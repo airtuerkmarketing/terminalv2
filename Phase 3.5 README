@@ -1,0 +1,280 @@
+
+Internal brand portal for airtuerk Service GmbH — a from-scratch rebuild of
+[terminal.airtuerk.de](https://terminal.airtuerk.de), replacing the Webflow
+hosting with a fully self-owned stack.
+
+## What this is
+
+A Next.js application that serves as the single source of truth for airtuerk's
+visual identity, brand assets, partner documents, team directory, and product
+documentation across **15 brand records** organized in a two-level hierarchy.
+
+## Status
+
+**Current phase:** Phase 3.5 COMPLETE (design system + brand hierarchy). Phase 4 next.
+
+See `spec/BUILD_LOG.md` for full progress.
+
+## Stack
+
+| Layer | Tech | Version |
+|---|---|---|
+| Framework | Next.js (App Router) | 16.2.9 |
+| Language | TypeScript | 5.x |
+| Styling | Tailwind CSS 4 + iOS 18 Liquid Glass tokens | latest |
+| Database | Supabase Postgres | 17 (Frankfurt) |
+| Auth | Supabase Auth | publishable+secret keys |
+| Storage | Supabase Storage | 4 buckets |
+| Hosting | Vercel | Edge runtime |
+| Package manager | pnpm | 11.x |
+| Node | local install | 20 LTS or 22 LTS |
+| Repo | github.com/airtuerkmarketing/terminalv2 | private |
+
+## Documents in `/spec/`
+
+### Canonical specifications
+
+| File | Purpose |
+|---|---|
+| `README.md` | This file — overview, daily commands |
+| `ARCHITECTURE.md` | System design, schema, block taxonomy, routing, brand hierarchy |
+| `DECISIONS.md` | Locked design decisions (D-001 through D-046) |
+| `DESIGN_SYSTEM.md` | iOS 18 Liquid Glass design language |
+| `EMBEDS_INVENTORY.md` | Webflow embeds preserved for Phase 6 |
+| `SOURCE_INVENTORY.md` | Full inventory of the Webflow zip |
+| `PHASE_PLAN.md` | Phase-by-phase execution plan with exit criteria |
+| `PRE_FLIGHT.md` | Pre-build checklist (historical) |
+| `CONTRIBUTING.md` | Branches, commits, deployment workflow |
+| `BUILD_LOG.md` | Running progress record |
+| `.env.example` | Required environment variables |
+
+### Reference material
+
+| Folder | Purpose |
+|---|---|
+| `spec/embeds/` | 12 custom HTML/CSS/JS files preserved from Webflow (~224 KB) |
+| `spec/mockups/` | Design reference HTML mockups |
+
+### Supabase migrations
+
+| File | Purpose |
+|---|---|
+| `supabase/migrations/0001_initial_schema.sql` | Full DDL with types, constraints, indexes |
+| `supabase/migrations/0002_rls_policies.sql` | Row Level Security |
+| `supabase/migrations/0003_storage_buckets.sql` | 4 storage buckets |
+| `supabase/migrations/0004_seed_brands.sql` | Initial 8 brands |
+| `supabase/migrations/0005_seed_pages.sql` | Initial 56-page tree |
+| `supabase/migrations/0006_profiles_trigger.sql` | Auto-create profile on signup |
+| `supabase/migrations/0007_brand_hierarchy_and_sidebar.sql` | Brand hierarchy columns |
+| `supabase/migrations/0008_restructure_brands.sql` | IBE products, service-center rename |
+| `supabase/migrations/0009_design_system_settings.sql` | Design tokens, sidebar config |
+
+## Brand hierarchy (post Phase 3.5)
+
+```
+Brands & Products (sidebar section)
++-- airtuerk Service       (Torch Red identity)
++-- airtuerk Holidays      (tour operator)
++-- atBeds                 (hotel inventory)
++-- Service Center Antalya (operations)
++-- IBE Product Suite      > (expandable)
+|   +-- multicheck
+|   +-- cockpit
+|   +-- myTransfer
+|   +-- myBooking
+|   +-- rentalCar
+|   +-- myStats
+|   +-- airLounge          (hidden in sidebar)
++-- Internal Branding
++-- airtuerk APIX
+
+Resources (sidebar section)
++-- Asset Library
++-- Document Library
++-- Team
++-- Presentation Hub       (sectioned doc list)
+```
+
+15 brand records, 52 pages total.
+
+## Design system
+
+The visual language is **iOS 18 Liquid Glass** — a glass-material system with
+translucent surfaces, ambient orb backgrounds, and Quantum Blue (`#0A82DF`)
+as the single UI accent color.
+
+Full details: `spec/DESIGN_SYSTEM.md`. Reference implementation:
+`spec/mockups/v3-01-dashboard.html`.
+
+## Quick start
+
+```bash
+# Clone
+git clone git@github.com:airtuerkmarketing/terminalv2.git
+cd terminalv2
+
+# Install
+pnpm install
+
+# Copy env, fill in Supabase values
+cp .env.example .env.local
+
+# Generate types from remote DB (Phase 4+)
+pnpm db:types
+
+# Run dev server (connects to remote Supabase in Frankfurt)
+pnpm dev
+```
+
+## Environments
+
+| Environment | URL | Branch | Auto-deploy | Database |
+|---|---|---|---|---|
+| Production | terminal.airtuerk.de (after Phase 7) | `main` | Yes | Supabase Frankfurt |
+| Preview | `terminalv2-dusky.vercel.app` | any PR | Yes | Supabase Frankfurt (same) |
+| Local | localhost:3000 | working tree | Manual | Supabase Frankfurt (same) |
+
+**Note:** v1 uses one shared remote database across all environments. Local Docker
+Supabase is optional and not required for development (decision D-024).
+'@
+
+[System.IO.File]::WriteAllText("$Repo\README.md", $readme, [System.Text.UTF8Encoding]::new($false))
+OK "README.md ersetzt (Phase 3.5 Version: 15 brands, 52 pages, D-001..D-046)"
+
+HEAD "2. Junk-Files entfernen"
+
+# Remove push.ps1 from repo
+if (Test-Path "$Repo\push.ps1") {
+    git rm push.ps1 2>&1 | Out-Null
+    FIX "push.ps1 entfernt (war Einmal-Script)"
+} else {
+    OK "push.ps1 schon weg"
+}
+
+# Remove CHECKPOINT from repo
+if (Test-Path "$Repo\CHECKPOINT-2026-06-15.md") {
+    # Erst lokal sichern
+    Copy-Item "$Repo\CHECKPOINT-2026-06-15.md" "$env:USERPROFILE\Desktop\CHECKPOINT-2026-06-15.md" -Force -ErrorAction SilentlyContinue
+    git rm "CHECKPOINT-2026-06-15.md" 2>&1 | Out-Null
+    FIX "CHECKPOINT-2026-06-15.md entfernt (Kopie auf Desktop gesichert)"
+} else {
+    OK "CHECKPOINT schon weg"
+}
+
+HEAD "3. Migration 0010 hinzufuegen (Brand-Farben Fix)"
+
+$mig0010 = @'
+-- ============================================================================
+-- 0010: Fix top-level brand card colors to match DESIGN_SYSTEM.md
+-- Phase 3.5 hot-fix -- colors from seed (0004) were placeholder values.
+-- Already applied to production DB via MCP on 2026-06-15.
+-- ============================================================================
+
+UPDATE brands SET primary_color = '#FF8A00' WHERE slug = 'airtuerk-holidays' AND primary_color != '#FF8A00';
+UPDATE brands SET primary_color = '#2DBE60' WHERE slug = 'atbeds' AND primary_color != '#2DBE60';
+UPDATE brands SET primary_color = '#C0392B' WHERE slug = 'service-center-antalya' AND primary_color != '#C0392B';
+UPDATE brands SET primary_color = '#0A82DF' WHERE slug = 'ibe-product-suite' AND primary_color != '#0A82DF';
+UPDATE brands SET primary_color = '#6B46C1' WHERE slug = 'internal-branding' AND primary_color != '#6B46C1';
+UPDATE brands SET primary_color = '#00868C' WHERE slug = 'airtuerk-apix' AND primary_color != '#00868C';
+'@
+
+$migPath = "$Repo\supabase\migrations\0010_fix_brand_card_colors.sql"
+if (-not (Test-Path $migPath)) {
+    [System.IO.File]::WriteAllText($migPath, $mig0010, [System.Text.UTF8Encoding]::new($false))
+    FIX "0010_fix_brand_card_colors.sql erstellt"
+} else {
+    OK "0010 existiert bereits"
+}
+
+HEAD "4. .gitignore erweitern"
+
+$gitignore = Get-Content "$Repo\.gitignore" -Raw -Encoding UTF8
+$additions = @()
+
+if ($gitignore -notlike "*push.ps1*") {
+    $additions += "push.ps1"
+}
+if ($gitignore -notlike "*CHECKPOINT*") {
+    $additions += "CHECKPOINT*.md"
+}
+if ($gitignore -notlike "*UPDATE_INSTRUCTIONS*") {
+    $additions += "UPDATE_INSTRUCTIONS.md"
+}
+if ($gitignore -notlike "*verify*") {
+    $additions += "verify*.ps1"
+}
+
+if ($additions.Count -gt 0) {
+    $block = "`n`n# One-time scripts and reference docs (not project code)`n"
+    foreach ($a in $additions) {
+        $block += "$a`n"
+    }
+    [System.IO.File]::AppendAllText(
+        "$Repo\.gitignore",
+        $block,
+        [System.Text.UTF8Encoding]::new($false)
+    )
+    FIX ".gitignore erweitert: $($additions -join ', ')"
+} else {
+    OK ".gitignore hat bereits alle Eintraege"
+}
+
+HEAD "5. Git Status"
+
+$changes = git status --porcelain 2>&1
+Write-Host ""
+$changes | ForEach-Object { INFO $_ }
+$count = ($changes | Measure-Object -Line).Lines
+Write-Host ""
+Write-Host "  $count Aenderung(en)" -ForegroundColor White
+
+HEAD "6. Bestaetigung"
+
+Write-Host ""
+$ok = Read-Host "  Commit und Push? (j/n)"
+if ($ok -ne "j") { Write-Host "  Abgebrochen." -ForegroundColor Yellow; exit 0 }
+
+HEAD "7. Commit + Push"
+
+git add .
+
+$msg = @"
+fix: update README, fix brand colors, remove junk files
+
+- README.md now reflects 15 brands, 52 pages, D-001..D-046
+- Add migration 0010: fix brand card colors to match DESIGN_SYSTEM.md
+- Remove push.ps1 (one-time utility script)
+- Remove CHECKPOINT-2026-06-15.md (reference doc, not project code)
+- Add .gitignore entries for utility scripts
+"@
+
+$tmp = [System.IO.Path]::GetTempFileName()
+[System.IO.File]::WriteAllText($tmp, $msg, [System.Text.UTF8Encoding]::new($false))
+git commit -F $tmp | Out-Null
+Remove-Item $tmp -Force
+
+$hash = git rev-parse --short HEAD
+OK "Committed: $hash"
+
+git push origin main
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  XX   Push fehlgeschlagen" -ForegroundColor Red
+    exit 1
+}
+OK "Gepusht"
+
+HEAD "Fertig"
+
+Write-Host ""
+Write-Host "  Commit: $hash" -ForegroundColor Green
+Write-Host "  URL:    https://github.com/airtuerkmarketing/terminalv2/commit/$hash" -ForegroundColor Green
+Write-Host ""
+Write-Host "  Noch zu tun (manuell in GitHub Settings):" -ForegroundColor Yellow
+Write-Host "    -> Repo auf 'Private' setzen (aktuell Public)" -ForegroundColor Yellow
+Write-Host "    -> Settings > General > Danger Zone > Change visibility" -ForegroundColor Yellow
+Write-Host ""
+
+$open = Read-Host "  GitHub im Browser oeffnen? (j/n)"
+if ($open -eq "j") {
+    Start-Process "https://github.com/airtuerkmarketing/terminalv2"
+}
