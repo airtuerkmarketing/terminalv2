@@ -1,11 +1,14 @@
 {
-  "name": "terminalv2-temp",
+  "name": "terminalv2",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:types": "supabase gen types typescript --project-id zkydrymygjrscjbhusxp > src/lib/database.types.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

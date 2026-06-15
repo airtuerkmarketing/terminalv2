@@ -233,8 +233,8 @@ and JS (`airtuerk-terminal.js`) are **reference material only**.
 
 terminalv2 uses Tailwind 4 + iOS 18 Liquid Glass tokens from scratch (D-034).
 
-The reference files are kept in `/spec/reference/` for design lookup. The
-custom embeds with real preserved value are in `/spec/embeds/`.
+These legacy Webflow CSS/JS files are **not** included in the repo — only the
+curated custom embeds with real preserved value are kept, in `/spec/embeds/`.
 
 ---
 

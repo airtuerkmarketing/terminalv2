@@ -70,7 +70,7 @@ Three new migrations applied via Supabase MCP:
 
 - Brands: **15** (8 original + 7 new IBE products)
 - Pages: **52** (was 56, -4 standalone pages)
-- Settings: 14 keys seeded
+- Settings: 19 keys seeded
 
 #### Spec consolidation
 
