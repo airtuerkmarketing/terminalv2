@@ -1,26 +1,67 @@
 @import "tailwindcss";
+@import "../styles/theme.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* Bridge the iOS 18 Liquid Glass CSS custom properties (defined in theme.css)
+ * into Tailwind v4's theme, so utilities (bg-surface, text-text-1, bg-accent,
+ * border-hairline, …) resolve to the runtime variables.
+ *
+ * `@theme inline` keeps the var() reference in the generated utilities, so
+ * toggling [data-theme="ios18-light"|"ios18-dark"] re-themes everything at
+ * runtime. No hex/rgba values are hardcoded here — every token bridges to a
+ * custom property.
+ *
+ * Bridged under Tailwind-namespaced names (--color-*, --font-sans) that do NOT
+ * collide with the raw tokens. We intentionally do NOT re-declare Tailwind's
+ * --radius-* or --font-mono here: `--radius-sm: var(--radius-sm)` would be a
+ * circular self-reference. The raw scale stays available as plain variables,
+ * e.g. var(--radius-xl), var(--space-6), var(--font-mono), var(--ease-smooth),
+ * var(--sidebar-w) — usable directly or via arbitrary utilities like
+ * rounded-[var(--radius-xl)].
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Background & glass surfaces */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-flat: var(--surface-flat);
+  --color-surface-muted: var(--surface-muted);
+
+  /* Lines */
+  --color-hairline: var(--hairline);
+  --color-separator: var(--separator);
+
+  /* Text */
+  --color-text-1: var(--text-1);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+
+  /* UI accent — Quantum Blue ONLY (D-036). Never torch in chrome. */
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-border: var(--accent-border);
+
+  /* Ambient orb tints */
+  --color-orb-1: var(--orb-1);
+  --color-orb-2: var(--orb-2);
+  --color-orb-3: var(--orb-3);
+
+  /* Brand-content palette — render brand identity only, never UI chrome */
+  --color-quantum: var(--quantum);
+  --color-quantum-soft: var(--quantum-soft);
+  --color-quantum-border: var(--quantum-border);
+  --color-torch: var(--torch);
+  --color-orient: var(--orient);
+  --color-tiara: var(--tiara);
+  --color-jet: var(--jet);
+  --color-ghost: var(--ghost);
+
+  /* Type */
+  --font-sans: var(--font);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Apply the theme baseline. (Foundational theming only — no components.) */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: var(--font);
 }
