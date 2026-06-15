@@ -45,3 +45,8 @@ supabase/.temp
 .cache/
 coverage/
 *.zip
+
+# Manual key storage
+KEYS.txt
+*.keys.txt
+
