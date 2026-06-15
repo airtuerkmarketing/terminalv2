@@ -1,37 +1,32 @@
-# spec/mockups — Design Reference Mockups
+# Mockups — terminalv2 v3 (iOS 18 Liquid Glass)
 
-Final approved HTML mockups used as the visual reference for Phase 4 implementation.
+These are the **approved v3 design references** for Phase 4. All three share one
+token system (the inline `<style>` block is identical across files — copy values
+verbatim into `src/styles/theme.css`).
 
-## Files
+| File | Page type | Shows |
+|---|---|---|
+| `v3-01-dashboard.html` | Landing / Dashboard | Brand card grid, sidebar, orbs, 3 document download styles |
+| `v3-02-brand-detail.html` | Brand detail page | Hero, logo download, color palette (hover-expand), typography specimen, preview-card documents |
+| `v3-03-asset-library.html` | Asset Library | Search toolbar, filter chips, view toggle, grouped asset grid (logos + photography) |
 
-### v3-01-dashboard.html
-**Approved on:** 2026-06-15 (Phase 3.5)
-**Status:** Canonical design reference for Phase 4
+## Design rules enforced in all three
 
-Demonstrates:
-- iOS 18 Liquid Glass design system (see `../DESIGN_SYSTEM.md`)
-- Final sidebar structure with three sections + IBE expandable
-- Collapsible sidebar (252px ↔ 64px)
-- Toggleable orbs (on for Dashboard)
-- Light/dark theme toggle (Quantum Blue accent)
-- Brand cards layout (7 brands, brand-specific mark colors)
-- Three document download styles side-by-side:
-  - Option 1: List rows
-  - Option 2: Preview cards (DEFAULT)
-  - Option 3: Image + outline button
+- **Quantum Blue** (`--accent` = `#0A82DF` light / `#0A9EFF` dark) is the ONLY UI accent.
+  Active nav items, focus states, hover icons, filter chips — all Quantum Blue.
+- **Torch Red** (`#ED1C24`) appears ONLY in brand content: the airtuerk logo itself,
+  the brand color palette, and PDF file-type indicators. NEVER in UI chrome.
+- **Glass surfaces**: `backdrop-filter: saturate(180%) blur(18px)` (sidebar `blur(24px)`).
+- **Card hover**: background + shadow change only. NO bouncy `translateY`.
+- **Orbs**: toggleable. Default ON for dashboard, OFF for detail/library pages.
+- **Themes**: `data-theme="ios18-light"` (default) and `ios18-dark`. Every token has both.
 
-## Phase 4 usage
+## How to use in Phase 4
 
-The inline `<style>` block in v3-01-dashboard.html is the source of truth
-for design tokens. Phase 4 ports it to `src/styles/theme.css`.
+1. Open each file in a browser to see the target.
+2. Toggle the Theme and Orbs buttons (top right) to verify dark mode + ambient.
+3. Copy CSS custom property VALUES verbatim — do not round or reinterpret.
+4. After building each React component, compare side-by-side against the matching mockup.
 
-The HTML structure shows the intended component breakdown — Phase 4 builds
-the React equivalents:
-- `<AppShell />` with `<Sidebar />` + `<Topbar />` + `<Ambient />`
-- `<BrandCard />` for the dashboard grid
-- Three document-download renderers for `document_list` block
-
-## Do NOT use as production code
-
-These files are static HTML for visual reference. The real implementation
-lives in `src/` and uses React Server Components + the block renderer.
+These are static HTML. The React/Tailwind build must reproduce them visually; a
+side-by-side visual diff is the Phase 4 exit criterion.
