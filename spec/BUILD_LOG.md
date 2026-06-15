@@ -1,4 +1,4 @@
-﻿# terminalv2 — Build Log
+# terminalv2 — Build Log
 
 Running record of what's been built, when. Newest entries on top.
 
@@ -96,3 +96,49 @@ Specification documents written and audited (2 review rounds).
 - Decisions go in DECISIONS.md, not here
 - File forward only — never rewrite history
 - Phase transitions get a header bump
+
+## Phase 3 — Next.js scaffold + auth shell (completed)
+
+**Date:** 2026-06-15
+**Stack confirmed live:** Next.js 16.2.9 (Turbopack) + Tailwind 4.3.1 + Supabase SSR
+
+### Scaffold
+- `pnpm create next-app@latest` with TypeScript, Tailwind, App Router, src-dir
+- Next.js bumped to 16.2.9 (was specced as "15" — see D-031)
+- pnpm 11.7.0 + Node 24.16.0
+- sharp not built locally (image optimization falls back, fine for now)
+- Scaffold merged into `D:\terminal V2\` preserving spec/, supabase/, .git/
+- Build green: `pnpm build` → "Compiled successfully"
+
+### Auth dependencies
+- @supabase/supabase-js 2.108.1, @supabase/ssr 0.12.0
+- zod 4.4.3, react-hook-form 7.79.0, @hookform/resolvers 5.4.0
+- clsx, tailwind-merge, class-variance-authority, lucide-react, tailwindcss-animate
+
+### Files added
+- `src/lib/utils.ts` — cn() helper
+- `src/lib/supabase/client.ts` — browser client
+- `src/lib/supabase/server.ts` — async server client (cookies() awaited)
+- `src/lib/supabase/middleware.ts` — refreshSession() helper (cookie refresh only)
+- `src/proxy.ts` — Next.js 16 proxy (replaces middleware.ts; see D-032)
+- `src/app/login/page.tsx` — public login route
+- `src/app/login/login-form.tsx` — Client Component with useTransition
+- `src/app/login/actions.ts` — loginAction + logoutAction Server Actions
+- `src/app/admin/layout.tsx` — auth gate via redirect() (see D-033)
+- `src/app/admin/page.tsx` — dashboard placeholder with live stats
+
+### Verification
+- Localhost: /admin → redirect /login → sign in dev@airtuerk.de → /admin OK
+- Stats query returns Brands 8, Pages 56, Assets 759, Documents 47
+  (Assets count is 759, not 708 — uploaded set is slightly higher than original
+  manifest count; investigate dedup in Phase 5 admin tooling)
+- Sign out → /login OK
+- Production (terminalv2-dusky.vercel.app): identical behaviour verified
+
+### Commits
+- 317338e feat(auth): add login + admin shell with supabase auth
+
+### Phase 3 follow-ups (deferred)
+- Database types generation: add `db:types` script to package.json
+- Fonts: upload Inter + GeneralSans to public/fonts/, configure next/font/local
+- Phase 4 onwards: see PHASE_PLAN.md

@@ -220,3 +220,36 @@ Claude-driven via MCP.
 - Not multi-tenant
 - Not public API
 - Not auto-translation
+
+---
+
+### D-031: Use Next.js 16 instead of 15
+
+**Date:** 2026-06-15
+**Status:** Adopted
+**Context:** The original spec (PRE_FLIGHT.md, ARCHITECTURE.md) referenced Next.js 15. When scaffolding via `pnpm create next-app@latest`, Next.js 16.2.9 was already the stable release.
+**Decision:** Adopt Next.js 16. The App Router API is stable; async `cookies()` and `searchParams` are now required (they were optional in 15). No spec features depend on 15-specific behaviour.
+**Trade-offs:** Slight learning curve for the async APIs. Mitigated — the SSR Supabase helpers (`@supabase/ssr 0.12+`) already use the async pattern.
+**Alternatives considered:** Pin to Next.js 15 LTS. Rejected because there is no LTS branch and 16 is the stable line.
+
+---
+
+### D-032: Use `proxy.ts` instead of `middleware.ts` (Next.js 16 convention)
+
+**Date:** 2026-06-15
+**Status:** Adopted
+**Context:** Next.js 16 deprecated the `middleware.ts` file convention in favour of `proxy.ts`. The rename is a paradigm shift, not cosmetic: `proxy.ts` now defaults to the Node.js runtime (vs Edge), follow-up to CVE-2025-29927 (auth bypass in Middleware under load).
+**Decision:** Use `src/proxy.ts` exporting `proxy()` function. File location stays the same (project root inside `src/`); function name and file name change.
+**Trade-offs:** Build warning if we keep the old `middleware.ts` name. None when migrated. The codemod `npx @next/codemod@canary middleware-to-proxy` exists but we did it manually because we also rewrote the helper.
+**Alternatives considered:** Keep `middleware.ts` — works but emits deprecation warning, will be removed in a future Next.js minor.
+
+---
+
+### D-033: Auth-gating in Server Component layouts, not in proxy
+
+**Date:** 2026-06-15
+**Status:** Adopted
+**Context:** CVE-2025-29927 demonstrated that Middleware/Proxy is the wrong place for hard authentication checks — under high load, the Edge runtime could be bypassed. Vercel and the Next.js team now recommend the "thin proxy" pattern.
+**Decision:** `proxy.ts` only refreshes Supabase session cookies (`supabase.auth.getUser()` to revalidate the token). All access control happens inside the protected Server Component layout — `src/app/admin/layout.tsx` calls `getUser()` and `redirect("/login?next=/admin")` if absent, then loads the profile and `redirect()`s again if `role !== 'admin'`.
+**Trade-offs:** Each request to `/admin/*` does one extra Supabase round-trip vs caching in middleware. Acceptable — the dashboard is admin-only and low-traffic.
+**Alternatives considered:** Auth-gating in `proxy.ts`. Rejected for the CVE reason above. Auth-gating in `page.tsx` per page. Rejected because forgetting one page would leak data; the layout enforces gating for every nested route under `/admin`.
