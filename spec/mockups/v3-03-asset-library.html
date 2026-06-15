@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="ios18-light" data-sidebar="expanded" data-orbs="off">
+<head>
+<meta charset="UTF-8">
+<title>terminalv2 v3 — Asset Library</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root {
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Menlo', monospace;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+  --space-12: 48px; --space-16: 64px; --space-20: 80px;
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+  --radius-xl: 20px; --radius-full: 9999px;
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --quantum: #0A82DF;
+  --quantum-soft: rgba(10, 130, 223, 0.08);
+  --quantum-border: rgba(10, 130, 223, 0.22);
+  --jet: #222222;
+  --ghost: #F7F7F7;
+  --torch: #ED1C24;
+  --orient: #17479E;
+  --tiara: #C7C6C5;
+  --sidebar-w: 252px;
+  --sidebar-w-collapsed: 64px;
+}
+
+:root[data-theme="ios18-light"] {
+  --bg: #F7F8FC;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-strong: rgba(255, 255, 255, 0.92);
+  --surface-flat: #FFFFFF;
+  --surface-muted: #F1F2F6;
+  --hairline: rgba(0, 0, 0, 0.08);
+  --separator: rgba(60, 60, 67, 0.10);
+  --text-1: rgba(0, 0, 0, 0.92);
+  --text-2: rgba(60, 60, 67, 0.62);
+  --text-3: rgba(60, 60, 67, 0.38);
+  --accent: var(--quantum);
+  --accent-soft: var(--quantum-soft);
+  --accent-border: var(--quantum-border);
+  --orb-1: rgba(10, 130, 223, 0.08);
+  --orb-2: rgba(23, 71, 158, 0.06);
+  --orb-3: rgba(120, 130, 180, 0.05);
+  /* +5% shadow strength per feedback */
+  --shadow-rest: 0 1px 2px rgba(0,0,0,0.05), 0 3px 10px -1px rgba(0,0,0,0.06);
+  --shadow-hover: 0 1px 3px rgba(0,0,0,0.07), 0 6px 18px -2px rgba(0,0,0,0.10);
+}
+
+:root[data-theme="ios18-dark"] {
+  --bg: #0b0e14;
+  --surface: rgba(28, 30, 36, 0.68);
+  --surface-strong: rgba(38, 40, 46, 0.85);
+  --surface-flat: #16181D;
+  --surface-muted: #1A1C22;
+  --hairline: rgba(255, 255, 255, 0.08);
+  --separator: rgba(200, 200, 210, 0.08);
+  --text-1: rgba(255, 255, 255, 0.95);
+  --text-2: rgba(235, 235, 245, 0.62);
+  --text-3: rgba(235, 235, 245, 0.38);
+  --accent: #0A9EFF;
+  --accent-soft: rgba(10, 158, 255, 0.14);
+  --accent-border: rgba(10, 158, 255, 0.30);
+  --orb-1: rgba(10, 130, 223, 0.16);
+  --orb-2: rgba(23, 71, 158, 0.12);
+  --orb-3: rgba(140, 100, 220, 0.08);
+  --shadow-rest: 0 1px 2px rgba(0,0,0,0.35), 0 3px 10px -1px rgba(0,0,0,0.45);
+  --shadow-hover: 0 1px 3px rgba(0,0,0,0.40), 0 6px 18px -2px rgba(0,0,0,0.50);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font); }
+html { font-size: 16px; }
+body { background: var(--bg); color: var(--text-1); -webkit-font-smoothing: antialiased; min-height: 100vh; overflow-x: hidden; }
+
+.ambient { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; transition: opacity 400ms var(--ease-smooth);
+  background-image: radial-gradient(1100px 700px at 18% 5%, var(--orb-1) 0%, transparent 55%), radial-gradient(900px 600px at 82% 12%, var(--orb-2) 0%, transparent 55%), radial-gradient(900px 700px at 50% 92%, var(--orb-3) 0%, transparent 60%); }
+:root[data-orbs="off"] .ambient { opacity: 0; }
+.orb { position: absolute; width: 520px; height: 520px; border-radius: 50%; filter: blur(34px) saturate(1.10); opacity: 0.8; mix-blend-mode: multiply; will-change: transform; }
+:root[data-theme="ios18-dark"] .orb { mix-blend-mode: screen; opacity: 0.6; }
+.orb--a { left: -140px; top: -160px; background: radial-gradient(circle at 30% 30%, var(--orb-1) 0%, transparent 62%); animation: orbA 70s ease-in-out infinite; }
+.orb--b { right: -180px; top: -90px; background: radial-gradient(circle at 35% 35%, var(--orb-2) 0%, transparent 64%); animation: orbB 80s ease-in-out infinite; }
+.orb--c { left: 25%; bottom: -220px; background: radial-gradient(circle at 35% 35%, var(--orb-3) 0%, transparent 66%); animation: orbC 90s ease-in-out infinite; }
+@keyframes orbA { 0%,100%{transform:translate3d(0,0,0) scale(1);} 50%{transform:translate3d(8vw,6vh,0) scale(1.04);} }
+@keyframes orbB { 0%,100%{transform:translate3d(0,0,0) scale(1);} 50%{transform:translate3d(-10vw,5vh,0) scale(1.05);} }
+@keyframes orbC { 0%,100%{transform:translate3d(0,0,0) scale(1);} 50%{transform:translate3d(-5vw,-5vh,0) scale(1.03);} }
+
+.card { background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); border: 1px solid var(--hairline); border-radius: 20px; box-shadow: var(--shadow-rest); transition: box-shadow 250ms var(--ease-smooth), background-color 250ms var(--ease-smooth); }
+.card:hover { background-color: var(--surface-strong); box-shadow: var(--shadow-hover); }
+
+/* LAYOUT */
+.layout { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; transition: grid-template-columns 300ms var(--ease-smooth); }
+:root[data-sidebar="collapsed"] .layout { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
+
+/* SIDEBAR */
+.sidebar { position: sticky; top: 0; height: 100vh; padding: var(--space-5); display: flex; flex-direction: column; overflow: hidden; }
+.sidebar-inner { background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); border: 1px solid var(--hairline); border-radius: 20px; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-rest); overflow-y: auto; }
+
+.brand-mark { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--radius-md); }
+.brand-mark .logo { width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--radius-md); background: var(--quantum); color: white; display: grid; place-items: center; font-weight: 600; font-size: 14px; box-shadow: 0 2px 6px rgba(10,130,223,0.25), inset 0 1px 0 rgba(255,255,255,0.30); }
+.brand-mark .name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; }
+.brand-mark .name span { color: var(--text-3); font-weight: 400; }
+.collapse-btn { width: 28px; height: 28px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-3); cursor: pointer; display: grid; place-items: center; transition: all 150ms; margin-left: auto; }
+.collapse-btn:hover { background: rgba(120, 120, 128, 0.10); color: var(--text-1); }
+:root[data-sidebar="collapsed"] .collapse-btn svg { transform: rotate(180deg); }
+.collapse-btn svg { transition: transform 250ms var(--ease-smooth); }
+
+.nav-section { display: flex; flex-direction: column; gap: 2px; }
+.nav-divider { height: 1px; background: var(--separator); margin: var(--space-2) var(--space-3); }
+:root[data-sidebar="collapsed"] .nav-divider { margin: var(--space-2) var(--space-2); }
+
+.nav-item { display: flex; align-items: center; gap: var(--space-3); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 14px; color: var(--text-2); cursor: pointer; text-decoration: none; transition: all 150ms var(--ease-smooth); white-space: nowrap; position: relative; }
+.nav-item:hover { background: rgba(120, 120, 128, 0.08); color: var(--text-1); }
+.nav-item.active { background: var(--accent-soft); color: var(--accent); }
+.nav-item .icon { width: 18px; height: 18px; flex-shrink: 0; display: grid; place-items: center; }
+.nav-item .icon svg { width: 16px; height: 16px; }
+.nav-item .text { transition: opacity 200ms; flex: 1; }
+.nav-item .chevron { color: var(--text-3); transition: transform 200ms var(--ease-smooth); }
+.nav-item.expandable[data-open="true"] .chevron { transform: rotate(90deg); }
+:root[data-sidebar="collapsed"] .nav-item .text,
+:root[data-sidebar="collapsed"] .nav-item .chevron { opacity: 0; width: 0; overflow: hidden; }
+:root[data-sidebar="collapsed"] .nav-item { justify-content: center; padding: 8px; }
+
+/* Nested sub-items under IBE */
+.nav-sub { display: flex; flex-direction: column; gap: 2px; padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 300ms var(--ease-smooth); }
+.nav-sub.open { max-height: 400px; }
+.nav-sub .nav-item { padding: 6px 10px; font-size: 13px; }
+.nav-sub .nav-item .icon { width: 14px; height: 14px; }
+.nav-sub .nav-item .icon svg { width: 12px; height: 12px; }
+:root[data-sidebar="collapsed"] .nav-sub { display: none; }
+
+.user-block { margin-top: auto; padding: var(--space-3); border-radius: var(--radius-md); background: rgba(120, 120, 128, 0.05); display: flex; align-items: center; gap: var(--space-3); overflow: hidden; }
+.user-block .avatar { width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--quantum); color: white; display: grid; place-items: center; font-weight: 600; font-size: 12px; }
+.user-block .meta { flex: 1; min-width: 0; }
+.user-block .name { font-size: 13px; font-weight: 500; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-block .role { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500; }
+:root[data-sidebar="collapsed"] .user-block .meta { display: none; }
+
+/* MAIN */
+.main { padding: var(--space-6) var(--space-8); max-width: 100%; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-8); }
+.search { flex: 1; max-width: 520px; display: flex; align-items: center; gap: var(--space-2); padding: 9px 16px; border-radius: var(--radius-md); background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); border: 1px solid var(--hairline); font-size: 14px; color: var(--text-3); }
+.search .key { margin-left: auto; padding: 2px 6px; border-radius: 4px; background: rgba(120, 120, 128, 0.10); font-family: var(--font-mono); font-size: 11px; color: var(--text-2); }
+.topbar-actions { display: flex; gap: var(--space-2); align-items: center; }
+.icon-btn { width: 36px; height: 36px; border-radius: var(--radius-md); background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); border: 1px solid var(--hairline); display: grid; place-items: center; cursor: pointer; color: var(--text-2); transition: all 150ms var(--ease-smooth); }
+.icon-btn:hover { background: var(--surface-strong); color: var(--text-1); }
+
+/* HERO */
+.hero { margin-bottom: var(--space-12); padding-top: var(--space-2); }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: var(--radius-full); background: var(--accent-soft); border: 1px solid var(--accent-border); color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: var(--space-4); }
+.eyebrow .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2.4s ease-in-out infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(10,130,223,0.50); } 100% { box-shadow: 0 0 0 8px rgba(10,130,223,0); } }
+.hero h1 { font-size: 38px; font-weight: 600; letter-spacing: -0.022em; line-height: 1.1; color: var(--text-1); margin-bottom: var(--space-4); max-width: 760px; }
+.hero h1 em { font-style: normal; color: var(--text-3); }
+.hero p { font-size: 17px; line-height: 1.55; color: var(--text-2); max-width: 620px; }
+
+/* SECTION HEAD */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-5); margin-top: var(--space-12); }
+.section-head h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.012em; color: var(--text-1); }
+.section-head .count { font-size: 13px; color: var(--text-3); }
+
+/* BRAND CARDS */
+.brands-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); }
+.brand-card { padding: var(--space-6); cursor: pointer; display: flex; flex-direction: column; gap: var(--space-4); min-height: 200px; }
+.brand-card .header { display: flex; align-items: center; gap: var(--space-3); }
+.brand-card .mark { width: 44px; height: 44px; border-radius: var(--radius-md); display: grid; place-items: center; color: white; font-weight: 700; font-size: 15px; flex-shrink: 0; letter-spacing: -0.01em; box-shadow: inset 0 1px 0 rgba(255,255,255,0.20); }
+.brand-card .name { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-1); }
+.brand-card .tag { font-size: 11px; color: var(--text-3); letter-spacing: 0.04em; text-transform: uppercase; font-weight: 500; margin-top: 2px; }
+.brand-card .desc { font-size: 13px; line-height: 1.55; color: var(--text-2); }
+.brand-card .footer { margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--separator); display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-3); }
+.brand-card .arrow { width: 24px; height: 24px; border-radius: var(--radius-sm); background: transparent; color: var(--text-3); display: grid; place-items: center; transition: all 200ms var(--ease-smooth); }
+.brand-card:hover .arrow { background: var(--accent-soft); color: var(--accent); transform: translateX(2px); }
+
+.brand-card.service .mark { background: var(--torch); }
+.brand-card.holidays .mark { background: #FF8A00; }
+.brand-card.atbeds .mark { background: #2DBE60; }
+.brand-card.antalya .mark { background: #C0392B; }
+.brand-card.ibe .mark { background: var(--quantum); }
+.brand-card.internal .mark { background: #6B46C1; }
+.brand-card.apix .mark { background: #00868C; }
+
+/* CHIP */
+.chip-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius-full); background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border: 1px solid var(--hairline); cursor: pointer; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-2); transition: all 150ms; }
+.chip-btn:hover { background: var(--surface-strong); color: var(--text-1); }
+.control-bar { position: fixed; top: var(--space-5); right: var(--space-5); z-index: 100; display: flex; gap: var(--space-2); }
+
+/* Document download styles — three options side-by-side for review */
+.dl-section { margin-bottom: var(--space-16); }
+.dl-section-head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-4); }
+.dl-section-head .title { font-size: 14px; font-weight: 600; color: var(--text-1); }
+.dl-section-head .desc { font-size: 13px; color: var(--text-3); }
+
+/* OPTION 1: List rows (current) */
+.opt1-list { display: flex; flex-direction: column; gap: 0; border-radius: 20px; overflow: hidden; border: 1px solid var(--hairline); background: var(--surface-flat); }
+.opt1-row { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--separator); transition: background 150ms; cursor: pointer; text-decoration: none; color: var(--text-1); }
+.opt1-row:last-child { border-bottom: 0; }
+.opt1-row:hover { background: var(--surface-muted); }
+.opt1-row .filetype { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; flex-shrink: 0; }
+.opt1-row .filetype.pdf { background: rgba(237,28,36,0.10); color: var(--torch); }
+.opt1-row .filetype.word { background: rgba(10,130,223,0.10); color: var(--quantum); }
+.opt1-row .info { flex: 1; min-width: 0; }
+.opt1-row .name { font-size: 14px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 2px; }
+.opt1-row .meta { font-size: 12px; color: var(--text-3); }
+.opt1-row .icon { width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--hairline); display: grid; place-items: center; color: var(--text-2); transition: all 150ms; }
+.opt1-row:hover .icon { border-color: var(--accent-border); color: var(--accent); }
+
+/* OPTION 2: Preview cards (Image 1 style — document thumbnails with filetype pills below) */
+.opt2-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); }
+.opt2-card { background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: 20px; overflow: hidden; cursor: pointer; transition: all 200ms var(--ease-smooth); }
+.opt2-card:hover { box-shadow: var(--shadow-hover); }
+.opt2-preview { background: var(--surface-muted); padding: var(--space-5); min-height: 260px; display: grid; place-items: center; position: relative; }
+.opt2-preview .doc-mockup { width: 70%; aspect-ratio: 1/1.3; background: white; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.10); padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.opt2-preview .doc-mockup .logo-line { display: flex; gap: 3px; font-size: 8px; font-weight: 700; color: var(--text-1); margin-bottom: 4px; }
+.opt2-preview .doc-mockup .logo-line .b { color: var(--orient); }
+.opt2-preview .doc-mockup .logo-line .r { color: var(--torch); }
+.opt2-preview .doc-mockup .img-bg { flex: 1; background: linear-gradient(135deg, #87CEEB 0%, #4A90E2 100%); border-radius: 3px; }
+.opt2-preview .doc-mockup .doc-title { font-size: 10px; font-weight: 700; line-height: 1.2; margin-top: 4px; }
+.opt2-preview .doc-mockup .year { font-size: 7px; padding: 1px 4px; border: 1px solid var(--hairline); border-radius: 9999px; align-self: flex-end; margin-top: 2px; }
+.opt2-preview .filetype-badge { position: absolute; bottom: 24px; right: 24px; width: 48px; height: 60px; background: var(--torch); color: white; border-radius: 4px; display: grid; place-items: center; font-size: 10px; font-weight: 700; box-shadow: 0 4px 10px rgba(237,28,36,0.25); }
+.opt2-preview .filetype-badge.word { background: var(--quantum); box-shadow: 0 4px 10px rgba(10,130,223,0.25); }
+.opt2-meta { padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--separator); }
+.opt2-link { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-1); text-decoration: none; }
+.opt2-link:hover { color: var(--accent); }
+.opt2-link .lang { color: var(--text-3); font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; font-size: 11px; }
+.opt2-link .pdf-pill { width: 14px; height: 14px; background: var(--torch); border-radius: 2px; flex-shrink: 0; display: grid; place-items: center; color: white; font-size: 7px; font-weight: 700; }
+.opt2-link .word-pill { width: 14px; height: 14px; background: var(--quantum); border-radius: 2px; flex-shrink: 0; display: grid; place-items: center; color: white; font-size: 7px; font-weight: 700; }
+
+/* OPTION 3: Image + outline button (Image 2 style — wood texture preview with button below) */
+.opt3-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-4); }
+.opt3-card { background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: 20px; overflow: hidden; cursor: pointer; transition: all 200ms var(--ease-smooth); }
+.opt3-card:hover { box-shadow: var(--shadow-hover); }
+.opt3-preview { background: linear-gradient(135deg, #6B4226 0%, #8B5A35 60%, #5D3920 100%); min-height: 220px; padding: var(--space-5); display: grid; place-items: center; position: relative; }
+.opt3-preview .doc-img { width: 75%; aspect-ratio: 1/1.1; background: linear-gradient(180deg, #F5F1E8 0%, #E8E2D0 100%); border-radius: 4px; box-shadow: 0 6px 20px rgba(0,0,0,0.30); padding: 10px; display: flex; flex-direction: column; gap: 4px; transform: rotate(-3deg); }
+.opt3-preview .doc-img .logo { font-size: 9px; font-weight: 700; line-height: 1; }
+.opt3-preview .doc-img .logo .b { color: var(--orient); }
+.opt3-preview .doc-img .logo .r { color: var(--torch); }
+.opt3-preview .doc-img .title { font-size: 8px; font-weight: 600; line-height: 1.3; margin-top: 6px; color: #333; }
+.opt3-preview .doc-img .title .highlight { background: var(--quantum); color: white; padding: 0 2px; }
+.opt3-preview .doc-img .lines { display: flex; flex-direction: column; gap: 2px; font-size: 5px; color: #999; margin-top: 4px; }
+.opt3-preview .doc-img .lines div { display: flex; justify-content: space-between; }
+.opt3-preview .doc-img .table { flex: 1; border: 1px solid #ccc; border-radius: 2px; margin-top: 4px; }
+.opt3-preview .filetype-icon { position: absolute; bottom: 32px; right: 32px; width: 52px; height: 52px; background: white; border-radius: 12px; display: grid; place-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.25); font-size: 11px; font-weight: 700; }
+.opt3-preview .filetype-icon.pdf { background: var(--torch); color: white; }
+.opt3-preview .filetype-icon.word { background: var(--quantum); color: white; }
+.opt3-cta { padding: var(--space-4); border-top: 1px solid var(--separator); }
+.opt3-cta .btn-outline { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: 1px solid var(--text-1); border-radius: 10px; background: transparent; color: var(--text-1); font-size: 11px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; cursor: pointer; transition: all 150ms; text-decoration: none; }
+.opt3-cta .btn-outline:hover { background: var(--text-1); color: var(--bg); }
+.opt3-cta .caption { font-size: 13px; color: var(--text-2); margin-top: var(--space-3); line-height: 1.5; }
+</style>
+<style>
+/* ASSET LIBRARY specifics */
+.main { padding: var(--space-6) var(--space-8); }
+.page-hero { margin-bottom: var(--space-8); padding-top: var(--space-8); }
+.page-hero .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--space-3); }
+.page-hero h1 { font-size: 40px; font-weight: 600; letter-spacing: -0.022em; line-height: 1.05; margin-bottom: var(--space-4); }
+.page-hero .lead { font-size: 17px; line-height: 1.55; color: var(--text-2); max-width: 620px; }
+
+/* Toolbar: search + filters */
+.toolbar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-6); flex-wrap: wrap; }
+.search-box { flex: 1; min-width: 280px; display: flex; align-items: center; gap: var(--space-3); padding: 10px var(--space-4); background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border: 1px solid var(--hairline); border-radius: var(--radius-full); box-shadow: var(--shadow-rest); }
+.search-box svg { color: var(--text-3); flex-shrink: 0; }
+.search-box input { flex: 1; border: 0; background: transparent; outline: none; font-size: 14px; color: var(--text-1); }
+.search-box input::placeholder { color: var(--text-3); }
+
+.filter-group { display: flex; gap: var(--space-2); }
+.filter-chip { padding: 8px 16px; border-radius: var(--radius-full); background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border: 1px solid var(--hairline); font-size: 13px; font-weight: 500; color: var(--text-2); cursor: pointer; transition: all 150ms var(--ease-smooth); }
+.filter-chip:hover { color: var(--text-1); }
+.filter-chip.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border); }
+
+.view-toggle { display: flex; gap: 2px; padding: 3px; background: var(--surface-muted); border-radius: var(--radius-md); }
+.view-toggle button { width: 32px; height: 32px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-3); cursor: pointer; display: grid; place-items: center; transition: all 150ms; }
+.view-toggle button.active { background: var(--surface-flat); color: var(--text-1); box-shadow: 0 1px 3px rgba(0,0,0,0.10); }
+
+/* Result count */
+.result-meta { font-size: 13px; color: var(--text-3); margin-bottom: var(--space-4); }
+
+/* Asset grid */
+.asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-4); }
+.asset-card { background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-lg); overflow: hidden; cursor: pointer; transition: box-shadow 200ms var(--ease-smooth); }
+.asset-card:hover { box-shadow: var(--shadow-hover); }
+.asset-thumb { aspect-ratio: 4/3; display: grid; place-items: center; position: relative; overflow: hidden; }
+.asset-thumb .badge { position: absolute; top: var(--space-3); left: var(--space-3); padding: 3px 8px; border-radius: var(--radius-sm); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: rgba(0,0,0,0.55); color: white; backdrop-filter: blur(8px); }
+.asset-thumb .dl-hover { position: absolute; top: var(--space-3); right: var(--space-3); width: 32px; height: 32px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.92); color: var(--jet); display: grid; place-items: center; opacity: 0; transform: translateY(-4px); transition: all 200ms var(--ease-smooth); }
+.asset-card:hover .dl-hover { opacity: 1; transform: translateY(0); }
+.asset-meta { padding: var(--space-3) var(--space-4); }
+.asset-meta .name { font-size: 13px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asset-meta .sub { font-size: 11px; color: var(--text-3); }
+
+/* Logo thumb backgrounds */
+.thumb-logo { width: 100%; height: 100%; display: grid; place-items: center; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+.thumb-img { width: 100%; height: 100%; }
+
+/* Section grouping */
+.asset-section { margin-bottom: var(--space-12); }
+.asset-section-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
+.asset-section-head h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.asset-section-head .count { font-size: 13px; color: var(--text-3); font-family: var(--font-mono); }
+.asset-section-head .line { flex: 1; height: 1px; background: var(--separator); }
+</style>
+</head>
+<body>
+<div class="ambient">
+  <div class="orb orb--a"></div>
+  <div class="orb orb--b"></div>
+  <div class="orb orb--c"></div>
+</div>
+
+<div class="control-bar">
+  <button class="chip-btn" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'ios18-light' ? 'ios18-dark' : 'ios18-light'">Theme</button>
+  <button class="chip-btn" onclick="document.documentElement.dataset.orbs = document.documentElement.dataset.orbs === 'on' ? 'off' : 'on'">Orbs</button>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR (same as brand detail) -->
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+      <div class="brand-mark">
+        <div class="logo">t</div>
+        <div class="name">terminal<span>v2</span></div>
+        <button class="collapse-btn" onclick="document.documentElement.dataset.sidebar = document.documentElement.dataset.sidebar === 'expanded' ? 'collapsed' : 'expanded'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      </div>
+      <nav class="nav-section">
+        <a class="nav-item" href="#"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span><span class="text">Dashboard</span></a>
+      </nav>
+      <div class="nav-divider"></div>
+      <nav class="nav-section">
+        <a class="nav-item" href="#"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></span><span class="text">airtuerk Service</span></a>
+        <a class="nav-item" href="#"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg></span><span class="text">airtuerk Holidays</span></a>
+        <a class="nav-item" href="#"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></span><span class="text">atBeds</span></a>
+        <a class="nav-item" href="#"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg></span><span class="text">Service Center Antalya</span></a>
+        <a class="nav-item expandable" data-open="false" href="#" onclick="this.dataset.open = this.dataset.open === 'true' ? 'false' : 'true'; this.nextElementSibling.style.display = this.dataset.open === 'true' ? 'flex' : 'none'; return false;"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span><span class="text">IBE Product Suite</span><span class="chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></a>
+        <div class="nav-section" style="display:none; padding-left: var(--space-6); gap:2px;">
+          <a class="nav-item" href="#"><span class="text">multicheck</span></a>
+          <a class="nav-item" href="#"><span class="text">cockpit</span></a>
+          <a class="nav-item" href="#"><span class="text">myTransfer</span></a>
+          <a class="nav-item" href="#"><span class="text">myBooking</span></a>
+          <a class="nav-item" href="#"><span class="text">rentalCar</span></a>
+          <a class="nav-item" href="#"><span class="text">myStats</span></a>
+        </div>
+        <a class="nav-item" href="#"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg></span><span class="text">Internal Branding</span></a>
+        <a class="nav-item" href="#"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span><span class="text">airtuerk APIX</span></a>
+      </nav>
+      <div class="nav-divider"></div>
+      <nav class="nav-section">
+        <a class="nav-item active" href="#"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span><span class="text">Asset Library</span></a>
+        <a class="nav-item" href="#"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span><span class="text">Document Library</span></a>
+        <a class="nav-item" href="#"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span><span class="text">Team</span></a>
+        <a class="nav-item" href="#"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg></span><span class="text">Presentation Hub</span></a>
+      </nav>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="page-hero">
+      <div class="eyebrow">Resources</div>
+      <h1>Asset Library</h1>
+      <p class="lead">All brand assets in one searchable place — logos, icons, photography and templates across every airtuerk brand.</p>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="search-box">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" placeholder="Search 759 assets..." />
+      </div>
+      <div class="view-toggle">
+        <button class="active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></button>
+        <button><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+      </div>
+    </div>
+
+    <div class="filter-group" style="margin-bottom: var(--space-6);">
+      <button class="filter-chip active">All</button>
+      <button class="filter-chip">Logos</button>
+      <button class="filter-chip">Icons</button>
+      <button class="filter-chip">Photography</button>
+      <button class="filter-chip">Templates</button>
+    </div>
+
+    <!-- LOGOS SECTION -->
+    <section class="asset-section">
+      <div class="asset-section-head">
+        <h2>Logos</h2>
+        <span class="count">24</span>
+        <div class="line"></div>
+      </div>
+      <div class="asset-grid">
+        <div class="asset-card">
+          <div class="asset-thumb" style="background:var(--surface-muted);">
+            <span class="badge">SVG</span>
+            <div class="dl-hover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+            <div class="thumb-logo" style="color:var(--torch);">airtuerk</div>
+          </div>
+          <div class="asset-meta"><div class="name">airtuerk Service · Primary</div><div class="sub">SVG · 24 KB</div></div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-thumb" style="background:#222;">
+            <span class="badge">SVG</span>
+            <div class="dl-hover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+            <div class="thumb-logo" style="color:white;">airtuerk</div>
+          </div>
+          <div class="asset-meta"><div class="name">airtuerk Service · Dark BG</div><div class="sub">SVG · 24 KB</div></div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-thumb" style="background:var(--surface-muted);">
+            <span class="badge">SVG</span>
+            <div class="dl-hover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+            <div class="thumb-logo" style="color:#FF8A00;">Holidays</div>
+          </div>
+          <div class="asset-meta"><div class="name">airtuerk Holidays</div><div class="sub">SVG · 18 KB</div></div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-thumb" style="background:var(--surface-muted);">
+            <span class="badge">SVG</span>
+            <div class="dl-hover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+            <div class="thumb-logo" style="color:#2DBE60;">atBeds</div>
+          </div>
+          <div class="asset-meta"><div class="name">atBeds · Primary</div><div class="sub">SVG · 16 KB</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PHOTOGRAPHY SECTION -->
+    <section class="asset-section">
+      <div class="asset-section-head">
+        <h2>Photography</h2>
+        <span class="count">312</span>
+        <div class="line"></div>
+      </div>
+      <div class="asset-grid">
+        <div class="asset-card">
+          <div class="asset-thumb">
+            <span class="badge">JPG</span>
+            <div class="dl-hover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+            <div class="thumb-img" style="background:linear-gradient(135deg,#87CEEB 0%,#4A90E2 100%);"></div>
+          </div>
+          <div class="asset-meta"><div class="name">Aircraft · Sunset Tarmac</div><div class="sub">JPG · 4032×3024 · 2.1 MB</div></div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-thumb">
+            <span class="badge">JPG</span>
+            <div class="dl-hover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+            <div class="thumb-img" style="background:linear-gradient(135deg,#F5C28A 0%,#E67E48 100%);"></div>
+          </div>
+          <div class="asset-meta"><div class="name">Antalya · Coastline</div><div class="sub">JPG · 5000×3333 · 3.4 MB</div></div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-thumb">
+            <span class="badge">JPG</span>
+            <div class="dl-hover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+            <div class="thumb-img" style="background:linear-gradient(135deg,#2DBE60 0%,#1a8f44 100%);"></div>
+          </div>
+          <div class="asset-meta"><div class="name">Hotel · Pool Deck</div><div class="sub">JPG · 4500×3000 · 2.8 MB</div></div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-thumb">
+            <span class="badge">JPG</span>
+            <div class="dl-hover"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+            <div class="thumb-img" style="background:linear-gradient(135deg,#627F9E 0%,#17479E 100%);"></div>
+          </div>
+          <div class="asset-meta"><div class="name">Cabin · Interior</div><div class="sub">JPG · 4032×2268 · 1.9 MB</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>
