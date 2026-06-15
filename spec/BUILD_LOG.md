@@ -4,102 +4,110 @@ Running record of what's been built, when. Newest entries on top.
 
 ---
 
-## Phase 2 — Asset Upload (COMPLETE — 2026-06-15)
+## Phase 3.5 — Design system + brand hierarchy (COMPLETE — 2026-06-15)
 
-**Status:** All 759 files uploaded to Supabase Storage. Database tables populated.
-
-### What was done
-
-- Uploaded 708 images to images bucket (152 MB)
-- Uploaded 47 documents to documents bucket (92 MB)
-- Uploaded 4 videos to videos bucket (11 MB)
-- 759 rows inserted into assets table
-- 47 rows inserted into documents table with category, language, brand_id, version
-- Documents auto-categorized into 12 categories
-- 4 brands have linked documents: airtuerk-service (7), airtuerk-holidays (2), atbeds (1), airtuerk-apix (1)
-- All public URLs verified working (HTTP 200, correct content-types)
-
-### Bucket organization
-
-- images/brand-logos/{brand-slug}/ — logos per brand
-- images/icons/ — UI icons (~26 files)
-- images/desktop-backgrounds/ — wallpapers
-- images/favicon/ — favicons
-- images/team-backgrounds/ — call-airtuerk photos
-- images/stock-photography/ — photographer-named stock
-- images/product-shots/ — mockups, product images
-- images/thumbnails/ — document preview thumbnails
-- images/opengraph/ — OG/social preview images
-- images/misc/ — 405 generic photos
-- documents/{category}/{brand-slug?}/ — categorized documents
-- videos/master/ — mp4, webm masters
-- videos/posters/ — video poster jpgs
-
-### Deviations from spec
-
-- 12 fonts not yet uploaded. Decision: defer to Phase 3 because Next.js scaffold uses next/font/local with files in /public/fonts/. The fonts bucket exists for future use but is empty for v1.
-
-### Next: Phase 3 — Next.js scaffold
-
----
-
-## Phase 1 — Infrastructure (COMPLETE — 2026-06-15)
-
-**Status:** All infrastructure provisioned and verified.
+**Status:** All design decisions locked, DB restructured, docs consolidated.
+**Tag:** `phase-3.5-design-consolidation`
 
 ### What was done
 
-- Supabase project terminalv2 (ref: zkydrymygjrscjbhusxp)
-- Region: eu-central-1 (Frankfurt), Pro tier, Postgres 17.6.1
-- All 6 migrations applied via Supabase MCP
-- 9 tables, RLS enabled on all
-- 4 Storage buckets (images, documents, videos, fonts)
-- 8 brands seeded, 56 pages seeded
-- Admin trigger active for dev@airtuerk.de
-- First admin user created via Studio (role=admin via trigger)
+#### Design iteration (3 mockup rounds)
 
-- Vercel project terminalv2
-- Team: airtuerk-service-gmbhs-projects
-- Linked to GitHub airtuerkmarketing/terminalv2 (main branch)
-- Env vars set, auto-deploy enabled
-- Preview URL: terminalv2-dusky.vercel.app
+- **v1 (rejected):** Torch Red as UI accent — user feedback "too much red"
+- **v2 (partly approved):** Switched to Quantum Blue, added collapsible sidebar
+  with toggle, made orbs toggleable (on for landing, off for detail), softened
+  card hover (no translate-Y bounce), tall color panels with hover-expand for
+  brand color palettes
+- **v3 (approved):** Final structure — Dashboard / Brands+Products (with IBE
+  expandable) / Resources sections. Shadows +5%. Three document download styles
+  side-by-side for review
 
-- GitHub repo airtuerkmarketing/terminalv2 (private)
+Reference mockup committed to `spec/mockups/v3-01-dashboard.html`.
 
-### Decision updates
+#### Webflow embed extraction (~224 KB)
 
-- D-013: Pro tier active from start (org-level)
-- D-027: Initial admin email hardcoded in handle_new_user() function due to Supabase Postgres permission model
+Extracted custom HTML/CSS/JS from the original Webflow export for verbatim
+preservation. Saved to `spec/embeds/`:
+
+- `apix-page-embeds.html` (34 KB) — APIX Workflow + Global Network
+- `apix-additional.css/.js` (88 KB) — APIX support code
+- `ibe-tools-showcase.html` (15 KB) — full standalone IBE products showcase
+- `jersey-customizer.html` + CSS/JS (17 KB) — Internal Branding tool
+- `signature-generator.html` (0.6 KB) — email signature form
+- `out-of-office-generator.html` (0.4 KB) — OOO message form
+- `color-strip-pattern.html` (0.7 KB) — reference for color_palette block
+- `service-page-support.css/.js` (66 KB) — shared support code
+
+Maps to Phase 6 React components per `EMBEDS_INVENTORY.md`.
+
+#### Database schema changes
+
+Three new migrations applied via Supabase MCP:
+
+- **0007_brand_hierarchy_and_sidebar.sql**
+  - `brands.parent_id` (uuid, nullable, self-reference) — for IBE product hierarchy
+  - `brands.is_product` (boolean) — distinguishes brand vs product-in-suite
+  - `brands.sidebar_section` (text) — `brands` / `resources` / `hidden`
+  - `pages.hidden_in_sidebar` (boolean) — for Playground, airLounge
+
+- **0008_restructure_brands.sql**
+  - Renamed `service-center` → `service-center-antalya` (brand + page slug + all sub-page paths)
+  - Moved Presentation Hub to `sidebar_section = 'resources'`, made it `rendering_mode = 'hardcoded'` with `component_key = 'presentation-hub'`
+  - Updated top-level brand `sort_order` to match final sidebar (10, 20, 30, 40, 50, 60, 70)
+  - Added 7 NEW IBE product sub-brands with `parent_id = (IBE Product Suite id)`: multicheck, cockpit, myTransfer, myBooking, rentalCar, myStats, airLounge
+  - Re-linked existing IBE sub-pages to their new product brand_id
+  - Marked airLounge sub-page `hidden_in_sidebar = true`
+  - Marked Playground `hidden_in_sidebar = true`
+  - Deleted 4 standalone pages (`/budget26`, `/ops`, `/image-grid`, `/focus-mgzn`)
+
+- **0009_design_system_settings.sql**
+  - Seeded `settings` table with design tokens, sidebar config, orb config,
+    document download style preference, Presentation Hub section structure
+  - Added `documents.download_style` column (per-document override)
+  - Added `documents.presentation_section` column (for Presentation Hub categorization)
+
+#### Final DB state after Phase 3.5
+
+- Brands: **15** (8 original + 7 new IBE products)
+- Pages: **52** (was 56, -4 standalone pages)
+- Settings: 14 keys seeded
+
+#### Spec consolidation
+
+New files:
+- `spec/DESIGN_SYSTEM.md` — full design language documentation
+- `spec/EMBEDS_INVENTORY.md` — what we preserved from Webflow
+
+Overwritten with new content:
+- `spec/ARCHITECTURE.md` — reflects new 15-brand structure, 52 pages, design system
+- `spec/DECISIONS.md` — added D-034 to D-046, marked D-010/D-011/D-023 superseded
+- `spec/PHASE_PLAN.md` — Phase 4 onwards revised to new structure
+- `spec/SOURCE_INVENTORY.md` — embeds inventory added, standalone pages removed
+- `spec/BUILD_LOG.md` — this entry
+- `README.md` — file list updated, structure note
+
+Unchanged:
+- `spec/CONTRIBUTING.md` — workflow rules still apply
+- `spec/PRE_FLIGHT.md` — historical pre-Phase-1 doc
+
+#### Locked design decisions
+
+D-034 through D-046 added — see `DECISIONS.md`.
+
+Key principles now enforced:
+1. iOS 18 Liquid Glass design system with light + dark themes
+2. Quantum Blue (`#0A82DF`) is the ONLY UI accent color
+3. Torch Red, Orient Blue, etc., appear ONLY in brand identity content
+4. Three document download styles available, default = preview cards
+5. Brand hierarchy is two levels (parent → product)
+6. Custom Webflow embeds preserved verbatim, ported 1:1 in Phase 6
+
+### Next: Phase 4 — Public frontend (using new structure)
 
 ---
 
-## Phase 0 — Planning (COMPLETE)
+## Phase 3 — Next.js scaffold + auth shell (COMPLETE — 2026-06-15)
 
-Specification documents written and audited (2 review rounds).
-
----
-
-## Phase 3+ roadmap
-
-- Phase 3 — Next.js scaffold (auth, layouts, login)
-- Phase 4 — Public frontend (sidebar, blocks, layouts)
-- Phase 5 — Admin CMS (page editor, asset/doc/team managers)
-- Phase 6 — Hardcoded interactives (team, workflow, signature, configurator)
-- Phase 7 — Polish + cutover (DNS to Vercel)
-- Phase 8 — RAG search (separate scope, later)
-
----
-
-## Logging rules
-
-- Entries terse: what changed, when, why if non-obvious
-- Decisions go in DECISIONS.md, not here
-- File forward only — never rewrite history
-- Phase transitions get a header bump
-
-## Phase 3 — Next.js scaffold + auth shell (completed)
-
-**Date:** 2026-06-15
 **Stack confirmed live:** Next.js 16.2.9 (Turbopack) + Tailwind 4.3.1 + Supabase SSR
 
 ### Scaffold
@@ -130,15 +138,90 @@ Specification documents written and audited (2 review rounds).
 ### Verification
 - Localhost: /admin → redirect /login → sign in dev@airtuerk.de → /admin OK
 - Stats query returns Brands 8, Pages 56, Assets 759, Documents 47
-  (Assets count is 759, not 708 — uploaded set is slightly higher than original
-  manifest count; investigate dedup in Phase 5 admin tooling)
+  (Pre-Phase-3.5 numbers; Phase 3.5 changes brands to 15, pages to 52)
 - Sign out → /login OK
 - Production (terminalv2-dusky.vercel.app): identical behaviour verified
 
 ### Commits
 - 317338e feat(auth): add login + admin shell with supabase auth
 
-### Phase 3 follow-ups (deferred)
+### Phase 3 follow-ups (deferred — addressed in Phase 4)
 - Database types generation: add `db:types` script to package.json
 - Fonts: upload Inter + GeneralSans to public/fonts/, configure next/font/local
-- Phase 4 onwards: see PHASE_PLAN.md
+
+---
+
+## Phase 2 — Asset Upload (COMPLETE — 2026-06-15)
+
+**Status:** All 759 files uploaded to Supabase Storage. Database tables populated.
+
+### What was done
+
+- Uploaded 708 images to images bucket (152 MB)
+- Uploaded 47 documents to documents bucket (92 MB)
+- Uploaded 4 videos to videos bucket (11 MB)
+- 759 rows inserted into assets table
+- 47 rows inserted into documents table with category, language, brand_id, version
+- Documents auto-categorized into 12 categories
+- 4 brands have linked documents: airtuerk-service (7), airtuerk-holidays (2), atbeds (1), airtuerk-apix (1)
+- All public URLs verified working (HTTP 200, correct content-types)
+
+### Deviations from spec
+
+- 12 fonts not yet uploaded. Decision: defer to Phase 3 because Next.js scaffold uses next/font/local with files in /public/fonts/. The fonts bucket exists for future use but is empty for v1.
+- Asset count is 759 not 708 — uploaded set slightly higher than original manifest. Dedup in Phase 5 admin tooling.
+
+---
+
+## Phase 1 — Infrastructure (COMPLETE — 2026-06-15)
+
+**Status:** All infrastructure provisioned and verified.
+
+### What was done
+
+- Supabase project terminalv2 (ref: zkydrymygjrscjbhusxp)
+- Region: eu-central-1 (Frankfurt), Pro tier, Postgres 17.6.1
+- All 6 migrations applied via Supabase MCP
+- 9 tables, RLS enabled on all
+- 4 Storage buckets (images, documents, videos, fonts)
+- 8 brands seeded, 56 pages seeded (later changed in Phase 3.5)
+- Admin trigger active for dev@airtuerk.de
+- First admin user created via Studio (role=admin via trigger)
+
+- Vercel project terminalv2
+- Team: airtuerk-service-gmbhs-projects
+- Linked to GitHub airtuerkmarketing/terminalv2 (main branch)
+- Env vars set, auto-deploy enabled
+- Preview URL: terminalv2-dusky.vercel.app
+
+- GitHub repo airtuerkmarketing/terminalv2 (private)
+
+### Decision updates
+
+- D-013: Pro tier active from start (org-level)
+- D-027: Initial admin email hardcoded in handle_new_user() function due to Supabase Postgres permission model
+
+---
+
+## Phase 0 — Planning (COMPLETE)
+
+Specification documents written and audited (2 review rounds).
+
+---
+
+## Phase 3+ roadmap (post Phase 3.5)
+
+- **Phase 4 — Public frontend** (sidebar with new hierarchy, blocks, layouts, Liquid Glass theme)
+- **Phase 5 — Admin CMS** (page editor, asset/doc/team managers, brand settings)
+- **Phase 6 — Hardcoded interactives** (team, APIX workflow + global network, signature, OOO, identity configurator, IBE tools showcase, Presentation Hub sections)
+- **Phase 7 — Polish + cutover** (full-text search, performance, a11y, SEO, DNS to Vercel)
+- **Phase 8 — RAG search** (separate scope, later)
+
+---
+
+## Logging rules
+
+- Entries terse: what changed, when, why if non-obvious
+- Decisions go in DECISIONS.md, not here
+- File forward only — never rewrite history
+- Phase transitions get a header bump

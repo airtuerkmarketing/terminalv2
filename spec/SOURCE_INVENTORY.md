@@ -1,11 +1,14 @@
 # terminalv2 — Source Inventory
 
 Complete inventory of the Webflow static export (`airtuerk-terminal_webflow.zip`)
-that seeds terminalv2. Generated from the actual zip contents, not estimated.
+that seeds terminalv2.
 
 **Zip size:** 270 MB
 **Total files:** 802
 **Last published by Webflow:** 2026-06-15 12:21:22 UTC
+
+**Updated for Phase 3.5:** standalone pages removed, embeds catalog added.
+See also `EMBEDS_INVENTORY.md` for the custom code preserved from this export.
 
 ---
 
@@ -13,28 +16,35 @@ that seeds terminalv2. Generated from the actual zip contents, not estimated.
 
 The zip contains 21 HTML files. Mapping to terminalv2 routes:
 
-### Maps to a content page (16 files)
+### Maps to a content page (13 files in final structure)
 
 | Source file | Target URL | Type |
 |---|---|---|
-| `index.html` | `/` | Landing |
+| `index.html` | `/` | Dashboard (block-driven) |
 | `airtuerk-service.html` | `/airtuerk-service` | Brand overview |
 | `airtuerk-holidays.html` | `/airtuerk-holidays` | Brand overview |
 | `atbeds.html` | `/atbeds` | Brand overview |
-| `service-center-antalya.html` | `/service-center` | Brand overview (renamed) |
-| `ibe-product-suite.html` | `/ibe-product-suite` | Brand overview |
+| `service-center-antalya.html` | `/service-center-antalya` | Brand overview (URL renamed) |
+| `ibe-product-suite.html` | `/ibe-product-suite` | Hardcoded (Tools Showcase) |
 | `internal-branding.html` | `/internal-branding` | Brand overview |
 | `airtuerk-apix.html` | `/airtuerk-apix` | Brand overview |
-| `presentation-hub.html` | `/presentation-hub` | Utility |
-| `asset-library.html` | `/asset-library` | Utility (hardcoded UI) |
-| `documents-library.html` | `/documents-library` | Utility (hardcoded UI) |
-| `team.html` | `/team` | Utility (hardcoded UI) |
-| `playground.html` | `/playground` | Utility/sandbox |
-| `budget26.html` | `/budget26` | Standalone page |
-| `ops.html` | `/ops` | Standalone page (duty cards) |
-| `image-grid.html` | `/image-grid` | Standalone page |
-| `focus-mgzn.html` | `/focus-mgzn` | Standalone page |
+| `presentation-hub.html` | `/presentation-hub` | Hardcoded (sectioned doc list) |
+| `asset-library.html` | `/asset-library` | Hardcoded UI |
+| `documents-library.html` | `/documents-library` | Hardcoded UI |
+| `team.html` | `/team` | Hardcoded UI |
+| `playground.html` | `/playground` | Block-driven, hidden_in_sidebar |
 | `preview.html` | (development scratch — skipped) | — |
+
+### NOT migrated (removed in Phase 3.5)
+
+These 4 standalone pages from the Webflow export are deleted per D-042:
+
+| Source file | Reason |
+|---|---|
+| `budget26.html` | Internal scratch page, no recurring use |
+| `ops.html` | Duty cards content — superseded by team directory |
+| `image-grid.html` | Demo/sandbox |
+| `focus-mgzn.html` | One-off magazine embed |
 
 ### System pages (3 files)
 
@@ -44,77 +54,99 @@ The zip contains 21 HTML files. Mapping to terminalv2 routes:
 | `401.html` | Replaced by `/login` redirect | Not needed |
 | `search.html` | `/search` | Becomes RAG chat in Phase 8 |
 
-**Important correction:** Earlier counts said "48 pages." The accurate total is
-**56 pages**: 13 top-level + 39 sub-pages + 4 standalone (budget26, ops,
-image-grid, focus-mgzn). See ARCHITECTURE.md §2 for the canonical list.
+**Final page count: 52** (13 top-level + 39 sub-pages).
 
 ---
 
 ## 2. Sub-pages (extracted from sidebar anchors)
 
-These are the hash-anchors that today exist within parent pages. They become
-real nested routes in terminalv2.
+These hash-anchors become real nested routes.
 
-### airtuerk Service (6)
+### airtuerk Service (6) — the Schablone
 - `#logo-airtuerk` → `/airtuerk-service/logos`
 - `#colors` → `/airtuerk-service/colors`
 - `#ux` → `/airtuerk-service/ux`
 - `#master-deck` → `/airtuerk-service/master-deck`
-- `#email-airtuerk-service` → `/airtuerk-service/email-signature`
+- `#email-airtuerk-service` → `/airtuerk-service/email-signature` (hardcoded)
 - `#letterhead` → `/airtuerk-service/letterhead`
 
 ### airtuerk Holidays (5)
 - `#logos` → `/airtuerk-holidays/logos`
 - `#colors` → `/airtuerk-holidays/colors`
 - `#master` → `/airtuerk-holidays/master-deck`
-- `#email-airtuerk-holidays` → `/airtuerk-holidays/email-signature`
+- `#email-airtuerk-holidays` → `/airtuerk-holidays/email-signature` (hardcoded)
 - `#letterhead` → `/airtuerk-holidays/letterhead`
 
-### atBeds (6)
+### atBeds (6) — same Schablone as airtuerk Service
 - `#logo-atbeds` → `/atbeds/logos`
 - `#colors-logo` → `/atbeds/colors`
 - `#ux` → `/atbeds/ux`
 - `#master` → `/atbeds/master-deck`
-- `#email-atbeds` → `/atbeds/email-signature`
+- `#email-atbeds` → `/atbeds/email-signature` (hardcoded)
 - `#letterhead` → `/atbeds/letterhead`
 
-### Service Center (5)
-- `#logo` → `/service-center/logo`
-- `#colors` → `/service-center/colors`
-- `#master` → `/service-center/master-deck`
-- `#email-service-center` → `/service-center/email-signature`
-- `#letterhead` → `/service-center/letterhead`
+### Service Center Antalya (5) — URL renamed in Phase 3.5
+- `#logo` → `/service-center-antalya/logo`
+- `#colors` → `/service-center-antalya/colors`
+- `#master` → `/service-center-antalya/master-deck`
+- `#email-service-center` → `/service-center-antalya/email-signature` (hardcoded)
+- `#letterhead` → `/service-center-antalya/letterhead`
 
-### IBE Product Suite (7)
+### IBE Product Suite (7 — 6 visible + 1 hidden)
 - `#multicheck` → `/ibe-product-suite/multicheck`
-- `#rentalCar` → `/ibe-product-suite/rentalcar`
-- `#myBooking` → `/ibe-product-suite/mybooking`
-- `#myStats` → `/ibe-product-suite/mystats`
-- `#myTransfer` → `/ibe-product-suite/mytransfer`
-- `#airLounge` → `/ibe-product-suite/airlounge`
 - `#cockpit` → `/ibe-product-suite/cockpit`
+- `#myTransfer` → `/ibe-product-suite/mytransfer`
+- `#myBooking` → `/ibe-product-suite/mybooking`
+- `#rentalCar` → `/ibe-product-suite/rentalcar`
+- `#myStats` → `/ibe-product-suite/mystats`
+- `#airLounge` → `/ibe-product-suite/airlounge` (hidden_in_sidebar = true)
+
+Each IBE product has its own brand record (added in migration 0008) with
+`parent_id = (IBE Product Suite id)` and `is_product = true`.
 
 ### Internal Branding (2)
 - `#applied` → `/internal-branding/applied-identity`
-- `#configurator` → `/internal-branding/configurator`
+- `#configurator` → `/internal-branding/configurator` (hardcoded — Jersey Customizer)
 
 ### airtuerk APIX (8)
 - `#present` → `/airtuerk-apix/presentation`
-- `#workflow` → `/airtuerk-apix/workflow`
-- `#global` → `/airtuerk-apix/global-network`
+- `#workflow` → `/airtuerk-apix/workflow` (hardcoded — node graph)
+- `#global` → `/airtuerk-apix/global-network` (hardcoded — animated map)
 - `#partner` → `/airtuerk-apix/partner`
 - `#agreement` → `/airtuerk-apix/agreement`
 - `#doc` → `/airtuerk-apix/documentation`
 - `#nda` → `/airtuerk-apix/nda`
 - `#master` → `/airtuerk-apix/master-deck`
 
-**Sub-page total: 39.** See ARCHITECTURE.md §2 for full tree.
+**Sub-page total: 39.**
 
 ---
 
-## 3. Assets (`images/` directory — 708 files)
+## 3. Custom embeds preserved
 
-### By type (estimated from extensions)
+The Webflow source has hand-written HTML/CSS/JS embeds that don't fit any
+block type. **All preserved in `spec/embeds/`** (per D-046), to be ported 1:1
+to React in Phase 6. Total ~224 KB:
+
+| File | Source page | Phase 6 target |
+|---|---|---|
+| `apix-page-embeds.html` (34 KB) | airtuerk-apix.html | `<APIXWorkflow />` + `<APIXGlobalNetwork />` |
+| `apix-additional.css` (22 KB) | airtuerk-apix.html | APIX styles |
+| `apix-additional.js` (67 KB) | airtuerk-apix.html | APIX logic |
+| `ibe-tools-showcase.html` (15 KB) | ibe-product-suite.html | `/ibe-product-suite` body |
+| `jersey-customizer.html` (0.4 KB) + CSS/JS (17 KB) | internal-branding.html | `<JerseyCustomizer />` |
+| `signature-generator.html` (0.6 KB) | airtuerk-service.html | `<SignatureGenerator />` (4 routes) |
+| `out-of-office-generator.html` (0.4 KB) | airtuerk-service.html | `<OutOfOfficeGenerator />` |
+| `color-strip-pattern.html` (0.7 KB) | airtuerk-service.html | Reference for `color_palette` block |
+| `service-page-support.css/.js` (66 KB) | airtuerk-service.html | Shared Phase 6 styles/scripts |
+
+See `EMBEDS_INVENTORY.md` for the full mapping and port plan.
+
+---
+
+## 4. Assets (`images/` directory — 708 files)
+
+### By type
 
 | Extension | Count | Target bucket |
 |---|---|---|
@@ -125,7 +157,7 @@ real nested routes in terminalv2.
 
 ### Subcategories (used for bucket subfolders)
 
-| Subfolder in `images/` bucket | Contents |
+| Subfolder | Contents |
 |---|---|
 | `brand-logos/airtuerk/` | airtuerk-Logo.svg + variants (Plain, B, W, SW) |
 | `brand-logos/airtuerk-holidays/` | 00.airtuerk-holidays-main-logo.svg + variants |
@@ -135,105 +167,46 @@ real nested routes in terminalv2.
 | `brand-logos/mystats/` | myStats.svg |
 | `brand-logos/mytransfer/` | myTransfer.svg |
 | `brand-logos/rentalcar/` | rentalCar.svg |
-| `brand-logos/airlounge/` | (logos to be confirmed during upload) |
-| `brand-logos/cockpit/` | (logos to be confirmed during upload) |
-| `icons/` | Chevron-Down, Arrow-Left/Right/Up-Right, Menu, Close-Menu, Search, Phone, Calendar, User_02, Steering_Wheel, Luggage, Bell_Ring, Archive, Jet_Engine, Airplane_Mode_On, Air_Traffic_Control_Tower, Pattern, Emblem-Original, download, AaBbCc, etc. |
+| `brand-logos/airlounge/` | airLounge logos (legacy product) |
+| `brand-logos/cockpit/` | Cockpit logos |
+| `icons/` | Chevron-Down, Arrow icons, Menu, Search, etc. |
 | `desktop-backgrounds/` | BG_red.png, BG_blue.png, BG_white.png |
-| `team-backgrounds/` | call-airtuerk.jpg + similar |
-| `stock-photography/` | mohammad-rahmani-*, riccardo-valeriana-*, christian-wiediger-*, nikita-kachanovsky-*, visualsoflukas-*, arif-riyanto-*, majid-rangraz-*, pexels-divinetechygirl-*, clement-m-* |
-| `product-shots/` | airtuerk_products.png, TableStand1.png |
-| `thumbnails/` | OTA-Framework-Agreement_DE.jpg, document preview thumbnails |
-| `misc/` | Notizblock1.jpg, westhafen.jpg, office.jpg, dd5407_* mv2 images, BG generic |
+| `team-backgrounds/` | call-airtuerk.jpg |
+| `stock-photography/` | Various photographers |
+| `product-shots/` | airtuerk_products.png |
+| `thumbnails/` | Document preview thumbnails |
+| `misc/` | Generic photos |
 | `favicon/` | airtuerk-Favicon.svg, favicon.png, webclip.png |
 
-The exact mapping per file is built into `asset-manifest.json` during Phase 2.
+Per-file mapping is in `asset-manifest.json` (Phase 2 output).
 
 ---
 
-## 4. Documents (`documents/` directory — 47 files)
+## 5. Documents (`documents/` directory — 47 files)
 
-Categorized for the `documents` table:
+Categorized for the `documents` table.
 
 ### Framework agreements (8 files)
-
-| Filename | Category | Language | Pair |
-|---|---|---|---|
-| `OTA-Framework-Agreement_DE.pdf` | framework-agreement | de | A |
-| `OTA-Framework-Agreement_DE.docx` | framework-agreement | de | A |
-| `OTA-Framework-Agreement_EN.pdf` | framework-agreement | en | A |
-| `OTA-Framework-Agreement_EN.docx` | framework-agreement | en | A |
-| `Tour-Operator-Framework-Agreement_DE.pdf` | framework-agreement | de | B |
-| `Tour-Operator-Framework-Agreement_DE.docx` | framework-agreement | de | B |
-| `Tour-Operator-Framework-Agreement_EN.pdf` | framework-agreement | en | B |
-| `Tour-Operator-Framework-Agreement_EN.docx` | framework-agreement | en | B |
+OTA + Tour Operator framework agreements, DE + EN, PDF + DOCX
 
 ### Partner agreements (4 files)
-
-| Filename | Category | Language |
-|---|---|---|
-| `Partner_Framework_Agreement_picture.pdf` | partner-agreement | en |
-| `Partner_Framework_Agreement_plain.pdf` | partner-agreement | en |
-| `Partner_Framework_Agreement_DE-Picture-Version.pdf` | partner-agreement | de |
-| `Partner_Framework_Agreement_DE-Plain-Version.pdf` | partner-agreement | de |
+Picture and plain variants, DE + EN
 
 ### SEPA mandates (10 files)
-
-| Filename | Category | Language | Brand |
-|---|---|---|---|
-| `SEPA-Firmenlastschrift-Mandat_airtuerk_DE.pdf` | sepa-mandate | de | airtuerk |
-| `SEPA-Firmenlastschrift-Mandat_airtuerk_EN.pdf` | sepa-mandate | en | airtuerk |
-| `SEPA-Firmenlastschrift-Mandat_-airtuerk_DE.docx` | sepa-mandate | de | airtuerk |
-| `SEPA-Firmenlastschrift-Mandat_-airtuerk_EN.docx` | sepa-mandate | en | airtuerk |
-| `SEPA-Firmenlastschrift-Mandat_airtuerk-holidays_DE.pdf` | sepa-mandate | de | airtuerk-holidays |
-| `SEPA-Firmenlastschrift-Mandat_airtuerk-holidays_EN.pdf` | sepa-mandate | en | airtuerk-holidays |
-| `SEPA-Firmenlastschrift-Mandat_aerticket_DE.pdf` | sepa-mandate | de | (legacy) |
-| `SEPA-Firmenlastschrift-Mandat_aerticket_EN.pdf` | sepa-mandate | en | (legacy) |
-| `SEPA-Firmenlastschrift-Mandat_aerticket_DE.docx` | sepa-mandate | de | (legacy) |
-| `SEPA-Firmenlastschrift-Mandat_aerticket_EN.docx` | sepa-mandate | en | (legacy) |
+Per-brand (airtuerk, holidays, legacy aerticket), DE + EN, PDF + DOCX
 
 ### Master decks (4 files)
-
-| Filename | Category | Language |
-|---|---|---|
-| `airtuerk_Master_DE.pdf` | master-deck | de |
-| `airtuerk_Master_DE.pptx` | master-deck | de |
-| `airtuerk_Master_EN.pdf` | master-deck | en |
-| `airtuerk_Master_EN.pptx` | master-deck | en |
+airtuerk_Master_DE/EN, PDF + PPTX
 
 ### Brand logo packages (9 ZIP files)
-
-| Filename | Category | Brand |
-|---|---|---|
-| `airtuerk-Logo.zip` | logo-package | airtuerk |
-| `atBeds-Logo.zip` | logo-package | atbeds |
-| `multicheck_Logo.zip` | logo-package | multicheck |
-| `myBooking_Logo.zip` | logo-package | mybooking |
-| `myStats_Logo.zip` | logo-package | mystats |
-| `myTransfer_Logo.zip` | logo-package | mytransfer |
-| `rentalCar_Logo.zip` | logo-package | rentalcar |
-| `airLounge_Logo.zip` | logo-package | airlounge |
-| `Cockpit_Logo.zip` | logo-package | cockpit |
+One per brand including new IBE products
 
 ### Other (12 files)
-
-| Filename | Category | Notes |
-|---|---|---|
-| `airtuerk-NDA.zip` | nda | Standard NDA package |
-| `API_Doc_v1.pdf` | api-doc | APIX documentation v1 |
-| `Focus-Magazine_June_page.pdf` | magazine | Focus issue |
-| `Abweichende-Bankverbindung.pdf` | bank-info | de |
-| `Abweichende-Bankverbindung.docx` | bank-info | de |
-| `Reisekostenformular-2026.pdf` | hr-form | de, 2026 version |
-| `Reisekostenformular-2026.docx` | hr-form | de, 2026 version |
-| `Logos.pdf` | reference | Compiled logo reference |
-| `airtuerk_Logos.pdf` | reference | airtuerk-specific logo reference |
-| `Hauptkonto.zip` | bank-info | Account documents |
-| `Nebenkonto01.zip` | bank-info | Account documents |
-| `Bayram-2026-Bilder.zip` | misc | Holiday imagery pack |
+NDA, API doc, Focus Magazine, bank info, HR forms, reference docs
 
 ---
 
-## 5. Videos (`videos/` directory — 4 files)
+## 6. Videos (`videos/` directory — 4 files)
 
 | Filename | Target bucket subfolder |
 |---|---|
@@ -244,96 +217,73 @@ Categorized for the `documents` table:
 
 ---
 
-## 6. Fonts (`fonts/` directory — 12 files)
+## 7. Fonts (`fonts/` directory — 12 files)
 
-| Filename | Target bucket subfolder | Note |
-|---|---|---|
-| `Inter-Light.woff2` | `fonts/inter/` | Local-hosted, used in CSS |
-| `Inter-Regular.woff2` | `fonts/inter/` | |
-| `Inter-Medium.woff2` | `fonts/inter/` | |
-| `Inter-SemiBold.woff2` | `fonts/inter/` | |
-| `Inter-Bold.woff2` | `fonts/inter/` | |
-| `GeneralSans-Regular.woff2` | `fonts/general-sans/` | |
-| `GeneralSans-Medium.woff2` | `fonts/general-sans/` | |
-| `GeneralSans-Semibold.woff2` | `fonts/general-sans/` | |
-| `GeneralSans-Bold.woff2` | `fonts/general-sans/` | |
-| `fontello.woff` | `fonts/icon-fonts/` | Icon font, may be replaceable by lucide |
-| `line-rounded-icon-font-brix.woff` | `fonts/icon-fonts/` | Icon font |
-| `social-media-icon-font-brix.woff` | `fonts/icon-fonts/` | Icon font |
+Inter (5 weights), GeneralSans (4 weights), icon fonts (3 files).
 
-**Note:** terminalv2 prefers `lucide-react` for icons. Icon fonts (`fontello`,
-`brix-*`) get migrated to Lucide equivalents during Phase 4. They're uploaded
-to Storage as a fallback but should not be relied on in new code.
+Phase 3 decision: ship via `next/font/local` from `public/fonts/`. Bucket
+exists but is empty for v1.
 
 ---
 
-## 7. CSS & JS (legacy)
+## 8. CSS & JS (legacy)
 
-The CSS (`normalize.css`, `components.css`, `airtuerk-terminal.css`) and JS
-(`airtuerk-terminal.js`) files from Webflow are **reference material only**.
-They are NOT migrated into terminalv2 directly. terminalv2 uses Tailwind +
-shadcn/ui from scratch.
+The Webflow CSS (`normalize.css`, `components.css`, `airtuerk-terminal.css`)
+and JS (`airtuerk-terminal.js`) are **reference material only**.
 
-The reference files are kept in `/spec/reference/` for design lookup during
-the rebuild.
+terminalv2 uses Tailwind 4 + iOS 18 Liquid Glass tokens from scratch (D-034).
+
+The reference files are kept in `/spec/reference/` for design lookup. The
+custom embeds with real preserved value are in `/spec/embeds/`.
 
 ---
 
-## 8. Team data (extracted from `team.html`)
-
-Team data is embedded in an inline JavaScript array (`var EMPLOYEES = [...]`)
-in team.html. Confirmed via inspection:
+## 9. Team data (extracted from `team.html`)
 
 - **Total members: 63**
-- Fields per member: `firstName`, `lastName`, `title` (position), `team`
-  (department), optional `photo` (asset URL)
-- 5 members have photos: Ümit Tenekeci, Ahmet Oezbek, Emre Karakas,
-  Hakan Sezen, Oruc Demir
-- Remaining 58 use initials-only avatars
+- Embedded in inline `var EMPLOYEES = [...]` JavaScript array
+- Fields: `firstName`, `lastName`, `title`, `team` (department), optional `photo`
+- 5 members have photos; 58 use initials-only avatars
 
-Departments observed in screenshot (Image 10):
-Management (5), Service (16), Finance (9), HR (3), IT (14), Flugdisposition
-(5), Vertrieb (4), Marketing (2), Verwaltung (3), airtuerk Holidays (2).
+Departments observed: Management, Service, Finance, HR, IT, Flugdisposition,
+Vertrieb, Marketing, Verwaltung, airtuerk Holidays.
 
-Some members belong to multiple brands ("airtuerk Holidays 2" appears as
-both a department-like filter and a brand). Handled via junction table
-`team_member_brands` (D-026).
+Junction table `team_member_brands` handles multi-brand membership (D-026).
 
-The full 63-member list is extracted into `team-manifest.json` during Phase 2.
+Full 63-member list extracted into `team-manifest.json` during Phase 2.
 
 ---
 
-## 9. External references in HTML
-
-Things the source HTML loads from outside, that we replace:
+## 10. External references in HTML
 
 | External reference | Replacement |
 |---|---|
 | `https://cdn.prod.website-files.com/...` (Webflow CDN) | Supabase Storage URLs |
-| `https://ajax.googleapis.com/.../webfont.js` (Web Font Loader) | `next/font/local` |
+| `https://ajax.googleapis.com/.../webfont.js` | `next/font/local` |
 | Google Fonts (DM Mono, Inter, Plus Jakarta Sans) | Self-hosted via `next/font` |
 | `https://cdn.jsdelivr.net/gh/airtuerkmarketing/terminal@main/airtuerk-search.js` | Built-in `/api/search` route |
-| `https://d3e54v103j8qbb.cloudfront.net/.../jquery-3.5.1.min.js` (Webflow jQuery) | Removed — React replaces it |
+| Webflow jQuery 3.5.1 | Removed — React replaces it |
 | `https://airtuerk.de` | Kept as external link |
-| `https://www.linkedin.com/company/airtuerk-service-gmbh/` | Kept as external link |
-| `https://www.instagram.com/airtuerk_official/` | Kept as external link |
+| `https://www.linkedin.com/...` | Kept |
+| `https://www.instagram.com/...` | Kept |
 
 ---
 
-## Summary numbers (canonical)
+## Summary numbers (canonical, post Phase 3.5)
 
 | Asset class | Count |
 |---|---|
 | HTML pages in zip | 21 |
-| Mapped to content routes | 17 (incl. 4 standalone) |
-| Target pages in DB | **56** (13 top-level + 39 sub-pages + 4 standalone) |
-| Image files | 708 |
+| Mapped to content routes | 13 |
+| Target pages in DB | **52** (13 top-level + 39 sub-pages) |
+| Target brands in DB | **15** (8 original + 7 IBE products) |
+| Image files | 708 (uploaded 759) |
 | Document files | 47 |
 | Video files | 4 |
 | Font files | 12 |
 | Team members | 63 |
-| Brands | 8 |
 | Block types | 15 + raw_html |
+| Custom embeds preserved | 12 files, ~224 KB |
 
 If any future inventory disagrees with this document, this document wins —
 unless DECISIONS.md or BUILD_LOG.md explicitly supersedes it.

@@ -1,0 +1,593 @@
+<!--  ════════════════════════════════════════════════════════════
+     AIRTÜRK — PowerPoint Embed (OneDrive / Office Online)
+     Paste this whole block into a Webflow "Embed" element.
+     The deck keeps ALL animations (Morph, GIF, transitions)
+     because it is rendered live by PowerPoint for the web.
+     ════════════════════════════════════════════════════════════  -->
+          <div class="ppx-wrap" id="ppx-root">
+            <div class="ppx-bar">
+              <div>
+                <h3 class="ppx-title">APIX Presentation</h3>
+                <p class="ppx-sub">Use the arrows inside the player &middot; press the button for fullscreen</p>
+
+<!-- ─── EMBED BLOCK ─── -->
+
+<!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>APIX Workflow — Interactive</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+            <style>body{margin:0;padding:0;font-family:'Inter',-apple-system,sans-serif;min-height:100vh}</style>
+          </head>
+          <body>
+            <div class="ax-wrap" id="ax-root">
+              <div class="ax-bar">
+                <div>
+                  <h3 class="ax-title">APIX Workflow</h3>
+                  <p class="ax-sub">Drag boxes to rearrange · click any element to learn more</p>
+
+<!-- ─── EMBED BLOCK ─── -->
+
+<style>
+/* ============================================================
+   airtuerk APIX — Global Network  ·  STYLES (Block 1 of 3)
+   ============================================================ */
+.apix-mw, .apix-mw * { box-sizing: border-box; }
+.apix-mw {
+  position: relative; width: 100%; margin: 24px auto;
+  font: 14px 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1a1a1a; -webkit-font-smoothing: antialiased; user-select: none;
+}
+/* ─── Map stage ─── */
+.apix-mw-stage {
+  position: relative; width: 100%; aspect-ratio: 1400 / 720;
+  overflow: hidden; border-radius: 20px; background: #FAFBFC;
+  background-image: radial-gradient(circle, #D8DCE0 1.1px, transparent 1.1px);
+  background-size: 24px 24px; border: 1px solid #EBEBEB;
+  box-shadow: 0 10px 40px -14px rgba(0,0,0,.14);
+}
+.apix-mw-stage > svg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block; touch-action: none; cursor: grab;
+}
+.apix-mw-stage > svg:active { cursor: grabbing; }
+.apix-mw-pills { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+/* ─── SVG layers ─── */
+.apix-mw .land { fill: #E7E9EC; stroke: #fff; stroke-width: .4; }
+.apix-mw .connection {
+  fill: none; stroke: #94A3B8; stroke-width: 1.2; stroke-dasharray: 2 3;
+  opacity: 0; vector-effect: non-scaling-stroke;
+  animation: apixFade .9s ease-out forwards;
+  transition: stroke .18s, stroke-width .18s, opacity .18s;
+}
+.apix-mw .connection.s-active   { stroke: #0A82DF; }
+.apix-mw .connection.s-upcoming { stroke: #F59E0B; }
+.apix-mw .connection.s-office   { stroke: #0557A6; }
+.apix-mw .connection.is-active  { stroke-width: 2; opacity: 1 !important; }
+.apix-mw .leader {
+  stroke: #94A3B8; stroke-width: 1; fill: none; opacity: 0;
+  vector-effect: non-scaling-stroke;
+  animation: apixFade .6s ease-out forwards; transition: opacity .22s;
+}
+.apix-mw .country-dot {
+  stroke: #fff; stroke-width: 1.6; opacity: 0;
+  vector-effect: non-scaling-stroke;
+  animation: apixFade .4s ease-out forwards;
+}
+.apix-mw .country-dot.s-active   { fill: #0A82DF; }
+.apix-mw .country-dot.s-upcoming { fill: #F59E0B; }
+.apix-mw .country-hit { fill: transparent; cursor: pointer; pointer-events: all; }
+/* ─── HUB: company favicon disc ─── */
+.apix-mw .hub-marker { opacity: 0; animation: apixFade .55s ease-out .15s forwards; pointer-events: none; }
+.apix-mw .hub-ring {
+  fill: none; stroke: #0A82DF; stroke-width: 1.5; opacity: .55;
+  transform-origin: center; transform-box: fill-box; vector-effect: non-scaling-stroke;
+  animation: apixHubRing 2.4s ease-out infinite;
+}
+.apix-mw .apix-pulse {
+  fill: none; stroke: #0A82DF; stroke-width: 1.6; opacity: .7;
+  transform-origin: center; transform-box: fill-box; vector-effect: non-scaling-stroke;
+  animation: apixRing 1.8s ease-out 2;
+}
+/* ─── OFFICE markers (lucide building-2) ─── */
+.apix-mw .office-marker { opacity: 0; animation: apixFade .45s ease-out forwards; }
+.apix-mw .office-marker .ofc-bg { fill: #fff; stroke: #0557A6; stroke-width: 1.6; transition: stroke-width .15s; }
+.apix-mw .office-marker .ofc-ic { fill: none; stroke: #0557A6; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.apix-mw .office-marker.is-hot .ofc-bg { stroke-width: 2.6; }
+/* ─── PILL labels ─── */
+.apix-pill {
+  position: absolute; transform: translate(-50%,-50%);
+  padding: 5px 9px; background: #fff; box-shadow: 0 2px 8px rgba(17,24,39,.1);
+  border-radius: 9px; outline: 1px solid #EBEBEB; outline-offset: -1px;
+  display: inline-flex; align-items: center; gap: 6px;
+  pointer-events: auto; cursor: pointer; white-space: nowrap;
+  opacity: 0; animation: apixFade .4s ease-out forwards;
+  transition: outline-color .18s, box-shadow .18s, opacity .22s;
+  z-index: 2; will-change: left, top;
+}
+.apix-pill:hover { outline-color: #0A82DF; box-shadow: 0 4px 14px rgba(10,130,223,.2); z-index: 6; }
+.apix-pill__flag {
+  width: 18px; height: 18px; border-radius: 50%; overflow: hidden;
+  flex-shrink: 0; background: #f1f5f9; box-shadow: 0 .5px 2px #DFDFDF;
+}
+.apix-pill__flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.apix-pill__label { font-size: 13px; font-weight: 600; line-height: 1; letter-spacing: .01em; color: #111; }
+.apix-pill__role {
+  font-size: 10px; font-weight: 700; line-height: 1; letter-spacing: .05em;
+  color: #0557A6; background: #E8F1FA; border-radius: 5px; padding: 3px 6px; text-transform: uppercase;
+}
+.apix-pill.is-office { outline-color: #BBD3EA; }
+.apix-pill.is-office:hover { outline-color: #0557A6; box-shadow: 0 4px 14px rgba(5,87,166,.22); }
+.apix-mw.labels-off .apix-pill:not(.is-hovered) { opacity: 0 !important; pointer-events: none; }
+.apix-mw.labels-off .leader:not(.is-active) { opacity: 0 !important; }
+.apix-pill.is-hovered { z-index: 10; outline-color: #0A82DF; box-shadow: 0 4px 14px rgba(10,130,223,.2); }
+.apix-pill.is-office.is-hovered { outline-color: #0557A6; }
+/* ─── GLASS ─── */
+.apix-glass {
+  background: rgba(255,255,255,.55);
+  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.65);
+  box-shadow: 0 8px 30px rgba(17,24,39,.14), inset 0 1px 0 rgba(255,255,255,.7);
+  border-radius: 16px;
+}
+/* ─── Floating top control bar ─── */
+.apix-controls {
+  position: absolute; top: 14px; left: 14px; right: 14px; z-index: 20;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap; pointer-events: none;
+}
+.apix-controls > * { pointer-events: auto; }
+.apix-cgroup { display: flex; align-items: center; gap: 4px; padding: 5px; flex-wrap: wrap; }
+/* ─── State tabs (single-select) ─── */
+.apix-state {
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px;
+  border: 1px solid transparent; border-radius: 999px; background: transparent;
+  font: 600 12px/1 'Inter', sans-serif; color: #1a1a1a; cursor: pointer;
+  opacity: .55; transition: opacity .18s, background .18s, border-color .18s, color .18s, transform .1s;
+}
+.apix-state:hover { opacity: .9; background: rgba(255,255,255,.45); }
+.apix-state:active { transform: scale(.97); }
+.apix-state[aria-pressed="true"] {
+  opacity: 1; background: #fff; border-color: rgba(0,0,0,.06); box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.apix-state[aria-pressed="true"][data-state="active"]   { color: #0A82DF; }
+.apix-state[aria-pressed="true"][data-state="upcoming"] { color: #B45309; }
+.apix-state[aria-pressed="true"][data-state="office"]   { color: #0557A6; }
+.apix-state__dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.apix-state[data-state="active"]   .apix-state__dot { background: #0A82DF; }
+.apix-state[data-state="upcoming"] .apix-state__dot { background: #F59E0B; }
+.apix-state[data-state="office"]   .apix-state__dot { background: #0557A6; }
+.apix-state__count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  background: rgba(0,0,0,.07); border-radius: 9px;
+  font: 700 10px/1 'Inter', sans-serif; color: #555; margin-left: 1px;
+}
+.apix-state[aria-pressed="true"] .apix-state__count { background: currentColor; color: #fff; opacity: .85; }
+/* ─── Icon buttons ─── */
+.apix-iconbtn {
+  width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(0,0,0,.06); border-radius: 12px; background: rgba(255,255,255,.45);
+  color: #1a1a1a; cursor: pointer; transition: background .15s, color .15s, transform .1s;
+}
+.apix-iconbtn:hover { background: rgba(255,255,255,.9); }
+.apix-iconbtn:active { transform: scale(.94); }
+.apix-iconbtn[aria-pressed="true"] { background: #EFF6FE; border-color: #BFDDF8; color: #0A82DF; }
+.apix-iconbtn .ic-off { display: none; }
+.apix-iconbtn[aria-pressed="true"] .ic-on { display: none; }
+.apix-iconbtn[aria-pressed="true"] .ic-off { display: block; }
+/* ─── Searchable country dropdown ─── */
+.apix-dd { position: relative; }
+.apix-dd__btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; min-width: 190px;
+  border: 1px solid rgba(255,255,255,.65); border-radius: 12px; background: rgba(255,255,255,.55);
+  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+  font: 600 13px/1 'Inter', sans-serif; color: #1a1a1a; cursor: pointer;
+}
+.apix-dd__btn:hover { background: rgba(255,255,255,.8); }
+.apix-dd__btnflag { width: 18px; height: 18px; border-radius: 50%; overflow: hidden; background: #eef2f6; flex-shrink: 0; }
+.apix-dd__btnflag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.apix-dd__btnflag:empty { display: none; }
+.apix-dd__btnlabel { flex: 1; text-align: left; white-space: nowrap; }
+.apix-dd__chev { width: 14px; height: 14px; opacity: .55; transition: transform .2s; flex-shrink: 0; }
+.apix-dd.is-open .apix-dd__chev { transform: rotate(180deg); }
+.apix-dd__panel { position: absolute; top: calc(100% + 8px); left: 0; width: 280px; max-width: 84vw; padding: 8px; z-index: 60; display: none; }
+.apix-dd.is-open .apix-dd__panel { display: block; animation: apixPop .18s ease-out; }
+.apix-dd__search {
+  width: 100%; height: 36px; padding: 0 12px; margin-bottom: 6px;
+  border: 1px solid rgba(0,0,0,.08); border-radius: 10px; background: rgba(255,255,255,.6);
+  font: 500 13px 'Inter', sans-serif; color: #111; outline: none;
+}
+.apix-dd__search:focus { border-color: #0A82DF; box-shadow: 0 0 0 3px rgba(10,130,223,.15); }
+.apix-dd__list { max-height: 280px; overflow-y: auto; scrollbar-width: thin; }
+.apix-dd__list::-webkit-scrollbar { width: 7px; }
+.apix-dd__list::-webkit-scrollbar-thumb { background: rgba(0,0,0,.18); border-radius: 4px; }
+.apix-dd__item { display: flex; align-items: center; gap: 10px; padding: 8px 9px; border-radius: 10px; cursor: pointer; transition: background .12s; }
+.apix-dd__item:hover, .apix-dd__item.kbd { background: rgba(10,130,223,.1); }
+.apix-dd__item.is-all { font-weight: 700; color: #0A82DF; border-bottom: 1px solid rgba(0,0,0,.06); border-radius: 10px 10px 0 0; }
+.apix-dd__iflag { width: 22px; height: 16px; border-radius: 3px; overflow: hidden; background: #eef2f6; flex-shrink: 0; }
+.apix-dd__iflag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.apix-dd__iname { flex: 1; font-size: 13px; font-weight: 500; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.apix-dd__idot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.apix-dd__empty { padding: 14px; text-align: center; color: #94A3B8; font-size: 12px; }
+/* ─── Zoom controls ─── */
+.apix-zoom { position: absolute; right: 14px; bottom: 14px; z-index: 20; display: flex; flex-direction: column; padding: 4px; gap: 2px; }
+.apix-zoom button {
+  width: 36px; height: 36px; border: none; background: transparent; color: #1a1a1a; cursor: pointer;
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 19px; font-weight: 500; transition: background .12s, transform .1s;
+}
+.apix-zoom button:hover { background: rgba(10,130,223,.12); color: #0A82DF; }
+.apix-zoom button:active { transform: scale(.92); }
+.apix-zoom .apix-zoom__sep { height: 1px; background: rgba(0,0,0,.08); margin: 1px 6px; }
+/* ─── Fullscreen ─── */
+.apix-mw.is-fullscreen {
+  position: fixed; inset: 0; z-index: 99999; margin: 0; width: 100vw; height: 100vh;
+  background: #FAFBFC; display: flex; align-items: center; justify-content: center;
+}
+.apix-mw.is-fullscreen .apix-mw-stage {
+  width: min(100vw, calc(100vh * 1400 / 720)); border-radius: 0; box-shadow: none; border: none;
+}
+.apix-mw.is-fullscreen .apix-controls { top: 18px; left: 18px; right: 18px; }
+.apix-mw.is-fullscreen .apix-zoom { right: 18px; bottom: 18px; }
+@keyframes apixFade { to { opacity: 1; } }
+@keyframes apixPop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes apixRing    { 0% { transform: scale(.6); opacity: .6; } 100% { transform: scale(3);   opacity: 0; } }
+@keyframes apixHubRing { 0% { transform: scale(1);  opacity: .55;} 100% { transform: scale(2.6); opacity: 0; } }
+@media (max-width: 720px) {
+  .apix-controls { top: 10px; left: 10px; right: 10px; gap: 8px; }
+  .apix-cgroup { padding: 4px; }
+  .apix-state { height: 28px; padding: 0 10px; font-size: 11px; }
+  .apix-state__count { min-width: 16px; height: 16px; font-size: 9px; }
+  .apix-dd__btn { min-width: 150px; height: 36px; }
+  .apix-pill__label { font-size: 12px; }
+}
+</style>
+
+<!-- ─── EMBED BLOCK ─── -->
+
+<!--  preconnect + Inter so pill widths measure correctly  -->
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+          <!--  ============================================================
+     airtuerk APIX — Global Network  ·  MARKUP (Block 2 of 3)
+     ============================================================  -->
+          <section class="apix-mw" id="apixMap">
+            <div class="apix-mw-stage" id="apixStage">
+              <svg viewbox="0 0 1400 720" preserveaspectratio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"></svg>
+              <div class="apix-mw-pills" id="apixPills">
+
+<!-- ─── EMBED BLOCK ─── -->
+
+<script>
+(function () {
+  /* ============================================================
+     airtuerk APIX — Global Network  ·  LOGIC (Block 3 of 3)
+     ============================================================ */
+  /* ╔══════════════════════════════════════════════════════════╗
+     ║  ★★★  EDIT YOUR MARKETS HERE  ★★★                         ║
+     ║                                                            ║
+     ║  Hub = GERMANY (company favicon marker, always visible).   ║
+     ║  Tabs are single-select. Allowed `state` values:           ║
+     ║    'active'    → "Doing business currently"  (DEFAULT)    ║
+     ║    'upcoming'  → "Coming up next"                          ║
+     ║    'office'    → "Our Offices" (building markers; add     ║
+     ║                   office:true and a `role` label)          ║
+     ╚══════════════════════════════════════════════════════════╝ */
+  const HUB_ICON = "https://cdn.prod.website-files.com/68d6684f885f73c332639c8e/69faf99d5741fe8723502313_at%20Favicon.svg";
+  const COUNTRIES = [
+    /* ─── HUB (always visible, company favicon) ────────────── */
+    { name: "GERMANY",              code: "de", lng: 10.45, lat: 51.16, hub: true, state: "active" },
+    /* ─── DOING BUSINESS CURRENTLY (30 active partners) ───── */
+    { name: "TÜRKİYE",              code: "tr", lng: 35.24, lat: 39.00, state: "active" },
+    { name: "IRAQ",                 code: "iq", lng: 43.68, lat: 33.00, state: "active" },
+    { name: "GABON",                code: "ga", lng: 11.60, lat: -0.80, state: "active" },
+    { name: "IRELAND",              code: "ie", lng: -8.00, lat: 53.20, state: "active" },
+    { name: "BELGIUM",              code: "be", lng:  4.60, lat: 50.60, state: "active" },
+    { name: "UKRAINE",              code: "ua", lng: 31.50, lat: 49.00, state: "active" },
+    { name: "LIBYA",                code: "ly", lng: 17.50, lat: 27.00, state: "active" },
+    { name: "UNITED KINGDOM",       code: "gb", lng: -2.00, lat: 54.00, state: "active" },
+    { name: "AZERBAIJAN",           code: "az", lng: 47.70, lat: 40.30, state: "active" },
+    { name: "PALESTINE",            code: "ps", lng: 35.20, lat: 31.90, state: "active" },
+    { name: "KENYA",                code: "ke", lng: 37.90, lat:  0.20, state: "active" },
+    { name: "PAKISTAN",             code: "pk", lng: 69.30, lat: 30.40, state: "active" },
+    { name: "UNITED ARAB EMIRATES", code: "ae", lng: 54.30, lat: 24.00, state: "active" },
+    { name: "FRANCE",               code: "fr", lng:  2.40, lat: 46.60, state: "active" },
+    { name: "MOROCCO",              code: "ma", lng: -6.50, lat: 31.80, state: "active" },
+    { name: "SAUDI ARABIA",         code: "sa", lng: 45.00, lat: 24.00, state: "active" },
+    { name: "NEPAL",                code: "np", lng: 84.10, lat: 28.40, state: "active" },
+    { name: "UNITED STATES",        code: "us", lng: -98.0, lat: 39.50, state: "active" },
+    { name: "CHINA",                code: "cn", lng: 104.0, lat: 35.50, state: "active" },
+    { name: "HONG KONG",            code: "hk", lng: 114.2, lat: 22.30, state: "active" },
+    { name: "UZBEKISTAN",           code: "uz", lng: 64.50, lat: 41.50, state: "active" },
+    { name: "INDONESIA",            code: "id", lng: 113.0, lat: -1.50, state: "active" },
+    { name: "INDIA",                code: "in", lng: 79.00, lat: 22.00, state: "active" },
+    { name: "ALGERIA",              code: "dz", lng:  2.60, lat: 28.00, state: "active" },
+    { name: "QATAR",                code: "qa", lng: 51.20, lat: 25.30, state: "active" },
+    { name: "GREECE",               code: "gr", lng: 22.00, lat: 39.20, state: "active" },
+    { name: "SYRIA",                code: "sy", lng: 38.50, lat: 35.00, state: "active" },
+    { name: "KYRGYZSTAN",           code: "kg", lng: 74.80, lat: 41.30, state: "active" },
+    { name: "KAZAKHSTAN",           code: "kz", lng: 67.00, lat: 48.00, state: "active" },
+    { name: "TAJIKISTAN",           code: "tj", lng: 71.30, lat: 38.90, state: "active" },
+    /* ─── COMING UP NEXT (edit / add / remove freely) ─────── */
+    { name: "SERBIA",               code: "rs", lng: 21.00, lat: 44.20, state: "upcoming" },
+    { name: "BULGARIA",             code: "bg", lng: 25.50, lat: 42.70, state: "upcoming" },
+    { name: "SOUTH AFRICA",         code: "za", lng: 25.00, lat: -29.0, state: "upcoming" },
+    { name: "EGYPT",                code: "eg", lng: 30.50, lat: 26.50, state: "upcoming" },
+    { name: "NIGERIA",              code: "ng", lng:  8.00, lat:  9.00, state: "upcoming" },
+    { name: "SENEGAL",              code: "sn", lng: -14.5, lat: 14.50, state: "upcoming" },
+    /* ─── OUR OFFICES (building markers) ──────────────────── */
+    { name: "FRANKFURT", code: "de", lng:  8.68, lat: 50.11, state: "office", office: true, role: "HQ" },
+    { name: "ISTANBUL",  code: "tr", lng: 28.98, lat: 41.01, state: "office", office: true, role: "BedBank" },
+    { name: "ANTALYA",   code: "tr", lng: 30.71, lat: 36.89, state: "office", office: true, role: "Service Center" },
+  ];
+  /* ─────────────  END OF EDITABLE MARKET DATA  ───────────── */
+  const STATE_META = {
+    active:   { label: "Doing business currently", color: "#0A82DF" },
+    upcoming: { label: "Coming up next",           color: "#F59E0B" },
+    office:   { label: "Our Offices",              color: "#0557A6" },
+  };
+  const DEFAULT_STATE = "active";
+  const WIDTH = 1400, HEIGHT = 720, ITER = 340;
+  const HUB_R = 13, OFFICE_R = 12;
+  const FLAG = c => "https://flagcdn.com/w80/" + c + ".png";
+  /* lucide.dev "building-2" path data (24×24) */
+  const BUILDING2 = ["M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z","M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2","M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2","M10 6h4","M10 10h4","M10 14h4","M10 18h4"];
+  const root = document.getElementById("apixMap"); if (!root) return;
+  const stageEl  = document.getElementById("apixStage");
+  const pillsEl  = document.getElementById("apixPills");
+  const ddEl     = document.getElementById("apixDropdown");
+  const ddBtn    = document.getElementById("apixDdBtn");
+  const ddBtnFlag= document.getElementById("apixDdBtnFlag");
+  const ddLabel  = document.getElementById("apixDdBtnLabel");
+  const ddSearch = document.getElementById("apixDdSearch");
+  const ddList   = document.getElementById("apixDdList");
+  const labelsBtn= document.getElementById("apixLabelsBtn");
+  const fsBtn    = document.getElementById("apixFsBtn");
+  let activeGroup = DEFAULT_STATE;
+  let d3, svgSel, gZoom, ringLayer, projection, zoom, points = [], selected = null;
+  function loadScript(src, ready) {
+    return new Promise((res, rej) => {
+      if (ready && ready()) return res();
+      let s = document.querySelector('script[data-apix-src="' + src + '"]');
+      if (!s) { s = document.createElement("script"); s.src = src; s.async = true;
+        s.dataset.apixSrc = src; s.onerror = () => rej(); document.head.appendChild(s); }
+      const t0 = Date.now();
+      (function p(){ if (ready && ready()) return res();
+        if (Date.now() - t0 > 15000) return rej(); setTimeout(p, 30); })();
+    });
+  }
+  Promise.all([
+    loadScript("https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js", () => window.d3),
+    loadScript("https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js", () => window.topojson),
+  ])
+    .then(() => fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"))
+    .then(r => r.json()).then(init)
+    .catch(() => { stageEl.innerHTML =
+      '<div style="padding:80px 24px;text-align:center;color:#64748b;font-family:Inter,sans-serif">Map data could not be loaded.
+
+<!-- ─── EMBED BLOCK ─── -->
+
+<!--  preconnect + Inter so card widths render correctly  -->
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+          <!--  ============================================================
+     airtuerk APIX — Group Structure  ·  SINGLE EMBED  (v5 · English, fixed)
+     Cards drag-sortable per column · click opens detail modal
+     with location map (Leaflet, lazy-loaded) + badge + founding year
+     ============================================================  -->
+          <style>
+.apix-org, .apix-org * { box-sizing: border-box; }
+.apix-org {
+  position: relative; width: 100%; margin: 24px auto;
+  font: 14px 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1a1a1a; -webkit-font-smoothing: antialiased; user-select: none;
+}
+/* ─── Stage (same dotted canvas as the map) ─── */
+.apix-org-stage {
+  position: relative; width: 100%; padding: 16px 16px 24px;
+  border-radius: 20px; background: #FAFBFC;
+  background-image: radial-gradient(circle, #D8DCE0 1.1px, transparent 1.1px);
+  background-size: 24px 24px; border: 1px solid #EBEBEB;
+  box-shadow: 0 10px 40px -14px rgba(0,0,0,.14);
+}
+/* ─── Glass (identical recipe) ─── */
+.apix-org .apix-glass {
+  background: rgba(255,255,255,.55);
+  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.65);
+  box-shadow: 0 8px 30px rgba(17,24,39,.14), inset 0 1px 0 rgba(255,255,255,.7);
+  border-radius: 16px;
+}
+/* ─── Top bar ─── */
+.apix-org-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 16px; margin-bottom: 18px; flex-wrap: wrap;
+}
+.apix-org-top__brand {
+  display: inline-flex; align-items: center; gap: 9px;
+  font: 700 15px/1 'Inter', sans-serif; color: #111; letter-spacing: .01em;
+}
+.apix-org-top__brand svg { width: 17px; height: 17px; flex-shrink: 0; }
+.apix-org-top__meta {
+  display: inline-flex; align-items: center; gap: 10px;
+  font: 500 12px/1.4 'Inter', sans-serif; color: #6B7280;
+}
+.apix-org-reset {
+  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px;
+  border: 1px solid rgba(0,0,0,.06); border-radius: 999px; background: rgba(255,255,255,.45);
+  font: 600 12px/1 'Inter', sans-serif; color: #1a1a1a; cursor: pointer;
+  transition: background .15s, color .15s, transform .1s;
+}
+.apix-org-reset:hover { background: #fff; color: #0A82DF; }
+.apix-org-reset:active { transform: scale(.96); }
+.apix-org-reset svg { width: 13px; height: 13px; }
+/* ─── Column grid ─── */
+.apix-org-cols {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px; align-items: start;
+}
+.apix-org-col { min-width: 0; }
+/* ─── Column header pill ─── */
+.apix-org-colhead {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 14px; margin-bottom: 14px; border-radius: 14px;
+  font: 700 14px/1 'Inter', sans-serif; letter-spacing: .01em;
+  border: 1px solid transparent;
+}
+.apix-org-colhead svg { width: 16px; height: 16px; flex-shrink: 0; }
+.apix-org-colhead__count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px; margin-left: 2px;
+  background: currentColor; border-radius: 9px;
+}
+.apix-org-colhead__count span {
+  font: 700 10px/1 'Inter', sans-serif; color: #fff;
+}
+/* ─── Cards ─── */
+.apix-org-list { display: flex; flex-direction: column; gap: 12px; min-height: 40px; }
+.apix-org-card {
+  position: relative; background: #fff; border-radius: 12px;
+  outline: 1px solid #EBEBEB; outline-offset: -1px;
+  box-shadow: 0 2px 8px rgba(17,24,39,.07);
+  padding: 13px 16px 13px 30px; text-align: center; cursor: pointer;
+  transition: outline-color .18s, box-shadow .18s, transform .12s;
+}
+.apix-org-card__title {
+  font-size: 14px; font-weight: 600; line-height: 1.25; color: #111; letter-spacing: .005em;
+}
+.apix-org-card__sub {
+  margin-top: 4px; font-size: 11.5px; font-weight: 500; line-height: 1.3; color: #9CA3AF;
+}
+.apix-org-card:hover { outline-color: var(--col, #0A82DF); box-shadow: 0 4px 14px var(--colShadow, rgba(10,130,223,.2)); }
+/* grip handle (drag) */
+.apix-org-card__grip {
+  position: absolute; left: 7px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 22px; display: flex; align-items: center; justify-content: center;
+  color: #C6CBD2; opacity: 0; cursor: grab; touch-action: none;
+  transition: opacity .15s, color .15s;
+}
+.apix-org-card:hover .apix-org-card__grip { opacity: 1; }
+.apix-org-card__grip:hover { color: var(--col, #0A82DF); }
+.apix-org-card__grip:active { cursor: grabbing; }
+@media (hover: none) { .apix-org-card__grip { opacity: .65; } }
+/* highlighted company (airtuerk) */
+.apix-org-card.is-self {
+  background: #EFF6FE; outline: 2px solid #0A82DF; outline-offset: -2px;
+  box-shadow: 0 4px 16px rgba(10,130,223,.18);
+}
+.apix-org-card.is-self .apix-org-card__title { color: #0A82DF; font-size: 16px; font-weight: 700; }
+.apix-org-card.is-self .apix-org-card__sub   { color: #0557A6; }
+/* drag states */
+.apix-org-card.is-ghosted { opacity: .35; outline: 1.5px dashed var(--col, #0A82DF); outline-offset: -1.5px; box-shadow: none; }
+.apix-org-drag-ghost {
+  position: fixed; z-index: 99999; pointer-events: none; margin: 0;
+  transform: rotate(1.4deg) scale(1.02);
+  box-shadow: 0 14px 34px rgba(17,24,39,.22); opacity: .96;
+}
+.apix-org.is-dragging, .apix-org.is-dragging * { cursor: grabbing !important; }
+/* ════════════════════ DETAIL MODAL ════════════════════ */
+.apix-org-modal {
+  position: fixed; inset: 0; z-index: 100000; display: none;
+  align-items: center; justify-content: center; padding: 20px;
+  background: rgba(17,24,39,.38);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.apix-org-modal.is-open { display: flex; }
+.apix-org-modal__box {
+  position: relative; width: 100%; max-width: 520px;
+  background: #fff; border-radius: 20px; overflow: hidden;
+  border: 1px solid #EBEBEB;
+  box-shadow: 0 24px 70px -18px rgba(17,24,39,.4);
+  animation: apixOrgPop .22s ease-out;
+}
+.apix-org-modal__close {
+  position: absolute; top: 12px; right: 12px; z-index: 1000;
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,.65); border-radius: 12px; cursor: pointer;
+  background: rgba(255,255,255,.7);
+  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+  box-shadow: 0 4px 16px rgba(17,24,39,.16); color: #1a1a1a;
+  transition: background .15s, color .15s, transform .1s;
+}
+.apix-org-modal__close:hover { background: #fff; color: #0A82DF; }
+.apix-org-modal__close:active { transform: scale(.92); }
+.apix-org-modal__close svg { width: 15px; height: 15px; }
+/* map area */
+.apix-org-modal__map {
+  width: 100%; height: 250px; background: #EDF1F4; display: none; position: relative; z-index: 0;
+}
+.apix-org-modal.has-map .apix-org-modal__map { display: block; }
+.apix-org-modal__map .leaflet-control-attribution {
+  font: 400 9px 'Inter', sans-serif; background: rgba(255,255,255,.7);
+}
+/* custom pin */
+.apix-org-pin { position: relative; width: 18px; height: 18px; }
+.apix-org-pin::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: var(--col, #0A82DF); border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(17,24,39,.3);
+}
+.apix-org-pin::after {
+  content: ""; position: absolute; inset: -2px; border-radius: 50%;
+  border: 1.6px solid var(--col, #0A82DF);
+  animation: apixOrgRing 1.9s ease-out infinite;
+}
+/* modal body */
+.apix-org-modal__body { padding: 20px 24px 24px; }
+.apix-org-modal__chips { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 11px; }
+.apix-org-chip {
+  display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px;
+  border-radius: 999px; border: 1px solid transparent;
+  font: 700 10.5px/1 'Inter', sans-serif; letter-spacing: .05em; text-transform: uppercase;
+}
+.apix-org-chip svg { width: 11px; height: 11px; }
+.apix-org-chip--cat     { background: var(--chipBg, #EFF6FE); color: var(--chipCol, #0A82DF); border-color: var(--chipBorder, #BFDDF8); }
+.apix-org-chip--founded { background: #F4F5F7; color: #4B5563; border-color: #E5E7EB; }
+.apix-org-chip--self    { background: #0A82DF; color: #fff; }
+.apix-org-modal__title { font-size: 21px; font-weight: 700; line-height: 1.2; color: #111; letter-spacing: -.01em; }
+.apix-org-modal__loc {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 7px;
+  font: 500 13px/1.3 'Inter', sans-serif; color: #6B7280;
+}
+.apix-org-modal__loc svg { width: 13px; height: 13px; flex-shrink: 0; color: #9CA3AF; }
+.apix-org-modal__desc {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid #F0F1F3;
+  font: 400 13px/1.55 'Inter', sans-serif; color: #4B5563;
+}
+.apix-org-modal__desc:empty { display: none; }
+@keyframes apixOrgFade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes apixOrgPop  { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes apixOrgRing { 0% { transform: scale(1); opacity: .6; } 100% { transform: scale(2.4); opacity: 0; } }
+.apix-org-card, .apix-org-colhead { animation: apixOrgFade .4s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .apix-org-card, .apix-org-colhead, .apix-org-modal__box { animation: none; }
+  .apix-org-pin::after { animation: none; opacity: 0; }
+}
+@media (max-width: 1100px) { .apix-org-cols { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 640px) {
+  .apix-org-cols { grid-template-columns: 1fr; }
+  .apix-org-stage { padding: 12px 12px 18px; }
+  .apix-org-top { padding: 10px 12px; }
+  .apix-org-top__meta { font-size: 11px; }
+  .apix-org-modal { padding: 12px; }
+  .apix-org-modal__map { height: 200px; }
+  .apix-org-modal__body { padding: 16px 18px 20px; }
+}
+</style>
+          <section class="apix-org" id="apixOrg">
+            <div class="apix-org-stage">
+              <div class="apix-glass apix-org-top">
+                <div class="apix-org-top__brand">
+                  <svg viewbox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path>
+                  </svg>
+                  AERTiCKET Group

@@ -4,6 +4,8 @@ This document is the **canonical system design** for terminalv2. Every
 decision below is locked. Changes require a new entry in `DECISIONS.md` and
 an update here.
 
+**Last consolidated:** Phase 3.5 (2026-06-15)
+
 ---
 
 ## 1. System overview
@@ -21,12 +23,12 @@ deploy together to Vercel as one unit.
                 │  terminal.airtuerk.de   (Vercel Edge — eu-central-1) │
                 │  ┌────────────────────────┬────────────────────────┐ │
                 │  │  Public (no auth)      │  /admin (auth-gated)   │ │
-                │  │  • Brand Universe      │  • Dashboard           │ │
-                │  │  • 8 brand sections    │  • Page editor         │ │
-                │  │  • 39 sub-pages        │  • Asset library       │ │
-                │  │  • 4 standalone pages  │  • Document library    │ │
-                │  │  • 5 utility pages     │  • Team manager        │ │
-                │  │  • /search (text→RAG)  │  • Brand settings      │ │
+                │  │  • Dashboard           │  • Dashboard           │ │
+                │  │  • 7 brand sections    │  • Page editor         │ │
+                │  │  • 7 IBE products      │  • Asset library       │ │
+                │  │  • Presentation Hub    │  • Document library    │ │
+                │  │  • Asset/Doc/Team libs │  • Team manager        │ │
+                │  │  • /search             │  • Brand settings      │ │
                 │  └────────────────────────┴────────────────────────┘ │
                 └────────────────────────────┬─────────────────────────┘
                                              │
@@ -35,8 +37,8 @@ deploy together to Vercel as one unit.
                 │  Supabase project: terminalv2   (Frankfurt)          │
                 │  ┌──────────────────┬──────────────────────────────┐ │
                 │  │  Postgres        │  Storage (4 buckets)         │ │
-                │  │  • brands        │  • images   (CDN-cached)     │ │
-                │  │  • pages         │  • documents (CDN)           │ │
+                │  │  • brands (15)   │  • images   (CDN-cached)     │ │
+                │  │  • pages (52)    │  • documents (CDN)           │ │
                 │  │  • blocks        │  • videos   (streaming)      │ │
                 │  │  • assets        │  • fonts    (immutable)      │ │
                 │  │  • documents     │                              │ │
@@ -48,23 +50,97 @@ deploy together to Vercel as one unit.
                 └──────────────────────────────────────────────────────┘
 ```
 
+**Brand count is 15:** 7 top-level brands + 7 IBE product sub-brands + 1 Presentation Hub (resources section). See §2 for breakdown.
+
+**Page count is 52:** 13 top-level + 39 sub-pages, after removing 4 standalone pages in Phase 3.5.
+
 ---
 
-## 2. Site structure (56 pages — canonical)
+## 2. Brand hierarchy
 
-The accurate count is **56 pages**: 13 top-
-level + 39 sub-pages + 4 standalone. Every URL below corresponds to one row in
-the `pages` table.
+terminalv2 has a **two-level brand hierarchy**, introduced in Phase 3.5 (D-039).
 
-### Group A — Brand sections (collapsible parents, 8 brands)
+### Top-level brands (7) — appear in main sidebar "Brands & Products"
+
+| sort | slug | name | sidebar_section | parent_id |
+|---|---|---|---|---|
+| 10 | `airtuerk-service` | airtuerk Service | brands | NULL |
+| 20 | `airtuerk-holidays` | airtuerk Holidays | brands | NULL |
+| 30 | `atbeds` | atBeds | brands | NULL |
+| 40 | `service-center-antalya` | Service Center Antalya | brands | NULL |
+| 50 | `ibe-product-suite` | IBE Product Suite (expandable) | brands | NULL |
+| 60 | `internal-branding` | Internal Branding | brands | NULL |
+| 70 | `airtuerk-apix` | airtuerk APIX | brands | NULL |
+
+### IBE Product Suite sub-brands (7) — nested under IBE in sidebar
+
+| sort | slug | name | parent_id | is_product | sidebar |
+|---|---|---|---|---|---|
+| 51 | `multicheck` | multicheck | IBE | true | nested |
+| 52 | `cockpit` | cockpit | IBE | true | nested |
+| 53 | `mytransfer` | myTransfer | IBE | true | nested |
+| 54 | `mybooking` | myBooking | IBE | true | nested |
+| 55 | `rentalcar` | rentalCar | IBE | true | nested |
+| 56 | `mystats` | myStats | IBE | true | nested |
+| 57 | `airlounge` | airLounge | IBE | true | **hidden** |
+
+### Resources section brands (1)
+
+| sort | slug | name | sidebar_section | rendering |
+|---|---|---|---|---|
+| 200 | `presentation-hub` | Presentation Hub | resources | hardcoded |
+
+---
+
+## 3. Sidebar structure
+
+```
+Dashboard
+─── divider ───
+airtuerk Service
+airtuerk Holidays
+atBeds
+Service Center Antalya
+IBE Product Suite                ▶  (expandable, click chevron)
+   ├── multicheck
+   ├── cockpit
+   ├── myTransfer
+   ├── myBooking
+   ├── rentalCar
+   └── myStats
+   (airLounge: hidden_in_sidebar)
+Internal Branding
+airtuerk APIX
+─── divider ───
+Asset Library
+Document Library
+Team
+Presentation Hub
+```
+
+Sidebar source of truth: `brands.sidebar_section` + `brands.parent_id` +
+`pages.hidden_in_sidebar`. The renderer queries these and builds the tree.
+
+Hidden in sidebar but URL is still reachable:
+- `/playground` (game coming later)
+- `/ibe-product-suite/airlounge` (legacy product, kept for inbound links)
+
+Deleted entirely in Phase 3.5:
+- `/budget26`, `/ops`, `/image-grid`, `/focus-mgzn`
+
+---
+
+## 4. Site structure (52 pages — canonical)
+
+### Group A — Brand sections (collapsible parents, 7 brands)
 
 | # | Path | Title | Children |
 |---|---|---|---|
 | 02 | `/airtuerk-service` | airtuerk Service | 6 |
 | 03 | `/airtuerk-holidays` | airtuerk Holidays | 5 |
 | 04 | `/atbeds` | atBeds | 6 |
-| 05 | `/service-center` | Service Center | 5 |
-| 06 | `/ibe-product-suite` | IBE Product Suite | 7 |
+| 05 | `/service-center-antalya` | Service Center Antalya | 5 |
+| 06 | `/ibe-product-suite` | IBE Product Suite (hardcoded) | 7 |
 | 07 | `/internal-branding` | Internal Branding | 2 |
 | 08 | `/airtuerk-apix` | airtuerk APIX | 8 |
 
@@ -72,258 +148,195 @@ the `pages` table.
 
 | # | Path | Title | Type |
 |---|---|---|---|
-| 01 | `/` | Brand Universe | Landing (block-driven) |
-| 09 | `/presentation-hub` | Presentation Hub | Block-driven |
+| 01 | `/` | Dashboard | Block-driven (landing) |
+| 09 | `/presentation-hub` | Presentation Hub | Hardcoded (sectioned doc list) |
 | 10 | `/asset-library` | Asset Library | Hardcoded UI |
 | 11 | `/documents-library` | Documents Library | Hardcoded UI |
 | 12 | `/team` | Team | Hardcoded UI |
-| 13 | `/playground` | Playground | Block-driven (sandbox) |
-
-### Standalone pages (no number, not in main sidebar)
-
-| Path | Title | Type |
-|---|---|---|
-| `/budget26` | Budget 2026 | Block-driven |
-| `/ops` | Operations | Block-driven (duty cards) |
-| `/image-grid` | Image Grid | Block-driven |
-| `/focus-mgzn` | Focus Magazine | Block-driven |
+| 13 | `/playground` | Playground | Hidden until game ships |
 
 ### Full sub-page tree
 
-See `SOURCE_INVENTORY.md §2` for the complete enumeration of all 39 sub-pages
-with their original anchor IDs.
+#### airtuerk Service (6) — the Schablone
+- `/airtuerk-service/logos`
+- `/airtuerk-service/colors`
+- `/airtuerk-service/ux`
+- `/airtuerk-service/master-deck`
+- `/airtuerk-service/email-signature` (hardcoded)
+- `/airtuerk-service/letterhead`
+
+#### airtuerk Holidays (5)
+Same as Service minus the UX page.
+
+#### atBeds (6) — same Schablone as airtuerk Service
+
+#### Service Center Antalya (5) — note URL renamed from /service-center
+
+#### IBE Product Suite (7 nested products, 6 visible)
+- `/ibe-product-suite/multicheck`
+- `/ibe-product-suite/cockpit`
+- `/ibe-product-suite/mytransfer`
+- `/ibe-product-suite/mybooking`
+- `/ibe-product-suite/rentalcar`
+- `/ibe-product-suite/mystats`
+- `/ibe-product-suite/airlounge` (hidden in sidebar)
+
+#### Internal Branding (2)
+- `/internal-branding/applied-identity`
+- `/internal-branding/configurator` (hardcoded — Jersey Customizer)
+
+#### airtuerk APIX (8)
+- `/airtuerk-apix/presentation`
+- `/airtuerk-apix/workflow` (hardcoded — interactive node graph)
+- `/airtuerk-apix/global-network` (hardcoded — animated map)
+- `/airtuerk-apix/partner`
+- `/airtuerk-apix/agreement`
+- `/airtuerk-apix/documentation`
+- `/airtuerk-apix/nda`
+- `/airtuerk-apix/master-deck`
 
 ---
 
-## 3. Page rendering modes
-
-Every visible URL in the system has a row in the `pages` table — including
-hardcoded ones. This is required so the sidebar, number badges, breadcrumbs,
-and prev/next navigation always work. The `pages.rendering_mode` column
-controls how the page renders:
+## 5. Page rendering modes
 
 | `rendering_mode` | Behavior |
 |---|---|
-| `blocks` | Page renders by reading ordered rows from `blocks` table |
-| `hardcoded` | Page renders by mounting a fixed React component (looked up by `pages.component_key`) |
+| `blocks` | Renders by reading ordered rows from `blocks` table |
+| `hardcoded` | Renders by mounting a fixed React component (looked up by `pages.component_key`) |
 
-**Pages with `rendering_mode = 'hardcoded'`:**
+### Hardcoded pages
 
 | Path | `component_key` | Why hardcoded |
 |---|---|---|
-| `/team` | `team-directory` | Queries `team_members` table, has filter UI |
-| `/asset-library` | `asset-library` | Queries `assets` table with filters |
-| `/documents-library` | `document-library` | Queries `documents` table with filters |
+| `/team` | `team-directory` | Queries `team_members`, filter UI |
+| `/asset-library` | `asset-library` | Queries `assets`, filter UI |
+| `/documents-library` | `document-library` | Queries `documents`, filter UI |
+| `/presentation-hub` | `presentation-hub` | Sectioned doc list (NEW in 3.5) |
 | `/search` | `search` | RAG chat interface |
-| `/airtuerk-apix/workflow` | `apix-workflow` | Interactive drag-rearrange node graph |
+| `/ibe-product-suite` | `ibe-tools-showcase` | Adapted from Webflow embed (NEW in 3.5) |
+| `/airtuerk-apix/workflow` | `apix-workflow` | Interactive node graph |
+| `/airtuerk-apix/global-network` | `apix-global-network` | Animated map (NEW in 3.5) |
 | `/airtuerk-service/email-signature` | `email-signature` | Form-driven HTML generator |
 | `/airtuerk-holidays/email-signature` | `email-signature` | Same component, branded |
 | `/atbeds/email-signature` | `email-signature` | Same component, branded |
-| `/service-center/email-signature` | `email-signature` | Same component, branded |
-| `/internal-branding/configurator` | `identity-configurator` | Visual identity builder (spec in DECISIONS D-025) |
+| `/service-center-antalya/email-signature` | `email-signature` | Same component, branded |
+| `/internal-branding/configurator` | `identity-configurator` | Jersey Customizer (D-025) |
 
-Hardcoded pages still have a `pages` row (with title, parent_id, sort_order,
-etc.) so the sidebar shows them correctly.
+Hardcoded pages still have a `pages` row.
 
 ---
 
-## 4. Block system
+## 6. Block system
 
 There are **15 block types** plus `raw_html` as an escape hatch.
 
-`color_entry` is NOT a separate block — it's a sub-shape used inside
-`color_palette.colors[]` (correction from earlier draft).
+`color_entry` is a sub-shape inside `color_palette.colors[]`, not a separate block.
 
 ### Structure blocks
-
-| Type | Content shape |
-|---|---|
-| `page_hero` | `{ number?: string, title: string, subtitle?: string }` |
-| `description` | `{ html: string }` |
-| `page_nav` | `{ prev?: { label, href }, next?: { label, href } }` |
+- `page_hero` — `{ number?: string, title: string, subtitle?: string }`
+- `description` — `{ html: string }`
+- `page_nav` — `{ prev?: { label, href }, next?: { label, href } }`
 
 ### Brand blocks
-
-| Type | Content shape |
-|---|---|
-| `color_palette` | `{ colors: ColorEntry[] }` where `ColorEntry = { number, role, name, hex, rgb, cmyk, pantone? }` |
-| `typography_specimen` | `{ fontFamily, weights, sampleText, kerningDemo?, sizeScale? }` |
-| `type_scale_table` | `{ rows: [{ sizeRange, lineHeight, label, tracking, notes }] }` |
-| `logo_showcase` | `{ logos: [{ assetId, variant, background, downloadAssetId, label }] }` |
-| `logo_grid` | `{ logos: [{ assetId, label, href? }], layout: 'circles' \| 'tiles' }` |
+- `color_palette` — `{ colors: ColorEntry[], display: 'panels' | 'strips' }`
+  - `display: 'panels'` (default) = tall hover-expand panels per DESIGN_SYSTEM §9
+  - `display: 'strips'` = compact horizontal strip
+- `typography_specimen`
+- `type_scale_table`
+- `logo_showcase` — Webflow-style large display + Download link
+- `logo_grid` — circles or tiles layout
 
 ### Content blocks
-
-| Type | Content shape |
-|---|---|
-| `asset_block` | `{ previewAssetId, downloads: [{ assetId, label, fileType }] }` |
-| `asset_grid` | `{ columns: 2 \| 3 \| 4, items: AssetBlockContent[] }` |
-| `document_list` | `{ groups: [{ title, documentIds: string[] }] }` |
-| `duty_card` | `{ icon, name, subs: string[] }` |
-| `duty_grid` | `{ duties: DutyCardContent[] }` |
-| `product_showcase` | `{ productName, description, featureTags: string[], ctaLabel, ctaHref, carouselAssetIds: string[] }` |
+- `asset_block`
+- `asset_grid`
+- `document_list` — `{ style?: 'list_rows' | 'preview_cards' | 'image_outline_button', groups: ... }`
+  - Three styles per Phase 3.5. Default if not set: `preview_cards`.
+- `duty_card`, `duty_grid`
+- `product_showcase`
 
 ### Escape hatch
-
-| Type | Content shape |
-|---|---|
-| `raw_html` | `{ html: string }` |
+- `raw_html`
 
 ### Layout flag (every block)
 
-Every block carries a `layout` field, stored as a column on `blocks`:
-
-```ts
+Stored as a column on `blocks`:
+```
 layout: 'full' | 'two-column'
 ```
 
-`two-column` puts heading on the left (~30%), content on the right (~70%) —
-the recurring `.two-blocks-content-grid` pattern in the original site
-(70 occurrences across the source HTML).
+Two-column places heading on left (~30%), content on right (~70%) — the
+brand-detail Schablone pattern.
 
 ### Block validation
 
-Every block type has a Zod schema in `src/lib/blocks/schemas.ts`. The schema
-files are required reading for any change to a block. Schemas are paired with:
+Every block type has a Zod schema in `src/lib/blocks/schemas.ts`. Schemas are paired with:
+- TypeScript type (`src/lib/blocks/types.ts`)
+- Renderer (`src/components/blocks/{group}/{name}.tsx`)
+- Admin form (`src/components/admin/page-editor/block-form.tsx`)
+- Registry entry (`src/lib/blocks/registry.ts`)
 
-- The TypeScript type (`src/lib/blocks/types.ts`)
-- The renderer (`src/components/blocks/{group}/{name}.tsx`)
-- The admin form (`src/components/admin/page-editor/block-form.tsx`)
-- The registry entry (`src/lib/blocks/registry.ts`)
-
-A "new block type" PR touches exactly these five files, plus a database
-migration if the block needs new lookup fields. The schema is the source of
-truth — types are inferred from it.
+A "new block type" PR touches these five files plus a migration if needed.
 
 ---
 
-## 5. Database schema
+## 7. Database schema
 
-Eight tables plus one junction table. Full DDL lives in
-`supabase/migrations/0001_initial_schema.sql`.
+### Tables (10 total — 1 added in Phase 3.5 logic, no new tables)
 
-Summary (full types and constraints in the SQL):
+Schema lives in:
+- `supabase/migrations/0001_initial_schema.sql` — initial 9 tables + 1 junction
+- `supabase/migrations/0007_brand_hierarchy_and_sidebar.sql` — adds columns: `brands.parent_id`, `brands.is_product`, `brands.sidebar_section`, `pages.hidden_in_sidebar`
+- `supabase/migrations/0008_restructure_brands.sql` — data migration
+- `supabase/migrations/0009_design_system_settings.sql` — settings seed + `documents.download_style` + `documents.presentation_section`
 
-### `brands` — 8 rows (seeded)
-Holds the eight airtuerk brands.
+### `brands` (Phase 3.5 schema)
 
-### `pages` — 56 rows (seeded in 0005)
-Self-referencing tree. Top-level pages have `parent_id IS NULL` and an
-explicit `number` (1-13). Sub-pages have `parent_id` set and `number IS NULL`.
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| slug | text UNIQUE | |
+| name, short_name, tagline, description | text | |
+| logo_asset_id | uuid FK | |
+| primary_color | text | hex |
+| sort_order | integer | |
+| `parent_id` | uuid FK | NEW — for sub-brand hierarchy |
+| `is_product` | boolean | NEW — true for IBE products |
+| `sidebar_section` | text | NEW — `brands` / `resources` / `hidden` |
+| created_at, updated_at | timestamptz | |
 
-`full_path` is auto-computed via a generated column from the parent chain
-plus this page's slug. It's UNIQUE.
+### `pages` (Phase 3.5 schema)
 
-`rendering_mode` is an enum-style check constraint:
-`CHECK (rendering_mode IN ('blocks', 'hardcoded'))`.
+Adds `hidden_in_sidebar boolean DEFAULT false`. All other columns from 0001 unchanged.
 
-### `blocks` — content of `rendering_mode='blocks'` pages
-Ordered list per page. `content` is JSONB validated by Zod at the application
-layer.
+### `documents` (Phase 3.5 schema)
 
-### `assets` — every uploaded image/video/font
-Populated in Phase 2 from the manifest. Each row is one file in Supabase
-Storage with metadata.
-
-### `documents` — first-class document type
-Separate from `assets` because they have semantic structure (category,
-language, DE/EN pairs, version). PDFs, DOCX, PPTX, ZIPs.
-
-### `team_members` + `team_member_brands`
-63 team members, each may belong to one or more brands. Junction table for
-the many-to-many relationship (D-026).
-
-### `settings` — key/value config
-Single-row pattern. Site title, footer text, default OG image, etc.
-
-### `profiles` — admin users
-Mirrors `auth.users` with a `role` column. Auto-created by trigger when a
-new user signs up (D-027).
+Adds:
+- `download_style text` — overrides site default per document
+- `presentation_section text` — for Presentation Hub categorization
 
 ### Row Level Security
 
-| Table | SELECT (read) | INSERT/UPDATE/DELETE (write) |
-|---|---|---|
-| `brands` | public | admin only |
-| `pages` | public WHERE status='published' | admin only |
-| `blocks` | public if parent page is published | admin only |
-| `assets` | public | admin only |
-| `documents` | public | admin only |
-| `team_members` | public | admin only |
-| `team_member_brands` | public | admin only |
-| `settings` | public | admin only |
-| `profiles` | own row only | own row only (limited fields) |
-
-The "admin" check is via `auth.jwt()->>'role' = 'admin'` or via
-`EXISTS(SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')`.
+Unchanged from 0002. Public read where applicable, admin write everywhere.
 
 ---
 
-## 6. Storage buckets
+## 8. Storage buckets
 
-Four buckets in Supabase Storage, all `eu-central-1`:
-
-### `images/` (public, aggressive CDN cache)
-
-```
-brand-logos/{brand-slug}/...
-icons/...
-desktop-backgrounds/...
-team-backgrounds/...
-product-shots/...
-stock-photography/...
-thumbnails/...
-favicon/...
-misc/...
-```
-
-### `documents/` (public for v1, designed to lock down later)
-
-```
-framework-agreements/
-partner-agreements/
-sepa-mandates/
-master-decks/
-nda/
-api-docs/
-magazines/
-bank-info/
-hr-forms/
-logo-packages/
-reference/
-misc/
-```
-
-### `videos/` (public, range-request friendly for streaming)
-
-```
-master/
-posters/
-```
-
-### `fonts/` (public, immutable 1-year cache)
-
-```
-inter/
-general-sans/
-icon-fonts/        (legacy, prefer lucide-react)
-```
-
-Bucket creation lives in
-`supabase/migrations/0003_storage_buckets.sql`.
+Unchanged from 0003. Four buckets: `images`, `documents`, `videos`, `fonts`.
 
 ---
 
-## 7. Routing model
+## 9. Routing model
 
-### Static and hardcoded routes (fixed file paths)
+### Static and hardcoded routes
 
 ```
-src/app/(public)/page.tsx                  → /            (block-driven landing, special case for full_path='/')
-src/app/(public)/team/page.tsx             → /team        (hardcoded UI shadows DB row)
-src/app/(public)/asset-library/page.tsx    → /asset-library
-src/app/(public)/documents-library/page.tsx → /documents-library
-src/app/(public)/search/page.tsx           → /search
+src/app/(public)/page.tsx                       → /
+src/app/(public)/team/page.tsx                  → /team
+src/app/(public)/asset-library/page.tsx         → /asset-library
+src/app/(public)/documents-library/page.tsx     → /documents-library
+src/app/(public)/presentation-hub/page.tsx      → /presentation-hub  (NEW)
+src/app/(public)/search/page.tsx                → /search
 ```
 
 ### Dynamic catch-all (everything else)
@@ -332,109 +345,103 @@ src/app/(public)/search/page.tsx           → /search
 src/app/(public)/[...slug]/page.tsx
 ```
 
-Handles `/airtuerk-service`, `/airtuerk-service/logos`, `/budget26`, etc.
+Handles all DB-driven pages.
 
 **Resolution algorithm:**
-
 1. Static file paths above match first (Next.js routing order)
 2. `[...slug]/page.tsx` builds `full_path` from `params.slug`
 3. Query: `SELECT * FROM pages WHERE full_path = $1 AND status = 'published'`
-4. If found:
-   - If `rendering_mode='blocks'` → load blocks, render via `BlockRenderer`
-   - If `rendering_mode='hardcoded'` → mount component by `component_key`
-5. If not found → Next.js `not-found.tsx`
+4. If `rendering_mode = 'blocks'` → load blocks, render via `BlockRenderer`
+5. If `rendering_mode = 'hardcoded'` → mount component by `component_key`
+6. If not found → Next.js `not-found.tsx`
 
-### Next.js 15 async API correction
+### Next.js 16 async API
 
-In Next.js 15, `params`, `searchParams`, `cookies()`, and `headers()` are
-async. Example for the catch-all route:
-
-```tsx
-// src/app/(public)/[...slug]/page.tsx
-export default async function CatchAllPage({
-  params,
-}: {
-  params: Promise<{ slug: string[] }>;
-}) {
-  const { slug } = await params;
-  const fullPath = '/' + slug.join('/');
-  const page = await getPageByPath(fullPath);
-  // ...
-}
-```
-
-Always await `params` before reading from it. Same rule for `cookies()` and
-`headers()` in Server Components and Route Handlers.
+In Next.js 16, `params`, `searchParams`, `cookies()`, and `headers()` are async. See D-031.
 
 ---
 
-## 8. Authentication & access
+## 10. Authentication & access
 
-- **Public site:** no auth needed. Public-read by default.
-- **Admin (`/admin/*`):** Supabase Auth, email+password.
-  Middleware checks session and redirects to `/login` if absent.
-- **Roles:** stored in `profiles.role` (`admin` | `editor` | `viewer`).
-  v1 uses only `admin`.
-- **First admin:** created manually via Supabase dashboard (D-028).
-  Auto-profile-creation trigger gives them `role = 'admin'` if email
-  matches the seeded `INITIAL_ADMIN_EMAIL` env var.
-
-Future frontend auth (members, partner-gated content) is feasible without
-schema changes — the table structure already supports it.
+- Public site: no auth needed
+- Admin (`/admin/*`): Supabase Auth, email+password
+- Auth-gating happens in Server Component layouts (D-033), not in proxy.ts
+- `proxy.ts` only refreshes session cookies (D-032)
+- Roles: `admin` | `editor` | `viewer` — v1 uses only `admin`
+- First admin: via Supabase Studio + D-027 trigger
 
 ---
 
-## 9. Search
+## 11. Search
 
-Two phases.
+### Phase A — Postgres full-text search (Phase 7)
 
-### Phase A — Postgres full-text search (launches with v1)
+Migration `0010_fulltext_search.sql` (was 0007 in old plan, renumbered after 3.5):
+- Generated `search_vector` columns on `pages`, `documents`, `team_members`
+- `block_searchable_text` view
+- GIN indexes
+- `/api/search` route handler
 
-**Not** in 0001 migration. Added in a later migration once content exists.
-Trying to maintain `tsvector` columns before any content is uploaded creates
-churn. Sequence:
+### Phase B — RAG (Phase 8, deferred)
 
-1. v1 launches with text content in the DB
-2. Migration `0007_fulltext_search.sql` adds:
-   - `pages.search_vector` (generated column from title + meta_description)
-   - `documents.search_vector` (generated column from title + description)
-   - `team_members.search_vector` (generated column from name + position)
-   - Block text extracted into a `block_searchable_text` view
-   - GIN indexes on all four
-3. `/api/search` route handler uses `to_tsquery` against these
-
-### Phase B — RAG (deferred, separate project)
-
-- Enable pgvector extension
+- pgvector extension
 - Embeddings of pages, blocks, documents
 - Chat-style UI at `/search`
-- Powered by Claude API
-- Stubs reserved in `src/lib/search/rag.ts` from day one
+- Claude API integration
+- Stubs reserved from day one in `src/lib/search/rag.ts`
 
 ---
 
-## 10. Caching & revalidation
+## 12. Design system
 
-- Public page rendering: `revalidate = 3600` (1 hour default)
-- Admin publish action: calls `revalidatePath(page.full_path)` plus the
-  parent paths so the sidebar refreshes
-- Asset URLs: immutable. Once an asset is in Storage, its public URL never
-  changes. Replace = new upload + new URL + update block references.
-- Sidebar tree: fetched once per request in a Server Component, cached
-  via React's request memoization
+The visual language is documented in `DESIGN_SYSTEM.md`. Quick reference:
+
+- **iOS 18 Liquid Glass** material system (light + dark themes)
+- **Quantum Blue** (`#0A82DF`) as the only UI accent color
+- **Brand colors stay in brand content** — never in UI chrome
+- **Three document download styles**, default = preview cards
+- **Sidebar collapses** 252px ↔ 64px, IBE expandable
+- **Orbs** toggleable, on for Dashboard / off for detail pages
+- **Shadows** soft but visible (+5% over initial proposal)
+- **No card-bounce on hover** — calm background + shadow swap only
+
+The reference implementation is `spec/mockups/v3-01-dashboard.html`. Phase 4 ports the tokens to `src/styles/theme.css`.
 
 ---
 
-## 11. Anti-features (explicitly NOT in v1)
+## 13. Custom embeds preserved from Webflow
 
-To prevent scope creep:
+See `EMBEDS_INVENTORY.md`. ~224 KB of custom HTML/CSS/JS extracted from the
+original site:
 
-- Frontend user accounts (table structure supports it, feature is off)
-- Multi-language CMS content (`pages.language` field is reserved)
-- Version history / revisions (Supabase PITR covers DR for v1)
-- Multi-reviewer publishing workflow
-- Webflow DevLink integration
-- Third-party CMS (Payload, etc.) — re-evaluated only after Phase 5
+- APIX Workflow + Global Network (largest)
+- IBE Tools Showcase → becomes the `/ibe-product-suite` page body
+- Jersey Customizer → `/internal-branding/configurator`
+- Signature Generator → 4 brand sub-routes
+- Out-of-Office Generator → `/airtuerk-service/out-of-office`
+- Color Strip Pattern → reference for `color_palette` block
+
+These get ported to React in Phase 6.
+
+---
+
+## 14. Caching & revalidation
+
+- Public page rendering: `revalidate = 3600` (1 hour)
+- Admin publish action: `revalidatePath(page.full_path)` + parent paths
+- Asset URLs: immutable
+- Sidebar tree: per-request React memoization
+
+---
+
+## 15. Anti-features (explicitly NOT in v1)
+
+- Frontend user accounts (DB supports, feature off)
+- Multi-language CMS content (`pages.language` reserved)
+- Version history (Supabase PITR is DR for v1)
+- Multi-reviewer publishing
+- Webflow DevLink
+- Third-party CMS (Payload, etc.)
 - Real-time collaborative editing
 - Public API
-- Multi-tenant or white-label support
+- Multi-tenant / white-label

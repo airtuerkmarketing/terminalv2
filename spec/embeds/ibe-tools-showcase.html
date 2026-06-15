@@ -1,0 +1,574 @@
+<!doctype html>
+        <html lang="de">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+          <title>airtuerk · Tools Showcase</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+          <style>
+  :root {
+    /* ---- airtuerk tokens ---- */
+    --neutral-100: #ffffff;
+    --neutral-200: #fafafa;
+    --neutral-400: #f0f0f0;
+    --neutral-500: #dfdfdf;
+    --neutral-700: #7a7a7a;
+    --neutral-800: #121316;
+    --blue-pill: #0a82df;       /* category pill bg, from your Figma */
+    --blue-link: #1777e7;       /* hover/CTA accent */
+    --red:       #de1f35;       /* live dot */
+    --shadow-chip: 0 2px 8px rgba(17, 24, 39, 0.06);
+    --shadow-card: 0 14px 24px -14px rgba(25, 33, 61, 0.10),
+                   0 30px 60px -28px rgba(25, 33, 61, 0.22);
+    --shadow-icon: 0 3.3px 12.3px rgba(0, 0, 0, 0.15);
+    --r-chip: 8px;
+    --r-cta:  10px;
+    --r-card: 24px;
+    --r-cat:  6px;
+    --r-icon: 12px;
+    --sans: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: transparent;
+    color: var(--neutral-800);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: contain;
+    letter-spacing: -0.01em;
+  }
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+  .stage {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: clamp(8px, 1.5vw, 16px) 0 24px;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: clamp(20px, 3vw, 32px);
+  }
+  @media (max-width: 980px) {
+    .stage {
+      padding: 36px 20px 24px;
+    }
+  }
+  /* ---------- main ---------- */
+  main {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: center;
+    gap: clamp(24px, 4vw, 56px);
+  }
+  @media (min-width: 980px) {
+    main { grid-template-columns: 1fr 1.05fr; }
+  }
+  /* ---------- info panel (left) ---------- */
+  .info { position: relative; user-select: none; }
+  .info-stack {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .slide-info {
+    grid-column: 1;
+    grid-row: 1;
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .slide-info.is-active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .title {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 42px;
+    line-height: 1.04;
+    letter-spacing: -0.84px;
+    color: var(--neutral-800);
+  }
+  @media (max-width: 767px) {
+    .title {
+      font-size: 36px;
+      letter-spacing: -0.72px;
+    }
+  }
+  .desc {
+    font-size: 15.5px;
+    line-height: 24px;
+    color: var(--neutral-700);
+    font-weight: 400;
+    max-width: 46ch;
+    padding-top: 2px;
+    letter-spacing: -0.005em;
+  }
+  .specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 6px;
+    padding-bottom: 12px;
+  }
+  .spec {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border: 1px solid var(--neutral-500);
+    border-radius: var(--r-chip);
+    color: var(--neutral-800);
+    background: var(--neutral-100);
+    box-shadow: var(--shadow-chip);
+    letter-spacing: -0.005em;
+  }
+  .cta {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 22px;
+    background: var(--neutral-800);
+    color: var(--neutral-100);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    border-radius: var(--r-cta);
+    font-family: var(--sans);
+    transition: background 0.25s ease, transform 0.25s ease;
+    border: none;
+    cursor: pointer;
+  }
+  .cta:hover {
+    background: #2a2b2e;
+    transform: translateY(-1px);
+  }
+  .cta svg {
+    width: 14px; height: 14px;
+    transition: transform 0.25s ease;
+  }
+  .cta:hover svg { transform: translateX(3px); }
+  /* ---------- card stack (right) ---------- */
+  .stack-wrap {
+    position: relative;
+    height: clamp(440px, 66vh, 640px);
+    perspective: 1500px;
+    user-select: none;
+    touch-action: pan-y;
+  }
+  .stack { position: absolute; inset: 0; cursor: grab; }
+  .stack.is-dragging { cursor: grabbing; }
+  /* card — exactly per your Figma spec */
+  .card {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: clamp(248px, 30vw, 340px);
+    aspect-ratio: 3 / 4;
+    border-radius: var(--r-card);
+    overflow: hidden;
+    background: var(--neutral-100);
+    border: 1px solid var(--neutral-400);
+    box-shadow: var(--shadow-card);
+    transform-origin: 50% 60%;
+    will-change: transform, opacity;
+    transition:
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.4s ease,
+      box-shadow 0.4s ease;
+  }
+  .stack.is-dragging .card { transition: none; }
+  /* active card gets a clickable affordance */
+  .card.is-active {
+    cursor: pointer;
+  }
+  .stack:not(.is-dragging) .card.is-active:hover {
+    box-shadow:
+      0 18px 28px -14px rgba(25, 33, 61, 0.14),
+      0 36px 70px -28px rgba(25, 33, 61, 0.30);
+  }
+  .card-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+  /* full-card gradient overlay: transparent top 34%, black at 100% — Figma values */
+  .card-overlay {
+    position: absolute;
+    inset: 0;
+    padding: clamp(16px, 1.8vw, 22.88px);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 34%, #000 100%);
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+  }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  /* white rounded square holding each product's icon */
+  .card-icon {
+    width: clamp(48px, 5.5vw, 60px);
+    height: clamp(48px, 5.5vw, 60px);
+    background: var(--neutral-100);
+    border: 1px solid #dddddd;
+    border-radius: var(--r-icon);
+    box-shadow: var(--shadow-icon);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .card-icon img {
+    width: 68%;
+    height: 68%;
+    object-fit: contain;
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+  /* category pill — 6px radius, NOT pill-shaped, blue per Figma */
+  .card-cat {
+    background: var(--blue-pill);
+    color: #fff;
+    font-size: clamp(10px, 0.95vw, 11px);
+    font-weight: 600;
+    padding: 5px 9px;
+    border-radius: var(--r-cat);
+    letter-spacing: -0.005em;
+    line-height: 1.4;
+    box-shadow: 0 2px 6px rgba(10, 130, 223, 0.25);
+  }
+  /* spacer pushes name + tagline to bottom */
+  .card-spacer { flex: 1; }
+  .card-bottom {
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 6.5px;
+  }
+  .card-name {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: clamp(22px, 2.6vw, 28px);
+    line-height: 1;
+    letter-spacing: -0.035em;
+  }
+  .card-tagline {
+    font-size: clamp(11px, 1vw, 12.5px);
+    font-weight: 400;
+    line-height: 1.4;
+    opacity: 0.92;
+    letter-spacing: -0.005em;
+    max-width: 26ch;
+  }
+  /* ---------- footer / controls ---------- */
+  footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .nav-group { display: flex; align-items: center; gap: 10px; }
+  .nav-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid var(--neutral-500);
+    background: var(--neutral-100);
+    color: var(--neutral-800);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+  .nav-btn:hover {
+    background: var(--neutral-800);
+    color: var(--neutral-100);
+    border-color: var(--neutral-800);
+  }
+  .nav-btn:active { transform: scale(0.94); }
+  .nav-btn svg { width: 18px; height: 18px; }
+  .dots { display: flex; gap: 6px; align-items: center; margin-left: 8px; }
+  .dot {
+    width: 24px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--neutral-500);
+    cursor: pointer;
+    border: none;
+    padding: 0;
+    transition: background 0.3s ease, width 0.3s ease;
+  }
+  .dot.is-active {
+    background: var(--neutral-800);
+    width: 40px;
+  }
+  .hint {
+    font-size: 12px;
+    color: var(--neutral-700);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.005em;
+  }
+  .hint svg { width: 14px; height: 14px; opacity: 0.5; }
+  @media (max-width: 640px) {
+    .hint span.long { display: none; }
+    .nav-btn { width: 44px; height: 44px; }
+  }
+  /* ---------- modal (product gallery) ---------- */
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal.is-open {
+    display: flex;
+    animation: modalFadeIn 0.25s ease;
+  }
+  @keyframes modalFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 17, 24, 0.65);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .modal-frame {
+    position: relative;
+    width: min(100%, 1200px);
+    aspect-ratio: 16 / 9;
+    max-height: calc(100vh - 40px);
+    background: var(--neutral-100);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    animation: modalSlideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes modalSlideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  .modal-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--neutral-400);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-shrink: 0;
+    background: var(--neutral-100);
+    z-index: 2;
+  }
+  .modal-title {
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+  }
+  .modal-product {
+    font-weight: 600;
+    color: var(--neutral-800);
+    white-space: nowrap;
+  }
+  .modal-sep {
+    width: 4px;
+    height: 4px;
+    background: var(--neutral-500);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .modal-page {
+    color: var(--neutral-700);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .modal-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .modal-counter {
+    font-size: 12px;
+    color: var(--neutral-700);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+  .modal-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--neutral-500);
+    background: var(--neutral-100);
+    color: var(--neutral-800);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    padding: 0;
+  }
+  .modal-close:hover {
+    background: var(--neutral-800);
+    color: var(--neutral-100);
+    border-color: var(--neutral-800);
+  }
+  .modal-close svg { width: 16px; height: 16px; }
+  .modal-body {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    background: var(--neutral-300);
+  }
+  .modal-scroll {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    touch-action: pan-y;
+  }
+  .modal-img {
+    width: 100%;
+    display: block;
+  }
+  .modal-empty {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--neutral-700);
+    font-size: 14px;
+    text-align: center;
+    padding: 24px;
+  }
+  .modal-empty .empty-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--neutral-800);
+  }
+  .modal-foot {
+    padding: 12px 20px;
+    border-top: 1px solid var(--neutral-400);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-shrink: 0;
+    background: var(--neutral-100);
+  }
+  .modal-foot .nav-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .modal-nav {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--neutral-500);
+    background: var(--neutral-100);
+    color: var(--neutral-800);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    padding: 0;
+  }
+  .modal-nav:hover:not(:disabled) {
+    background: var(--neutral-800);
+    color: var(--neutral-100);
+    border-color: var(--neutral-800);
+  }
+  .modal-nav:active { transform: scale(0.94); }
+  .modal-nav:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: transparent;
+  }
+  .modal-nav svg { width: 16px; height: 16px; }
+  .modal-dots {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .modal-dot {
+    width: 22px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--neutral-500);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.3s ease, width 0.3s ease;
+  }
+  .modal-dot.is-active {
+    background: var(--neutral-800);
+    width: 36px;
+  }
+  @media (max-width: 768px) {
+    .modal { padding: 0; }
+    .modal-frame {
+      aspect-ratio: auto;
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      border-radius: 0;
+    }
+    .modal-page, .modal-sep { display: none; }
+    .modal-foot { padding: 10px 14px; }
+    .modal-nav { width: 36px; height: 36px; }
+  }
+</style>
+        </head>
+        <body>
+          <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+            <defs>
+              <symbol id="i-arrow" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"></path>
+              </symbol>
+              <symbol id="i-arrow-l" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"></path>
+              </symbol>
+            </defs>
+          </svg>
+          <div class="stage">
+            <main>
+              <section class="info">
+                <div class="info-stack" id="infoStack">
