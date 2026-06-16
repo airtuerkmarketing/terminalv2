@@ -179,12 +179,12 @@
 .product-card .name { font-size: 16px; font-weight: 600; color: var(--text-1); }
 .product-card .tagline { font-size: 13px; color: var(--text-2); }
 
-/* ── IBE product anchor sections (Task 3 placeholders; real content Phase 5) ── */
-/* scroll-margin-top keeps the target clear of the top when jumped to via the
-   sidebar #slug anchors (more robust than relying on :target). */
-.ibe-product-section { padding-top: var(--space-6); scroll-margin-top: var(--space-20); }
-.ibe-product-section + .ibe-product-section { margin-top: var(--space-10); border-top: 1px solid var(--separator); }
-.ibe-product-section > h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.012em; color: var(--text-1); margin-bottom: var(--space-4); padding-top: var(--space-6); }
+/* ── In-page anchor sections (single-page brands + IBE). scroll-margin-top keeps
+   the target clear of the topbar when jumped to via the sidebar #slug anchors
+   (more robust than relying on :target alone). ── */
+.anchor-section { padding-top: var(--space-6); scroll-margin-top: var(--space-20); }
+.anchor-section + .anchor-section { margin-top: var(--space-10); border-top: 1px solid var(--separator); }
+.anchor-section > h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.012em; color: var(--text-1); margin-bottom: var(--space-4); padding-top: var(--space-6); }
 
 /* ── empty state + unsupported note ── */
 .block-empty { border: 1px dashed var(--hairline); border-radius: var(--radius-xl); padding: var(--space-12) var(--space-6); text-align: center; background: var(--surface); }

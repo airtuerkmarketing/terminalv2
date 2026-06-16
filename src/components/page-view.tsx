@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   getBlocks,
+  getBrandSections,
   getDocumentLibrary,
   getIbeProducts,
   getImageAssets,
   getPageByPath,
+  getSinglePageBrandSlugs,
   type PageRow,
 } from "@/lib/pages";
 import { BlockRenderer } from "@/components/blocks/block-renderer";
@@ -53,11 +55,24 @@ export async function renderPage(fullPath: string) {
     return <HardcodedStub title={page.title} componentKey={page.component_key} />;
   }
 
+  // Single-page brands (Task 6): a block-mode child of a single-page brand is not
+  // its own route — redirect it to the parent's in-page anchor. Hardcoded children
+  // (email-signature, …) returned above; IBE + APIX are excluded from the set.
+  const singlePageSlugs = await getSinglePageBrandSlugs();
+  const segments = fullPath.split("/").filter(Boolean);
+  if (
+    segments.length === 2 &&
+    page.parent_id &&
+    page.rendering_mode === "blocks" &&
+    singlePageSlugs.has(segments[0])
+  ) {
+    redirect(`/${segments[0]}#${page.slug}`);
+  }
+
   const blocks = await getBlocks(page.id);
 
-  // IBE Product Suite: render the 6 product anchor sections so the sidebar
-  // anchor links scroll correctly. Content per product is the empty state for
-  // now (Phase 5 authors it); the anchor ids must exist today.
+  // IBE Product Suite keeps its product-brand-driven single page (unchanged path,
+  // preserves the spec'd product order). Sections come from the product brands.
   if (fullPath === IBE_PATH) {
     const products = await getIbeProducts();
     return (
@@ -65,9 +80,28 @@ export async function renderPage(fullPath: string) {
         <PageHeader page={page} />
         {blocks.length > 0 ? <BlockRenderer blocks={blocks} /> : null}
         {products.map((p) => (
-          <section key={p.slug} id={p.slug} className="ibe-product-section">
+          <section key={p.slug} id={p.slug} className="anchor-section">
             <h2>{p.name}</h2>
             <BlockEmptyState />
+          </section>
+        ))}
+      </article>
+    );
+  }
+
+  // Single-page brand parent (Task 6): parent's own blocks (hero) first, then each
+  // block-mode child page as an in-page anchor <section>. Empty-state where a
+  // section has no blocks yet (expected — no content authored).
+  if (segments.length === 1 && singlePageSlugs.has(segments[0])) {
+    const sections = await getBrandSections(page.id);
+    return (
+      <article>
+        <PageHeader page={page} />
+        {blocks.length > 0 ? <BlockRenderer blocks={blocks} /> : null}
+        {sections.map((s) => (
+          <section key={s.slug} id={s.slug} className="anchor-section">
+            <h2>{s.title}</h2>
+            {s.blocks.length > 0 ? <BlockRenderer blocks={s.blocks} /> : <BlockEmptyState />}
           </section>
         ))}
       </article>

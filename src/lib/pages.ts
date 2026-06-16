@@ -28,6 +28,7 @@ export const SHOW_DRAFTS =
 
 export interface PageRow {
   id: string;
+  parent_id: string | null;
   slug: string;
   full_path: string;
   number: number | null;
@@ -40,7 +41,7 @@ export interface PageRow {
 }
 
 const PAGE_COLUMNS =
-  "id, slug, full_path, number, title, meta_title, meta_description, rendering_mode, component_key, status";
+  "id, parent_id, slug, full_path, number, title, meta_title, meta_description, rendering_mode, component_key, status";
 
 // Reads that must see drafts in dev use the admin client; production anonymous
 // reads use the RLS-scoped anon client.
@@ -89,6 +90,101 @@ export async function getIbeProducts(): Promise<{ slug: string; name: string }[]
     .neq("slug", "airlounge") // D-043: kept in DB, hidden
     .order("sort_order");
   return (data ?? []).map((b) => ({ slug: b.slug as string, name: (b.short_name as string) || (b.name as string) }));
+}
+
+// ── Single-page brand model (Task 6) ──
+// Most top-level brands render as ONE scrolling page: their block-mode child
+// pages become in-page anchor sections (the same UX as IBE). EXCLUDED:
+//   • airtuerk-apix — keeps its multi-page structure (interactive workflow /
+//     global-network sub-pages are full pages, not brand-identity sections);
+//   • ibe-product-suite — retains its own product-brand-driven single-page path
+//     (getIbeProducts), which preserves the spec'd product order.
+// Both are intentionally left on their existing behavior.
+const SINGLE_PAGE_EXCLUDED_SLUGS = new Set(["airtuerk-apix", "ibe-product-suite"]);
+
+/** Slugs of top-level brands that render as a single anchored page. Cached so
+ *  the sidebar (getNav), the redirect check, and the aggregator share one read. */
+export const getSinglePageBrandSlugs = cache(async (): Promise<Set<string>> => {
+  const supabase = await createClient(); // brands are public-readable
+  const { data } = await supabase
+    .from("brands")
+    .select("slug")
+    .is("parent_id", null)
+    .eq("sidebar_section", "brands");
+  return new Set(
+    (data ?? []).map((b) => b.slug as string).filter((slug) => !SINGLE_PAGE_EXCLUDED_SLUGS.has(slug))
+  );
+});
+
+export interface SidebarChild {
+  slug: string;
+  title: string;
+  rendering_mode: "blocks" | "hardcoded";
+}
+
+/**
+ * Visible child pages grouped by top-level parent slug, for the sidebar sub-nav.
+ * Ordered by sort_order, hidden_in_sidebar excluded. Draft-aware (dev sees
+ * drafts; prod anon sees only published, so children stay empty until publish —
+ * consistent with the rest of the site).
+ */
+export async function getSidebarChildren(): Promise<Map<string, SidebarChild[]>> {
+  const supabase = await readClient();
+  let query = supabase
+    .from("pages")
+    .select("id, slug, title, rendering_mode, parent_id, hidden_in_sidebar, status, sort_order")
+    .order("sort_order", { ascending: true });
+  if (!SHOW_DRAFTS) query = query.eq("status", "published");
+  const { data } = await query;
+  type Row = {
+    id: string;
+    slug: string;
+    title: string;
+    rendering_mode: "blocks" | "hardcoded";
+    parent_id: string | null;
+    hidden_in_sidebar: boolean;
+  };
+  const rows = (data ?? []) as Row[];
+  const idToSlug = new Map(rows.map((r) => [r.id, r.slug]));
+  const byParent = new Map<string, SidebarChild[]>();
+  for (const r of rows) {
+    if (!r.parent_id || r.hidden_in_sidebar) continue;
+    const parentSlug = idToSlug.get(r.parent_id);
+    if (!parentSlug) continue;
+    const arr = byParent.get(parentSlug) ?? [];
+    arr.push({ slug: r.slug, title: r.title, rendering_mode: r.rendering_mode });
+    byParent.set(parentSlug, arr);
+  }
+  return byParent;
+}
+
+export interface BrandSection {
+  slug: string;
+  title: string;
+  blocks: BlockRow[];
+}
+
+/**
+ * Block-mode child pages of a single-page brand parent, each with its blocks,
+ * ordered by sort_order — these become the in-page anchor sections. Hardcoded
+ * children (email-signature, etc.) are excluded (they stay standalone routes).
+ * Draft-aware.
+ */
+export async function getBrandSections(parentId: string): Promise<BrandSection[]> {
+  const supabase = await readClient();
+  let query = supabase
+    .from("pages")
+    .select("id, slug, title, sort_order, status")
+    .eq("parent_id", parentId)
+    .eq("rendering_mode", "blocks")
+    .eq("hidden_in_sidebar", false)
+    .order("sort_order", { ascending: true });
+  if (!SHOW_DRAFTS) query = query.eq("status", "published");
+  const { data } = await query;
+  const kids = (data ?? []) as { id: string; slug: string; title: string }[];
+  return Promise.all(
+    kids.map(async (k) => ({ slug: k.slug, title: k.title, blocks: await getBlocks(k.id) }))
+  );
 }
 
 // ── Assets (Asset Library, Task 5a) ──

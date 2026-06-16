@@ -154,22 +154,24 @@ export function Sidebar({ nav }: { nav: SidebarNav }) {
           <nav className="nav-section" aria-label="Brands and products">
             {nav.brands.map((b) => {
               if (b.children && b.children.length > 0) {
-                // IBE Product Suite: a LINK to /ibe-product-suite. Its product
-                // list expands ONLY while that route is active (route-driven);
-                // navigating elsewhere collapses it. Products are in-page anchor
-                // links (/ibe-product-suite#<slug>).
-                // TODO(Task 3): build the /ibe-product-suite page with the
-                // product sections (id="multicheck", …) these anchors target.
-                const ibeOpen = isActive(pathname, b.href, false);
+                // Expandable brand (IBE + the single-page brands): a LINK to the
+                // brand page whose child list expands ONLY while that route is
+                // active (route-driven) — it collapses when you navigate away.
+                // Children are in-page anchor links (/<brand>#<section>) for block
+                // sections, or route links (/<brand>/<slug>) for hardcoded
+                // sub-pages. The sub-nav id is per-brand so multiple expanded
+                // brands never collide on one DOM id.
+                const open = isActive(pathname, b.href, false);
+                const subnavId = `subnav-${b.href.replace(/[^a-z0-9]+/gi, "-").replace(/(^-|-$)/g, "")}`;
                 return (
                   <div key={b.href}>
                     <Link
                       href={b.href}
-                      className={`nav-item expandable${ibeOpen ? " active" : ""}`}
-                      data-open={ibeOpen}
-                      aria-expanded={ibeOpen}
-                      aria-controls="ibe-subnav"
-                      aria-current={ibeOpen ? "page" : undefined}
+                      className={`nav-item expandable${open ? " active" : ""}`}
+                      data-open={open}
+                      aria-expanded={open}
+                      aria-controls={subnavId}
+                      aria-current={open ? "page" : undefined}
                       onClick={closeDrawer}
                     >
                       <span className="icon">
@@ -180,7 +182,7 @@ export function Sidebar({ nav }: { nav: SidebarNav }) {
                         <ChevronIcon />
                       </span>
                     </Link>
-                    <div id="ibe-subnav" className={`nav-sub${ibeOpen ? " open" : ""}`}>
+                    <div id={subnavId} className={`nav-sub${open ? " open" : ""}`}>
                       {b.children.map((c) => (
                         <a key={c.href} className="nav-item" href={c.href} onClick={closeDrawer}>
                           <span className="icon">

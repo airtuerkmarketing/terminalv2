@@ -2,6 +2,7 @@ import "@/styles/shell.css";
 import "@/styles/blocks.css";
 import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { getSinglePageBrandSlugs, getSidebarChildren } from "@/lib/pages";
 import { Ambient } from "@/components/shell/ambient";
 import {
   Sidebar,
@@ -50,17 +51,20 @@ type BrandRow = {
 async function getNav(): Promise<SidebarNav> {
   const supabase = await createClient();
 
-  const [{ data: brandRows }, { data: hiddenPages }] = await Promise.all([
-    supabase
-      .from("brands")
-      .select("id, slug, name, short_name, sort_order, is_product, sidebar_section, parent_id")
-      .order("sort_order"),
-    supabase
-      .from("pages")
-      .select("slug")
-      .like("full_path", `/${IBE_SLUG}/%`)
-      .eq("hidden_in_sidebar", true),
-  ]);
+  const [{ data: brandRows }, { data: hiddenPages }, singlePageSlugs, sidebarChildren] =
+    await Promise.all([
+      supabase
+        .from("brands")
+        .select("id, slug, name, short_name, sort_order, is_product, sidebar_section, parent_id")
+        .order("sort_order"),
+      supabase
+        .from("pages")
+        .select("slug")
+        .like("full_path", `/${IBE_SLUG}/%`)
+        .eq("hidden_in_sidebar", true),
+      getSinglePageBrandSlugs(),
+      getSidebarChildren(),
+    ]);
 
   const brands = (brandRows ?? []) as BrandRow[];
   const hiddenSlugs = new Set<string>([
@@ -76,16 +80,29 @@ async function getNav(): Promise<SidebarNav> {
 
   const brandsNav: NavNode[] = topLevel.map((b) => {
     const node: NavNode = { label: label(b), href: `/${b.slug}`, iconKey: b.slug };
-    if (b.slug === IBE_SLUG && ibe) {
+    if (singlePageSlugs.has(b.slug)) {
+      // Single-page brand (Task 6): its child pages become sub-nav items —
+      // block children are in-page anchors (/<brand>#<slug>); hardcoded children
+      // (email-signature, configurator, …) stay route links (/<brand>/<slug>).
+      const kids = sidebarChildren.get(b.slug) ?? [];
+      if (kids.length > 0) {
+        node.children = kids.map<NavLeaf>((c) => ({
+          label: c.title,
+          href: c.rendering_mode === "hardcoded" ? `/${b.slug}/${c.slug}` : `/${b.slug}#${c.slug}`,
+          iconKey: c.slug,
+        }));
+      }
+    } else if (b.slug === IBE_SLUG && ibe) {
+      // IBE keeps its product-brand anchor children (preserves the spec'd order).
       node.children = brands
         .filter((p) => p.is_product && p.parent_id === ibe.id && !hiddenSlugs.has(p.slug))
         .map<NavLeaf>((p) => ({
           label: label(p),
-          // In-page anchor on the single /ibe-product-suite page (not a route).
           href: `/${IBE_SLUG}#${p.slug}`,
           iconKey: p.slug,
         }));
     }
+    // else (e.g. airtuerk-apix): flat link, no children — unchanged.
     return node;
   });
 
