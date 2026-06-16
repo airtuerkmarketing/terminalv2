@@ -28,6 +28,7 @@ export default function RootLayout({
       data-theme="ios18-light"
       data-sidebar="expanded"
       data-orbs="on"
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >

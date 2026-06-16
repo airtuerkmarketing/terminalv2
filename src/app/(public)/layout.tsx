@@ -1,4 +1,5 @@
 import "@/styles/shell.css";
+import "@/styles/blocks.css";
 import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Ambient } from "@/components/shell/ambient";
