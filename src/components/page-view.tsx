@@ -5,6 +5,7 @@ import { BlockRenderer } from "@/components/blocks/block-renderer";
 import { BlockEmptyState } from "@/components/blocks/empty-state";
 import { HardcodedStub } from "@/components/blocks/hardcoded-stub";
 import { AssetLibrary } from "@/components/hardcoded/asset-library";
+import { EmailSignature } from "@/components/hardcoded/email-signature";
 
 const IBE_PATH = "/ibe-product-suite";
 
@@ -33,6 +34,9 @@ export async function renderPage(fullPath: string) {
     if (page.component_key === "asset-library") {
       const assets = await getImageAssets();
       return <AssetLibrary title={page.title} assets={assets} />;
+    }
+    if (page.component_key === "email-signature") {
+      return <EmailSignature title={page.title} />;
     }
     return <HardcodedStub title={page.title} componentKey={page.component_key} />;
   }

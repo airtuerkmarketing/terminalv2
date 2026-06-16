@@ -1,0 +1,194 @@
+/* Your Signature generator (Task 5b). Ported from the Webflow embed
+ * (spec/embeds/service-page-support.{js,css}) but RESTYLED with theme.css tokens
+ * — no hardcoded theme hex. Quantum Blue (--accent) is the only accent (D-036):
+ * the original's black (#222) active states map to --accent, its green
+ * "copied" (#16a34a) maps to --accent + a check icon, and its torch-red remove
+ * hover maps to a neutral surface (no torch in chrome).
+ *
+ * The rendered signature inside `.sig-paper` is EMAIL CONTENT with its own inline
+ * styles, designed on white — so the paper stays white in every theme (like the
+ * asset-library badge scrim, an intentional theme-agnostic exception). The `sig-`
+ * prefix is unique to this component. */
+
+.sig-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  margin-top: var(--space-6);
+  padding: var(--space-6);
+  background: var(--surface);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+}
+@media (min-width: 980px) {
+  .sig-wrap { grid-template-columns: 340px minmax(0, 1fr); gap: var(--space-8); }
+}
+
+/* ── Form column ── */
+.sig-form { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.sig-form-title { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-1); }
+.sig-form-sub { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text-2); }
+
+.sig-field { display: flex; flex-direction: column; gap: 6px; }
+.sig-field > label { font-size: 11px; font-weight: 500; letter-spacing: 0.02em; color: var(--text-2); }
+.sig-input {
+  height: 38px; padding: 0 12px; width: 100%; min-width: 0; box-sizing: border-box;
+  background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 13px; font-weight: 500; color: var(--text-1);
+  outline: none; transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
+}
+.sig-input::placeholder { color: var(--text-3); font-weight: 400; }
+.sig-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.sig-field-optional { animation: sig-slide-in 250ms var(--ease-smooth); }
+@keyframes sig-slide-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.sig-field-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.sig-field-head > label { font-size: 11px; font-weight: 500; letter-spacing: 0.02em; color: var(--text-2); }
+.sig-field-hint { font-weight: 400; color: var(--text-3); margin-left: 4px; }
+.sig-field-actions { display: flex; align-items: center; gap: 6px; }
+.sig-field-remove {
+  background: transparent; border: none; color: var(--text-3); cursor: pointer;
+  padding: 4px; margin: -4px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm); transition: color 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth);
+}
+.sig-field-remove:hover { color: var(--text-1); background: var(--surface-muted); }
+.sig-field-remove svg { width: 14px; height: 14px; }
+
+/* Tel / Mobil label badges (rendered inside .sig-field-actions) */
+.sig-badge {
+  background: var(--surface-muted); border: 1px solid transparent; border-radius: 6px; padding: 4px 9px;
+  font-family: inherit; font-size: 11px; font-weight: 500; color: var(--text-2); line-height: 1.2;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
+}
+.sig-badge:hover { color: var(--text-1); }
+.sig-badge:active { transform: scale(0.95); }
+.sig-badge.is-active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border); }
+
+/* Swyx prefix input */
+.sig-prefix-input {
+  display: flex; align-items: stretch; background: var(--surface-flat);
+  border: 1px solid var(--hairline); border-radius: var(--radius-sm); overflow: hidden;
+  transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
+}
+.sig-prefix-input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sig-prefix {
+  display: flex; align-items: center; padding: 0 10px 0 12px;
+  background: var(--surface-muted); color: var(--text-2); font-family: var(--font-mono);
+  font-size: 12px; white-space: nowrap; border-right: 1px solid var(--hairline); user-select: none;
+}
+.sig-prefix-input input {
+  flex: 1; min-width: 0; height: 36px; border: none; background: transparent; padding: 0 12px;
+  outline: none; font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--text-1);
+}
+
+/* Kununu banner variant pickers */
+.sig-banner-variants { display: flex; flex-direction: column; gap: var(--space-2); }
+.sig-banner-variant {
+  border: 2px solid var(--hairline); border-radius: var(--radius-sm); padding: 0; background: var(--surface-flat);
+  cursor: pointer; overflow: hidden; line-height: 0; position: relative; width: 100%; max-width: 100%;
+  transition: border-color 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
+}
+.sig-banner-variant:hover { border-color: var(--text-3); }
+.sig-banner-variant:active { transform: scale(0.99); }
+.sig-banner-variant img { display: block; width: 100%; height: auto; max-width: 100%; }
+.sig-banner-variant.is-active { border-color: var(--accent); }
+.sig-banner-variant.is-active::after {
+  content: ""; position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='3 7 6 10 11 4'/></svg>") center/13px no-repeat;
+  box-shadow: 0 0 0 2px var(--surface-flat);
+}
+
+/* "Add field" dashed buttons */
+.sig-add-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.sig-add-btn {
+  background: transparent; border: 1px dashed var(--separator); color: var(--text-2);
+  font-family: inherit; font-size: 11px; font-weight: 500; padding: 7px 11px; border-radius: var(--radius-sm);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  transition: border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth);
+}
+.sig-add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.sig-add-btn svg { width: 13px; height: 13px; }
+
+/* ── Preview column ── */
+.sig-preview-wrap { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.sig-card {
+  background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-md);
+  overflow: hidden; opacity: 0.62; cursor: pointer; min-width: 0;
+  transition: box-shadow 250ms var(--ease-smooth), transform 250ms var(--ease-smooth), border-color 250ms var(--ease-smooth), opacity 250ms var(--ease-smooth);
+}
+.sig-card:hover { opacity: 0.88; border-color: var(--separator); }
+.sig-card.is-active {
+  opacity: 1; border-color: var(--accent); cursor: default; transform: translateY(-1px);
+  box-shadow: 0 8px 28px -6px var(--accent-soft), 0 4px 10px -4px var(--accent-soft);
+}
+.sig-card.is-active:hover { opacity: 1; }
+.sig-card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: 14px 16px; background: var(--surface-muted); border-bottom: 1px solid var(--hairline);
+  transition: background-color 250ms var(--ease-smooth);
+}
+.sig-card.is-active .sig-card-head { background: transparent; }
+.sig-card-info { min-width: 0; flex: 1; }
+.sig-card-title { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-1); line-height: 1.3; }
+.sig-card-sub { margin-top: 2px; font-size: 11px; color: var(--text-2); line-height: 1.4; }
+.sig-copy-btn {
+  flex-shrink: 0; height: 32px; padding: 0 14px; background: var(--accent); color: #fff;
+  border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  transition: filter 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
+}
+.sig-copy-btn:hover { filter: brightness(0.93); }
+.sig-copy-btn:active { transform: scale(0.97); }
+.sig-copy-btn svg { width: 14px; height: 14px; }
+.sig-copy-btn.is-copied { background: var(--accent-soft); color: var(--accent); }
+.sig-copy-btn.is-copied:hover { filter: none; }
+
+.sig-card-body { padding: var(--space-6); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* The email signature is authored on white; keep the preview "paper" white in
+ * every theme so it previews exactly as recipients will see it. */
+.sig-paper { background: #fff; border-radius: var(--radius-sm); padding: var(--space-5); min-width: 560px; }
+
+/* ── "How to install" accordion ── */
+.sig-info-card { background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-md); overflow: hidden; }
+.sig-info-toggle {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: 14px 18px; background: transparent; border: none; cursor: pointer; font-family: inherit; text-align: left;
+  transition: background-color 150ms var(--ease-smooth);
+}
+.sig-info-toggle:hover { background: var(--surface-muted); }
+.sig-info-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sig-info-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--text-1); }
+.sig-info-chevron { color: var(--text-3); flex-shrink: 0; width: 16px; height: 16px; transition: transform 250ms var(--ease-smooth); }
+.sig-info-card.is-open .sig-info-chevron { transform: rotate(180deg); }
+/* grid-rows 0fr→1fr trick for a smooth auto-height reveal */
+.sig-info-collapse { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 300ms var(--ease-smooth); }
+.sig-info-card.is-open .sig-info-collapse { grid-template-rows: 1fr; }
+.sig-info-collapse-inner { overflow: hidden; }
+.sig-info-rows { display: flex; flex-direction: column; gap: var(--space-3); padding: 2px 18px 16px; }
+.sig-info-row { display: flex; gap: var(--space-3); align-items: flex-start; }
+.sig-info-step {
+  flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; margin-top: 1px;
+  background: var(--accent-soft); color: var(--accent); font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.sig-info-text { font-size: 11px; color: var(--text-2); line-height: 1.55; }
+.sig-info-text strong { color: var(--text-1); font-weight: 600; }
+
+/* Caveat note (image-rendering guidance) */
+.sig-note {
+  display: flex; gap: var(--space-2); align-items: flex-start;
+  padding: 10px 12px; background: var(--accent-soft); border: 1px solid var(--accent-border);
+  border-radius: var(--radius-sm); font-size: 11px; line-height: 1.5; color: var(--text-2);
+}
+.sig-note svg { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sig-input, .sig-badge, .sig-banner-variant, .sig-add-btn, .sig-card, .sig-card-head,
+  .sig-copy-btn, .sig-info-toggle, .sig-info-chevron, .sig-info-collapse, .sig-field-optional { transition: none; animation: none; }
+}
