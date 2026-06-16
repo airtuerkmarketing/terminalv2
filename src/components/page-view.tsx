@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getBlocks, getIbeProducts, getPageByPath, type PageRow } from "@/lib/pages";
+import { getBlocks, getIbeProducts, getImageAssets, getPageByPath, type PageRow } from "@/lib/pages";
 import { BlockRenderer } from "@/components/blocks/block-renderer";
 import { BlockEmptyState } from "@/components/blocks/empty-state";
 import { HardcodedStub } from "@/components/blocks/hardcoded-stub";
+import { AssetLibrary } from "@/components/hardcoded/asset-library";
 
 const IBE_PATH = "/ibe-product-suite";
 
@@ -26,8 +27,13 @@ export async function renderPage(fullPath: string) {
   const page = await getPageByPath(fullPath);
   if (!page) notFound();
 
-  // Hardcoded routes → stub by component_key (real component is Task 5).
+  // Hardcoded routes → the real component by component_key; others still stub
+  // (built in later Task 5 sub-tasks).
   if (page.rendering_mode === "hardcoded") {
+    if (page.component_key === "asset-library") {
+      const assets = await getImageAssets();
+      return <AssetLibrary title={page.title} assets={assets} />;
+    }
     return <HardcodedStub title={page.title} componentKey={page.component_key} />;
   }
 

@@ -90,3 +90,53 @@ export async function getIbeProducts(): Promise<{ slug: string; name: string }[]
     .order("sort_order");
   return (data ?? []).map((b) => ({ slug: b.slug as string, name: (b.short_name as string) || (b.name as string) }));
 }
+
+// ── Assets (Asset Library, Task 5a) ──
+// The assets table has no category column; category is derived from the
+// storage_path folder prefix. The Asset Library shows the `images` bucket
+// (logos / icons / backgrounds / photography); documents and videos have their
+// own libraries. Assets are public-read (RLS qual=true), so the anon server
+// client works in dev and prod — no service-role needed here.
+export interface AssetDTO {
+  id: string;
+  url: string;
+  name: string;
+  mime: string;
+  size: number;
+  category: string;
+}
+
+const ASSET_CATEGORY: Record<string, string> = {
+  "brand-logos": "Logos",
+  icons: "Icons",
+  favicon: "Icons",
+  "desktop-backgrounds": "Backgrounds",
+  "team-backgrounds": "Backgrounds",
+  "stock-photography": "Photography",
+  "product-shots": "Photography",
+  opengraph: "Photography",
+  thumbnails: "Photography",
+  misc: "Photography",
+};
+
+function assetCategory(storagePath: string): string {
+  return ASSET_CATEGORY[storagePath.split("/")[0]] ?? "Other";
+}
+
+/** All image-bucket assets, mapped to a lean DTO with a derived category. */
+export async function getImageAssets(): Promise<AssetDTO[]> {
+  const supabase = await createClient(); // assets are public-read
+  const { data } = await supabase
+    .from("assets")
+    .select("id, storage_path, public_url, filename, mime_type, size_bytes")
+    .eq("bucket", "images")
+    .order("storage_path", { ascending: true });
+  return (data ?? []).map((a) => ({
+    id: a.id as string,
+    url: a.public_url as string,
+    name: a.filename as string,
+    mime: a.mime_type as string,
+    size: a.size_bytes as number,
+    category: assetCategory(a.storage_path as string),
+  }));
+}
