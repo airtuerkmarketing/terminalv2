@@ -1,7 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { ExternalIcon, OrbsIcon, SearchIcon } from "./icons";
+import { useDrawerOpen, setDrawer } from "./drawer";
+import { ExternalIcon, MenuIcon, OrbsIcon, SearchIcon } from "./icons";
 import { ThemeToggle } from "./theme-toggle";
 
 const ORBS_KEY = "terminalv2-orbs";
@@ -22,11 +23,13 @@ function getOrbsOn() {
 }
 
 /**
- * Topbar: glass search field (placeholder until the Phase 7 search), the
- * ambient-orbs toggle, the theme toggle, and a link out to the live site.
+ * Topbar: a hamburger (mobile/tablet only) that opens the sidebar drawer, the
+ * glass search field (placeholder until Phase 7 search), the ambient-orbs
+ * toggle, the theme toggle, and a link out to the live site.
  */
 export function Topbar() {
   const orbsOn = useSyncExternalStore(subscribe, getOrbsOn, () => true);
+  const drawerOpen = useDrawerOpen();
 
   function toggleOrbs() {
     document.documentElement.dataset.orbs = orbsOn ? "off" : "on";
@@ -39,6 +42,17 @@ export function Topbar() {
 
   return (
     <header className="topbar">
+      <button
+        type="button"
+        className="icon-btn hamburger"
+        onClick={() => setDrawer("open")}
+        aria-label="Open navigation menu"
+        aria-expanded={drawerOpen}
+        aria-controls="app-sidebar"
+      >
+        <MenuIcon />
+      </button>
+
       <div className="search">
         <SearchIcon />
         <input
@@ -48,6 +62,7 @@ export function Topbar() {
         />
         <span className="key">⌘K</span>
       </div>
+
       <div className="topbar-actions">
         <button
           type="button"

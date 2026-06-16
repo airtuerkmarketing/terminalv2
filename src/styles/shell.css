@@ -1,4 +1,4 @@
-/* terminalv2 — public app shell styles (Phase 4 Task 2)
+/* terminalv2 — public app shell styles
  *
  * Ported from spec/mockups/v3-01-dashboard.html. All theme colors, blur,
  * shadow, spacing and radius come from the theme.css custom properties — no
@@ -6,11 +6,28 @@
  * Quantum glow rgba(10,130,223,…) are copied verbatim from the mockup; no token
  * exists for them and both are theme-agnostic. Active state uses --accent
  * (Quantum Blue) only — never torch red.
+ *
+ * ════════════════════════════════════════════════════════════════════════
+ * RESPONSIVE BREAKPOINT SYSTEM (Task 2.5) — mobile-first; the single model
+ * used by the shell AND every future page (dashboard, brand detail, asset /
+ * document library, team, etc.). Do not invent per-page breakpoints.
+ *
+ *   Tier      Width           Sidebar                 Brand-card grid
+ *   ───────── ─────────────── ─────────────────────── ───────────────
+ *   Mobile    < 768px         overlay drawer          1 column
+ *   Tablet    768–1023px      overlay drawer          2 columns
+ *   Desktop   1024–1535px     fixed, collapses 252↔64 3 columns
+ *   Wide      ≥ 1536px        fixed 252               3 columns, content
+ *                                                     capped 1440px centered
+ *
+ * Drawer boundary = 1024px (Tailwind `lg`). Below it the sidebar is an
+ * off-canvas drawer opened by the topbar hamburger over a backdrop; at/above
+ * it the sidebar is fixed and collapsible. The hamburger exists ONLY < lg, the
+ * collapse toggle ONLY ≥ lg — never both at once. Wide content cap = 1440px
+ * (readable measure on ultrawide/4K). Reuse `.brands-grid` (defined below) for
+ * any card grid so every page follows these same column rules.
+ * ════════════════════════════════════════════════════════════════════════
  */
-
-/* ── Layout grid (collapsible 252px ↔ 64px) ── */
-.layout { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; transition: grid-template-columns 300ms var(--ease-smooth); }
-:root[data-sidebar="collapsed"] .layout { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
 
 /* Smooth in-page anchor scrolling. Sidebar product names are anchor links to
  * sections on /ibe-product-suite; scroll-margin keeps the target clear of the
@@ -18,37 +35,30 @@
 html { scroll-behavior: smooth; }
 :target { scroll-margin-top: var(--space-20); }
 
-/* ── Sidebar ── */
-.sidebar { position: sticky; top: 0; height: 100vh; padding: var(--space-5); display: flex; flex-direction: column; overflow: hidden; }
+/* ── Sidebar glass panel + nav (shared by drawer and fixed modes) ── */
 .sidebar-inner { background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); border: 1px solid var(--hairline); border-radius: 20px; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-rest); overflow-y: auto; }
 
 .brand-mark { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--radius-md); }
 .brand-mark .logo { width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--radius-md); background: var(--quantum); color: white; display: grid; place-items: center; font-weight: 600; font-size: 14px; box-shadow: 0 2px 6px rgba(10,130,223,0.25), inset 0 1px 0 rgba(255,255,255,0.30); }
 .brand-mark .name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; }
 .brand-mark .name span { color: var(--text-3); font-weight: 400; }
-:root[data-sidebar="collapsed"] .brand-mark .name { opacity: 0; width: 0; overflow: hidden; }
 
 .collapse-btn { width: 28px; height: 28px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-3); cursor: pointer; display: grid; place-items: center; transition: all 150ms; margin-left: auto; }
 .collapse-btn:hover { background: rgba(120, 120, 128, 0.10); color: var(--text-1); }
 .collapse-btn svg { width: 14px; height: 14px; transition: transform 250ms var(--ease-smooth); }
-:root[data-sidebar="collapsed"] .collapse-btn svg { transform: rotate(180deg); }
 
 .nav-section { display: flex; flex-direction: column; gap: 2px; }
 .nav-divider { height: 1px; background: var(--separator); margin: var(--space-2) var(--space-3); }
-:root[data-sidebar="collapsed"] .nav-divider { margin: var(--space-2) var(--space-2); }
 
 .nav-item { display: flex; align-items: center; gap: var(--space-3); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 14px; color: var(--text-2); cursor: pointer; text-decoration: none; transition: all 150ms var(--ease-smooth); white-space: nowrap; position: relative; background: transparent; border: 0; width: 100%; text-align: left; font-family: inherit; }
 .nav-item:hover { background: rgba(120, 120, 128, 0.08); color: var(--text-1); }
 .nav-item.active { background: var(--accent-soft); color: var(--accent); }
 .nav-item .icon { width: 18px; height: 18px; flex-shrink: 0; display: grid; place-items: center; }
 .nav-item .icon svg { width: 16px; height: 16px; }
-.nav-item .text { transition: opacity 200ms; flex: 1; }
+.nav-item .text { flex: 1; }
 .nav-item .chevron { color: var(--text-3); transition: transform 200ms var(--ease-smooth); flex-shrink: 0; display: grid; place-items: center; }
 .nav-item .chevron svg { width: 14px; height: 14px; }
 .nav-item.expandable[data-open="true"] .chevron { transform: rotate(90deg); }
-:root[data-sidebar="collapsed"] .nav-item .text,
-:root[data-sidebar="collapsed"] .nav-item .chevron { opacity: 0; width: 0; overflow: hidden; }
-:root[data-sidebar="collapsed"] .nav-item { justify-content: center; padding: 8px 6px; }
 
 /* Nested sub-items under IBE */
 .nav-sub { display: flex; flex-direction: column; gap: 2px; padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 300ms var(--ease-smooth); }
@@ -56,35 +66,78 @@ html { scroll-behavior: smooth; }
 .nav-sub .nav-item { padding: 6px 10px; font-size: 13px; }
 .nav-sub .nav-item .icon { width: 14px; height: 14px; }
 .nav-sub .nav-item .icon svg { width: 12px; height: 12px; }
-:root[data-sidebar="collapsed"] .nav-sub { display: none; }
 
 .user-block { margin-top: auto; padding: var(--space-3); border-radius: var(--radius-md); background: rgba(120, 120, 128, 0.05); display: flex; align-items: center; gap: var(--space-3); overflow: hidden; }
 .user-block .avatar { width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--quantum); color: white; display: grid; place-items: center; font-weight: 600; font-size: 12px; }
 .user-block .meta { flex: 1; min-width: 0; }
 .user-block .name { font-size: 13px; font-weight: 500; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-block .role { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500; }
-:root[data-sidebar="collapsed"] .user-block .meta { display: none; }
 
-/* Collapsed rail (64px): tighten padding and show only the centered collapse
-   toggle in the brand row, so it stays reachable to expand the sidebar again. */
-:root[data-sidebar="collapsed"] .sidebar { padding: var(--space-2); }
-:root[data-sidebar="collapsed"] .sidebar-inner { padding: var(--space-3) var(--space-2); }
-:root[data-sidebar="collapsed"] .brand-mark { justify-content: center; gap: 0; padding: var(--space-1); }
-:root[data-sidebar="collapsed"] .brand-mark .logo { display: none; }
-:root[data-sidebar="collapsed"] .collapse-btn { margin-left: 0; }
-
-/* ── Main + topbar ── */
-.main { padding: var(--space-6) var(--space-8); max-width: 100%; }
-.topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-8); }
+/* ── Topbar + main (shared) ── */
+.main { padding: var(--space-5) var(--space-4); max-width: 100%; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-8); }
 .search { flex: 1; max-width: 520px; display: flex; align-items: center; gap: var(--space-2); padding: 9px 16px; border-radius: var(--radius-md); background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); border: 1px solid var(--hairline); font-size: 14px; color: var(--text-3); }
 .search > svg { width: 16px; height: 16px; flex-shrink: 0; }
 .search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: 14px; color: var(--text-1); font-family: inherit; }
 .search input::placeholder { color: var(--text-3); }
 .search .key { margin-left: auto; padding: 2px 6px; border-radius: 4px; background: rgba(120, 120, 128, 0.10); font-family: var(--font-mono); font-size: 11px; color: var(--text-2); flex-shrink: 0; }
 .topbar-actions { display: flex; gap: var(--space-2); align-items: center; }
-.icon-btn { width: 36px; height: 36px; border-radius: var(--radius-md); background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); border: 1px solid var(--hairline); display: grid; place-items: center; cursor: pointer; color: var(--text-2); transition: all 150ms var(--ease-smooth); text-decoration: none; }
+.icon-btn { width: 36px; height: 36px; border-radius: var(--radius-md); background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); border: 1px solid var(--hairline); display: grid; place-items: center; cursor: pointer; color: var(--text-2); transition: all 150ms var(--ease-smooth); text-decoration: none; flex-shrink: 0; }
 .icon-btn:hover { background: var(--surface-strong); color: var(--text-1); }
 .icon-btn svg { width: 16px; height: 16px; }
+
+/* ════ MOBILE / TABLET (< lg): sidebar is an off-canvas DRAWER ════ */
+.layout { display: block; min-height: 100vh; }
+.sidebar { position: fixed; top: 0; left: 0; height: 100dvh; width: var(--sidebar-w); padding: var(--space-4); display: flex; flex-direction: column; overflow: hidden; z-index: 60; transform: translateX(-100%); transition: transform 280ms var(--ease-smooth); will-change: transform; }
+:root[data-drawer="open"] .sidebar { transform: translateX(0); }
+.sidebar-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.40); opacity: 0; visibility: hidden; transition: opacity 280ms var(--ease-smooth), visibility 280ms var(--ease-smooth); }
+:root[data-drawer="open"] .sidebar-backdrop { opacity: 1; visibility: visible; }
+.collapse-btn { display: none; } /* no collapse toggle in drawer mode */
+
+@media (max-width: 1023px) {
+  :root[data-drawer="open"] body { overflow: hidden; } /* scroll lock while drawer open */
+}
+
+/* ════ DESKTOP (≥ 1024px / lg): fixed, collapsible sidebar ════ */
+@media (min-width: 1024px) {
+  .layout { display: grid; grid-template-columns: var(--sidebar-w) 1fr; transition: grid-template-columns 300ms var(--ease-smooth); }
+  :root[data-sidebar="collapsed"] .layout { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
+
+  .sidebar { position: sticky; top: 0; height: 100vh; width: auto; padding: var(--space-5); transform: none; z-index: auto; transition: none; }
+  .sidebar-backdrop { display: none; }
+  .hamburger { display: none; }
+  .collapse-btn { display: grid; }
+
+  .main { padding: var(--space-6) var(--space-8); }
+
+  /* Collapsed rail (64px) — collapse exists only at this tier.
+     FIX A: hide labels (display:none, not clipped) and center every icon on a
+     clean vertical centerline; keep the collapse toggle reachable. */
+  :root[data-sidebar="collapsed"] .sidebar { padding: var(--space-2); }
+  :root[data-sidebar="collapsed"] .sidebar-inner { padding: var(--space-3) var(--space-2); }
+  :root[data-sidebar="collapsed"] .brand-mark { justify-content: center; gap: 0; padding: var(--space-1); }
+  :root[data-sidebar="collapsed"] .brand-mark .name { display: none; }
+  :root[data-sidebar="collapsed"] .brand-mark .logo { display: none; }
+  :root[data-sidebar="collapsed"] .collapse-btn { margin-left: 0; }
+  :root[data-sidebar="collapsed"] .collapse-btn svg { transform: rotate(180deg); }
+  :root[data-sidebar="collapsed"] .nav-item { justify-content: center; gap: 0; padding: 8px; }
+  :root[data-sidebar="collapsed"] .nav-item .text { display: none; }
+  :root[data-sidebar="collapsed"] .nav-item .chevron { display: none; }
+  :root[data-sidebar="collapsed"] .nav-divider { margin: var(--space-2); }
+  :root[data-sidebar="collapsed"] .nav-sub { display: none; }
+  :root[data-sidebar="collapsed"] .user-block .meta { display: none; }
+}
+
+/* ════ WIDE (≥ 1536px / 2xl): cap content width for readability ════ */
+@media (min-width: 1536px) {
+  .main { max-width: 1440px; margin-inline: auto; }
+}
+
+/* ── Brand-card grid — REUSABLE across all pages (dashboard, brand detail,
+   asset/document library). Mobile 1 / Tablet 2 / Desktop+ 3 columns. ── */
+.brands-grid { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+@media (min-width: 768px) { .brands-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .brands-grid { grid-template-columns: repeat(3, 1fr); } }
 
 /* ── Ambient orbs ── */
 .ambient { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; transition: opacity 400ms var(--ease-smooth);
@@ -99,9 +152,9 @@ html { scroll-behavior: smooth; }
 @keyframes orbB { 0%,100%{transform:translate3d(0,0,0) scale(1);} 50%{transform:translate3d(-10vw,5vh,0) scale(1.05);} }
 @keyframes orbC { 0%,100%{transform:translate3d(0,0,0) scale(1);} 50%{transform:translate3d(-5vw,-5vh,0) scale(1.03);} }
 
-/* ── Reduced motion (required) — freeze orbs and transitions ── */
+/* ── Reduced motion (required): freeze orbs, drawer slide, and transitions ── */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .orb { animation: none; }
-  .layout, .nav-item, .nav-sub, .collapse-btn, .collapse-btn svg, .nav-item .chevron, .icon-btn, .ambient { transition: none; }
+  .layout, .sidebar, .sidebar-backdrop, .nav-item, .nav-sub, .collapse-btn, .collapse-btn svg, .nav-item .chevron, .icon-btn, .ambient { transition: none; }
 }
