@@ -12,6 +12,12 @@
 .layout { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; transition: grid-template-columns 300ms var(--ease-smooth); }
 :root[data-sidebar="collapsed"] .layout { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
 
+/* Smooth in-page anchor scrolling. Sidebar product names are anchor links to
+ * sections on /ibe-product-suite; scroll-margin keeps the target clear of the
+ * top of the viewport. TODO(Task 3): create those id="<product-slug>" sections. */
+html { scroll-behavior: smooth; }
+:target { scroll-margin-top: var(--space-20); }
+
 /* ── Sidebar ── */
 .sidebar { position: sticky; top: 0; height: 100vh; padding: var(--space-5); display: flex; flex-direction: column; overflow: hidden; }
 .sidebar-inner { background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); border: 1px solid var(--hairline); border-radius: 20px; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-rest); overflow-y: auto; }
@@ -42,7 +48,7 @@
 .nav-item.expandable[data-open="true"] .chevron { transform: rotate(90deg); }
 :root[data-sidebar="collapsed"] .nav-item .text,
 :root[data-sidebar="collapsed"] .nav-item .chevron { opacity: 0; width: 0; overflow: hidden; }
-:root[data-sidebar="collapsed"] .nav-item { justify-content: center; padding: 8px; }
+:root[data-sidebar="collapsed"] .nav-item { justify-content: center; padding: 8px 6px; }
 
 /* Nested sub-items under IBE */
 .nav-sub { display: flex; flex-direction: column; gap: 2px; padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 300ms var(--ease-smooth); }
@@ -58,6 +64,14 @@
 .user-block .name { font-size: 13px; font-weight: 500; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-block .role { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500; }
 :root[data-sidebar="collapsed"] .user-block .meta { display: none; }
+
+/* Collapsed rail (64px): tighten padding and show only the centered collapse
+   toggle in the brand row, so it stays reachable to expand the sidebar again. */
+:root[data-sidebar="collapsed"] .sidebar { padding: var(--space-2); }
+:root[data-sidebar="collapsed"] .sidebar-inner { padding: var(--space-3) var(--space-2); }
+:root[data-sidebar="collapsed"] .brand-mark { justify-content: center; gap: 0; padding: var(--space-1); }
+:root[data-sidebar="collapsed"] .brand-mark .logo { display: none; }
+:root[data-sidebar="collapsed"] .collapse-btn { margin-left: 0; }
 
 /* ── Main + topbar ── */
 .main { padding: var(--space-6) var(--space-8); max-width: 100%; }
@@ -87,6 +101,7 @@
 
 /* ── Reduced motion (required) — freeze orbs and transitions ── */
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   .orb { animation: none; }
   .layout, .nav-item, .nav-sub, .collapse-btn, .collapse-btn svg, .nav-item .chevron, .icon-btn, .ambient { transition: none; }
 }

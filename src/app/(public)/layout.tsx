@@ -80,7 +80,8 @@ async function getNav(): Promise<SidebarNav> {
         .filter((p) => p.is_product && p.parent_id === ibe.id && !hiddenSlugs.has(p.slug))
         .map<NavLeaf>((p) => ({
           label: label(p),
-          href: `/${IBE_SLUG}/${p.slug}`,
+          // In-page anchor on the single /ibe-product-suite page (not a route).
+          href: `/${IBE_SLUG}#${p.slug}`,
           iconKey: p.slug,
         }));
     }
