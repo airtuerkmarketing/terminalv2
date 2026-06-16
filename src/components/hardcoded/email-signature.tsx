@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import "@/styles/email-signature.css";
 import { copyRichText, escapeHtml, imageUrl } from "@/lib/email-tools";
+import { OutOfOffice } from "@/components/hardcoded/out-of-office";
 
 /**
  * Your Signature generator (hardcoded route, component_key='email-signature').
@@ -667,6 +668,9 @@ export function EmailSignature({ title }: { title: string }) {
           </div>
         </div>
       </div>
+
+      {/* Out-of-Office generator (Task 5c) — second tool on the same page */}
+      <OutOfOffice />
     </article>
   );
 }

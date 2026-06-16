@@ -1,0 +1,177 @@
+/* Out-of-Office generator (Task 5c). Ported from the Webflow embed
+ * (spec/embeds/service-page-support.{js,css}, oo-* rules) but RESTYLED with
+ * theme.css tokens — no hardcoded theme hex. Quantum Blue (--accent) is the only
+ * accent (D-036): the original's black (#222) active states map to --accent, its
+ * green "copied" (#16a34a) maps to --accent + a check icon. Renders as a section
+ * below the signature generator inside the same page. `oo-` prefix is unique. */
+
+/* Section separator from the signature above */
+.oo {
+  margin-top: var(--space-16);
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--separator);
+}
+.oo-section-head { margin-bottom: var(--space-6); }
+.oo-eyebrow {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: var(--space-2);
+}
+.oo-section-head h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-1); margin: 0; }
+.oo-lead { margin: var(--space-2) 0 0; font-size: 14px; line-height: 1.6; color: var(--text-2); max-width: 60ch; }
+
+.oo-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  padding: var(--space-6);
+  background: var(--surface);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  position: relative;
+  max-width: 100%;
+  align-items: start;
+}
+@media (min-width: 980px) {
+  .oo-wrap { grid-template-columns: 320px minmax(0, 1fr); gap: var(--space-8); }
+}
+
+/* ── Form ── */
+.oo-form { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+
+.oo-optional { font-weight: 400; color: var(--text-3); text-transform: none; letter-spacing: 0; }
+
+/* Language / tone style bar */
+.oo-style-bar {
+  display: flex; gap: var(--space-4); flex-wrap: wrap;
+  padding: 12px 14px; background: var(--surface-flat); border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+}
+.oo-toggle-group { display: flex; align-items: center; gap: var(--space-2); }
+.oo-toggle-label { font-size: 11px; font-weight: 500; color: var(--text-2); white-space: nowrap; }
+.oo-toggle { display: flex; background: var(--surface-muted); border-radius: 8px; padding: 3px; gap: 2px; }
+.oo-toggle-btn {
+  background: transparent; border: none; border-radius: 6px; padding: 5px 12px;
+  font-family: inherit; font-size: 11.5px; font-weight: 500; color: var(--text-2); cursor: pointer;
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.oo-toggle-btn:hover { color: var(--text-1); }
+.oo-toggle-btn.oo-toggle-active { background: var(--surface-flat); color: var(--text-1); box-shadow: var(--shadow-rest); }
+
+/* Fields */
+.oo-field { display: flex; flex-direction: column; gap: 5px; }
+.oo-field label { font-size: 11px; font-weight: 500; color: var(--text-2); }
+.oo-field input {
+  height: 38px; padding: 0 12px; width: 100%; min-width: 0; box-sizing: border-box;
+  background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 13px; font-weight: 500; color: var(--text-1); outline: none;
+  transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
+}
+.oo-field input::placeholder { color: var(--text-3); font-weight: 400; }
+.oo-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.oo-field input[type="date"] { cursor: pointer; }
+.oo-date-row, .oo-deputy-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+@media (max-width: 460px) { .oo-date-row, .oo-deputy-row { grid-template-columns: 1fr; } }
+
+/* Quick select + reason chips */
+.oo-shortcuts { display: flex; flex-direction: column; gap: 7px; }
+.oo-shortcuts-label { font-size: 10px; font-weight: 600; color: var(--text-3); letter-spacing: 0.06em; text-transform: uppercase; }
+.oo-shortcut-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.oo-pill {
+  background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-full);
+  font-family: inherit; font-size: 11.5px; font-weight: 500; color: var(--text-2);
+  padding: 5px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  white-space: nowrap; line-height: 1;
+  transition: border-color 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
+}
+.oo-pill:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.oo-pill:active { transform: scale(0.96); }
+.oo-pill.oo-pill-active { border-color: var(--accent-border); background: var(--accent-soft); color: var(--accent); }
+
+.oo-badge-row { display: flex; flex-wrap: wrap; gap: 7px; }
+.oo-badge {
+  background: var(--surface-muted); border: 1px solid transparent; border-radius: 8px;
+  padding: 6px 11px; font-family: inherit; font-size: 12px; font-weight: 500; color: var(--text-2);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; line-height: 1;
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
+}
+.oo-badge:hover { color: var(--text-1); }
+.oo-badge:active { transform: scale(0.96); }
+.oo-badge.oo-badge-active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border); }
+
+/* ── Preview ── */
+.oo-preview-wrap { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.oo-card {
+  background: var(--surface-flat); border: 1px solid var(--accent); border-radius: var(--radius-md);
+  overflow: hidden; box-shadow: 0 8px 28px -6px var(--accent-soft), 0 4px 10px -4px var(--accent-soft);
+}
+.oo-card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: 14px 16px; background: transparent; border-bottom: 1px solid var(--hairline);
+}
+.oo-card-info { min-width: 0; flex: 1; }
+.oo-card-title { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-1); }
+.oo-card-sub { margin-top: 2px; font-size: 11px; color: var(--text-2); }
+.oo-card-btns { display: flex; gap: var(--space-2); flex-shrink: 0; }
+.oo-copy-btn {
+  height: 32px; padding: 0 12px; background: var(--accent); color: #fff; border: none;
+  border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  transition: filter 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
+}
+.oo-copy-btn:hover { filter: brightness(0.93); }
+.oo-copy-btn:active { transform: scale(0.97); }
+.oo-copy-btn svg { width: 14px; height: 14px; }
+.oo-copy-btn.oo-just-copied { background: var(--accent-soft); color: var(--accent); }
+.oo-copy-btn.oo-just-copied:hover { filter: none; }
+.oo-outlook-btn {
+  height: 32px; padding: 0 12px; background: transparent; color: var(--text-2);
+  border: 1px solid var(--hairline); border-radius: var(--radius-sm); font-family: inherit;
+  font-size: 12px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  white-space: nowrap; transition: border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth);
+}
+.oo-outlook-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.oo-outlook-btn svg { width: 14px; height: 14px; }
+
+.oo-card-body { padding: 20px 24px; }
+.oo-card-subject-row { display: flex; align-items: baseline; gap: var(--space-2); margin-bottom: var(--space-3); }
+.oo-subject-label { font-size: 11px; font-weight: 600; color: var(--text-3); white-space: nowrap; }
+.oo-subject-text { font-size: 13px; font-weight: 500; color: var(--text-1); word-break: break-word; }
+.oo-divider { height: 1px; background: var(--separator); margin-bottom: var(--space-4); }
+.oo-text-preview {
+  font-family: Arial, sans-serif; font-size: 13px; color: var(--text-1);
+  line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+}
+.oo-text-preview strong { font-weight: 700; }
+
+/* ── "How to set up in Outlook" accordion ── */
+.oo-info-card { background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-md); overflow: hidden; }
+.oo-info-toggle {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: 14px 18px; background: transparent; border: none; cursor: pointer; font-family: inherit; text-align: left;
+  transition: background-color 150ms var(--ease-smooth);
+}
+.oo-info-toggle:hover { background: var(--surface-muted); }
+.oo-info-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.oo-info-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--text-1); }
+.oo-info-title svg { width: 15px; height: 15px; color: var(--text-2); }
+.oo-info-chevron { color: var(--text-3); flex-shrink: 0; width: 16px; height: 16px; transition: transform 250ms var(--ease-smooth); }
+.oo-info-card.is-open .oo-info-chevron { transform: rotate(180deg); }
+.oo-info-collapse { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 300ms var(--ease-smooth); }
+.oo-info-card.is-open .oo-info-collapse { grid-template-rows: 1fr; }
+.oo-info-collapse-inner { overflow: hidden; }
+.oo-info-rows { display: flex; flex-direction: column; gap: var(--space-3); padding: 2px 18px 16px; }
+.oo-info-row { display: flex; gap: var(--space-3); align-items: flex-start; }
+.oo-info-step {
+  flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; margin-top: 1px;
+  background: var(--accent-soft); color: var(--accent); font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.oo-info-text { font-size: 11px; color: var(--text-2); line-height: 1.55; }
+.oo-info-text strong { color: var(--text-1); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .oo-toggle-btn, .oo-field input, .oo-pill, .oo-badge, .oo-copy-btn, .oo-outlook-btn,
+  .oo-info-toggle, .oo-info-chevron, .oo-info-collapse { transition: none; }
+}
