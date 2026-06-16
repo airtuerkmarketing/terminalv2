@@ -1,0 +1,89 @@
+/* Document Library page (Task 5e). Reuses the Asset Library visual language
+ * (chips, section heads, card grid via .brands-grid) but with a `doc-` prefix.
+ * Tokens from theme.css — no hardcoded theme hex. Quantum Blue (--accent) is the
+ * only accent (D-036); file-type badges are intentionally NEUTRAL (no per-format
+ * brand colors / no torch red in chrome). The cover badge scrim (rgba(0,0,0,.55))
+ * is an image overlay, theme-agnostic by design (same exception as al-badge). */
+
+/* ── Filter chips ── */
+.doc-filters { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-6); }
+.doc-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius-full);
+  background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px); border: 1px solid var(--hairline);
+  font-size: 13px; font-weight: 500; color: var(--text-2); cursor: pointer;
+  transition: color 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth);
+}
+.doc-chip:hover { color: var(--text-1); }
+.doc-chip.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border); }
+.doc-chip-count { font-size: 11px; color: var(--text-3); }
+.doc-chip.active .doc-chip-count { color: var(--accent); }
+
+/* ── Sections ── */
+.doc-section { margin-bottom: var(--space-12); }
+.doc-section-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
+.doc-section-head h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-1); }
+.doc-section-count { font-size: 13px; color: var(--text-3); font-family: var(--font-mono); }
+.doc-line { flex: 1; height: 1px; background: var(--separator); }
+
+/* ── Card ── */
+.doc-card {
+  background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-lg);
+  overflow: hidden; display: flex; flex-direction: column;
+  transition: box-shadow 200ms var(--ease-smooth), background-color 200ms var(--ease-smooth);
+}
+.doc-card:hover { box-shadow: var(--shadow-hover); background-color: var(--surface-strong); }
+
+.doc-cover { position: relative; aspect-ratio: 4 / 3; background: var(--surface-muted); overflow: hidden; }
+.doc-cover-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.doc-cover-fallback {
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, var(--surface-muted), var(--surface-strong));
+}
+.doc-badges { position: absolute; top: var(--space-3); left: var(--space-3); display: flex; gap: 6px; }
+.doc-badge {
+  padding: 3px 8px; border-radius: var(--radius-sm); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase; color: #fff; background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+
+.doc-meta { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); flex: 1; }
+.doc-title { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.doc-title-text {
+  font-size: 14px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-1); line-height: 1.35;
+  flex: 1; min-width: 0;
+}
+.doc-lang {
+  flex-shrink: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 7px;
+  border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent);
+}
+
+/* ── Download rows (one per format) ── */
+.doc-downloads { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
+.doc-download {
+  display: flex; align-items: center; gap: var(--space-2); padding: 8px 10px;
+  border-radius: var(--radius-sm); border: 1px solid var(--hairline); background: var(--surface-muted);
+  text-decoration: none; color: var(--text-2); cursor: pointer;
+  transition: border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth);
+}
+.doc-download:hover { border-color: var(--accent-border); color: var(--accent); background: var(--accent-soft); }
+.doc-dl-badge {
+  flex-shrink: 0; min-width: 38px; text-align: center; padding: 2px 6px; border-radius: 6px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.02em;
+  background: var(--surface-flat); border: 1px solid var(--hairline); color: var(--text-2);
+}
+.doc-download:hover .doc-dl-badge { color: var(--accent); border-color: var(--accent-border); }
+.doc-dl-label { flex: 1; font-size: 12px; font-weight: 500; }
+.doc-dl-icon { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* ── Empty state (e.g. Sales) ── */
+.doc-empty {
+  border: 1px dashed var(--hairline); border-radius: var(--radius-xl); padding: var(--space-12) var(--space-6);
+  text-align: center; color: var(--text-3); font-size: 14px; background: var(--surface);
+  display: flex; flex-direction: column; gap: var(--space-2); align-items: center;
+}
+.doc-empty strong { color: var(--text-1); font-weight: 600; font-size: 15px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-chip, .doc-card, .doc-download { transition: none; }
+}

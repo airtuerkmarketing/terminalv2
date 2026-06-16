@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getBlocks, getIbeProducts, getImageAssets, getPageByPath, type PageRow } from "@/lib/pages";
+import {
+  getBlocks,
+  getDocumentLibrary,
+  getIbeProducts,
+  getImageAssets,
+  getPageByPath,
+  type PageRow,
+} from "@/lib/pages";
 import { BlockRenderer } from "@/components/blocks/block-renderer";
 import { BlockEmptyState } from "@/components/blocks/empty-state";
 import { HardcodedStub } from "@/components/blocks/hardcoded-stub";
 import { AssetLibrary } from "@/components/hardcoded/asset-library";
 import { EmailSignature } from "@/components/hardcoded/email-signature";
+import { DocumentLibrary } from "@/components/hardcoded/document-library";
 
 const IBE_PATH = "/ibe-product-suite";
 
@@ -37,6 +45,10 @@ export async function renderPage(fullPath: string) {
     }
     if (page.component_key === "email-signature") {
       return <EmailSignature title={page.title} />;
+    }
+    if (page.component_key === "document-library") {
+      const docData = await getDocumentLibrary();
+      return <DocumentLibrary title={page.title} data={docData} />;
     }
     return <HardcodedStub title={page.title} componentKey={page.component_key} />;
   }
