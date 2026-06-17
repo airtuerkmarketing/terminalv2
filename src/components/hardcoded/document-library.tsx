@@ -127,7 +127,7 @@ export function DocumentLibrary({ title, data }: { title: string; data: Document
               <span className="doc-section-count">{s.items.length}</span>
               <div className="doc-line" />
             </div>
-            <div className="brands-grid">
+            <div className="doc-card-grid">
               {s.items.map((card) => (
                 <DocCard key={card.pairId} card={card} fallbackCover={sampleCoverUrl} />
               ))}

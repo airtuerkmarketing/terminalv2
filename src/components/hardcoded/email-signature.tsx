@@ -250,7 +250,7 @@ function buildPlain(f: SigFields, tab: "main" | "reply"): string {
 
 const NONE = { main: false, reply: false } as const;
 
-export function EmailSignature({ title }: { title: string }) {
+export function EmailSignature({ title, embedded }: { title: string; embedded?: boolean }) {
   const [name, setName] = useState("");
   const [position, setPosition] = useState("");
   const [email, setEmail] = useState("");
@@ -327,15 +327,17 @@ export function EmailSignature({ title }: { title: string }) {
 
   return (
     <article className="email-signature">
-      <header className="page-hero">
-        <div className="eyebrow">Brand Tools</div>
-        <h1>{title}</h1>
-        <p className="lead">
-          Build a consistent airtuerk email signature in seconds — fill in your
-          details, then copy the Main version for new mails and the Reply version
-          for responses.
-        </p>
-      </header>
+      {!embedded && (
+        <header className="page-hero">
+          <div className="eyebrow">Brand Tools</div>
+          <h1>{title}</h1>
+          <p className="lead">
+            Build a consistent airtuerk email signature in seconds — fill in your
+            details, then copy the Main version for new mails and the Reply version
+            for responses.
+          </p>
+        </header>
+      )}
 
       <div className="sig-wrap">
         {/* ── Form ── */}

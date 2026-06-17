@@ -81,14 +81,14 @@ async function getNav(): Promise<SidebarNav> {
   const brandsNav: NavNode[] = topLevel.map((b) => {
     const node: NavNode = { label: label(b), href: `/${b.slug}`, iconKey: b.slug };
     if (singlePageSlugs.has(b.slug)) {
-      // Single-page brand (Task 6): its child pages become sub-nav items —
-      // block children are in-page anchors (/<brand>#<slug>); hardcoded children
-      // (email-signature, configurator, …) stay route links (/<brand>/<slug>).
+      // Single-page brand: ALL child pages become anchor sub-nav items, both
+      // block and hardcoded (APIX tools, email-signature, …) — the parent page
+      // embeds them as inline sections, so deep routes redirect to the anchor.
       const kids = sidebarChildren.get(b.slug) ?? [];
       if (kids.length > 0) {
         node.children = kids.map<NavLeaf>((c) => ({
           label: c.title,
-          href: c.rendering_mode === "hardcoded" ? `/${b.slug}/${c.slug}` : `/${b.slug}#${c.slug}`,
+          href: `/${b.slug}#${c.slug}`,
           iconKey: c.slug,
         }));
       }
@@ -102,7 +102,7 @@ async function getNav(): Promise<SidebarNav> {
           iconKey: p.slug,
         }));
     }
-    // else (e.g. airtuerk-apix): flat link, no children — unchanged.
+    // else (non-single-page, non-IBE brands): flat link, no children.
     return node;
   });
 

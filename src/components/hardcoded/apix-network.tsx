@@ -98,7 +98,7 @@ const COUNTRIES: Country[] = [
   { name: "ANTALYA", code: "tr", lng: 30.71, lat: 36.89, state: "office", office: true, role: "Service Center" },
 ];
 
-export function ApixNetwork({ title }: { title: string }) {
+export function ApixNetwork({ title, embedded }: { title: string; embedded?: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -462,10 +462,12 @@ export function ApixNetwork({ title }: { title: string }) {
 
   return (
     <section className="apix-net">
-      <header className="apix-net-head">
-        <div className="eyebrow">airtuerk APIX</div>
-        <h1>{title}</h1>
-      </header>
+      {!embedded && (
+        <header className="apix-net-head">
+          <div className="eyebrow">airtuerk APIX</div>
+          <h1>{title}</h1>
+        </header>
+      )}
 
       <section className="apix-mw" id="apixMap" ref={rootRef}>
         <div className="apix-mw-stage" id="apixStage">

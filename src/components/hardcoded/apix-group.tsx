@@ -106,7 +106,7 @@ function esc(s: unknown) {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m] as string));
 }
 
-export function ApixGroup({ title }: { title: string }) {
+export function ApixGroup({ title, embedded }: { title: string; embedded?: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -319,10 +319,12 @@ export function ApixGroup({ title }: { title: string }) {
 
   return (
     <section className="apix-group">
-      <header className="apix-group-head">
-        <div className="eyebrow">airtuerk APIX</div>
-        <h1>{title}</h1>
-      </header>
+      {!embedded && (
+        <header className="apix-group-head">
+          <div className="eyebrow">airtuerk APIX</div>
+          <h1>{title}</h1>
+        </header>
+      )}
 
       <section className="apix-org" id="apixOrg" ref={rootRef}>
         <div className="apix-org-stage">

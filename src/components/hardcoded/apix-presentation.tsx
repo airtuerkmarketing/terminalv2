@@ -28,7 +28,7 @@ import "@/styles/apix-presentation.css";
 const DECK_SRC =
   "https://aerticket-my.sharepoint.com/personal/bdemir_airtuerk_de/_layouts/15/Doc.aspx?sourcedoc={569fe19c-0ebd-47ce-966a-d1ac028777dc}&action=embedview&wdAr=1.7777777777777777";
 
-export function ApixPresentation({ title }: { title: string }) {
+export function ApixPresentation({ title, embedded }: { title: string; embedded?: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [pressed, setPressed] = useState(false); // aria-pressed (fullscreen active)
   const [fsfix, setFsfix] = useState(false); // fixed-overlay fallback active
@@ -71,10 +71,12 @@ export function ApixPresentation({ title }: { title: string }) {
 
   return (
     <section className="apix-pres">
-      <header className="apix-pres-head">
-        <div className="eyebrow">airtuerk APIX</div>
-        <h1>{title}</h1>
-      </header>
+      {!embedded && (
+        <header className="apix-pres-head">
+          <div className="eyebrow">airtuerk APIX</div>
+          <h1>{title}</h1>
+        </header>
+      )}
 
       <div className={`ppx-wrap${fsfix ? " ppx-fsfix" : ""}`} id="ppx-root" ref={rootRef}>
         <div className="ppx-bar">

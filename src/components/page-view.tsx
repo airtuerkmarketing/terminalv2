@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import {
   getBlocks,
-  getBrandSections,
+  getBrandSectionsAll,
   getDocumentLibrary,
   getIbeProducts,
   getImageAssets,
@@ -42,8 +42,23 @@ export async function renderPage(fullPath: string) {
   const page = await getPageByPath(fullPath);
   if (!page) notFound();
 
-  // Hardcoded routes → the real component by component_key; others still stub
-  // (built in later Task 5 sub-tasks).
+  // Single-page brand child (any rendering mode): redirect to parent anchor.
+  // This check runs BEFORE the hardcoded dispatcher so that sub-routes of a
+  // single-page brand (e.g. /airtuerk-apix/workflow, /airtuerk-service/email-signature)
+  // redirect to /<brand>#<slug> instead of rendering a full standalone page.
+  // Top-level hardcoded routes (asset-library, document-library, …) have
+  // segments.length === 1 and are never caught here.
+  const singlePageSlugs = await getSinglePageBrandSlugs();
+  const segments = fullPath.split("/").filter(Boolean);
+  if (
+    segments.length === 2 &&
+    page.parent_id &&
+    singlePageSlugs.has(segments[0])
+  ) {
+    redirect(`/${segments[0]}#${page.slug}`);
+  }
+
+  // Hardcoded routes → the real component by component_key; others still stub.
   if (page.rendering_mode === "hardcoded") {
     if (page.component_key === "asset-library") {
       const assets = await getImageAssets();
@@ -71,20 +86,6 @@ export async function renderPage(fullPath: string) {
     return <HardcodedStub title={page.title} componentKey={page.component_key} />;
   }
 
-  // Single-page brands (Task 6): a block-mode child of a single-page brand is not
-  // its own route — redirect it to the parent's in-page anchor. Hardcoded children
-  // (email-signature, …) returned above; IBE + APIX are excluded from the set.
-  const singlePageSlugs = await getSinglePageBrandSlugs();
-  const segments = fullPath.split("/").filter(Boolean);
-  if (
-    segments.length === 2 &&
-    page.parent_id &&
-    page.rendering_mode === "blocks" &&
-    singlePageSlugs.has(segments[0])
-  ) {
-    redirect(`/${segments[0]}#${page.slug}`);
-  }
-
   const blocks = await getBlocks(page.id);
 
   // IBE Product Suite keeps its product-brand-driven single page (unchanged path,
@@ -105,19 +106,26 @@ export async function renderPage(fullPath: string) {
     );
   }
 
-  // Single-page brand parent (Task 6): parent's own blocks (hero) first, then each
-  // block-mode child page as an in-page anchor <section>. Empty-state where a
-  // section has no blocks yet (expected — no content authored).
+  // Single-page brand parent: parent's own blocks (hero) first, then each child
+  // page as an in-page anchor <section>. Block children get a BlockRenderer;
+  // hardcoded children (APIX tools, email-signature, …) get their component
+  // with embedded=true so the component suppresses its own standalone header.
   if (segments.length === 1 && singlePageSlugs.has(segments[0])) {
-    const sections = await getBrandSections(page.id);
+    const sections = await getBrandSectionsAll(page.id);
     return (
       <article>
         <PageHeader page={page} />
         {blocks.length > 0 ? <BlockRenderer blocks={blocks} /> : null}
         {sections.map((s) => (
           <section key={s.slug} id={s.slug} className="anchor-section">
-            <h2>{s.title}</h2>
-            {s.blocks.length > 0 ? <BlockRenderer blocks={s.blocks} /> : <BlockEmptyState />}
+            {s.rendering_mode === "hardcoded" ? (
+              renderHardcodedEmbedded(s.component_key, s.title)
+            ) : (
+              <>
+                <h2>{s.title}</h2>
+                {s.blocks.length > 0 ? <BlockRenderer blocks={s.blocks} /> : <BlockEmptyState />}
+              </>
+            )}
           </section>
         ))}
       </article>
@@ -138,6 +146,15 @@ export async function renderPage(fullPath: string) {
       )}
     </article>
   );
+}
+
+function renderHardcodedEmbedded(componentKey: string, title: string) {
+  if (componentKey === "apix-workflow") return <ApixWorkflow title={title} embedded />;
+  if (componentKey === "apix-network") return <ApixNetwork title={title} embedded />;
+  if (componentKey === "apix-presentation") return <ApixPresentation title={title} embedded />;
+  if (componentKey === "apix-group") return <ApixGroup title={title} embedded />;
+  if (componentKey === "email-signature") return <EmailSignature title={title} embedded />;
+  return <HardcodedStub title={title} componentKey={componentKey} />;
 }
 
 function PageHeader({ page }: { page: PageRow }) {

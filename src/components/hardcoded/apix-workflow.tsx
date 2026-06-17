@@ -133,7 +133,7 @@ function themeFor(id: string): Theme {
 
 const pos = (x: number, y: number): CSSProperties => ({ left: `${x}px`, top: `${y}px` });
 
-export function ApixWorkflow({ title }: { title: string }) {
+export function ApixWorkflow({ title, embedded }: { title: string; embedded?: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -383,10 +383,12 @@ export function ApixWorkflow({ title }: { title: string }) {
 
   return (
     <section className="apix-wf">
-      <header className="apix-wf-head">
-        <div className="eyebrow">airtuerk APIX</div>
-        <h1>{title}</h1>
-      </header>
+      {!embedded && (
+        <header className="apix-wf-head">
+          <div className="eyebrow">airtuerk APIX</div>
+          <h1>{title}</h1>
+        </header>
+      )}
 
       <div className="ax-wrap" id="ax-root" ref={rootRef}>
         <div className="ax-bar">

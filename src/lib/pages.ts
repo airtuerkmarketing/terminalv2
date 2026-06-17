@@ -93,14 +93,13 @@ export async function getIbeProducts(): Promise<{ slug: string; name: string }[]
 }
 
 // ── Single-page brand model (Task 6) ──
-// Most top-level brands render as ONE scrolling page: their block-mode child
-// pages become in-page anchor sections (the same UX as IBE). EXCLUDED:
-//   • airtuerk-apix — keeps its multi-page structure (interactive workflow /
-//     global-network sub-pages are full pages, not brand-identity sections);
+// Most top-level brands render as ONE scrolling page: their child pages
+// (blocks AND hardcoded) become in-page anchor sections. EXCLUDED:
 //   • ibe-product-suite — retains its own product-brand-driven single-page path
 //     (getIbeProducts), which preserves the spec'd product order.
-// Both are intentionally left on their existing behavior.
-const SINGLE_PAGE_EXCLUDED_SLUGS = new Set(["airtuerk-apix", "ibe-product-suite"]);
+// airtuerk-apix was previously excluded but is now a single-page brand:
+// its 4 hardcoded tools + block sections all render as anchors on /airtuerk-apix.
+const SINGLE_PAGE_EXCLUDED_SLUGS = new Set(["ibe-product-suite"]);
 
 /** Slugs of top-level brands that render as a single anchored page. Cached so
  *  the sidebar (getNav), the redirect check, and the aggregator share one read. */
@@ -184,6 +183,41 @@ export async function getBrandSections(parentId: string): Promise<BrandSection[]
   const kids = (data ?? []) as { id: string; slug: string; title: string }[];
   return Promise.all(
     kids.map(async (k) => ({ slug: k.slug, title: k.title, blocks: await getBlocks(k.id) }))
+  );
+}
+
+/** A single in-page anchor section — either block-driven or a hardcoded tool. */
+export type BrandSectionAny =
+  | { slug: string; title: string; rendering_mode: "blocks"; component_key: null; blocks: BlockRow[] }
+  | { slug: string; title: string; rendering_mode: "hardcoded"; component_key: string; blocks: [] };
+
+/**
+ * All visible child pages of a single-page brand parent (both block-mode and
+ * hardcoded), ordered by sort_order — used for the combined anchor-section
+ * rendering where hardcoded tools embed alongside brand-identity sections.
+ * Draft-aware.
+ */
+export async function getBrandSectionsAll(parentId: string): Promise<BrandSectionAny[]> {
+  const supabase = await readClient();
+  let query = supabase
+    .from("pages")
+    .select("id, slug, title, sort_order, status, rendering_mode, component_key")
+    .eq("parent_id", parentId)
+    .eq("hidden_in_sidebar", false)
+    .order("sort_order", { ascending: true });
+  if (!SHOW_DRAFTS) query = query.eq("status", "published");
+  const { data } = await query;
+  const kids = (data ?? []) as {
+    id: string; slug: string; title: string;
+    rendering_mode: "blocks" | "hardcoded"; component_key: string | null;
+  }[];
+  return Promise.all(
+    kids.map(async (k): Promise<BrandSectionAny> => {
+      if (k.rendering_mode === "hardcoded") {
+        return { slug: k.slug, title: k.title, rendering_mode: "hardcoded", component_key: k.component_key ?? k.slug, blocks: [] };
+      }
+      return { slug: k.slug, title: k.title, rendering_mode: "blocks", component_key: null, blocks: await getBlocks(k.id) };
+    })
   );
 }
 
