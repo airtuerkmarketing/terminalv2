@@ -403,3 +403,52 @@ export async function getDocumentLibrary(): Promise<DocumentLibraryData> {
     sampleCoverUrl,
   };
 }
+
+// ── Team Directory (/team) ──
+// team_members carries richer fields (is_lead, joined_year, tools, tasks) for a
+// future detail modal; the current directory UI uses only name/position/
+// department/initials/photo. The profile photo is an FK to assets
+// (avatar_asset_id); resolve it to a public URL via the embed. team_members is
+// public-read, so the anon client works in dev and prod.
+export interface TeamMemberDTO {
+  id: string;
+  firstName: string;
+  lastName: string;
+  position: string | null;
+  department: string | null;
+  initials: string;
+  photoUrl: string | null;
+  email: string | null;
+}
+
+/** All team members, ordered by sort_order (alphabetical by last name). */
+export async function getTeamMembers(): Promise<TeamMemberDTO[]> {
+  const supabase = await createClient(); // team_members is public-read
+  const { data } = await supabase
+    .from("team_members")
+    .select(
+      "id, first_name, last_name, position, department, initials, email, sort_order, " +
+        "avatar:assets!team_members_avatar_asset_id_fkey(public_url)"
+    )
+    .order("sort_order", { ascending: true });
+  type Row = {
+    id: string;
+    first_name: string;
+    last_name: string;
+    position: string | null;
+    department: string | null;
+    initials: string;
+    email: string | null;
+    avatar: { public_url: string | null } | { public_url: string | null }[] | null;
+  };
+  return ((data ?? []) as unknown as Row[]).map((r) => ({
+    id: r.id,
+    firstName: r.first_name,
+    lastName: r.last_name,
+    position: r.position,
+    department: r.department,
+    initials: r.initials,
+    photoUrl: one(r.avatar)?.public_url ?? null,
+    email: r.email,
+  }));
+}

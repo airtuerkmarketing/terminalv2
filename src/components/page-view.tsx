@@ -8,6 +8,7 @@ import {
   getImageAssets,
   getPageByPath,
   getSinglePageBrandSlugs,
+  getTeamMembers,
   type PageRow,
 } from "@/lib/pages";
 import { BlockRenderer } from "@/components/blocks/block-renderer";
@@ -20,6 +21,7 @@ import { ApixWorkflow } from "@/components/hardcoded/apix-workflow";
 import { ApixNetwork } from "@/components/hardcoded/apix-network";
 import { ApixPresentation } from "@/components/hardcoded/apix-presentation";
 import { ApixGroup } from "@/components/hardcoded/apix-group";
+import { TeamDirectory } from "@/components/hardcoded/team";
 
 const IBE_PATH = "/ibe-product-suite";
 
@@ -82,6 +84,10 @@ export async function renderPage(fullPath: string) {
     }
     if (page.component_key === "apix-group") {
       return <ApixGroup title={page.title} />;
+    }
+    if (page.component_key === "team-directory") {
+      const members = await getTeamMembers();
+      return <TeamDirectory title={page.title} members={members} />;
     }
     return <HardcodedStub title={page.title} componentKey={page.component_key} />;
   }
