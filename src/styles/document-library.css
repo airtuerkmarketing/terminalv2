@@ -5,6 +5,10 @@
  * brand colors / no torch red in chrome). The cover badge scrim (rgba(0,0,0,.55))
  * is an image overlay, theme-agnostic by design (same exception as al-badge). */
 
+/* ── Toolbar: filter chips (left) + view toggle (right) ── */
+.doc-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-6); }
+.doc-toolbar .doc-filters { margin-bottom: 0; }
+
 /* ── Filter chips ── */
 .doc-filters { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-6); }
 .doc-chip {
@@ -50,6 +54,25 @@
 .doc-card-grid { display: grid; gap: var(--space-3); grid-template-columns: 1fr; }
 @media (min-width: 768px) { .doc-card-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (min-width: 1024px) { .doc-card-grid { grid-template-columns: repeat(4, 1fr); } }
+
+/* Grid view: denser (4 / 6 cols), square cover, no download rows (the card is a
+   compact preview — click-through stays available via List or Card view). */
+@media (min-width: 768px) { .doc-card-grid[data-view="grid"] { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1024px) { .doc-card-grid[data-view="grid"] { grid-template-columns: repeat(6, 1fr); } }
+.doc-card-grid[data-view="grid"] .doc-cover { aspect-ratio: 1 / 1; }
+.doc-card-grid[data-view="grid"] .doc-downloads { display: none; }
+
+/* List view: download links on the right of each .doc-row (reuses blocks.css). */
+.doc-row-actions { display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
+.doc-row-dl {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--hairline); background: var(--surface-muted); color: var(--text-2);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.02em; text-decoration: none;
+  transition: border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth);
+}
+.doc-row-dl:hover { border-color: var(--accent-border); color: var(--accent); background: var(--accent-soft); }
+.doc-row-dl svg { width: 13px; height: 13px; }
+@media (prefers-reduced-motion: reduce) { .doc-row-dl { transition: none; } }
 
 .doc-meta { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); flex: 1; }
 .doc-title { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }

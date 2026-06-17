@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import "@/styles/document-library.css";
+import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
 // Type-only import: erased at compile time, so server-only pages.ts is NOT pulled
 // into this client bundle.
 import type { DocCardDTO, DocumentLibraryData } from "@/lib/pages";
@@ -51,6 +52,8 @@ function catRank(c: string): number {
 export function DocumentLibrary({ title, data }: { title: string; data: DocumentLibraryData }) {
   const { cards, sampleCoverUrl } = data;
   const [active, setActive] = useState<string>("all");
+  // Default "card" matches SSR; ViewToggle lifts the persisted choice after mount.
+  const [view, setView] = useState<ViewMode>("card");
 
   const chips = useMemo(() => {
     const counts = new Map<string, number>();
@@ -92,20 +95,23 @@ export function DocumentLibrary({ title, data }: { title: string; data: Document
         </p>
       </header>
 
-      <div className="doc-filters" role="tablist" aria-label="Departments">
-        {chips.map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            role="tab"
-            aria-selected={active === c.key}
-            className={`doc-chip${active === c.key ? " active" : ""}`}
-            onClick={() => setActive(c.key)}
-          >
-            {c.label}
-            <span className="doc-chip-count">{c.count}</span>
-          </button>
-        ))}
+      <div className="doc-toolbar">
+        <div className="doc-filters" role="tablist" aria-label="Departments">
+          {chips.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              role="tab"
+              aria-selected={active === c.key}
+              className={`doc-chip${active === c.key ? " active" : ""}`}
+              onClick={() => setActive(c.key)}
+            >
+              {c.label}
+              <span className="doc-chip-count">{c.count}</span>
+            </button>
+          ))}
+        </div>
+        <ViewToggle value={view} onChange={setView} storageKey="terminalv2-doclib-view" />
       </div>
 
       {sections.length === 0 ? (
@@ -127,11 +133,19 @@ export function DocumentLibrary({ title, data }: { title: string; data: Document
               <span className="doc-section-count">{s.items.length}</span>
               <div className="doc-line" />
             </div>
-            <div className="doc-card-grid">
-              {s.items.map((card) => (
-                <DocCard key={card.pairId} card={card} fallbackCover={sampleCoverUrl} />
-              ))}
-            </div>
+            {view === "list" ? (
+              <div className="doc-rows">
+                {s.items.map((card) => (
+                  <DocRow key={card.pairId} card={card} />
+                ))}
+              </div>
+            ) : (
+              <div className="doc-card-grid" data-view={view}>
+                {s.items.map((card) => (
+                  <DocCard key={card.pairId} card={card} fallbackCover={sampleCoverUrl} />
+                ))}
+              </div>
+            )}
           </section>
         ))
       )}
@@ -185,6 +199,42 @@ function DocCard({ card, fallbackCover }: { card: DocCardDTO; fallbackCover: str
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+// List-view row, reusing the .doc-rows / .doc-row / .ft / .info pattern from
+// blocks.css (no duplicate layout). Each available format is a download link on
+// the right; the leading .ft badge takes the first format's color (pdf/word).
+function DocRow({ card }: { card: DocCardDTO }) {
+  const kinds = [...new Set(card.formats.map((f) => f.kind))];
+  const ftClass = kinds[0]?.toLowerCase() === "pdf" ? "pdf" : kinds[0]?.toLowerCase() === "word" ? "word" : "";
+  return (
+    <div className="doc-row">
+      <span className={`ft ${ftClass}`}>{kinds[0]}</span>
+      <span className="info">
+        <span className="name">
+          {card.title}
+          {card.language ? <span className="doc-lang"> {card.language.toUpperCase()}</span> : null}
+        </span>
+        <span className="sub">{kinds.join(" · ")}</span>
+      </span>
+      <span className="doc-row-actions">
+        {card.formats.map((f) => (
+          <a
+            key={f.kind}
+            className="doc-row-dl"
+            href={f.url}
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Download ${card.title} as ${f.kind}`}
+          >
+            <DownloadSvg />
+            {f.kind}
+          </a>
+        ))}
+      </span>
     </div>
   );
 }
