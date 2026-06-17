@@ -97,10 +97,11 @@ export function ApixPresentation({ title }: { title: string }) {
             title="APIX Presentation — PowerPoint Viewer"
             loading="lazy"
           >
-            This is an embedded{" "}
-            <a target="_blank" rel="noopener noreferrer" href="https://office.com">Microsoft Office</a>{" "}
-            presentation, powered by{" "}
-            <a target="_blank" rel="noopener noreferrer" href="https://office.com/webapps">Office</a>.
+            {/* iframe fallback is shown only by user agents that can't render
+                iframes (effectively none). Kept as a single static string — no
+                {" "} whitespace expressions or nested elements, which under
+                React 19 hydrate as separate text nodes and mismatch (M4). */}
+            This is an embedded Microsoft Office presentation, powered by Office.
           </iframe>
         </div>
       </div>
