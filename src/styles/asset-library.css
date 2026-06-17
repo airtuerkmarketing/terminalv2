@@ -27,7 +27,7 @@
 
 .al-card { background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-lg); overflow: hidden; transition: box-shadow 200ms var(--ease-smooth), background-color 200ms var(--ease-smooth); }
 .al-card:hover { box-shadow: var(--shadow-hover); background-color: var(--surface-strong); }
-.al-thumb { position: relative; aspect-ratio: 4 / 3; background: var(--surface-muted); display: grid; place-items: center; overflow: hidden; }
+.al-thumb { position: relative; aspect-ratio: 1 / 1; background: var(--surface-muted); display: grid; place-items: center; overflow: hidden; }
 .al-img { width: 100%; height: 100%; object-fit: cover; }
 .al-img.is-contain { object-fit: contain; padding: var(--space-5); }
 .al-badge { position: absolute; top: var(--space-3); left: var(--space-3); padding: 3px 8px; border-radius: var(--radius-sm); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: rgba(0, 0, 0, 0.55); color: white; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
@@ -35,9 +35,33 @@
 .al-dl svg { width: 16px; height: 16px; }
 .al-card:hover .al-dl { opacity: 1; transform: translateY(0); }
 .al-dl:hover { color: var(--accent); border-color: var(--accent-border); }
-.al-meta { padding: var(--space-3) var(--space-4); }
+.al-meta { padding: var(--space-2) var(--space-3); }
 .al-meta .al-name { font-size: 13px; font-weight: 500; letter-spacing: -0.01em; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .al-meta .al-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+/* ── View modes (grid / card / list). The .al-card markup is identical across
+   all three; only the grid container and a few card overrides change per view. */
+.al-grid { display: grid; gap: var(--space-4); }
+
+/* Card (default): medium cards, 1 / 2 / 3 columns. */
+.al-grid[data-view="card"] { grid-template-columns: 1fr; }
+@media (min-width: 768px) { .al-grid[data-view="card"] { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .al-grid[data-view="card"] { grid-template-columns: repeat(3, 1fr); } }
+
+/* Grid: dense thumbnails, more per row (3 / 4 / 6), name only. */
+.al-grid[data-view="grid"] { gap: var(--space-3); grid-template-columns: repeat(3, 1fr); }
+@media (min-width: 768px) { .al-grid[data-view="grid"] { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1024px) { .al-grid[data-view="grid"] { grid-template-columns: repeat(6, 1fr); } }
+.al-grid[data-view="grid"] .al-sub { display: none; }
+
+/* List: one item per row — 48px thumb left, name + meta right. */
+.al-grid[data-view="list"] { grid-template-columns: 1fr; gap: var(--space-2); }
+.al-grid[data-view="list"] .al-card { display: flex; align-items: center; gap: var(--space-4); }
+.al-grid[data-view="list"] .al-thumb { width: 48px; height: 48px; aspect-ratio: 1; flex-shrink: 0; border-radius: var(--radius-md); }
+.al-grid[data-view="list"] .al-thumb .al-badge, .al-grid[data-view="list"] .al-dl { display: none; }
+.al-grid[data-view="list"] .al-img.is-contain { padding: 6px; }
+.al-grid[data-view="list"] .al-meta { flex: 1; min-width: 0; display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); padding: 0 var(--space-3) 0 0; }
+.al-grid[data-view="list"] .al-meta .al-sub { margin-top: 0; flex-shrink: 0; }
 
 .al-empty { border: 1px dashed var(--hairline); border-radius: var(--radius-xl); padding: var(--space-12) var(--space-6); text-align: center; color: var(--text-3); font-size: 14px; background: var(--surface); }
 

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import "@/styles/asset-library.css";
+import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
 // Type-only import: erased at compile time, so it does NOT pull the server-only
 // pages.ts module into this client bundle.
 import type { AssetDTO } from "@/lib/pages";
@@ -39,6 +40,8 @@ function orderCategories(cats: string[]): string[] {
 export function AssetLibrary({ title, assets }: { title: string; assets: AssetDTO[] }) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState("All");
+  // Default "card" matches SSR; ViewToggle lifts the persisted choice after mount.
+  const [view, setView] = useState<ViewMode>("card");
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
@@ -90,6 +93,7 @@ export function AssetLibrary({ title, assets }: { title: string; assets: AssetDT
             aria-label="Search assets"
           />
         </div>
+        <ViewToggle value={view} onChange={setView} storageKey="terminalv2-assetlib-view" />
       </div>
 
       <div className="al-filters" role="tablist" aria-label="Asset categories">
@@ -122,7 +126,7 @@ export function AssetLibrary({ title, assets }: { title: string; assets: AssetDT
               <span className="al-section-count">{g.items.length}</span>
               <div className="al-line" />
             </div>
-            <div className="brands-grid">
+            <div className="al-grid" data-view={view}>
               {g.items.map((a) => (
                 <AssetCard key={a.id} asset={a} />
               ))}
