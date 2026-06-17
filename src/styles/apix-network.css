@@ -116,7 +116,7 @@
 .apix-pill.is-office.is-hovered { outline-color: #0557A6; }
 
 /* ─── GLASS ─── */
-.apix-glass {
+.apix-mw .apix-glass {
   background: rgba(255,255,255,.55);
   -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
   border: 1px solid rgba(255,255,255,.65);
