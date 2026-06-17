@@ -153,6 +153,17 @@ html { scrollbar-gutter: stable; }
 @media (min-width: 768px) { .brands-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1024px) { .brands-grid { grid-template-columns: repeat(3, 1fr); } }
 
+/* ── View toggle (grid / card / list) — shared by asset + document libraries.
+   Pill with three icon buttons; active = Quantum-Blue accent. 40px tap targets
+   (touch-friendly). Tokens only — adapts to dark mode. ── */
+.view-toggle { display: inline-flex; gap: 2px; padding: 3px; background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-md); flex-shrink: 0; }
+.view-toggle-btn { width: 40px; height: 40px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-3); cursor: pointer; display: grid; place-items: center; transition: color 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth); }
+.view-toggle-btn:hover { color: var(--text-1); background: var(--surface); }
+.view-toggle-btn.active { background: var(--accent-soft); color: var(--accent); }
+.view-toggle-btn svg { width: 18px; height: 18px; }
+.view-toggle-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) { .view-toggle-btn { transition: none; } }
+
 /* ── Ambient orbs ── */
 .ambient { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; transition: opacity 400ms var(--ease-smooth);
   background-image: radial-gradient(1100px 700px at 18% 5%, var(--orb-1) 0%, transparent 55%), radial-gradient(900px 600px at 82% 12%, var(--orb-2) 0%, transparent 55%), radial-gradient(900px 700px at 50% 92%, var(--orb-3) 0%, transparent 60%); }
