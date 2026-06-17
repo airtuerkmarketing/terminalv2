@@ -29,6 +29,12 @@
 .page-hero .lead { font-size: 17px; line-height: 1.55; color: var(--text-2); max-width: 620px; }
 
 /* ── description / raw_html (rich text) ── */
+/* max-width 720 is an intentional readable-measure cap (~70-character lines),
+   consistent with the .lead cap (620) and the shell's "readable measure"
+   philosophy. Visual blocks (palette, specimens, grids) deliberately run to the
+   full content width; the resulting text-narrow / visual-wide rhythm is the
+   editorial layout, not a defect. Removing the cap would stretch body copy to
+   ~1400px lines on desktop and hurt readability — so it is kept by design. */
 .rich-text { font-size: 15px; line-height: 1.65; color: var(--text-2); max-width: 720px; }
 .rich-text h2 { font-size: 22px; font-weight: 600; color: var(--text-1); letter-spacing: -0.012em; margin: var(--space-6) 0 var(--space-3); }
 .rich-text h3 { font-size: 16px; font-weight: 600; color: var(--text-1); margin: var(--space-5) 0 var(--space-2); }
@@ -210,7 +216,10 @@
    (more robust than relying on :target alone). ── */
 .anchor-section { padding-top: var(--space-6); scroll-margin-top: var(--space-20); }
 .anchor-section + .anchor-section { margin-top: var(--space-10); border-top: 1px solid var(--separator); }
-.anchor-section > h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.012em; color: var(--text-1); margin-bottom: var(--space-4); padding-top: var(--space-6); }
+/* No padding-top here: .anchor-section already owns the space-6 top padding
+   (and scroll-margin-top for the anchor jump offset). Adding it to the h2 too
+   doubled the gap above the heading (space-6 + space-6). */
+.anchor-section > h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.012em; color: var(--text-1); margin-bottom: var(--space-4); }
 
 /* ── empty state + unsupported note ── */
 .block-empty { border: 1px dashed var(--hairline); border-radius: var(--radius-xl); padding: var(--space-12) var(--space-6); text-align: center; background: var(--surface); }

@@ -34,6 +34,10 @@
  * sections on /ibe-product-suite; scroll-margin keeps the target clear of the
  * top of the viewport. TODO(Task 3): create those id="<product-slug>" sections. */
 html { scroll-behavior: smooth; }
+/* Reserve the scrollbar gutter at all times so navigating between a scrolling
+   page (long) and a non-scrolling one (short) doesn't shift the centered
+   content by the ~15px scrollbar width on each route change. */
+html { scrollbar-gutter: stable; }
 :target { scroll-margin-top: var(--space-20); }
 
 /* ── Sidebar glass panel + nav (shared by drawer and fixed modes) ── */

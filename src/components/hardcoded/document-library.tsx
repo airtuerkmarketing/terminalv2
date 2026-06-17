@@ -57,7 +57,10 @@ export function DocumentLibrary({ title, data }: { title: string; data: Document
     for (const c of cards) counts.set(c.department, (counts.get(c.department) ?? 0) + 1);
     return [
       { key: "all", label: "Alle", count: cards.length },
-      ...DEPARTMENTS.map((d) => ({ key: d.key, label: d.label, count: counts.get(d.key) ?? 0 })),
+      // Hide zero-count department chips generically (e.g. Sales today has 0
+      // docs). A department only shows once it has at least one document.
+      ...DEPARTMENTS.map((d) => ({ key: d.key, label: d.label, count: counts.get(d.key) ?? 0 }))
+        .filter((d) => d.count > 0),
     ];
   }, [cards]);
 
