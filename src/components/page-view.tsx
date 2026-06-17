@@ -16,6 +16,7 @@ import { HardcodedStub } from "@/components/blocks/hardcoded-stub";
 import { AssetLibrary } from "@/components/hardcoded/asset-library";
 import { EmailSignature } from "@/components/hardcoded/email-signature";
 import { DocumentLibrary } from "@/components/hardcoded/document-library";
+import { ApixWorkflow } from "@/components/hardcoded/apix-workflow";
 
 const IBE_PATH = "/ibe-product-suite";
 
@@ -51,6 +52,9 @@ export async function renderPage(fullPath: string) {
     if (page.component_key === "document-library") {
       const docData = await getDocumentLibrary();
       return <DocumentLibrary title={page.title} data={docData} />;
+    }
+    if (page.component_key === "apix-workflow") {
+      return <ApixWorkflow title={page.title} />;
     }
     return <HardcodedStub title={page.title} componentKey={page.component_key} />;
   }
