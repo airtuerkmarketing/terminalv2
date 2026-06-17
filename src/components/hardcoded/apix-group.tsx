@@ -271,6 +271,10 @@ export function ApixGroup({ title }: { title: string }) {
           if (leafletMap) { leafletMap.remove(); leafletMap = null; }
           leafletMap = L.map(modalMapEl, { zoomControl: true, scrollWheelZoom: false, attributionControl: true })
             .setView([it.lat, it.lng], 11);
+          // CARTO light_all tiles are kept in BOTH app themes (not swapped for
+          // dark_all in dark mode): the modal box is a light content surface
+          // (#fff in both themes, like the org board), so a dark basemap inside
+          // a white modal would clash. Accepted dark-mode exception (M5).
           L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
             subdomains: "abcd", maxZoom: 19,
