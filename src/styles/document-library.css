@@ -95,7 +95,7 @@
 }
 .doc-download:hover { border-color: var(--accent-border); color: var(--accent); background: var(--accent-soft); }
 .doc-dl-badge {
-  flex-shrink: 0; min-width: 38px; text-align: center; padding: 2px 6px; border-radius: 6px;
+  flex-shrink: 0; min-width: 38px; text-align: center; padding: 2px 6px; border-radius: var(--radius-sm);
   font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.02em;
   background: var(--surface-flat); border: 1px solid var(--hairline); color: var(--text-2);
 }

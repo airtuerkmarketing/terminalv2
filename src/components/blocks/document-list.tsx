@@ -23,8 +23,19 @@ export function DocumentList({ content }: { content: DocumentListContent }) {
   );
 }
 
-function ft(d: DocumentItem) {
-  return (d.filetype ?? "doc").toUpperCase();
+// BUG-2: resolve a concrete file kind so the badge never falls back to "DOC"
+// for non-doc files (e.g. ZIP letterheads) and never emits an empty modifier
+// class. Prefer the explicit filetype, else derive from the href extension.
+type FtKind = "pdf" | "word" | "zip" | "file";
+const FT_LABEL: Record<FtKind, string> = { pdf: "PDF", word: "DOC", zip: "ZIP", file: "FILE" };
+function ftKind(d: DocumentItem): FtKind {
+  if (d.filetype === "pdf") return "pdf";
+  if (d.filetype === "word") return "word";
+  const href = (d.href ?? "").toLowerCase();
+  if (href.endsWith(".zip")) return "zip";
+  if (href.endsWith(".pdf")) return "pdf";
+  if (href.endsWith(".docx") || href.endsWith(".doc")) return "word";
+  return "file";
 }
 
 function ListRows({ docs }: { docs: DocumentItem[] }) {
@@ -32,7 +43,7 @@ function ListRows({ docs }: { docs: DocumentItem[] }) {
     <div className="doc-rows">
       {docs.map((d, i) => (
         <a key={i} className="doc-row" href={d.href ?? "#"}>
-          <span className={`ft ${d.filetype ?? ""}`}>{ft(d)}</span>
+          <span className={`ft ${ftKind(d)}`}>{FT_LABEL[ftKind(d)]}</span>
           <span className="info">
             <span className="name">{d.title}</span>
             {d.meta ? <span className="sub">{d.meta}</span> : null}
@@ -49,7 +60,7 @@ function PreviewCards({ docs }: { docs: DocumentItem[] }) {
       {docs.map((d, i) => (
         <div key={i} className="doc-card">
           <div className="preview">
-            <span className={`doc-badge ${d.filetype ?? ""}`}>{ft(d)}</span>
+            <span className={`doc-badge ${ftKind(d)}`}>{FT_LABEL[ftKind(d)]}</span>
             {d.href ? (
               <a className="card-dl" href={d.href} download aria-label={`Download ${d.title}`} title={`Download ${d.title}`}>
                 <Download aria-hidden />
@@ -59,7 +70,11 @@ function PreviewCards({ docs }: { docs: DocumentItem[] }) {
           <div className="meta">
             <a href={d.href ?? "#"}>
               {d.title}
-              {d.lang ? <span className="lang">{d.lang}</span> : null}
+              {/* BUG-1: skip the lang badge when the title already ends in a
+                  language suffix like "(DE)" / "(EN)" / "(TR)" to avoid "(DE)DE". */}
+              {d.lang && !/\((DE|EN|TR)\)\s*$/i.test(d.title) ? (
+                <span className="lang">{d.lang}</span>
+              ) : null}
             </a>
           </div>
         </div>
@@ -74,11 +89,11 @@ function ImageCta({ docs }: { docs: DocumentItem[] }) {
       {docs.map((d, i) => (
         <div key={i} className="doc-image-card">
           <div className="shot">
-            <span className={`doc-badge ${d.filetype ?? ""}`}>{ft(d)}</span>
+            <span className={`doc-badge ${ftKind(d)}`}>{FT_LABEL[ftKind(d)]}</span>
           </div>
           <div className="cta">
             <a className="btn-outline" href={d.href ?? "#"}>
-              Download {ft(d)}
+              Download {FT_LABEL[ftKind(d)]}
             </a>
             {d.meta ? <p className="caption">{d.meta}</p> : null}
           </div>

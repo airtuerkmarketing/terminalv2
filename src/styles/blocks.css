@@ -124,9 +124,10 @@
 /* ── logo_grid ── */
 .logo-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, 1fr); }
 @media (min-width: 768px) { .logo-grid { grid-template-columns: repeat(4, 1fr); } }
-.logo-tile { position: relative; background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-lg); aspect-ratio: 4 / 3; display: grid; place-items: center; color: var(--text-1); font-weight: 600; }
+.logo-tile { position: relative; background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-lg); aspect-ratio: 1 / 1; display: grid; place-items: center; color: var(--text-1); font-weight: 600; padding: var(--card-padding); }
 .logo-grid.is-circles .logo-tile { border-radius: 50%; aspect-ratio: 1; }
-.logo-tile img { max-width: 64%; max-height: 64%; }
+/* Adaptive (Buhara): square container, logo in natural ratio, contained + capped. */
+.logo-tile img { object-fit: contain; max-width: 70%; max-height: 70%; }
 
 /* ── per-asset download button (top-right of a showcase card) ── */
 /* Glassy, always visible at low opacity; full accent on hover/focus. The hit
@@ -135,7 +136,7 @@
 .card-dl {
   position: absolute; top: 10px; right: 10px; z-index: 2;
   display: inline-flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; padding: 7px; border-radius: var(--radius-full);
+  width: 34px; height: 34px; padding: 7px; border-radius: var(--button-radius);
   background: var(--surface); border: 1px solid var(--hairline); color: var(--text-2);
   -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
   opacity: 0.65; cursor: pointer;
@@ -153,7 +154,7 @@
 .asset-block .downloads { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 /* shared download pill / link */
-.dl-pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius-full); border: 1px solid var(--hairline); background: var(--surface); font-size: 13px; color: var(--text-1); text-decoration: none; transition: all 150ms var(--ease-smooth); }
+.dl-pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--button-radius); border: 1px solid var(--hairline); background: var(--surface); font-size: 13px; color: var(--text-1); text-decoration: none; transition: all 150ms var(--ease-smooth); }
 .dl-pill:hover { border-color: var(--accent-border); color: var(--accent); }
 
 /* ── asset_grid ── */
@@ -177,6 +178,8 @@
 .doc-row .ft { width: 40px; height: 40px; border-radius: var(--radius-md); display: grid; place-items: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
 .doc-row .ft.pdf { background: rgba(237, 28, 36, 0.10); color: var(--torch); }
 .doc-row .ft.word { background: var(--accent-soft); color: var(--accent); }
+/* BUG-2: neutral badge for zip/file (no torch, no strong accent) */
+.doc-row .ft.zip, .doc-row .ft.file { background: var(--surface-muted); color: var(--text-2); }
 .doc-row .info { flex: 1; min-width: 0; }
 .doc-row .info .name { font-size: 14px; font-weight: 500; }
 .doc-row .info .sub { font-size: 12px; color: var(--text-3); }
@@ -190,6 +193,7 @@
 .doc-card .preview { background: var(--surface-muted); min-height: 200px; display: grid; place-items: center; position: relative; }
 .doc-badge { width: 48px; height: 60px; border-radius: var(--radius-sm); display: grid; place-items: center; color: white; font-size: 10px; font-weight: 700; background: var(--accent); }
 .doc-badge.pdf { background: var(--torch); }
+.doc-badge.zip, .doc-badge.file { background: var(--surface-muted); color: var(--text-2); }
 .doc-card .meta { padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--separator); }
 .doc-card .meta a { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-1); text-decoration: none; }
 .doc-card .meta a:hover { color: var(--accent); }
@@ -233,7 +237,7 @@
    the target clear of the topbar when jumped to via the sidebar #slug anchors
    (more robust than relying on :target alone). ── */
 .anchor-section { padding-top: var(--space-6); scroll-margin-top: var(--space-20); }
-.anchor-section + .anchor-section { margin-top: var(--space-10); border-top: 1px solid var(--separator); }
+.anchor-section + .anchor-section { margin-top: var(--section-gap); border-top: 1px solid var(--separator); }
 /* No padding-top here: .anchor-section already owns the space-6 top padding
    (and scroll-margin-top for the anchor jump offset). Adding it to the h2 too
    doubled the gap above the heading (space-6 + space-6). */
