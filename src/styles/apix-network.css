@@ -1,0 +1,253 @@
+/* APIX Global Network — interactive map (Phase 4, Task 10c).
+ *
+ * Ported VERBATIM from the recovered embed (apix map 1 css.txt). The `.apix-*`
+ * prefix is unique to this tool. PORT POLICY (mirrors the Workflow port):
+ *
+ *   • MAP = CONTENT → preserved verbatim. The dotted-grid stage, land fill, the
+ *     state colours (active #0A82DF · upcoming #F59E0B · office #0557A6), the
+ *     glass control bar / state tabs / searchable dropdown / zoom controls, the
+ *     pills with flags, the hub disc and office markers are the map's MEANING
+ *     and are kept exactly. The map is a self-contained light artifact (like the
+ *     Workflow board), so its surfaces stay light in both app themes. Its active
+ *     colour #0A82DF already equals our Quantum Blue accent.
+ *   • APP CHROME = TOKENISED → only the page header above the widget uses
+ *     theme.css tokens (Quantum Blue eyebrow, --text-1 title).
+ *   • FONTS → the original hotlinked Google Fonts (Inter) are dropped; every
+ *     'Inter' is replaced with var(--font). Pill widths are measured from the
+ *     rendered font at runtime, so sizing self-adjusts.
+ */
+
+.apix-mw, .apix-mw * { box-sizing: border-box; }
+
+.apix-mw {
+  position: relative; width: 100%; margin: 0 auto;
+  font-size: 14px; font-family: var(--font);
+  color: #1a1a1a; -webkit-font-smoothing: antialiased; user-select: none;
+}
+
+/* ─── Map stage ─── */
+.apix-mw-stage {
+  position: relative; width: 100%; aspect-ratio: 1400 / 720;
+  overflow: hidden; border-radius: 20px; background: #FAFBFC;
+  background-image: radial-gradient(circle, #D8DCE0 1.1px, transparent 1.1px);
+  background-size: 24px 24px; border: 1px solid #EBEBEB;
+  box-shadow: 0 10px 40px -14px rgba(0,0,0,.14);
+}
+.apix-mw-stage > svg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block; touch-action: none; cursor: grab;
+}
+.apix-mw-stage > svg:active { cursor: grabbing; }
+.apix-mw-pills { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+
+/* ─── SVG layers ─── */
+.apix-mw .land { fill: #E7E9EC; stroke: #fff; stroke-width: .4; }
+.apix-mw .connection {
+  fill: none; stroke: #94A3B8; stroke-width: 1.2; stroke-dasharray: 2 3;
+  opacity: 0; vector-effect: non-scaling-stroke;
+  animation: apixFade .9s ease-out forwards;
+  transition: stroke .18s, stroke-width .18s, opacity .18s;
+}
+.apix-mw .connection.s-active   { stroke: #0A82DF; }
+.apix-mw .connection.s-upcoming { stroke: #F59E0B; }
+.apix-mw .connection.s-office   { stroke: #0557A6; }
+.apix-mw .connection.is-active  { stroke-width: 2; opacity: 1 !important; }
+.apix-mw .leader {
+  stroke: #94A3B8; stroke-width: 1; fill: none; opacity: 0;
+  vector-effect: non-scaling-stroke;
+  animation: apixFade .6s ease-out forwards; transition: opacity .22s;
+}
+.apix-mw .country-dot {
+  stroke: #fff; stroke-width: 1.6; opacity: 0;
+  vector-effect: non-scaling-stroke;
+  animation: apixFade .4s ease-out forwards;
+}
+.apix-mw .country-dot.s-active   { fill: #0A82DF; }
+.apix-mw .country-dot.s-upcoming { fill: #F59E0B; }
+.apix-mw .country-hit { fill: transparent; cursor: pointer; pointer-events: all; }
+
+/* ─── HUB: company favicon disc ─── */
+.apix-mw .hub-marker { opacity: 0; animation: apixFade .55s ease-out .15s forwards; pointer-events: none; }
+.apix-mw .hub-ring {
+  fill: none; stroke: #0A82DF; stroke-width: 1.5; opacity: .55;
+  transform-origin: center; transform-box: fill-box; vector-effect: non-scaling-stroke;
+  animation: apixHubRing 2.4s ease-out infinite;
+}
+.apix-mw .apix-pulse {
+  fill: none; stroke: #0A82DF; stroke-width: 1.6; opacity: .7;
+  transform-origin: center; transform-box: fill-box; vector-effect: non-scaling-stroke;
+  animation: apixRing 1.8s ease-out 2;
+}
+
+/* ─── OFFICE markers (lucide building-2 path data) ─── */
+.apix-mw .office-marker { opacity: 0; animation: apixFade .45s ease-out forwards; }
+.apix-mw .office-marker .ofc-bg { fill: #fff; stroke: #0557A6; stroke-width: 1.6; transition: stroke-width .15s; }
+.apix-mw .office-marker .ofc-ic { fill: none; stroke: #0557A6; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.apix-mw .office-marker.is-hot .ofc-bg { stroke-width: 2.6; }
+
+/* ─── PILL labels ─── */
+.apix-pill {
+  position: absolute; transform: translate(-50%,-50%);
+  padding: 5px 9px; background: #fff; box-shadow: 0 2px 8px rgba(17,24,39,.1);
+  border-radius: 9px; outline: 1px solid #EBEBEB; outline-offset: -1px;
+  display: inline-flex; align-items: center; gap: 6px;
+  pointer-events: auto; cursor: pointer; white-space: nowrap;
+  opacity: 0; animation: apixFade .4s ease-out forwards;
+  transition: outline-color .18s, box-shadow .18s, opacity .22s;
+  z-index: 2; will-change: left, top;
+}
+.apix-pill:hover { outline-color: #0A82DF; box-shadow: 0 4px 14px rgba(10,130,223,.2); z-index: 6; }
+.apix-pill__flag {
+  width: 18px; height: 18px; border-radius: 50%; overflow: hidden;
+  flex-shrink: 0; background: #f1f5f9; box-shadow: 0 .5px 2px #DFDFDF;
+}
+.apix-pill__flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.apix-pill__label { font-size: 13px; font-weight: 600; line-height: 1; letter-spacing: .01em; color: #111; }
+.apix-pill__role {
+  font-size: 10px; font-weight: 700; line-height: 1; letter-spacing: .05em;
+  color: #0557A6; background: #E8F1FA; border-radius: 5px; padding: 3px 6px; text-transform: uppercase;
+}
+.apix-pill.is-office { outline-color: #BBD3EA; }
+.apix-pill.is-office:hover { outline-color: #0557A6; box-shadow: 0 4px 14px rgba(5,87,166,.22); }
+
+.apix-mw.labels-off .apix-pill:not(.is-hovered) { opacity: 0 !important; pointer-events: none; }
+.apix-mw.labels-off .leader:not(.is-active) { opacity: 0 !important; }
+.apix-pill.is-hovered { z-index: 10; outline-color: #0A82DF; box-shadow: 0 4px 14px rgba(10,130,223,.2); }
+.apix-pill.is-office.is-hovered { outline-color: #0557A6; }
+
+/* ─── GLASS ─── */
+.apix-glass {
+  background: rgba(255,255,255,.55);
+  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.65);
+  box-shadow: 0 8px 30px rgba(17,24,39,.14), inset 0 1px 0 rgba(255,255,255,.7);
+  border-radius: 16px;
+}
+
+/* ─── Floating top control bar ─── */
+.apix-controls {
+  position: absolute; top: 14px; left: 14px; right: 14px; z-index: 20;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap; pointer-events: none;
+}
+.apix-controls > * { pointer-events: auto; }
+.apix-cgroup { display: flex; align-items: center; gap: 4px; padding: 5px; flex-wrap: wrap; }
+
+/* ─── State tabs (single-select) ─── */
+.apix-state {
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px;
+  border: 1px solid transparent; border-radius: 999px; background: transparent;
+  font: 600 12px/1 var(--font); color: #1a1a1a; cursor: pointer;
+  opacity: .55; transition: opacity .18s, background .18s, border-color .18s, color .18s, transform .1s;
+}
+.apix-state:hover { opacity: .9; background: rgba(255,255,255,.45); }
+.apix-state:active { transform: scale(.97); }
+.apix-state[aria-pressed="true"] {
+  opacity: 1; background: #fff; border-color: rgba(0,0,0,.06); box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.apix-state[aria-pressed="true"][data-state="active"]   { color: #0A82DF; }
+.apix-state[aria-pressed="true"][data-state="upcoming"] { color: #B45309; }
+.apix-state[aria-pressed="true"][data-state="office"]   { color: #0557A6; }
+.apix-state__dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.apix-state[data-state="active"]   .apix-state__dot { background: #0A82DF; }
+.apix-state[data-state="upcoming"] .apix-state__dot { background: #F59E0B; }
+.apix-state[data-state="office"]   .apix-state__dot { background: #0557A6; }
+.apix-state__count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  background: rgba(0,0,0,.07); border-radius: 9px;
+  font: 700 10px/1 var(--font); color: #555; margin-left: 1px;
+}
+.apix-state[aria-pressed="true"] .apix-state__count { background: currentColor; color: #fff; opacity: .85; }
+
+/* ─── Icon buttons ─── */
+.apix-iconbtn {
+  width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(0,0,0,.06); border-radius: 12px; background: rgba(255,255,255,.45);
+  color: #1a1a1a; cursor: pointer; transition: background .15s, color .15s, transform .1s;
+}
+.apix-iconbtn:hover { background: rgba(255,255,255,.9); }
+.apix-iconbtn:active { transform: scale(.94); }
+.apix-iconbtn[aria-pressed="true"] { background: #EFF6FE; border-color: #BFDDF8; color: #0A82DF; }
+.apix-iconbtn .ic-off { display: none; }
+.apix-iconbtn[aria-pressed="true"] .ic-on { display: none; }
+.apix-iconbtn[aria-pressed="true"] .ic-off { display: block; }
+
+/* ─── Searchable country dropdown ─── */
+.apix-dd { position: relative; }
+.apix-dd__btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; min-width: 190px;
+  border: 1px solid rgba(255,255,255,.65); border-radius: 12px; background: rgba(255,255,255,.55);
+  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+  font: 600 13px/1 var(--font); color: #1a1a1a; cursor: pointer;
+}
+.apix-dd__btn:hover { background: rgba(255,255,255,.8); }
+.apix-dd__btnflag { width: 18px; height: 18px; border-radius: 50%; overflow: hidden; background: #eef2f6; flex-shrink: 0; }
+.apix-dd__btnflag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.apix-dd__btnflag:empty { display: none; }
+.apix-dd__btnlabel { flex: 1; text-align: left; white-space: nowrap; }
+.apix-dd__chev { width: 14px; height: 14px; opacity: .55; transition: transform .2s; flex-shrink: 0; }
+.apix-dd.is-open .apix-dd__chev { transform: rotate(180deg); }
+
+.apix-dd__panel { position: absolute; top: calc(100% + 8px); left: 0; width: 280px; max-width: 84vw; padding: 8px; z-index: 60; display: none; }
+.apix-dd.is-open .apix-dd__panel { display: block; animation: apixPop .18s ease-out; }
+.apix-dd__search {
+  width: 100%; height: 36px; padding: 0 12px; margin-bottom: 6px;
+  border: 1px solid rgba(0,0,0,.08); border-radius: 10px; background: rgba(255,255,255,.6);
+  font: 500 13px var(--font); color: #111; outline: none;
+}
+.apix-dd__search:focus { border-color: #0A82DF; box-shadow: 0 0 0 3px rgba(10,130,223,.15); }
+.apix-dd__list { max-height: 280px; overflow-y: auto; scrollbar-width: thin; }
+.apix-dd__list::-webkit-scrollbar { width: 7px; }
+.apix-dd__list::-webkit-scrollbar-thumb { background: rgba(0,0,0,.18); border-radius: 4px; }
+.apix-dd__item { display: flex; align-items: center; gap: 10px; padding: 8px 9px; border-radius: 10px; cursor: pointer; transition: background .12s; }
+.apix-dd__item:hover, .apix-dd__item.kbd { background: rgba(10,130,223,.1); }
+.apix-dd__item.is-all { font-weight: 700; color: #0A82DF; border-bottom: 1px solid rgba(0,0,0,.06); border-radius: 10px 10px 0 0; }
+.apix-dd__iflag { width: 22px; height: 16px; border-radius: 3px; overflow: hidden; background: #eef2f6; flex-shrink: 0; }
+.apix-dd__iflag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.apix-dd__iname { flex: 1; font-size: 13px; font-weight: 500; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.apix-dd__idot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.apix-dd__empty { padding: 14px; text-align: center; color: #94A3B8; font-size: 12px; }
+
+/* ─── Zoom controls ─── */
+.apix-zoom { position: absolute; right: 14px; bottom: 14px; z-index: 20; display: flex; flex-direction: column; padding: 4px; gap: 2px; }
+.apix-zoom button {
+  width: 36px; height: 36px; border: none; background: transparent; color: #1a1a1a; cursor: pointer;
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 19px; font-weight: 500; transition: background .12s, transform .1s;
+}
+.apix-zoom button:hover { background: rgba(10,130,223,.12); color: #0A82DF; }
+.apix-zoom button:active { transform: scale(.92); }
+.apix-zoom .apix-zoom__sep { height: 1px; background: rgba(0,0,0,.08); margin: 1px 6px; }
+
+/* ─── Fullscreen ─── */
+.apix-mw.is-fullscreen {
+  position: fixed; inset: 0; z-index: 99999; margin: 0; width: 100vw; height: 100vh;
+  background: #FAFBFC; display: flex; align-items: center; justify-content: center;
+}
+.apix-mw.is-fullscreen .apix-mw-stage {
+  width: min(100vw, calc(100vh * 1400 / 720)); border-radius: 0; box-shadow: none; border: none;
+}
+.apix-mw.is-fullscreen .apix-controls { top: 18px; left: 18px; right: 18px; }
+.apix-mw.is-fullscreen .apix-zoom { right: 18px; bottom: 18px; }
+
+@keyframes apixFade { to { opacity: 1; } }
+@keyframes apixPop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes apixRing    { 0% { transform: scale(.6); opacity: .6; } 100% { transform: scale(3);   opacity: 0; } }
+@keyframes apixHubRing { 0% { transform: scale(1);  opacity: .55;} 100% { transform: scale(2.6); opacity: 0; } }
+
+@media (max-width: 720px) {
+  .apix-controls { top: 10px; left: 10px; right: 10px; gap: 8px; }
+  .apix-cgroup { padding: 4px; }
+  .apix-state { height: 28px; padding: 0 10px; font-size: 11px; }
+  .apix-state__count { min-width: 16px; height: 16px; font-size: 9px; }
+  .apix-dd__btn { min-width: 150px; height: 36px; }
+  .apix-pill__label { font-size: 12px; }
+}
+
+/* ─── Section header above the widget (app CHROME → tokens) ─── */
+.apix-net { padding: var(--space-2) 0; }
+.apix-net-head { margin-bottom: var(--space-6); }
+.apix-net-head .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--space-2); }
+.apix-net-head h1 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; color: var(--text-1); margin: 0; }
