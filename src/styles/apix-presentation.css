@@ -1,0 +1,64 @@
+/* APIX Presentation player — live SharePoint/Office-Online embed (Task 10b).
+ *
+ * Ported from the recovered embed (apix powerpoint embed.txt). The `.ppx-*`
+ * prefix is unique to this tool. PORT POLICY (mirrors the Workflow/Map ports):
+ *
+ *   • The deck is rendered by the live Office-Online viewer inside an <iframe>
+ *     pointing at aerticket-my.sharepoint.com — this is the FEATURE (renders all
+ *     animations server-side), the one intentional external request, NOT a
+ *     migratable asset.
+ *   • APP CHROME = TOKENISED → the container, title bar and fullscreen button
+ *     follow theme.css tokens (Quantum Blue --accent, glass --surface, no green)
+ *     and adapt to dark mode. The fullscreen backdrop stays the deck-friendly
+ *     dark #0b0f17 (presentation chrome, kept faithful).
+ *   • FONTS → the original 'General Sans' is dropped; inherits var(--font).
+ */
+
+.ppx-wrap {
+  font-family: var(--font); font-size: 14px;
+  width: 100%; margin: 0 auto; border-radius: var(--radius-lg); overflow: hidden;
+  background: var(--surface);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid var(--hairline); box-shadow: var(--shadow-rest); color: var(--text-1);
+}
+.ppx-bar { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--hairline); gap: 16px; flex-wrap: wrap; }
+.ppx-title { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.01em; color: var(--text-1); }
+.ppx-sub { margin: 3px 0 0; font-size: 12px; color: var(--text-2); }
+.ppx-btn { height: 32px; padding: 0 12px; background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-sm); font: 500 12px/1 inherit; cursor: pointer; color: var(--text-1); display: inline-flex; align-items: center; gap: 6px; transition: background .15s, border-color .15s, color .15s; }
+.ppx-btn:hover { background: var(--surface-flat); border-color: var(--accent-border); color: var(--accent); }
+.ppx-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent); }
+.ppx-btn .ic-off, .ppx-btn .t-off { display: none; }
+.ppx-btn[aria-pressed="true"] .ic-on, .ppx-btn[aria-pressed="true"] .t-on { display: none; }
+.ppx-btn[aria-pressed="true"] .ic-off { display: inline-block; }
+.ppx-btn[aria-pressed="true"] .t-off { display: inline; }
+
+/* Responsive 16:9 stage — the iframe always fills it */
+.ppx-stage { position: relative; width: 100%; aspect-ratio: 16/9; background: var(--surface-muted); }
+.ppx-stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+
+/* Fullscreen — native Fullscreen API, with a fixed-overlay fallback
+   (.ppx-fsfix) for browsers without it (iOS Safari etc.). The fullscreen
+   backdrop stays the deck-friendly dark #0b0f17. */
+.ppx-wrap.ppx-fsfix { position: fixed; inset: 0; z-index: 99999; margin: 0; border-radius: 0; display: flex; flex-direction: column; background: #0b0f17; }
+.ppx-wrap.ppx-fsfix .ppx-bar { background: #0b0f17; border-color: rgba(255,255,255,.08); }
+.ppx-wrap.ppx-fsfix .ppx-title { color: #fff; }
+.ppx-wrap.ppx-fsfix .ppx-sub { color: #9aa3b2; }
+.ppx-wrap.ppx-fsfix .ppx-btn { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.12); color: #e7ebf2; }
+.ppx-wrap.ppx-fsfix .ppx-stage { flex: 1; aspect-ratio: auto; min-height: 0; }
+.ppx-wrap:fullscreen { display: flex; flex-direction: column; border-radius: 0; background: #0b0f17; }
+.ppx-wrap:fullscreen .ppx-stage { flex: 1; aspect-ratio: auto; min-height: 0; }
+.ppx-wrap:fullscreen .ppx-bar { background: #0b0f17; border-color: rgba(255,255,255,.08); }
+.ppx-wrap:fullscreen .ppx-title { color: #fff; }
+.ppx-wrap:fullscreen .ppx-sub { color: #9aa3b2; }
+.ppx-wrap:fullscreen .ppx-btn { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.12); color: #e7ebf2; }
+
+@media (max-width: 980px) {
+  .ppx-bar { padding: 14px 16px; }
+  .ppx-btn { font-size: 11px; }
+}
+
+/* Section header above the player (app CHROME → tokens) */
+.apix-pres { padding: var(--space-2) 0; }
+.apix-pres-head { margin-bottom: var(--space-6); }
+.apix-pres-head .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--space-2); }
+.apix-pres-head h1 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; color: var(--text-1); margin: 0; }

@@ -18,6 +18,7 @@ import { EmailSignature } from "@/components/hardcoded/email-signature";
 import { DocumentLibrary } from "@/components/hardcoded/document-library";
 import { ApixWorkflow } from "@/components/hardcoded/apix-workflow";
 import { ApixNetwork } from "@/components/hardcoded/apix-network";
+import { ApixPresentation } from "@/components/hardcoded/apix-presentation";
 
 const IBE_PATH = "/ibe-product-suite";
 
@@ -59,6 +60,9 @@ export async function renderPage(fullPath: string) {
     }
     if (page.component_key === "apix-network") {
       return <ApixNetwork title={page.title} />;
+    }
+    if (page.component_key === "apix-presentation") {
+      return <ApixPresentation title={page.title} />;
     }
     return <HardcodedStub title={page.title} componentKey={page.component_key} />;
   }
