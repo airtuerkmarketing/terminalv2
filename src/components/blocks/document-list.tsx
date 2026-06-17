@@ -1,3 +1,4 @@
+import { Download } from "lucide-react";
 import type { DocumentItem, DocumentListContent } from "@/lib/blocks/types";
 
 // document_list supports three presentation styles (D-037); default is
@@ -49,6 +50,11 @@ function PreviewCards({ docs }: { docs: DocumentItem[] }) {
         <div key={i} className="doc-card">
           <div className="preview">
             <span className={`doc-badge ${d.filetype ?? ""}`}>{ft(d)}</span>
+            {d.href ? (
+              <a className="card-dl" href={d.href} download aria-label={`Download ${d.title}`} title={`Download ${d.title}`}>
+                <Download aria-hidden />
+              </a>
+            ) : null}
           </div>
           <div className="meta">
             <a href={d.href ?? "#"}>

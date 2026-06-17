@@ -124,9 +124,27 @@
 /* ── logo_grid ── */
 .logo-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, 1fr); }
 @media (min-width: 768px) { .logo-grid { grid-template-columns: repeat(4, 1fr); } }
-.logo-tile { background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-lg); aspect-ratio: 4 / 3; display: grid; place-items: center; color: var(--text-1); font-weight: 600; }
+.logo-tile { position: relative; background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-lg); aspect-ratio: 4 / 3; display: grid; place-items: center; color: var(--text-1); font-weight: 600; }
 .logo-grid.is-circles .logo-tile { border-radius: 50%; aspect-ratio: 1; }
 .logo-tile img { max-width: 64%; max-height: 64%; }
+
+/* ── per-asset download button (top-right of a showcase card) ── */
+/* Glassy, always visible at low opacity; full accent on hover/focus. The hit
+ * area is padded out to ~40px so it stays tappable on touch even though the
+ * glyph is small. Shared by .logo-tile and .doc-card .preview. */
+.card-dl {
+  position: absolute; top: 10px; right: 10px; z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; padding: 7px; border-radius: var(--radius-full);
+  background: var(--surface); border: 1px solid var(--hairline); color: var(--text-2);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  opacity: 0.65; cursor: pointer;
+  transition: opacity 150ms var(--ease-smooth), color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth);
+}
+.card-dl:hover, .card-dl:focus-visible { opacity: 1; color: var(--accent); border-color: var(--accent-border); }
+.card-dl svg { width: 16px; height: 16px; }
+.logo-tile:hover .card-dl, .doc-card:hover .card-dl { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .card-dl { transition: none; } }
 
 /* ── asset_block ── */
 .asset-block { display: grid; gap: var(--space-4); }
