@@ -68,6 +68,14 @@
   --tiara: #C7C6C5;
   --sidebar-w: 252px;
   --sidebar-w-collapsed: 64px;
+
+  /* Sidebar redesign (2026-06-18) — named radii + the neutral avatar fill and
+     the nav-label colour. --nav-label defaults to Jet (#222) for light; the
+     dark theme overrides it to --text-1 so labels stay legible in both modes. */
+  --sidebar-panel-radius: 25px;
+  --sidebar-item-radius: 10px;
+  --avatar-bg: #B0B0B0;
+  --nav-label: var(--jet);
 }
 
 :root[data-theme="ios18-light"] {
@@ -106,6 +114,10 @@
   --accent: #0A9EFF;
   --accent-soft: rgba(10, 158, 255, 0.14);
   --accent-border: rgba(10, 158, 255, 0.30);
+  /* Sidebar: Jet is invisible on dark, so labels use --text-1; avatar fill is a
+     damped grey so the white "BD" initials stay legible. */
+  --nav-label: var(--text-1);
+  --avatar-bg: rgba(160, 160, 160, 0.45);
   --orb-1: rgba(10, 130, 223, 0.16);
   --orb-2: rgba(23, 71, 158, 0.12);
   --orb-3: rgba(140, 100, 220, 0.08);
