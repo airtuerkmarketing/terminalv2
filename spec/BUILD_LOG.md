@@ -4,6 +4,16 @@ Running record of what's been built, when. Newest entries on top.
 
 ---
 
+## JetBrains Mono removed — Inter is the sole family (2026-06-18)
+
+Removed JetBrains Mono (introduced in the previous run): dropped the
+`next/font` import and `--font-jetbrains-mono` variable from `layout.tsx`, and
+redefined `--font-mono` in `theme.css` to resolve to Inter (identical to
+`--font`). The variable is kept so the existing `var(--font-mono)` usages
+inherit Inter untouched — no monospace anywhere.
+
+---
+
 ## Typography foundation — Inter + canonical type scale (2026-06-18)
 
 Introduced Inter as the single sans family (self-hosted via `next/font`, with

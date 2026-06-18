@@ -1,18 +1,13 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-// Inter is the single sans family (self-hosted by next/font). JetBrains Mono
-// covers the mono token. Both exposed as CSS variables that theme.css's --font /
-// --font-mono lead with, so the @theme bridge (--font-sans: var(--font)) resolves
-// to Inter automatically.
+// Inter is the single font family (self-hosted by next/font). It's the only
+// face in the app — no monospace. Exposed as a CSS variable that theme.css's
+// --font (and --font-mono, which also resolves to Inter) leads with, so the
+// @theme bridge (--font-sans: var(--font)) resolves to Inter automatically.
 const inter = Inter({
   variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
 
@@ -39,7 +34,7 @@ export default function RootLayout({
       data-orbs="on"
       data-scroll-behavior="smooth"
       suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

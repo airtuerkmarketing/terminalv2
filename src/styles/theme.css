@@ -14,7 +14,9 @@
 
 :root {
   --font: var(--font-inter), -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, 'SF Mono', Menlo, monospace;
+  /* Inter is the single family — no monospace. --font-mono is kept (identical to
+     --font) so the existing var(--font-mono) usages inherit Inter untouched. */
+  --font-mono: var(--font-inter), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
   /* Canonical type scale (Type foundation, 2026-06-18). These eight sizes,
      four leadings and four weights are the single source of truth for
