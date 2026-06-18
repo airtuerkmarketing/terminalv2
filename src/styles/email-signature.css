@@ -31,25 +31,25 @@
 
 /* ── Form column ── */
 .sig-form { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
-.sig-form-title { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-1); }
-.sig-form-sub { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text-2); }
+.sig-form-title { margin: 0; font-size: var(--text-md); font-weight: var(--weight-semibold); letter-spacing: -0.01em; color: var(--text-1); }
+.sig-form-sub { margin: 0; font-size: var(--text-sm); line-height: var(--leading-normal); color: var(--text-2); }
 
 .sig-field { display: flex; flex-direction: column; gap: 6px; }
-.sig-field > label { font-size: 11px; font-weight: 500; letter-spacing: 0.02em; color: var(--text-2); }
+.sig-field > label { font-size: var(--text-xs); font-weight: var(--weight-medium); letter-spacing: 0.02em; color: var(--text-2); }
 .sig-input {
   height: 38px; padding: 0 12px; width: 100%; min-width: 0; box-sizing: border-box;
   background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-sm);
-  font-family: inherit; font-size: 13px; font-weight: 500; color: var(--text-1);
+  font-family: inherit; font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--text-1);
   outline: none; transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }
-.sig-input::placeholder { color: var(--text-3); font-weight: 400; }
+.sig-input::placeholder { color: var(--text-3); font-weight: var(--weight-regular); }
 .sig-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
 .sig-field-optional { animation: sig-slide-in 250ms var(--ease-smooth); }
 @keyframes sig-slide-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 .sig-field-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.sig-field-head > label { font-size: 11px; font-weight: 500; letter-spacing: 0.02em; color: var(--text-2); }
-.sig-field-hint { font-weight: 400; color: var(--text-3); margin-left: 4px; }
+.sig-field-head > label { font-size: var(--text-xs); font-weight: var(--weight-medium); letter-spacing: 0.02em; color: var(--text-2); }
+.sig-field-hint { font-weight: var(--weight-regular); color: var(--text-3); margin-left: 4px; }
 .sig-field-actions { display: flex; align-items: center; gap: 6px; }
 .sig-field-remove {
   background: transparent; border: none; color: var(--text-3); cursor: pointer;
@@ -62,7 +62,7 @@
 /* Tel / Mobil label badges (rendered inside .sig-field-actions) */
 .sig-badge {
   background: var(--surface-muted); border: 1px solid transparent; border-radius: 6px; padding: 4px 9px;
-  font-family: inherit; font-size: 11px; font-weight: 500; color: var(--text-2); line-height: 1.2;
+  font-family: inherit; font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--text-2); line-height: var(--leading-snug);
   cursor: pointer; white-space: nowrap; flex-shrink: 0;
   transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
 }
@@ -80,11 +80,11 @@
 .sig-prefix {
   display: flex; align-items: center; padding: 0 10px 0 12px;
   background: var(--surface-muted); color: var(--text-2); font-family: var(--font-mono);
-  font-size: 12px; white-space: nowrap; border-right: 1px solid var(--hairline); user-select: none;
+  font-size: var(--text-sm); white-space: nowrap; border-right: 1px solid var(--hairline); user-select: none;
 }
 .sig-prefix-input input {
   flex: 1; min-width: 0; height: 36px; border: none; background: transparent; padding: 0 12px;
-  outline: none; font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--text-1);
+  outline: none; font-family: var(--font-mono); font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--text-1);
 }
 
 /* Kununu banner variant pickers */
@@ -108,7 +108,7 @@
 .sig-add-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .sig-add-btn {
   background: transparent; border: 1px dashed var(--separator); color: var(--text-2);
-  font-family: inherit; font-size: 11px; font-weight: 500; padding: 7px 11px; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: var(--text-xs); font-weight: var(--weight-medium); padding: 7px 11px; border-radius: var(--radius-sm);
   cursor: pointer; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
   transition: border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth);
 }
@@ -135,11 +135,11 @@
 }
 .sig-card.is-active .sig-card-head { background: transparent; }
 .sig-card-info { min-width: 0; flex: 1; }
-.sig-card-title { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-1); line-height: 1.3; }
-.sig-card-sub { margin-top: 2px; font-size: 11px; color: var(--text-2); line-height: 1.4; }
+.sig-card-title { font-size: var(--text-sm); font-weight: var(--weight-semibold); letter-spacing: -0.01em; color: var(--text-1); line-height: var(--leading-snug); }
+.sig-card-sub { margin-top: 2px; font-size: var(--text-xs); color: var(--text-2); line-height: var(--leading-normal); }
 .sig-copy-btn {
   flex-shrink: 0; height: 32px; padding: 0 14px; background: var(--accent); color: #fff;
-  border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600;
+  border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: var(--text-sm); font-weight: var(--weight-semibold);
   cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
   transition: filter 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
 }
@@ -163,7 +163,7 @@
 }
 .sig-info-toggle:hover { background: var(--surface-muted); }
 .sig-info-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.sig-info-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--text-1); }
+.sig-info-title { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--text-1); }
 .sig-info-chevron { color: var(--text-3); flex-shrink: 0; width: 16px; height: 16px; transition: transform 250ms var(--ease-smooth); }
 .sig-info-card.is-open .sig-info-chevron { transform: rotate(180deg); }
 /* grid-rows 0fr→1fr trick for a smooth auto-height reveal */
@@ -174,17 +174,17 @@
 .sig-info-row { display: flex; gap: var(--space-3); align-items: flex-start; }
 .sig-info-step {
   flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; margin-top: 1px;
-  background: var(--accent-soft); color: var(--accent); font-size: 10px; font-weight: 700;
+  background: var(--accent-soft); color: var(--accent); font-size: var(--text-xs); font-weight: var(--weight-bold);
   display: flex; align-items: center; justify-content: center;
 }
-.sig-info-text { font-size: 11px; color: var(--text-2); line-height: 1.55; }
-.sig-info-text strong { color: var(--text-1); font-weight: 600; }
+.sig-info-text { font-size: var(--text-xs); color: var(--text-2); line-height: var(--leading-normal); }
+.sig-info-text strong { color: var(--text-1); font-weight: var(--weight-semibold); }
 
 /* Caveat note (image-rendering guidance) */
 .sig-note {
   display: flex; gap: var(--space-2); align-items: flex-start;
   padding: 10px 12px; background: var(--accent-soft); border: 1px solid var(--accent-border);
-  border-radius: var(--radius-sm); font-size: 11px; line-height: 1.5; color: var(--text-2);
+  border-radius: var(--radius-sm); font-size: var(--text-xs); line-height: var(--leading-normal); color: var(--text-2);
 }
 .sig-note svg { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
 

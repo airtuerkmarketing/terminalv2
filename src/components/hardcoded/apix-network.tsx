@@ -522,7 +522,7 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
         <div className="apix-glass apix-zoom" id="apixZoom">
           <button id="apixZoomIn" type="button" title="Zoom in">+</button>
           <div className="apix-zoom__sep" />
-          <button id="apixZoomReset" type="button" title="Reset view" style={{ fontSize: 15 }}>⤾</button>
+          <button id="apixZoomReset" type="button" title="Reset view" style={{ fontSize: 15 /* D-046 verbatim */ }}>⤾</button>
           <div className="apix-zoom__sep" />
           <button id="apixZoomOut" type="button" title="Zoom out">−</button>
         </div>
