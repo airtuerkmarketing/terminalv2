@@ -21,7 +21,7 @@
 
 .apix-mw {
   position: relative; width: 100%; margin: 0 auto;
-  font-size: var(--text-base); font-family: var(--font);
+  font-size: var(--fs-base); font-family: var(--font);
   color: #1a1a1a; -webkit-font-smoothing: antialiased; user-select: none;
 }
 
@@ -102,7 +102,7 @@
   flex-shrink: 0; background: #f1f5f9; box-shadow: 0 .5px 2px #DFDFDF;
 }
 .apix-pill__flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.apix-pill__label { font-size: var(--text-sm); font-weight: var(--weight-semibold); line-height: 1; letter-spacing: .01em; color: #111; }
+.apix-pill__label { font-size: var(--fs-sm); font-weight: var(--weight-semibold); line-height: 1; letter-spacing: .01em; color: #111; }
 .apix-pill__role {
   font-size: 10px; font-weight: var(--weight-bold); line-height: 1; letter-spacing: .05em; /* D-046 verbatim */
   color: #0557A6; background: #E8F1FA; border-radius: 5px; padding: 3px 6px; text-transform: uppercase;
@@ -180,7 +180,7 @@
   border: 1px solid rgba(255,255,255,.65); border-radius: 12px; background: rgba(255,255,255,.55);
   -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
-  font: var(--weight-semibold) var(--text-sm)/1 var(--font); color: #1a1a1a; cursor: pointer;
+  font: var(--weight-semibold) var(--fs-sm)/1 var(--font); color: #1a1a1a; cursor: pointer;
 }
 .apix-dd__btn:hover { background: rgba(255,255,255,.8); }
 .apix-dd__btnflag { width: 18px; height: 18px; border-radius: 50%; overflow: hidden; background: #eef2f6; flex-shrink: 0; }
@@ -195,7 +195,7 @@
 .apix-dd__search {
   width: 100%; height: 36px; padding: 0 12px; margin-bottom: 6px;
   border: 1px solid rgba(0,0,0,.08); border-radius: 10px; background: rgba(255,255,255,.6);
-  font: var(--weight-medium) var(--text-sm) var(--font); color: #111; outline: none;
+  font: var(--weight-medium) var(--fs-sm) var(--font); color: #111; outline: none;
 }
 .apix-dd__search:focus { border-color: #0A82DF; box-shadow: 0 0 0 3px rgba(10,130,223,.15); }
 .apix-dd__list { max-height: 280px; overflow-y: auto; scrollbar-width: thin; }
@@ -206,7 +206,7 @@
 .apix-dd__item.is-all { font-weight: var(--weight-bold); color: #0A82DF; border-bottom: 1px solid rgba(0,0,0,.06); border-radius: 10px 10px 0 0; }
 .apix-dd__iflag { width: 22px; height: 16px; border-radius: 3px; overflow: hidden; background: #eef2f6; flex-shrink: 0; }
 .apix-dd__iflag img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.apix-dd__iname { flex: 1; font-size: var(--text-sm); font-weight: var(--weight-medium); text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.apix-dd__iname { flex: 1; font-size: var(--fs-sm); font-weight: var(--weight-medium); text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .apix-dd__idot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .apix-dd__empty { padding: 14px; text-align: center; color: #94A3B8; font-size: 12px; } /* D-046 verbatim */
 
@@ -240,7 +240,7 @@
 @media (max-width: 720px) {
   .apix-controls { top: 10px; left: 10px; right: 10px; gap: 8px; }
   .apix-cgroup { padding: 4px; }
-  .apix-state { height: 28px; padding: 0 10px; font-size: var(--text-xs); }
+  .apix-state { height: 28px; padding: 0 10px; font-size: var(--fs-xs); }
   .apix-state__count { min-width: 16px; height: 16px; font-size: 9px; } /* D-046 verbatim */
   .apix-dd__btn { min-width: 150px; height: 36px; }
   .apix-pill__label { font-size: 12px; } /* D-046 verbatim */
@@ -249,5 +249,5 @@
 /* ─── Section header above the widget (app CHROME → tokens) ─── */
 .apix-net { padding: var(--space-2) 0; }
 .apix-net-head { margin-bottom: var(--space-6); }
-.apix-net-head .eyebrow { font-size: var(--text-xs); font-weight: var(--weight-semibold); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--space-2); }
+.apix-net-head .eyebrow { font-size: var(--fs-xs); font-weight: var(--weight-semibold); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--space-2); }
 .apix-net-head h1 { font-size: 26px; font-weight: var(--weight-bold); letter-spacing: -.02em; color: var(--text-1); margin: 0; } /* D-046 verbatim */
