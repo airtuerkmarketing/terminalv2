@@ -14,7 +14,7 @@ import { ArrowUp, Paperclip, Sparkles } from "lucide-react";
 import { ModelSelector } from "@/components/dashboard/hero/ModelSelector";
 import { QuickChips } from "@/components/dashboard/hero/QuickChips";
 import { SearchDropdown, ASK_AI_ID } from "@/components/dashboard/hero/SearchDropdown";
-import { AIAnswerBlock } from "@/components/dashboard/hero/AIAnswerBlock";
+import { AIChatWindow } from "@/components/dashboard/hero/AIChatWindow";
 import {
   DEFAULT_MODEL_ID,
   LS_HISTORY,
@@ -74,6 +74,7 @@ export function SearchAIBox() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [turns, setTurns] = useState<AiTurn[]>([]);
   const [model, setModel] = useState(DEFAULT_MODEL_ID);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -176,6 +177,7 @@ export function SearchAIBox() {
       setMode("ai");
       setFocused(false);
       setActiveId(null);
+      setChatOpen(true);
       const id = newId();
       setTurns((prev) => [...prev, { id, question: qq, model, answer: null }]);
       setQuery("");
@@ -188,6 +190,11 @@ export function SearchAIBox() {
     },
     [model]
   );
+
+  const closeChat = useCallback(() => setChatOpen(false), []);
+  // Reset the thread: clearing turns lets the persist effect write [] back to
+  // terminal_chat_history (the "Neuer Chat" button guards this behind a confirm).
+  const newChat = useCallback(() => setTurns([]), []);
 
   const selectHit = useCallback(
     (hit: SearchHit) => {
@@ -269,12 +276,12 @@ export function SearchAIBox() {
   }
 
   return (
-    <div className="dh-stack">
-      <div className="dh-box-wrap" ref={boxRef}>
-        <div className={`dh-box${focused ? " is-focused" : ""}`}>
+    <div className="ai-stack">
+      <div className="ai-search-wrap" ref={boxRef}>
+        <div className={`ai-search-box${focused ? " is-focused" : ""}`}>
           <textarea
             ref={textareaRef}
-            className="dh-textarea"
+            className="ai-search-textarea"
             rows={3}
             value={query}
             placeholder={mode === "ai" ? "Frag die KI…" : "Frag mich alles…"}
@@ -283,42 +290,42 @@ export function SearchAIBox() {
             onKeyDown={onKeyDown}
           />
 
-          <div className="dh-divider" />
+          <div className="ai-search-divider" />
 
-          <div className="dh-toolbar">
-            <div className="dh-toolbar-left">
+          <div className="ai-search-toolbar">
+            <div className="ai-search-toolbar-left">
               <button
                 type="button"
-                className="dh-pill"
+                className="ai-search-pill"
                 disabled
                 title="Anhänge kommen in Stufe 2"
               >
-                <Paperclip className="dh-pill-icon" aria-hidden="true" />
+                <Paperclip className="ai-search-pill-icon" aria-hidden="true" />
                 <span>Anhang</span>
               </button>
               <button
                 type="button"
-                className={`dh-pill dh-ki${mode === "ai" ? " is-active" : ""}`}
+                className={`ai-search-pill ai-search-ki${mode === "ai" ? " is-active" : ""}`}
                 onClick={toggleKi}
                 aria-pressed={mode === "ai"}
               >
-                <Sparkles className="dh-pill-icon" aria-hidden="true" />
+                <Sparkles className="ai-search-pill-icon" aria-hidden="true" />
                 <span>KI fragen</span>
               </button>
             </div>
 
-            <div className="dh-toolbar-right">
+            <div className="ai-search-toolbar-right">
               {mode === "ai" && (
                 <ModelSelector value={model} onChange={onModelChange} />
               )}
               <button
                 type="button"
-                className="dh-send"
+                className="ai-search-send"
                 disabled={!query.trim()}
                 onClick={() => submitAi(query)}
                 aria-label="Senden"
               >
-                <ArrowUp className="dh-send-icon" aria-hidden="true" />
+                <ArrowUp className="ai-search-send-icon" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -337,15 +344,15 @@ export function SearchAIBox() {
         )}
       </div>
 
-      {turns.length > 0 && (
-        <div className="dh-answers">
-          {turns.map((t) => (
-            <AIAnswerBlock key={t.id} turn={t} />
-          ))}
-        </div>
-      )}
-
       <QuickChips onPick={onPickChip} />
+
+      <AIChatWindow
+        open={chatOpen}
+        turns={turns}
+        onClose={closeChat}
+        onSubmit={submitAi}
+        onNewChat={newChat}
+      />
     </div>
   );
 }

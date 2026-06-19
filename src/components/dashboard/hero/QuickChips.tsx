@@ -7,12 +7,12 @@ import { QUICK_CHIPS } from "@/components/dashboard/hero-data";
 
 export function QuickChips({ onPick }: { onPick: (text: string) => void }) {
   return (
-    <div className="dh-chips">
+    <div className="ai-search-chips">
       {QUICK_CHIPS.map((text) => (
         <button
           key={text}
           type="button"
-          className="dh-chip"
+          className="ai-search-chip"
           onClick={() => onPick(text)}
         >
           {text}

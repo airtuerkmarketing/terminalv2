@@ -29,36 +29,36 @@ export function ModelSelector({
   }, [open]);
 
   return (
-    <div className="dh-model" ref={ref}>
+    <div className="ai-search-model" ref={ref}>
       <button
         type="button"
-        className="dh-pill dh-model-trigger"
+        className="ai-search-pill ai-search-model-trigger"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <Bot className="dh-pill-icon" aria-hidden="true" />
+        <Bot className="ai-search-pill-icon" aria-hidden="true" />
         <span>{current.label}</span>
-        <ChevronDown className="dh-pill-caret" aria-hidden="true" />
+        <ChevronDown className="ai-search-pill-caret" aria-hidden="true" />
       </button>
 
       {open && (
-        <ul className="dh-model-menu" role="listbox">
+        <ul className="ai-search-model-menu" role="listbox">
           {AI_MODELS.map((m) => (
             <li key={m.id} role="option" aria-selected={m.id === value}>
               <button
                 type="button"
-                className="dh-model-option"
+                className="ai-search-model-option"
                 onClick={() => {
                   onChange(m.id);
                   setOpen(false);
                 }}
               >
-                <Bot className="dh-pill-icon" aria-hidden="true" />
-                <span className="dh-model-option-label">{m.label}</span>
-                <span className="dh-model-option-provider">{m.provider}</span>
+                <Bot className="ai-search-pill-icon" aria-hidden="true" />
+                <span className="ai-search-model-option-label">{m.label}</span>
+                <span className="ai-search-model-option-provider">{m.provider}</span>
                 {m.id === value && (
-                  <Check className="dh-model-check" aria-hidden="true" />
+                  <Check className="ai-search-model-check" aria-hidden="true" />
                 )}
               </button>
             </li>

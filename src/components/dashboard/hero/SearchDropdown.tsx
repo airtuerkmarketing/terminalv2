@@ -52,28 +52,28 @@ export function SearchDropdown({
     results.brands.length;
 
   return (
-    <div className="dh-dropdown" role="listbox">
+    <div className="ai-search-dropdown" role="listbox">
       {GROUPS.map(({ key, label, Icon }) => {
         const hits = results[key];
         if (hits.length === 0) return null;
         return (
-          <div className="dh-group" key={key}>
-            <div className="dh-group-label">{label}</div>
+          <div className="ai-search-group" key={key}>
+            <div className="ai-search-group-label">{label}</div>
             {hits.map((hit) => (
               <button
                 type="button"
                 key={hit.id}
                 role="option"
                 aria-selected={activeId === hit.id}
-                className={`dh-hit${activeId === hit.id ? " is-active" : ""}`}
+                className={`ai-search-hit${activeId === hit.id ? " is-active" : ""}`}
                 onMouseEnter={() => onHover(hit.id)}
                 onClick={() => onSelect(hit)}
               >
-                <Icon className="dh-hit-icon" aria-hidden="true" />
-                <span className="dh-hit-body">
-                  <span className="dh-hit-title">{hit.title}</span>
+                <Icon className="ai-search-hit-icon" aria-hidden="true" />
+                <span className="ai-search-hit-body">
+                  <span className="ai-search-hit-title">{hit.title}</span>
                   {hit.subtitle && (
-                    <span className="dh-hit-meta">{hit.subtitle}</span>
+                    <span className="ai-search-hit-meta">{hit.subtitle}</span>
                   )}
                 </span>
               </button>
@@ -83,20 +83,20 @@ export function SearchDropdown({
       })}
 
       {total === 0 && !loading && (
-        <div className="dh-empty">Keine Treffer für „{query}“</div>
+        <div className="ai-search-empty">Keine Treffer für „{query}“</div>
       )}
-      {loading && total === 0 && <div className="dh-empty">Suche…</div>}
+      {loading && total === 0 && <div className="ai-search-empty">Suche…</div>}
 
       <button
         type="button"
         role="option"
         aria-selected={activeId === ASK_AI_ID}
-        className={`dh-askai${activeId === ASK_AI_ID ? " is-active" : ""}`}
+        className={`ai-search-askai${activeId === ASK_AI_ID ? " is-active" : ""}`}
         onMouseEnter={() => onHover(ASK_AI_ID)}
         onClick={onAskAi}
       >
-        <Sparkles className="dh-hit-icon" aria-hidden="true" />
-        <span className="dh-askai-text">
+        <Sparkles className="ai-search-hit-icon" aria-hidden="true" />
+        <span className="ai-search-askai-text">
           Frag stattdessen die KI: <strong>„{query}“</strong>
         </span>
       </button>

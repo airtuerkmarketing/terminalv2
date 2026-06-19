@@ -1,7 +1,13 @@
-/* Dashboard hero (Stage 1) — Cloud Orbit + Such+KI-Box + Quick-Chips.
+/* Dashboard hero (Stage 1) — Cloud Orbit + AI Such+KI-Box + Quick-Chips.
  * Styled with theme.css tokens only (no hardcoded theme hex). Per D-036 the
  * only chrome accent is Quantum Blue (--accent): focus ring, active KI pill,
- * send button, active hit, confidence gradient. `dh-` prefix. */
+ * send button, active hit, confidence gradient.
+ *
+ * Class prefixes:
+ *   dh-*         — non-AI dashboard chrome (page wrapper, cloud orbit visual)
+ *   ai-stack     — root of the AI interaction subtree
+ *   ai-search-*  — the AI search/KI box (input, toolbar, model picker, dropdown, chips)
+ *   ai-chat-*    — the sliding chat window + answer turns */
 
 .dh-page {
   display: flex;
@@ -29,20 +35,20 @@
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03), var(--card-shadow);
 }
 
-/* ── Box ── */
-.dh-stack {
+/* ── AI interaction stack (search box + chips + chat window) ── */
+.ai-stack {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-6);
   width: 100%;
 }
-.dh-box-wrap {
+.ai-search-wrap {
   position: relative;
   width: 100%;
   max-width: 720px;
 }
-.dh-box {
+.ai-search-box {
   width: 100%;
   box-sizing: border-box;
   background: var(--surface-flat);
@@ -52,11 +58,11 @@
   padding: var(--card-padding);
   transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }
-.dh-box.is-focused {
+.ai-search-box.is-focused {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
-.dh-textarea {
+.ai-search-textarea {
   width: 100%;
   box-sizing: border-box;
   border: 0;
@@ -71,29 +77,29 @@
   max-height: 220px;
   overflow-y: auto;
 }
-.dh-textarea::placeholder {
+.ai-search-textarea::placeholder {
   color: var(--text-3);
 }
-.dh-divider {
+.ai-search-divider {
   height: 1px;
   background: var(--separator);
   margin: var(--space-3) 0;
 }
-.dh-toolbar {
+.ai-search-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
-.dh-toolbar-left,
-.dh-toolbar-right {
+.ai-search-toolbar-left,
+.ai-search-toolbar-right {
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
 
 /* ── Pills ── */
-.dh-pill {
+.ai-search-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -109,34 +115,34 @@
   transition: all 150ms var(--ease-smooth);
   white-space: nowrap;
 }
-.dh-pill:hover:not(:disabled) {
+.ai-search-pill:hover:not(:disabled) {
   background: var(--surface);
   color: var(--text-1);
 }
-.dh-pill:disabled {
+.ai-search-pill:disabled {
   opacity: 0.55;
   cursor: default;
 }
-.dh-pill-icon {
+.ai-search-pill-icon {
   width: 15px;
   height: 15px;
   flex-shrink: 0;
 }
-.dh-pill-caret {
+.ai-search-pill-caret {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
   color: var(--text-3);
 }
-.dh-ki.is-active,
-.dh-ki.is-active:hover {
+.ai-search-ki.is-active,
+.ai-search-ki.is-active:hover {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
 }
 
 /* ── Send ── */
-.dh-send {
+.ai-search-send {
   width: 38px;
   height: 38px;
   flex-shrink: 0;
@@ -149,23 +155,23 @@
   cursor: pointer;
   transition: opacity 150ms var(--ease-smooth), transform 150ms var(--ease-smooth);
 }
-.dh-send:hover:not(:disabled) {
+.ai-search-send:hover:not(:disabled) {
   transform: translateY(-1px);
 }
-.dh-send:disabled {
+.ai-search-send:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
-.dh-send-icon {
+.ai-search-send-icon {
   width: 18px;
   height: 18px;
 }
 
 /* ── Model selector ── */
-.dh-model {
+.ai-search-model {
   position: relative;
 }
-.dh-model-menu {
+.ai-search-model-menu {
   position: absolute;
   right: 0;
   bottom: calc(100% + 6px);
@@ -179,7 +185,7 @@
   box-shadow: var(--card-shadow);
   z-index: 30;
 }
-.dh-model-option {
+.ai-search-model-option {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -194,18 +200,18 @@
   color: var(--text-1);
   text-align: left;
 }
-.dh-model-option:hover {
+.ai-search-model-option:hover {
   background: var(--surface-muted);
 }
-.dh-model-option-label {
+.ai-search-model-option-label {
   font-weight: var(--weight-medium);
 }
-.dh-model-option-provider {
+.ai-search-model-option-provider {
   color: var(--text-3);
   font-size: var(--fs-xs);
   margin-left: auto;
 }
-.dh-model-check {
+.ai-search-model-check {
   width: 15px;
   height: 15px;
   color: var(--accent);
@@ -213,7 +219,7 @@
 }
 
 /* ── Search dropdown ── */
-.dh-dropdown {
+.ai-search-dropdown {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
@@ -227,15 +233,15 @@
   max-height: 60vh;
   overflow-y: auto;
 }
-.dh-group {
+.ai-search-group {
   padding: 2px 0;
 }
-.dh-group + .dh-group {
+.ai-search-group + .ai-search-group {
   border-top: 1px solid var(--separator);
   margin-top: 2px;
   padding-top: 4px;
 }
-.dh-group-label {
+.ai-search-group-label {
   font-size: var(--fs-xs);
   font-weight: var(--weight-semibold);
   text-transform: uppercase;
@@ -243,7 +249,7 @@
   color: var(--text-3);
   padding: 6px 10px 2px;
 }
-.dh-hit {
+.ai-search-hit {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -257,44 +263,44 @@
   font-family: inherit;
   color: var(--text-1);
 }
-.dh-hit.is-active,
-.dh-hit:hover {
+.ai-search-hit.is-active,
+.ai-search-hit:hover {
   background: var(--accent-soft);
 }
-.dh-hit-icon {
+.ai-search-hit-icon {
   width: 17px;
   height: 17px;
   flex-shrink: 0;
   color: var(--text-3);
 }
-.dh-hit.is-active .dh-hit-icon {
+.ai-search-hit.is-active .ai-search-hit-icon {
   color: var(--accent);
 }
-.dh-hit-body {
+.ai-search-hit-body {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
-.dh-hit-title {
+.ai-search-hit-title {
   font-size: var(--fs-base);
   font-weight: var(--weight-medium);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.dh-hit-meta {
+.ai-search-hit-meta {
   font-size: var(--fs-xs);
   color: var(--text-3);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.dh-empty {
+.ai-search-empty {
   padding: 12px 10px;
   font-size: var(--fs-sm);
   color: var(--text-3);
 }
-.dh-askai {
+.ai-search-askai {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -309,38 +315,145 @@
   font-family: inherit;
   font-size: var(--fs-sm);
 }
-.dh-askai .dh-hit-icon {
+.ai-search-askai .ai-search-hit-icon {
   color: var(--accent);
 }
-.dh-askai.is-active,
-.dh-askai:hover {
+.ai-search-askai.is-active,
+.ai-search-askai:hover {
   background: var(--accent-soft);
 }
-.dh-askai-text {
+.ai-search-askai-text {
   color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.dh-askai-text strong {
+.ai-search-askai-text strong {
   color: var(--accent);
   font-weight: var(--weight-semibold);
 }
 
-/* ── AI answers ── */
-.dh-answers {
-  width: 100%;
-  max-width: 720px;
+/* ── AI chat window (right-side sliding side panel; non-modal) ──
+   Slides in from the right edge on submit; reuses the house drawer pattern
+   (translateX + --ease-smooth). Layers above the shell sidebar (z 50/60). */
+.ai-chat-window {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: min(440px, 100vw);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-flat);
+  border-left: 1px solid var(--hairline);
+  box-shadow: var(--card-shadow);
+  /* +24px buffer past the panel's own width so the closed state also clears any
+     scrollbar gutter (layout width < visual width on scrollbar platforms),
+     otherwise a thin sliver peeks at the right edge in full-width mode. */
+  transform: translateX(calc(100% + 24px));
+  transition: transform 280ms var(--ease-smooth);
+  will-change: transform;
+}
+.ai-chat-window.is-open {
+  transform: translateX(0);
+}
+
+.ai-chat-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--separator);
+}
+.ai-chat-title {
+  font-size: var(--fs-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-1);
+}
+.ai-chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ai-chat-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--hairline);
+  background: var(--surface-muted);
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 150ms var(--ease-smooth);
+}
+.ai-chat-new:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--text-1);
+}
+.ai-chat-new:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* armed (second click confirms) — accent fill per D-036 accent-only chrome */
+.ai-chat-new.is-confirming,
+.ai-chat-new.is-confirming:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.ai-chat-new-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.ai-chat-close {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  color: var(--text-2);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.ai-chat-close:hover {
+  background: var(--surface);
+  color: var(--text-1);
+}
+.ai-chat-close-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.ai-chat-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5);
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  scroll-behavior: smooth;
 }
-.dh-turn {
+
+/* ── One Q→A turn inside the chat body ── */
+.ai-chat-turn {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
-.dh-q {
+.ai-chat-q {
   align-self: flex-end;
   max-width: 85%;
   padding: 10px 14px;
@@ -349,38 +462,53 @@
   border-radius: var(--radius-md);
   font-size: var(--fs-base);
 }
-.dh-a {
+.ai-chat-a {
   background: var(--surface-flat);
   border: 1px solid var(--hairline);
   border-radius: var(--card-radius);
   box-shadow: var(--shadow-rest);
   padding: var(--card-padding);
 }
-.dh-a-loading {
+.ai-chat-loading {
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--text-3);
   font-size: var(--fs-sm);
 }
-.dh-spin {
+.ai-chat-spin {
   width: 16px;
   height: 16px;
-  animation: dh-spin 0.8s linear infinite;
+  animation: ai-chat-spin 0.8s linear infinite;
 }
-.dh-a-text {
+.ai-chat-a-text {
   margin: 0;
   font-size: var(--fs-base);
   line-height: var(--lh-relaxed);
   color: var(--text-1);
+  white-space: pre-wrap;
 }
-.dh-sources {
+.ai-chat-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--accent);
+  animation: ai-chat-blink 1s step-end infinite;
+}
+@keyframes ai-chat-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.ai-chat-sources {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-4);
 }
-.dh-source {
+.ai-chat-source {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -392,30 +520,30 @@
   text-decoration: none;
   transition: border-color 150ms var(--ease-smooth);
 }
-.dh-source:hover {
+.ai-chat-source:hover {
   border-color: var(--accent-border);
 }
-.dh-source-head {
+.ai-chat-source-head {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.dh-source-title {
+.ai-chat-source-title {
   font-size: var(--fs-sm);
   font-weight: var(--weight-medium);
   color: var(--text-1);
 }
-.dh-source-ext {
+.ai-chat-source-ext {
   width: 13px;
   height: 13px;
   color: var(--text-3);
 }
-.dh-source-meta {
+.ai-chat-source-meta {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.dh-badge {
+.ai-chat-badge {
   font-size: var(--fs-xs);
   padding: 2px 7px;
   border-radius: var(--radius-full);
@@ -425,38 +553,99 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
-.dh-source-stand {
+.ai-chat-source-stand {
   font-size: var(--fs-xs);
   color: var(--text-3);
 }
-.dh-confidence {
+.ai-chat-confidence {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: var(--space-4);
 }
-.dh-conf-bars {
+.ai-chat-conf-bars {
   display: inline-flex;
   gap: 3px;
 }
-.dh-conf-bar {
+.ai-chat-conf-bar {
   width: 18px;
   height: 5px;
   border-radius: var(--radius-full);
   background: var(--surface-muted);
 }
-.dh-confidence[data-level="1"] .dh-conf-bar:nth-child(-n + 1),
-.dh-confidence[data-level="2"] .dh-conf-bar:nth-child(-n + 2),
-.dh-confidence[data-level="3"] .dh-conf-bar:nth-child(-n + 3) {
+.ai-chat-confidence[data-level="1"] .ai-chat-conf-bar:nth-child(-n + 1),
+.ai-chat-confidence[data-level="2"] .ai-chat-conf-bar:nth-child(-n + 2),
+.ai-chat-confidence[data-level="3"] .ai-chat-conf-bar:nth-child(-n + 3) {
   background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, white));
 }
-.dh-conf-label {
+.ai-chat-conf-label {
   font-size: var(--fs-xs);
   color: var(--text-2);
 }
 
+/* ── Chat follow-up input (panel footer) ── */
+.ai-chat-input {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--separator);
+  background: var(--surface-flat);
+}
+.ai-chat-textarea {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  color: var(--text-1);
+  padding: 10px 12px;
+  min-height: 42px;
+  max-height: 140px;
+  overflow-y: auto;
+  transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
+}
+.ai-chat-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.ai-chat-textarea::placeholder {
+  color: var(--text-3);
+}
+.ai-chat-send {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: opacity 150ms var(--ease-smooth), transform 150ms var(--ease-smooth);
+}
+.ai-chat-send:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.ai-chat-send:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.ai-chat-send-icon {
+  width: 18px;
+  height: 18px;
+}
+
 /* ── Quick-Chips ── */
-.dh-chips {
+.ai-search-chips {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
@@ -464,7 +653,7 @@
   width: 100%;
   max-width: 720px;
 }
-.dh-chip {
+.ai-search-chip {
   padding: 8px 14px;
   border-radius: var(--radius-full);
   border: 1px solid var(--hairline);
@@ -476,7 +665,7 @@
   white-space: nowrap;
   transition: all 150ms var(--ease-smooth);
 }
-.dh-chip:hover {
+.ai-search-chip:hover {
   background: var(--surface-muted);
   color: var(--text-1);
   border-color: var(--accent-border);
@@ -484,23 +673,26 @@
 
 /* ── Keyboard focus rings (WCAG 2.4.7) — accent outline, matching the house
    pattern in shell.css / email-signature.css / blocks.css. D-036: --accent
-   only. The textarea keeps outline:none (replaced by .dh-box.is-focused). ── */
-.dh-pill:focus-visible,
-.dh-send:focus-visible,
-.dh-model-option:focus-visible,
-.dh-source:focus-visible,
-.dh-chip:focus-visible {
+   only. The textareas keep outline:none (replaced by a focus box-shadow). ── */
+.ai-search-pill:focus-visible,
+.ai-search-send:focus-visible,
+.ai-search-model-option:focus-visible,
+.ai-search-chip:focus-visible,
+.ai-chat-source:focus-visible,
+.ai-chat-new:focus-visible,
+.ai-chat-close:focus-visible,
+.ai-chat-send:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 /* In-panel rows: keep the ring inside the dropdown so it isn't clipped. */
-.dh-hit:focus-visible,
-.dh-askai:focus-visible {
+.ai-search-hit:focus-visible,
+.ai-search-askai:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
-@keyframes dh-spin {
+@keyframes ai-chat-spin {
   to {
     transform: rotate(360deg);
   }
@@ -511,18 +703,32 @@
   .dh-orbit {
     display: none;
   }
-  .dh-box-wrap,
-  .dh-answers,
-  .dh-chips {
+  .ai-search-wrap,
+  .ai-search-chips {
     max-width: none;
   }
-  .dh-chips {
+  .ai-search-chips {
     justify-content: flex-start;
+  }
+  /* Mobile: edge-to-edge chat panel. Anchor BOTH sides (left:0 + the base
+     right:0) instead of relying on 100vw, which can leave a sliver when the
+     layout/visual viewports differ. OBSERVE later whether the slide-in still
+     reads well on phones or the panel should present full-screen — polish. */
+  .ai-chat-window {
+    left: 0;
+    width: auto;
+    border-left: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dh-spin {
+  .ai-chat-spin {
+    animation: none;
+  }
+  .ai-chat-window {
+    transition: none;
+  }
+  .ai-chat-caret {
     animation: none;
   }
 }
