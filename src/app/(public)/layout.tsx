@@ -20,6 +20,11 @@ const RESOURCES: NavLeaf[] = [
   { label: "Document Library", href: "/documents-library", iconKey: "document-library" },
   { label: "Team", href: "/team", iconKey: "team" },
   { label: "Presentation Hub", href: "/presentation-hub", iconKey: "presentation-hub" },
+  // Three AI TEST review pages — flat siblings directly under Presentation Hub
+  // (the Resources section is flat; no child-nesting like the brand nodes).
+  { label: "AI TEST 1", href: "/presentation-hub/ai-test-1", iconKey: "presentation-hub" },
+  { label: "AI TEST 2", href: "/presentation-hub/ai-test-2", iconKey: "presentation-hub" },
+  { label: "AI TEST 3", href: "/presentation-hub/ai-test-3", iconKey: "presentation-hub" },
 ];
 
 /**
