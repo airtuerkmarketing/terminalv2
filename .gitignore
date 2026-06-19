@@ -50,3 +50,8 @@ coverage/
 KEYS.txt
 *.keys.txt
 
+# Vercel CLI
+.vercel
+
+# Local maintenance/experiment scripts (not part of the app)
+scripts/
