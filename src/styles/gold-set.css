@@ -1,0 +1,206 @@
+/* Gold-Set validation quiz (hardcoded route /presentation-hub/gold-set,
+ * component_key='gold-set'). Internal RAG gold-set validation form — 28 free-text
+ * questions, one batched insert into public.gold_set_answers. Styled with
+ * theme.css tokens only (no hardcoded theme hex); Quantum Blue (--accent) is the
+ * only accent (D-036), and the submit uses --button-radius like the other primary
+ * buttons. Unique `gs-` prefix. */
+
+.gs-wrap {
+  max-width: 760px;
+}
+
+.gs-intro {
+  margin: var(--space-4) 0 var(--space-8);
+  max-width: 62ch;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.gs-intro strong {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+/* ── Name / Kürzel ── */
+.gs-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gs-field > label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-2);
+}
+.gs-field > label span {
+  color: var(--text-3);
+  font-weight: 400;
+}
+.gs-name {
+  margin-bottom: var(--space-8);
+  max-width: 280px;
+}
+
+.gs-input {
+  height: 38px;
+  padding: 0 12px;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+  outline: none;
+  transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
+}
+.gs-input::placeholder {
+  color: var(--text-3);
+  font-weight: 400;
+}
+.gs-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ── Question list ── */
+.gs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.gs-item {
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+}
+.gs-q {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.gs-num {
+  flex-shrink: 0;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.gs-text {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text-1);
+}
+
+.gs-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 64px;
+  resize: vertical;
+  padding: 10px 12px;
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-1);
+  outline: none;
+  transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
+}
+.gs-textarea::placeholder {
+  color: var(--text-3);
+}
+.gs-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ── Actions ── */
+.gs-actions {
+  margin-top: var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.gs-submit {
+  height: 42px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--button-radius);
+  background: var(--accent);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
+}
+.gs-submit:hover {
+  filter: brightness(1.06);
+}
+.gs-submit:active {
+  transform: scale(0.98);
+}
+.gs-submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.gs-hint {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.gs-error {
+  margin-top: var(--space-4);
+  padding: 10px 14px;
+  background: var(--surface-muted);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+/* ── Thank-you ── */
+.gs-thanks {
+  margin-top: var(--space-6);
+  padding: var(--space-10) var(--space-8);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+.gs-thanks h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+.gs-thanks p {
+  margin: 0 auto var(--space-6);
+  max-width: 48ch;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
