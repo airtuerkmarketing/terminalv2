@@ -22,6 +22,7 @@ import { ApixNetwork } from "@/components/hardcoded/apix-network";
 import { ApixPresentation } from "@/components/hardcoded/apix-presentation";
 import { ApixGroup } from "@/components/hardcoded/apix-group";
 import { TeamDirectory } from "@/components/hardcoded/team";
+import { GoldSet } from "@/components/hardcoded/gold-set";
 
 const IBE_PATH = "/ibe-product-suite";
 
@@ -88,6 +89,9 @@ export async function renderPage(fullPath: string) {
     if (page.component_key === "team-directory") {
       const members = await getTeamMembers();
       return <TeamDirectory title={page.title} members={members} />;
+    }
+    if (page.component_key === "gold-set") {
+      return <GoldSet title={page.title} />;
     }
     return <HardcodedStub title={page.title} componentKey={page.component_key} />;
   }
