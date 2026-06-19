@@ -1,9 +1,10 @@
-/* Gold-Set validation quiz (hardcoded route /presentation-hub/gold-set,
- * component_key='gold-set'). Internal RAG gold-set validation form — 28 free-text
- * questions, one batched insert into public.gold_set_answers. Styled with
- * theme.css tokens only (no hardcoded theme hex); Quantum Blue (--accent) is the
- * only accent (D-036), and the submit uses --button-radius like the other primary
- * buttons. Unique `gs-` prefix. */
+/* Gold-Set validation quiz — REVIEW MODE (hardcoded route
+ * /presentation-hub/gold-set, component_key='gold-set'). Each card shows a
+ * suggested answer; the team rates it richtig/falsch (+ correction when falsch)
+ * and flags confidence. Styled with theme.css tokens only (no hardcoded theme
+ * hex). Per D-036 the only chrome accent is Quantum Blue (--accent): "Richtig"
+ * active = accent fill, "Falsch" active = inverted neutral (--text-1) — no brand
+ * red/green in chrome; the ✓/✗ icons + labels carry the semantics. `gs-` prefix. */
 
 .gs-wrap {
   max-width: 760px;
@@ -11,7 +12,7 @@
 
 .gs-intro {
   margin: var(--space-4) 0 var(--space-8);
-  max-width: 62ch;
+  max-width: 64ch;
   font-size: 14px;
   line-height: 1.6;
   color: var(--text-2);
@@ -66,7 +67,7 @@
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-/* ── Question list ── */
+/* ── Question cards ── */
 .gs-list {
   list-style: none;
   margin: 0;
@@ -80,13 +81,18 @@
   background: var(--surface);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-lg);
+  scroll-margin-top: 80px;
+  transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
+}
+.gs-item-invalid {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .gs-q {
   display: flex;
   gap: 10px;
   align-items: baseline;
-  margin-bottom: 10px;
-  cursor: pointer;
+  margin-bottom: var(--space-4);
 }
 .gs-num {
   flex-shrink: 0;
@@ -105,16 +111,148 @@
   font-variant-numeric: tabular-nums;
 }
 .gs-text {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   line-height: 1.45;
   color: var(--text-1);
 }
 
+/* Suggested answer callout */
+.gs-suggest {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+.gs-suggest-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.gs-suggest-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-1);
+}
+.gs-falle-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--text-3);
+}
+
+/* Controls row: verdict (left) + confidence (right) */
+.gs-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+}
+.gs-rate {
+  display: flex;
+  gap: 8px;
+}
+.gs-rate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--button-radius);
+  background: var(--surface-flat);
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth),
+    border-color 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
+}
+.gs-rate-btn span {
+  font-size: 14px;
+  line-height: 1;
+}
+.gs-rate-btn:hover {
+  color: var(--text-1);
+  border-color: var(--text-3);
+}
+.gs-rate-btn:active {
+  transform: scale(0.97);
+}
+/* Active states — accent for richtig, inverted neutral for falsch (D-036). */
+.gs-rate-richtig.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.gs-rate-falsch.is-active {
+  background: var(--text-1);
+  border-color: var(--text-1);
+  color: var(--bg);
+}
+
+/* Confidence toggle (segmented) */
+.gs-sicher {
+  margin-left: auto;
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--surface-muted);
+  border-radius: var(--radius-full);
+}
+.gs-sicher-btn {
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-3);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.gs-sicher-btn:hover {
+  color: var(--text-1);
+}
+.gs-sicher-btn.is-active {
+  background: var(--surface-flat);
+  color: var(--text-1);
+  box-shadow: var(--shadow-rest);
+}
+
+/* Correction field (only when falsch) */
+.gs-correction {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: gs-slide-in 200ms var(--ease-smooth);
+}
+@keyframes gs-slide-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.gs-correction > label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-2);
+}
 .gs-textarea {
   width: 100%;
   box-sizing: border-box;
-  min-height: 64px;
+  min-height: 56px;
   resize: vertical;
   padding: 10px 12px;
   background: var(--surface-flat);
@@ -133,6 +271,13 @@
 .gs-textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.gs-item-error {
+  margin: var(--space-3) 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
 }
 
 /* ── Actions ── */
@@ -178,6 +323,7 @@
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
   font-size: 13px;
+  line-height: 1.5;
   color: var(--text-1);
 }
 
