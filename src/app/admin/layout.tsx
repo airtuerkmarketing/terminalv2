@@ -21,8 +21,8 @@ export default async function AdminLayout({
     .eq("id", user.id)
     .single();
 
-  // Only admin role allowed (for now)
-  if (!profile || profile.role !== "admin") {
+  // admin OR super_admin may reach the admin shell (mirrors public.is_admin()).
+  if (!profile || !["admin", "super_admin"].includes(profile.role)) {
     redirect("/login?error=Not%20authorized");
   }
 
