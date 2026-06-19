@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { useDrawerOpen, setDrawer } from "./drawer";
-import { ExternalIcon, MenuIcon, OrbsIcon, SearchIcon } from "./icons";
+import { ExternalIcon, MenuIcon, OrbsIcon } from "./icons";
 import { ThemeToggle } from "./theme-toggle";
 
 const ORBS_KEY = "terminalv2-orbs";
@@ -24,8 +24,9 @@ function getOrbsOn() {
 
 /**
  * Topbar: a hamburger (mobile/tablet only) that opens the sidebar drawer, the
- * glass search field (placeholder until Phase 7 search), the ambient-orbs
- * toggle, the theme toggle, and a link out to the live site.
+ * ambient-orbs toggle, the theme toggle, and a link out to the live site.
+ * (The old placeholder search field was removed once the dashboard hero
+ * provided the real Such+KI-Box.)
  */
 export function Topbar() {
   const orbsOn = useSyncExternalStore(subscribe, getOrbsOn, () => true);
@@ -52,16 +53,6 @@ export function Topbar() {
       >
         <MenuIcon />
       </button>
-
-      <div className="search">
-        <SearchIcon />
-        <input
-          type="search"
-          placeholder="Search brands, assets, documents..."
-          aria-label="Search"
-        />
-        <span className="key">⌘K</span>
-      </div>
 
       <div className="topbar-actions">
         <button
