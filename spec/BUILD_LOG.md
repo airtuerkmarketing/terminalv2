@@ -4,6 +4,38 @@ Running record of what's been built, when. Newest entries on top.
 
 ---
 
+## File System v2 — roles + folder Document Library (2026-06-20)
+
+**Status:** Built + applied to prod (`zkydrymygjrscjbhusxp`) + pushed to `main`.
+Decisions **D-047 … D-055**.
+
+Replaced the flat `documents` library with a real folder file-manager gated by a
+three-tier role model. Each migration was applied via the Supabase Management API
+(MCP not connected this session) and verified; the two schema-bearing migrations
+were run through an adversarial multi-lens review **before** touching prod.
+
+- **Part A — roles (`0030`):** `profiles.role` → `super_admin|admin|user`;
+  `is_admin()` kept (= admin OR super_admin) so all existing RLS still works;
+  `is_super_admin()` added; `user_role_defaults` table + signup trigger
+  (data-driven assignment); `admin/layout.tsx` allows both admin tiers.
+- **Part B — library (`0031`):** `document_folders` (recursive tree,
+  trigger-maintained `path`, slug CHECK) + `document_files` (one folder per file,
+  `language` de/en/tr + anchorless `group_id` variant model), FORCE RLS keyed on
+  per-folder `is_public`, a **private** `library` bucket, pg_trgm title index. No
+  data migration — fresh uploads. Seeded starter folders (Business Development +
+  Westhafen public; Finance + HR private).
+- **Security fix (`0032`):** closed an admin self-promotion hole in the
+  `profiles` UPDATE policy (role changes are super-admin-only).
+- **App:** `lib/documents.ts` (RLS-scoped reads + role gates),
+  `lib/documents-constants.ts`, gated signed-URL route `/api/library/file/[id]`,
+  role-gated `documents-library/actions.ts`, the `[[...folder]]` route +
+  `components/documents/*`, rewritten `document-library.css`, expandable sidebar
+  node with real identity, and search/stats repointed to `document_files`
+  (visibility-filtered). Verified live: anon sees only public folders; private
+  folders + bogus file ids 404; search doesn't leak private titles.
+
+---
+
 ## JetBrains Mono removed — Inter is the sole family (2026-06-18)
 
 Removed JetBrains Mono (introduced in the previous run): dropped the

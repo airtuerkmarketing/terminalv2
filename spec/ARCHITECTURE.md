@@ -314,15 +314,32 @@ Adds:
 - `download_style text` — overrides site default per document
 - `presentation_section text` — for Presentation Hub categorization
 
+Note: superseded for the Document Library by the v2 tables below (D-053). The
+`documents`/`assets` rows are left intact (orphaned, rollback) but no longer read.
+
+### Document Library v2 tables (File System v2 — migration 0031)
+
+- **`document_folders`** — recursive folder tree (`parent_id`), trigger-maintained
+  materialized slug `path`, per-folder `is_public`, slug-format CHECK.
+- **`document_files`** — one file per folder (`folder_id`), `language` (de/en/tr
+  CHECK) + anchorless `group_id` variant cluster, `storage_path` into the private
+  `library` bucket (no `public_url`), pg_trgm index on `title`.
+- **`user_role_defaults`** (migration 0030) — email→role seed for the signup trigger.
+
 ### Row Level Security
 
-Unchanged from 0002. Public read where applicable, admin write everywhere.
+`is_admin()` now means admin OR super_admin; `is_super_admin()` added (migration
+0030). Public read where applicable, admin write everywhere. The v2 library tables
+ENABLE **and FORCE** RLS, keyed on per-folder `is_public` (D-051); `profiles` role
+changes are super-admin-only (D-055).
 
 ---
 
 ## 8. Storage buckets
 
-Unchanged from 0003. Four buckets: `images`, `documents`, `videos`, `fonts`.
+Four public buckets from 0003 (`images`, `documents`, `videos`, `fonts`) + a
+fifth **private** bucket `library` (migration 0031) for Document Library v2 files,
+served only via short-TTL signed URLs through `/api/library/file/[id]` (D-052).
 
 ---
 
@@ -334,9 +351,10 @@ Unchanged from 0003. Four buckets: `images`, `documents`, `videos`, `fonts`.
 src/app/(public)/page.tsx                       → /
 src/app/(public)/team/page.tsx                  → /team
 src/app/(public)/asset-library/page.tsx         → /asset-library
-src/app/(public)/documents-library/page.tsx     → /documents-library
+src/app/(public)/documents-library/[[...folder]]/page.tsx → /documents-library/*  (File System v2; optional catch-all, shadows [...slug] per D-008)
 src/app/(public)/presentation-hub/page.tsx      → /presentation-hub  (NEW)
 src/app/(public)/search/page.tsx                → /search
+src/app/api/library/file/[id]/route.ts          → gated signed-URL file serving (D-052)
 ```
 
 ### Dynamic catch-all (everything else)
@@ -367,8 +385,14 @@ In Next.js 16, `params`, `searchParams`, `cookies()`, and `headers()` are async.
 - Admin (`/admin/*`): Supabase Auth, email+password
 - Auth-gating happens in Server Component layouts (D-033), not in proxy.ts
 - `proxy.ts` only refreshes session cookies (D-032)
-- Roles: `admin` | `editor` | `viewer` — v1 uses only `admin`
-- First admin: via Supabase Studio + D-027 trigger
+- Roles: `super_admin` | `admin` | `user` (migration 0030, D-047). `is_admin()` =
+  admin OR super_admin; `is_super_admin()` gates structural ops (folder delete,
+  visibility toggle, role management). Assignment is data-driven via
+  `user_role_defaults` + the signup trigger (D-048).
+- The public site now reads the session in `(public)/layout.tsx` to drive role-aware
+  affordances (admin upload/manage, "+ Create New Folder"); every mutation
+  re-verifies the role server-side. The login gate for normal users is still later
+  (a one-clause RLS change, D-051).
 
 ---
 

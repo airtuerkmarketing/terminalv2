@@ -62,6 +62,10 @@ See `spec/BUILD_LOG.md` for full progress.
 | `0008_restructure_brands.sql` | IBE products, service-center rename, 52 pages |
 | `0009_design_system_settings.sql` | Design tokens, sidebar config |
 | `0010_fix_brand_card_colors.sql` | Brand card colors to match design system |
+| `0011`–`0029` | Content seeds, APIX Webflow ports, team/IBE seeds, intelligence layer (see `supabase/migrations/`) |
+| `0030_role_model.sql` | Three-tier roles (super_admin/admin/user), `is_super_admin()`, `user_role_defaults` (D-047/048) |
+| `0031_document_library_filesystem.sql` | Document Library v2: folder tree + files, RLS, private `library` bucket, pg_trgm (D-049–054) |
+| `0032_profiles_role_escalation_guard.sql` | Restrict profile role changes to super-admins (D-055) |
 
 ## Design system
 

@@ -281,6 +281,67 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 **Trade-offs:** The CSS/JS isn't idiomatic React — needs refactoring for hooks and refs. Acceptable — the alternative (rebuild from screenshots) is worse.
 
+## D-047 — Three-tier role model
+**Date:** 2026-06-20
+**Status:** Adopted.
+**Context:** The old `profiles.role` set (`admin|editor|viewer`) couldn't express "structural/sensitive ops are stricter than day-to-day admin." File System v2 needs a tier above admin.
+**Decision:** Roles are `super_admin | admin | user`. `is_admin()` is KEPT (same name/signature) and now means `role IN ('admin','super_admin')`, so every existing RLS policy keeps working unchanged. New `is_super_admin()` (same shape) gates structural ops (folder delete, visibility toggle, role management). `src/app/admin/layout.tsx` updated to allow both admin tiers.
+**Migration:** `0030_role_model.sql`.
+
+## D-048 — Data-driven role assignment
+**Date:** 2026-06-20
+**Status:** Adopted. Supersedes the single `app.initial_admin_email` mechanism (D-028).
+**Context:** Roles should be editable as data, not hardcoded per environment.
+**Decision:** `user_role_defaults(email → role)` (RLS: super-admin only) seeds intended roles; `handle_new_user()` applies them on signup, defaulting to `user`. Existing profiles are updated in place. The later user-settings UI just edits `profiles.role`. Seeded super-admins: bdemir@, eerkara@, utenekeci@, aoezbek@, **dev@** (the actual login). `INITIAL_ADMIN_EMAIL` in `.env.example` is deprecated.
+**Migration:** `0030_role_model.sql` (+ dev@ in `0031`).
+
+## D-049 — Folder tree, no separate category
+**Date:** 2026-06-20
+**Status:** Adopted.
+**Context:** The flat `documents` library used a `category` + `department` taxonomy. A real file manager needs nesting.
+**Decision:** `document_folders` is a recursive tree (`parent_id`, unlimited nesting). A file lives in exactly one folder (`document_files.folder_id`). Chips on a folder page are its direct child folders. No `category` concept.
+**Migration:** `0031_document_library_filesystem.sql`.
+
+## D-050 — Trigger-maintained folder path
+**Date:** 2026-06-20
+**Status:** Adopted.
+**Context:** URL→folder resolution and breadcrumbs need to be cheap; moves must rewrite descendants.
+**Decision:** `document_folders.path` is a materialized slash-joined slug path kept by a BEFORE trigger (with an in-trigger cycle check on move) and a set-based AFTER trigger that rewrites descendants on rename/move. A DB `slug` CHECK (`^[a-z0-9]+(?:-[a-z0-9]+)*$`) keeps segments metacharacter-free so the path math is provably safe (closed a LIKE-metacharacter corruption surface found in adversarial review).
+**Migration:** `0031`.
+
+## D-051 — Per-folder is_public gates listing (FORCE RLS)
+**Date:** 2026-06-20
+**Status:** Adopted.
+**Context:** NDA/contract sensitivity must decouple from the (later) login rollout.
+**Decision:** `document_folders.is_public` (default false) gates listing via RLS; files are visible iff their folder is. RLS is ENABLEd **and FORCEd** on both tables (closes a SECURITY-DEFINER bypass). The later login gate is a one-clause change to the SELECT policy. Write policies are command-specific (INSERT/UPDATE/DELETE) so they never widen reads.
+**Migration:** `0031`.
+
+## D-052 — Private bucket + gated signed-URL serving
+**Date:** 2026-06-20
+**Status:** Adopted. **Supersedes the spec's "reuse the public documents bucket."**
+**Context:** The `documents` bucket is public — `is_public` would only hide *listings* while files stayed at permanent public URLs (NDAs reachable by leaked link). The user chose true access control.
+**Decision:** A new **private** `library` bucket (15 MB, extended MIME, admin-write, no public read). `document_files` stores only the object key (no `public_url`). Every fetch goes through `/api/library/file/[id]`: the request-scoped client fetches the row (RLS = the gate), then the service role mints a short-TTL signed URL (`Cache-Control: no-store`), inline for images/PDFs else download. Visibility toggle stays a pure metadata flip; login-gate-later is one clause in the route.
+
+## D-053 — No data migration; fresh uploads
+**Date:** 2026-06-20
+**Status:** Adopted. **Supersedes the spec's metadata-only migration of the 47 documents.**
+**Context:** The user will upload fresh into the new structure.
+**Decision:** The library starts empty; no `documents`→folders migration. Old `documents`/`assets` rows are left intact (orphaned, available for rollback). Search + admin stats repoint to `document_files`; the legacy `getDocumentLibrary()` render path is deprecated (the new route shadows `/documents-library`). No file version history in v1 — `replaceFile` overwrites.
+
+## D-054 — Multilingual variant model (language + group_id)
+**Date:** 2026-06-20
+**Status:** Adopted.
+**Context:** The same logical document arrives over time in multiple languages (DE now, EN/TR later) and formats (PDF + Word). The old rigid `pair_id`/title-match was brittle.
+**Decision:** `document_files.language` (CHECK `de|en|tr`, nullable; extend with a one-line ALTER) + `group_id` (anchorless uuid, no FK; NULL = standalone). The folder page groups by `COALESCE(group_id, id)` → one card per logical document with per-(language × format) downloads. Deliberately **no** `UNIQUE(group_id, language)` — a group legitimately holds same-language multiple formats.
+**Migration:** `0031`.
+
+## D-055 — Profiles role-escalation guard
+**Date:** 2026-06-20
+**Status:** Adopted.
+**Context:** The adversarial review of the v2 server layer found that `profiles_update_admin` (0002) let any `admin` UPDATE any profile's `role` — self-promotion to `super_admin` via the REST API, defeating D-047's tier split.
+**Decision:** Admins may still update profiles, but the `role` column may only change when the actor is `super_admin` (else the new role must equal the existing one — same MVCC subquery lock as `profiles_update_own`).
+**Migration:** `0032_profiles_role_escalation_guard.sql`.
+
 ---
 
 ## Anti-decisions (explicitly NOT doing)
