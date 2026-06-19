@@ -192,6 +192,16 @@ export async function getFolderById(id: string): Promise<FolderDTO | null> {
   return data ? mapFolder(data as FolderRow) : null;
 }
 
+/** All visible folders, ordered by path — for move-target pickers (RLS-scoped). */
+export async function getAllFolders(): Promise<FolderDTO[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("document_folders")
+    .select(FOLDER_COLS)
+    .order("path", { ascending: true });
+  return ((data as FolderRow[] | null) ?? []).map(mapFolder);
+}
+
 /** Direct child folders (the chips on a folder page). */
 export async function getChildFolders(folderId: string): Promise<FolderDTO[]> {
   const supabase = await createClient();

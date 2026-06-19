@@ -18,7 +18,13 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAdmin, requireSuperAdmin, type Identity } from "@/lib/documents";
+import {
+  getFilesInFolder,
+  requireAdmin,
+  requireSuperAdmin,
+  type FileDTO,
+  type Identity,
+} from "@/lib/documents";
 import {
   ALLOWED_EXT,
   EXT_TO_MIME,
@@ -31,6 +37,15 @@ import {
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
 
 const BUCKET = "library";
+
+/** Read action for client-side "Load more" pagination. RLS-gated (no role required). */
+export async function listFiles(
+  folderId: string,
+  offset: number
+): Promise<{ files: FileDTO[]; hasMore: boolean }> {
+  const page = await getFilesInFolder(folderId, { offset, limit: 60 });
+  return { files: page.files, hasMore: page.hasMore };
+}
 
 /** Map thrown auth errors + Postgres error codes to friendly messages. */
 function toMessage(e: unknown, ctx: "folder" | "file" | "generic" = "generic"): string {
