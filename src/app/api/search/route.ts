@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getIdentity } from "@/lib/documents";
 import type { SearchHit, SearchResults } from "@/lib/search/types";
 
 /* Live search for the dashboard hero (BAU-Auftrag §5.3, Option B).
@@ -25,11 +26,16 @@ interface PageRow {
   slug: string | null;
   full_path: string | null;
 }
-interface DocRow {
+type FolderEmbed = { name: string | null; path: string | null; is_public: boolean };
+interface FileHitRow {
   id: string;
   title: string | null;
-  category: string | null;
-  department: string | null;
+  document_folders: FolderEmbed | FolderEmbed[] | null;
+}
+interface FolderHitRow {
+  id: string;
+  name: string | null;
+  path: string | null;
 }
 interface AssetRow {
   id: string;
@@ -63,7 +69,27 @@ export async function GET(req: NextRequest) {
   const p = `%${q}%`;
   const supabase = createAdminClient();
 
-  const [pagesRes, docsRes, assetsRes, brandsRes] = await Promise.all([
+  // Library results respect folder visibility: the service-role client bypasses
+  // RLS, so we filter is_public ourselves for non-admin callers (no NDA-title
+  // leak via search). Admins (session-resolved) see everything.
+  const identity = await getIdentity();
+  const isAdmin = identity?.isAdmin ?? false;
+
+  let filesQuery = supabase
+    .from("document_files")
+    .select("id, title, document_folders!inner(name, path, is_public)")
+    .or(`title.ilike.${p},description.ilike.${p}`)
+    .limit(PER_TABLE);
+  if (!isAdmin) filesQuery = filesQuery.eq("document_folders.is_public", true);
+
+  let foldersQuery = supabase
+    .from("document_folders")
+    .select("id, name, path, is_public")
+    .ilike("name", p)
+    .limit(PER_TABLE);
+  if (!isAdmin) foldersQuery = foldersQuery.eq("is_public", true);
+
+  const [pagesRes, filesRes, foldersRes, assetsRes, brandsRes] = await Promise.all([
     supabase
       .from("pages")
       .select("id, title, slug, full_path")
@@ -71,11 +97,8 @@ export async function GET(req: NextRequest) {
         `title.ilike.${p},meta_title.ilike.${p},meta_description.ilike.${p},slug.ilike.${p},full_path.ilike.${p}`
       )
       .limit(PER_TABLE),
-    supabase
-      .from("documents")
-      .select("id, title, category, department")
-      .or(`title.ilike.${p},description.ilike.${p},category.ilike.${p}`)
-      .limit(PER_TABLE),
+    filesQuery,
+    foldersQuery,
     supabase
       .from("assets")
       .select("id, filename, alt_text, public_url")
@@ -88,6 +111,26 @@ export async function GET(req: NextRequest) {
       .limit(PER_TABLE),
   ]);
 
+  // Merge library file + folder hits into one "documents" group (files first).
+  const oneOf = <T,>(v: T | T[] | null | undefined): T | null =>
+    v == null ? null : Array.isArray(v) ? v[0] ?? null : v;
+  const fileHits: SearchHit[] = ((filesRes.data as FileHitRow[] | null) ?? []).map((r) => {
+    const folder = oneOf(r.document_folders);
+    return {
+      id: r.id,
+      title: r.title?.trim() || "Datei",
+      subtitle: folder?.name ?? null,
+      href: folder?.path ? `/documents-library/${folder.path}?file=${r.id}` : "/documents-library",
+    };
+  });
+  const folderHits: SearchHit[] = ((foldersRes.data as FolderHitRow[] | null) ?? []).map((r) => ({
+    id: r.id,
+    title: r.name?.trim() || "Ordner",
+    subtitle: "Ordner",
+    href: r.path ? `/documents-library/${r.path}` : "/documents-library",
+  }));
+  const documentHits = [...fileHits, ...folderHits].slice(0, PER_TABLE);
+
   const results: SearchResults = {
     pages: ((pagesRes.data as PageRow[] | null) ?? []).map(
       (r): SearchHit => ({
@@ -97,14 +140,7 @@ export async function GET(req: NextRequest) {
         href: r.full_path || (r.slug ? `/${r.slug}` : "/"),
       })
     ),
-    documents: ((docsRes.data as DocRow[] | null) ?? []).map(
-      (r): SearchHit => ({
-        id: r.id,
-        title: r.title?.trim() || "Dokument",
-        subtitle: r.category ?? r.department ?? null,
-        href: "/documents-library",
-      })
-    ),
+    documents: documentHits,
     assets: ((assetsRes.data as AssetRow[] | null) ?? []).map(
       (r): SearchHit => ({
         id: r.id,

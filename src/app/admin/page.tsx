@@ -8,7 +8,7 @@ export default async function AdminDashboardPage() {
     supabase.from("brands").select("*", { count: "exact", head: true }),
     supabase.from("pages").select("*", { count: "exact", head: true }),
     supabase.from("assets").select("*", { count: "exact", head: true }),
-    supabase.from("documents").select("*", { count: "exact", head: true }),
+    supabase.from("document_files").select("*", { count: "exact", head: true }),
   ]);
 
   const stats = [

@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import {
   getBlocks,
   getBrandSectionsAll,
-  getDocumentLibrary,
   getIbeProducts,
   getImageAssets,
   getPageByPath,
@@ -16,7 +15,6 @@ import { BlockEmptyState } from "@/components/blocks/empty-state";
 import { HardcodedStub } from "@/components/blocks/hardcoded-stub";
 import { AssetLibrary } from "@/components/hardcoded/asset-library";
 import { EmailSignature } from "@/components/hardcoded/email-signature";
-import { DocumentLibrary } from "@/components/hardcoded/document-library";
 import { ApixWorkflow } from "@/components/hardcoded/apix-workflow";
 import { ApixNetwork } from "@/components/hardcoded/apix-network";
 import { ApixPresentation } from "@/components/hardcoded/apix-presentation";
@@ -82,10 +80,10 @@ export async function renderPage(fullPath: string) {
     if (page.component_key === "email-signature") {
       return <EmailSignature title={page.title} />;
     }
-    if (page.component_key === "document-library") {
-      const docData = await getDocumentLibrary();
-      return <DocumentLibrary title={page.title} data={docData} />;
-    }
+    // document-library: superseded by the File System v2 route
+    // /documents-library/[[...folder]] (D-053), which shadows this catch-all for
+    // that subtree. The legacy getDocumentLibrary()/<DocumentLibrary> path is
+    // deprecated and no longer reached.
     if (page.component_key === "apix-workflow") {
       return <ApixWorkflow title={page.title} />;
     }
