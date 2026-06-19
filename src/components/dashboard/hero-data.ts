@@ -24,6 +24,15 @@ export const ORBIT_LOGOS: OrbitLogo[] = [
   { url: "/orbit/deepseek.svg", name: "DeepSeek" },
 ];
 
+/** Centre crossfade slots — airtuerk ↔ terminal wordmarks as SVG <img> so the
+ * native CloudOrbit images[] crossfade + glass bubble engage (BAU-Auftrag
+ * Fix #2). Text can't go through the <img>-only crossfade path; these are
+ * placeholders until a raster airtuerk wordmark is uploaded to public.assets. */
+export const CENTER_IMAGES: OrbitLogo[] = [
+  { url: "/orbit/center-airtuerk.svg", name: "airtuerk" },
+  { url: "/orbit/center-terminal.svg", name: "terminal" },
+];
+
 /** 4 static, curated quick-chips. Click inserts the text (no auto-submit). */
 export const QUICK_CHIPS: string[] = [
   "Was ist ein Zip-Mandat?",

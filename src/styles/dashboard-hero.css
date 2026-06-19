@@ -19,24 +19,14 @@
   height: 320px;
   margin: 0 auto;
 }
-.dh-orbit-center {
-  width: 104px;
-  height: 104px;
-  border-radius: var(--radius-full);
-  background: var(--surface-strong);
-  border: 1px solid var(--hairline);
-  box-shadow: var(--shadow-rest);
-  -webkit-backdrop-filter: saturate(180%) blur(18px);
-  backdrop-filter: saturate(180%) blur(18px);
-  display: grid;
-  place-items: center;
-  z-index: 6;
-}
-.dh-orbit-center-mark {
-  font-size: var(--fs-md);
-  font-weight: var(--weight-semibold);
-  letter-spacing: -0.5px;
-  color: var(--text-1);
+/* Glass coins (orbit logo bubbles + the crossfade centre): the ported badtz-ui
+   component ships only the inset highlight, so add a token drop-shadow to make
+   the white bubbles float on the near-white background. Inset highlight kept as
+   a theme-agnostic literal (like the neutral rgbas in shell.css). The centre is
+   a direct <img> of the CloudOrbit root; each orbit logo sits in a bubble div. */
+.dh-orbit > div > img,
+.dh-orbit > div > div > div {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03), var(--card-shadow);
 }
 
 /* ── Box ── */
