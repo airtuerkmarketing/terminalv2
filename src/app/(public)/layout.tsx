@@ -3,6 +3,7 @@ import "@/styles/blocks.css";
 import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getSinglePageBrandSlugs, getSidebarChildren } from "@/lib/pages";
+import { getFolderTreeForSidebar, getIdentity } from "@/lib/documents";
 import { Ambient } from "@/components/shell/ambient";
 import {
   Sidebar,
@@ -14,14 +15,16 @@ import { Topbar } from "@/components/shell/topbar";
 
 const IBE_SLUG = "ibe-product-suite";
 
-/** Resources section — hardcoded routes per ARCHITECTURE.md §3 / §5. */
-const RESOURCES: NavLeaf[] = [
+/** Resources section — hardcoded routes per ARCHITECTURE.md §3 / §5. Document
+ *  Library is an EXPANDABLE node whose children are the visible top-level folders
+ *  (built in getNav, RLS-scoped); the rest stay flat leaves. */
+const RESOURCES_BEFORE: NavLeaf[] = [
   { label: "Asset Library", href: "/asset-library", iconKey: "asset-library" },
-  { label: "Document Library", href: "/documents-library", iconKey: "document-library" },
+];
+const RESOURCES_AFTER: NavLeaf[] = [
   { label: "Team", href: "/team", iconKey: "team" },
   { label: "Presentation Hub", href: "/presentation-hub", iconKey: "presentation-hub" },
-  // Three AI TEST review pages — flat siblings directly under Presentation Hub
-  // (the Resources section is flat; no child-nesting like the brand nodes).
+  // Three AI TEST review pages — flat siblings directly under Presentation Hub.
   { label: "AI TEST 1", href: "/presentation-hub/ai-test-1", iconKey: "presentation-hub" },
   { label: "AI TEST 2", href: "/presentation-hub/ai-test-2", iconKey: "presentation-hub" },
   { label: "AI TEST 3", href: "/presentation-hub/ai-test-3", iconKey: "presentation-hub" },
@@ -56,20 +59,26 @@ type BrandRow = {
 async function getNav(): Promise<SidebarNav> {
   const supabase = await createClient();
 
-  const [{ data: brandRows }, { data: hiddenPages }, singlePageSlugs, sidebarChildren] =
-    await Promise.all([
-      supabase
-        .from("brands")
-        .select("id, slug, name, short_name, sort_order, is_product, sidebar_section, parent_id")
-        .order("sort_order"),
-      supabase
-        .from("pages")
-        .select("slug")
-        .like("full_path", `/${IBE_SLUG}/%`)
-        .eq("hidden_in_sidebar", true),
-      getSinglePageBrandSlugs(),
-      getSidebarChildren(),
-    ]);
+  const [
+    { data: brandRows },
+    { data: hiddenPages },
+    singlePageSlugs,
+    sidebarChildren,
+    libraryFolders,
+  ] = await Promise.all([
+    supabase
+      .from("brands")
+      .select("id, slug, name, short_name, sort_order, is_product, sidebar_section, parent_id")
+      .order("sort_order"),
+    supabase
+      .from("pages")
+      .select("slug")
+      .like("full_path", `/${IBE_SLUG}/%`)
+      .eq("hidden_in_sidebar", true),
+    getSinglePageBrandSlugs(),
+    getSidebarChildren(),
+    getFolderTreeForSidebar(), // RLS-scoped: anon sees only public top-level folders
+  ]);
 
   const brands = (brandRows ?? []) as BrandRow[];
   const hiddenSlugs = new Set<string>([
@@ -111,25 +120,58 @@ async function getNav(): Promise<SidebarNav> {
     return node;
   });
 
+  const documentLibrary: NavNode = {
+    label: "Document Library",
+    href: "/documents-library",
+    iconKey: "document-library",
+    children: libraryFolders.map((f) => ({
+      label: f.name,
+      href: `/documents-library/${f.path}`,
+      iconKey: "document-library",
+    })),
+  };
+
   return {
     dashboard: { label: "Dashboard", href: "/", iconKey: "dashboard" },
     brands: brandsNav,
-    resources: RESOURCES,
+    resources: [...RESOURCES_BEFORE, documentLibrary, ...RESOURCES_AFTER],
   };
 }
 
 // Apply persisted theme/orbs/sidebar before paint to avoid a flash.
 const PREFS_SCRIPT = `(function(){try{var d=document.documentElement;var t=localStorage.getItem('terminalv2-theme');if(t==='ios18-light'||t==='ios18-dark')d.dataset.theme=t;var o=localStorage.getItem('terminalv2-orbs');if(o==='on'||o==='off')d.dataset.orbs=o;var s=localStorage.getItem('terminalv2-sidebar');if(s==='expanded'||s==='collapsed')d.dataset.sidebar=s;}catch(e){}})();`;
 
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const i = (parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "");
+  return (i || name.slice(0, 2)).toUpperCase();
+}
+
 export default async function PublicLayout({ children }: { children: ReactNode }) {
-  const nav = await getNav();
+  // getIdentity() is React-cached, so this auth read is shared with the pages
+  // rendered inside this layout (no duplicate query per request).
+  const [nav, identity] = await Promise.all([getNav(), getIdentity()]);
+  const isAdmin = identity?.isAdmin ?? false;
+  const isSuperAdmin = identity?.isSuperAdmin ?? false;
+  const displayName = identity
+    ? identity.fullName?.trim() || identity.email?.split("@")[0] || "User"
+    : null;
+  const sidebarIdentity =
+    identity && displayName
+      ? {
+          name: displayName,
+          email: identity.email ?? "",
+          role: isSuperAdmin ? "Super Admin" : isAdmin ? "Admin" : "User",
+          initials: initialsOf(displayName),
+        }
+      : null;
 
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: PREFS_SCRIPT }} />
       <Ambient />
       <div className="layout">
-        <Sidebar nav={nav} />
+        <Sidebar nav={nav} identity={sidebarIdentity} isAdmin={isAdmin} />
         <main className="main">
           <Topbar />
           {children}

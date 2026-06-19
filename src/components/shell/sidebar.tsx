@@ -2,19 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { PanelLeft } from "lucide-react";
 import { useDrawerOpen, setDrawer } from "./drawer";
 import { ChevronIcon, NavIcon } from "./icons";
 import { UserMenu } from "./user-menu";
+import { CreateFolderModal } from "@/components/documents/create-folder-modal";
 
 export type NavLeaf = { label: string; href: string; iconKey: string };
 export type NavNode = NavLeaf & { children?: NavLeaf[] };
 export interface SidebarNav {
   dashboard: NavLeaf;
   brands: NavNode[];
-  resources: NavLeaf[];
+  resources: NavNode[];
 }
+
+type SidebarIdentity = { name: string; email: string; role: string; initials: string };
 
 const SIDEBAR_KEY = "terminalv2-sidebar";
 
@@ -44,11 +47,20 @@ function getCollapsed() {
  * breakpoint system): an off-canvas drawer < lg, a fixed collapsible rail ≥ lg.
  * Structure is ARCHITECTURE.md §3. Active state uses .active → --accent.
  */
-export function Sidebar({ nav }: { nav: SidebarNav }) {
+export function Sidebar({
+  nav,
+  identity,
+  isAdmin,
+}: {
+  nav: SidebarNav;
+  identity: SidebarIdentity | null;
+  isAdmin: boolean;
+}) {
   const pathname = usePathname();
   const collapsed = useSyncExternalStore(subscribeSidebar, getCollapsed, () => false);
   const drawerOpen = useDrawerOpen();
   const asideRef = useRef<HTMLElement>(null);
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
 
   function toggleCollapse() {
     // Read the live attribute (source of truth) so direction is correct for any
@@ -212,29 +224,104 @@ export function Sidebar({ nav }: { nav: SidebarNav }) {
 
           <div className="nav-divider" />
 
-            {/* Resources */}
+            {/* Resources — Document Library is an expandable folder node
+                (reuses the brand expandable markup); the rest are flat leaves. */}
             <nav className="nav-section" aria-label="Resources">
-              {nav.resources.map((r) => (
-                <NavLink
-                  key={r.href}
-                  item={r}
-                  active={isActive(pathname, r.href, false)}
-                  onNavigate={closeDrawer}
-                />
-              ))}
+              {nav.resources.map((r) => {
+                const isDocLib = r.iconKey === "document-library";
+                const showSub = (r.children && r.children.length > 0) || (isDocLib && isAdmin);
+                if (!showSub) {
+                  return (
+                    <NavLink
+                      key={r.href}
+                      item={r}
+                      active={isActive(pathname, r.href, false)}
+                      onNavigate={closeDrawer}
+                    />
+                  );
+                }
+                const open = isActive(pathname, r.href, false);
+                const subnavId = `subnav-${r.href.replace(/[^a-z0-9]+/gi, "-").replace(/(^-|-$)/g, "")}`;
+                return (
+                  <div key={r.href}>
+                    <Link
+                      href={r.href}
+                      className={`nav-item expandable${open ? " active" : ""}`}
+                      data-open={open}
+                      aria-expanded={open}
+                      aria-controls={subnavId}
+                      aria-current={open ? "page" : undefined}
+                      onClick={closeDrawer}
+                    >
+                      <span className="icon">
+                        <NavIcon name={r.iconKey} />
+                      </span>
+                      <span className="text">{r.label}</span>
+                      <span className="chevron">
+                        <ChevronIcon />
+                      </span>
+                    </Link>
+                    <div id={subnavId} className={`nav-sub${open ? " open" : ""}`}>
+                      {(r.children ?? []).map((c) => (
+                        <Link key={c.href} className="nav-item" href={c.href} onClick={closeDrawer}>
+                          <span className="icon">
+                            <NavIcon name={c.iconKey} />
+                          </span>
+                          <span className="text">{c.label}</span>
+                        </Link>
+                      ))}
+                      {isDocLib && isAdmin && (
+                        <button
+                          type="button"
+                          className="nav-item"
+                          onClick={() => setCreateFolderOpen(true)}
+                        >
+                          <span className="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                              <path d="M12 5v14M5 12h14" />
+                            </svg>
+                          </span>
+                          <span className="text">Create New Folder</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </nav>
           </div>
 
-          {/* Fixed bottom zone: user block is the trigger for the user menu;
-              the action buttons (orbs / theme / settings) live inside it. */}
-          <UserMenu
-            name="Buhara Demir"
-            email="bdemir@airtuerk.de"
-            role="Admin"
-            initials="BD"
-          />
+          {/* Fixed bottom zone: the real signed-in user (UserMenu trigger +
+              orbs/theme/settings/logout), or a sign-in link for anon visitors. */}
+          {identity ? (
+            <UserMenu
+              name={identity.name}
+              email={identity.email}
+              role={identity.role}
+              initials={identity.initials}
+            />
+          ) : (
+            <Link href="/login" className="nav-item" onClick={closeDrawer}>
+              <span className="icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                  <polyline points="10 17 15 12 10 7" />
+                  <line x1="15" y1="12" x2="3" y2="12" />
+                </svg>
+              </span>
+              <span className="text">Sign in</span>
+            </Link>
+          )}
         </div>
       </aside>
+
+      {isAdmin && (
+        <CreateFolderModal
+          open={createFolderOpen}
+          onClose={() => setCreateFolderOpen(false)}
+          parentId={null}
+        />
+      )}
     </>
   );
 }

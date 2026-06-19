@@ -20,6 +20,7 @@ export type Role = "super_admin" | "admin" | "user";
 export interface Identity {
   userId: string;
   email: string | null;
+  fullName: string | null;
   role: Role;
   isAdmin: boolean;
   isSuperAdmin: boolean;
@@ -34,13 +35,14 @@ export const getIdentity = cache(async (): Promise<Identity | null> => {
   if (!user) return null;
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, email")
+    .select("role, email, full_name")
     .eq("id", user.id)
     .single();
   const role = ((profile?.role as Role) ?? "user") as Role;
   return {
     userId: user.id,
     email: (profile?.email as string | null) ?? user.email ?? null,
+    fullName: (profile?.full_name as string | null) ?? null,
     role,
     isAdmin: role === "admin" || role === "super_admin",
     isSuperAdmin: role === "super_admin",
