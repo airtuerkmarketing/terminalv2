@@ -6,7 +6,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { PanelLeft } from "lucide-react";
 import { useDrawerOpen, setDrawer } from "./drawer";
 import { ChevronIcon, NavIcon } from "./icons";
-import { SidebarActions } from "./sidebar-actions";
+import { UserMenu } from "./user-menu";
 
 export type NavLeaf = { label: string; href: string; iconKey: string };
 export type NavNode = NavLeaf & { children?: NavLeaf[] };
@@ -225,16 +225,14 @@ export function Sidebar({ nav }: { nav: SidebarNav }) {
             </nav>
           </div>
 
-          {/* Fixed bottom zone: user block + action row (orbs / theme / settings). */}
-          <div className="user-block">
-            <div className="avatar">BD</div>
-            <div className="meta">
-              <div className="name">Buhara Demir</div>
-              <div className="role">Admin</div>
-            </div>
-          </div>
-
-          <SidebarActions />
+          {/* Fixed bottom zone: user block is the trigger for the user menu;
+              the action buttons (orbs / theme / settings) live inside it. */}
+          <UserMenu
+            name="Buhara Demir"
+            email="bdemir@airtuerk.de"
+            role="Admin"
+            initials="BD"
+          />
         </div>
       </aside>
     </>

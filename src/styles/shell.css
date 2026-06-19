@@ -48,9 +48,6 @@ html { scrollbar-gutter: stable; }
    the sidebar sits attached to the viewport's left edge. */
 .sidebar-inner { background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); border: 1px solid var(--hairline); border-radius: 0 var(--sidebar-panel-radius) var(--sidebar-panel-radius) 0; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-rest); overflow: hidden; }
 
-/* Bottom action row (orbs / theme / settings), relocated from the topbar.
-   Sits directly below the user block; stacks vertically on the collapsed rail. */
-.sidebar-actions { flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: var(--space-2); }
 .sidebar-top { flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-4); }
 .sidebar-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: var(--space-4); }
 /* Subtle scrollbar: thin, light thumb, transparent track. */
@@ -105,7 +102,6 @@ html { scrollbar-gutter: stable; }
 .user-block .avatar { width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--avatar-bg); color: white; display: grid; place-items: center; font-weight: var(--weight-bold); font-size: var(--fs-xs); }
 .user-block .meta { flex: 1; min-width: 0; }
 .user-block .name { font-size: var(--fs-sm); font-weight: var(--weight-regular); color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.user-block .role { font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; font-weight: var(--weight-medium); }
 
 /* ── Topbar + main (shared) ── */
 /* Content lives in a centered container: it fills the area to the right of the
@@ -115,8 +111,8 @@ html { scrollbar-gutter: stable; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-8); }
 /* The topbar's placeholder search field and action buttons were both removed:
    the dashboard hero provides the real Such+KI-Box, and the orbs/theme/settings
-   actions moved into the sidebar (.sidebar-actions). The topbar now holds only
-   the mobile hamburger. */
+   actions moved into the sidebar's user menu (.um-menu). The topbar now holds
+   only the mobile hamburger. */
 .icon-btn { width: 36px; height: 36px; border-radius: var(--radius-md); background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); border: 1px solid var(--hairline); display: grid; place-items: center; cursor: pointer; color: var(--text-2); transition: all 150ms var(--ease-smooth); text-decoration: none; flex-shrink: 0; }
 .icon-btn:hover { background: var(--surface-strong); color: var(--text-1); }
 .icon-btn svg { width: 16px; height: 16px; }
@@ -153,7 +149,6 @@ html { scrollbar-gutter: stable; }
      of snapping to full width and overflowing the narrow rail mid-animation.
      Icons stay centered on a clean vertical centerline; collapse toggle reachable. */
   :root[data-sidebar="collapsed"] .sidebar { padding: 0; }
-  :root[data-sidebar="collapsed"] .sidebar-actions { flex-direction: column; gap: var(--space-1); }
   :root[data-sidebar="collapsed"] .sidebar-inner { padding: var(--space-3) var(--space-2); }
   :root[data-sidebar="collapsed"] .brand-mark { justify-content: center; gap: 0; padding: var(--space-1); }
   :root[data-sidebar="collapsed"] .brand-mark .name { display: none; }

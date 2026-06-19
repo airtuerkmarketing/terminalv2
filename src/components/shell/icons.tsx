@@ -3,9 +3,11 @@ import {
   GalleryVerticalEnd,
   LayoutDashboard,
   LibraryBig,
+  LogOut,
   Presentation,
   Settings,
   StickyNote,
+  User,
   Users,
 } from "lucide-react";
 
@@ -205,6 +207,14 @@ export function OrbsIcon() {
 
 export function SettingsIcon() {
   return <Settings aria-hidden />;
+}
+
+export function ProfileIcon() {
+  return <User aria-hidden />;
+}
+
+export function LogoutIcon() {
+  return <LogOut aria-hidden />;
 }
 
 export function MenuIcon() {
