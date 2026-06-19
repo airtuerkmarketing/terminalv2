@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   LibraryBig,
   Presentation,
+  Settings,
   StickyNote,
   Users,
 } from "lucide-react";
@@ -200,6 +201,10 @@ export function OrbsIcon() {
       <path d="M12 2v2M12 20v2M2 12h2M20 12h2" />
     </I>
   );
+}
+
+export function SettingsIcon() {
+  return <Settings aria-hidden />;
 }
 
 export function MenuIcon() {

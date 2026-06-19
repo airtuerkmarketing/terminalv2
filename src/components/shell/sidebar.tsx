@@ -6,6 +6,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { PanelLeft } from "lucide-react";
 import { useDrawerOpen, setDrawer } from "./drawer";
 import { ChevronIcon, NavIcon } from "./icons";
+import { SidebarActions } from "./sidebar-actions";
 
 export type NavLeaf = { label: string; href: string; iconKey: string };
 export type NavNode = NavLeaf & { children?: NavLeaf[] };
@@ -224,7 +225,7 @@ export function Sidebar({ nav }: { nav: SidebarNav }) {
             </nav>
           </div>
 
-          {/* Fixed bottom zone: user block (sticks to the bottom, never clipped). */}
+          {/* Fixed bottom zone: user block + action row (orbs / theme / settings). */}
           <div className="user-block">
             <div className="avatar">BD</div>
             <div className="meta">
@@ -232,6 +233,8 @@ export function Sidebar({ nav }: { nav: SidebarNav }) {
               <div className="role">Admin</div>
             </div>
           </div>
+
+          <SidebarActions />
         </div>
       </aside>
     </>

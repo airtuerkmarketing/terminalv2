@@ -1,0 +1,123 @@
+/* User settings modal — portaled to <body>. Styled with theme.css tokens only
+ * (no hardcoded theme hex; the backdrop rgba is theme-agnostic, like shell.css).
+ * D-036: --accent is the only chrome accent. `usm-` prefix. */
+
+.usm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.usm-panel {
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.usm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--card-padding);
+  border-bottom: 1px solid var(--separator);
+}
+.usm-title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-1);
+}
+.usm-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-3);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.usm-close:hover {
+  background: var(--surface-muted);
+  color: var(--text-1);
+}
+.usm-close svg {
+  width: 18px;
+  height: 18px;
+}
+.usm-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.usm-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--card-padding);
+}
+.usm-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.usm-section-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+}
+.usm-account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.usm-avatar {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--avatar-bg);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: var(--weight-bold);
+  font-size: var(--fs-sm);
+}
+.usm-account-name {
+  font-size: var(--fs-base);
+  font-weight: var(--weight-medium);
+  color: var(--text-1);
+}
+.usm-account-role {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+.usm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--fs-base);
+  color: var(--text-1);
+}
+.usm-note {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}

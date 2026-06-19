@@ -72,7 +72,7 @@
   /* Sidebar redesign (2026-06-18) — named radii + the neutral avatar fill and
      the nav-label colour. --nav-label defaults to Jet (#222) for light; the
      dark theme overrides it to --text-1 so labels stay legible in both modes. */
-  --sidebar-panel-radius: 25px;
+  --sidebar-panel-radius: 20px;
   --sidebar-item-radius: 10px;
   --avatar-bg: #B0B0B0;
   --nav-label: var(--jet);
