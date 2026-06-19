@@ -1,0 +1,247 @@
+/* User dropdown menu — trigger (the .user-block button) + portaled popup.
+ * Styled with theme.css tokens only (glass surfaces, --accent the sole accent),
+ * matching the iOS18 shell aesthetic. `um-` prefix for the popup. The base
+ * .user-block layout (avatar/meta/name/role) still lives in shell.css; this file
+ * only adds the button reset, interaction states, and the menu. */
+
+/* ── Trigger: the user block is now a button ── */
+button.user-block {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  border: 1px solid transparent;
+  transition: background-color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth);
+}
+button.user-block:hover {
+  background: var(--surface-muted);
+}
+button.user-block[data-open="true"] {
+  background: var(--surface-flat);
+  border-color: var(--hairline);
+  box-shadow: var(--shadow-rest);
+}
+button.user-block:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.user-block .um-caret {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+  transition: transform 200ms var(--ease-smooth);
+}
+.user-block .um-caret svg {
+  width: 14px;
+  height: 14px;
+  /* ChevronIcon points right; rotate to point up (menu opens upward). */
+  transform: rotate(-90deg);
+}
+.user-block[data-open="true"] .um-caret {
+  transform: rotate(180deg);
+}
+
+/* The trigger now shows only the name; identity (name + e-mail + role) lives in
+   the popup header. Gradient-filled initials in place of the flat token fill —
+   the element-qualified selector outranks shell.css's `.user-block .avatar`
+   regardless of stylesheet order. White glyph reads on both gradient stops. */
+.user-block .meta {
+  display: flex;
+  min-width: 0;
+}
+button.user-block .avatar {
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+}
+
+/* Collapsed rail (≥lg): hide the caret alongside the meta block. */
+@media (min-width: 1024px) {
+  :root[data-sidebar="collapsed"] .user-block .um-caret {
+    display: none;
+  }
+}
+
+/* ── Popup (portaled to <body>, fixed-positioned from the trigger rect) ── */
+.um-menu {
+  position: fixed;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2);
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-hover);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  transform-origin: bottom left;
+  animation: um-pop 160ms var(--ease-smooth);
+}
+@keyframes um-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .um-menu {
+    animation: none;
+  }
+}
+
+/* ── Identity header: name (bold) + role pill, e-mail dimmed beneath ── */
+.um-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 6px;
+}
+.um-header-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.um-header-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-1);
+}
+.um-header-role {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.um-header-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.um-sep {
+  height: 1px;
+  background: var(--separator);
+  margin: var(--space-1) 0;
+}
+
+/* Action rows (the relocated action buttons). */
+.um-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.um-item:hover {
+  background: var(--surface-muted);
+}
+.um-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.um-item-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+}
+.um-item-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.um-item-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.um-item-state {
+  flex-shrink: 0;
+  font-size: var(--fs-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-3);
+}
+/* Checked toggle rows highlight the icon + state with the accent. */
+.um-item[aria-checked="true"] .um-item-icon,
+.um-item[aria-checked="true"] .um-item-state {
+  color: var(--accent);
+}
+.um-item-caret {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+}
+.um-item-caret svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Disabled Profile stub: inert + dimmed, no hover, default cursor. It keeps
+   role="menuitem" for shape but is excluded from roving focus via aria-disabled
+   (the JS skips [aria-disabled='true']). */
+.um-item[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+.um-item[aria-disabled="true"]:hover {
+  background: transparent;
+}
+
+/* The logout form is a layout-neutral wrapper around the menuitem. */
+.um-logout-form {
+  display: contents;
+}
+
+/* Destructive Logout row: red glyph + label, light-red hover tint. Scoped
+   `um-` tokens (no global --destructive exists) keep both themes legible —
+   Quantum-Blue stays the sole chrome accent, never used for these states. */
+.um-menu {
+  --um-destructive: #dc2626;
+  --um-destructive-surface: rgb(254 226 226);
+}
+:root[data-theme="ios18-dark"] .um-menu {
+  --um-destructive: #ff6b6b;
+  --um-destructive-surface: rgba(255, 107, 107, 0.14);
+}
+.um-item--danger,
+.um-item--danger .um-item-icon {
+  color: var(--um-destructive);
+}
+.um-item--danger:hover {
+  background: var(--um-destructive-surface);
+  color: var(--um-destructive);
+}
+.um-item--danger:focus-visible {
+  outline-color: var(--um-destructive);
+}

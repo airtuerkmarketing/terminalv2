@@ -5,9 +5,9 @@ import { MenuIcon } from "./icons";
 
 /**
  * Topbar: just the hamburger (mobile/tablet only) that opens the sidebar
- * drawer. The ambient-orbs / theme / settings actions moved into the sidebar
- * (see SidebarActions); the old placeholder search field was removed once the
- * dashboard hero provided the real Such+KI-Box.
+ * drawer. The ambient-orbs / theme / settings actions moved into the sidebar's
+ * user menu (see UserMenu); the old placeholder search field was removed once
+ * the dashboard hero provided the real Such+KI-Box.
  */
 export function Topbar() {
   const drawerOpen = useDrawerOpen();
