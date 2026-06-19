@@ -19,7 +19,7 @@
 
 .apix-org {
   position: relative; width: 100%; margin: 0 auto;
-  font-size: 14px; font-family: var(--font);
+  font-size: var(--fs-base); font-family: var(--font);
   color: #1a1a1a; -webkit-font-smoothing: antialiased; user-select: none;
 }
 
@@ -48,17 +48,17 @@
 }
 .apix-org-top__brand {
   display: inline-flex; align-items: center; gap: 9px;
-  font: 700 15px/1 var(--font); color: #111; letter-spacing: .01em;
+  font: var(--weight-bold) 15px/1 var(--font); color: #111; letter-spacing: .01em; /* D-046 verbatim */
 }
 .apix-org-top__brand svg { width: 17px; height: 17px; flex-shrink: 0; }
 .apix-org-top__meta {
   display: inline-flex; align-items: center; gap: 10px;
-  font: 500 12px/1.4 var(--font); color: #6B7280;
+  font: var(--weight-medium) 12px/1.4 var(--font); color: #6B7280; /* D-046 verbatim */
 }
 .apix-org-reset {
   display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px;
   border: 1px solid rgba(0,0,0,.06); border-radius: 999px; background: rgba(255,255,255,.45);
-  font: 600 12px/1 var(--font); color: #1a1a1a; cursor: pointer;
+  font: var(--weight-semibold) 12px/1 var(--font); color: #1a1a1a; cursor: pointer; /* D-046 verbatim */
   transition: background .15s, color .15s, transform .1s;
 }
 .apix-org-reset:hover { background: #fff; color: #0A82DF; }
@@ -76,7 +76,7 @@
 .apix-org-colhead {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 12px 14px; margin-bottom: 14px; border-radius: 14px;
-  font: 700 14px/1 var(--font); letter-spacing: .01em;
+  font: var(--weight-bold) var(--fs-base)/1 var(--font); letter-spacing: .01em;
   border: 1px solid transparent;
 }
 .apix-org-colhead svg { width: 16px; height: 16px; flex-shrink: 0; }
@@ -86,7 +86,7 @@
   background: currentColor; border-radius: 9px;
 }
 .apix-org-colhead__count span {
-  font: 700 10px/1 var(--font); color: #fff;
+  font: var(--weight-bold) 10px/1 var(--font); color: #fff; /* D-046 verbatim */
 }
 
 /* ─── Cards ─── */
@@ -99,10 +99,10 @@
   transition: outline-color .18s, box-shadow .18s, transform .12s;
 }
 .apix-org-card__title {
-  font-size: 14px; font-weight: 600; line-height: 1.25; color: #111; letter-spacing: .005em;
+  font-size: var(--fs-base); font-weight: var(--weight-semibold); line-height: 1.25; color: #111; letter-spacing: .005em;
 }
 .apix-org-card__sub {
-  margin-top: 4px; font-size: 11.5px; font-weight: 500; line-height: 1.3; color: #9CA3AF;
+  margin-top: 4px; font-size: 11.5px; font-weight: var(--weight-medium); line-height: var(--lh-snug); color: #9CA3AF; /* D-046 verbatim */
 }
 .apix-org-card:hover { outline-color: var(--col, #0A82DF); box-shadow: 0 4px 14px var(--colShadow, rgba(10,130,223,.2)); }
 
@@ -123,7 +123,7 @@
   background: #EFF6FE; outline: 2px solid #0A82DF; outline-offset: -2px;
   box-shadow: 0 4px 16px rgba(10,130,223,.18);
 }
-.apix-org-card.is-self .apix-org-card__title { color: #0A82DF; font-size: 16px; font-weight: 700; }
+.apix-org-card.is-self .apix-org-card__title { color: #0A82DF; font-size: 16px; font-weight: var(--weight-bold); } /* D-046 verbatim */
 .apix-org-card.is-self .apix-org-card__sub   { color: #0557A6; }
 
 /* drag states */
@@ -169,7 +169,7 @@
 }
 .apix-org-modal.has-map .apix-org-modal__map { display: block; }
 .apix-org-modal__map .leaflet-control-attribution {
-  font: 400 9px var(--font); background: rgba(255,255,255,.7);
+  font: var(--weight-regular) 9px var(--font); background: rgba(255,255,255,.7); /* D-046 verbatim */
 }
 
 /* custom pin */
@@ -191,21 +191,21 @@
 .apix-org-chip {
   display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px;
   border-radius: 999px; border: 1px solid transparent;
-  font: 700 10.5px/1 var(--font); letter-spacing: .05em; text-transform: uppercase;
+  font: var(--weight-bold) 10.5px/1 var(--font); letter-spacing: .05em; text-transform: uppercase; /* D-046 verbatim */
 }
 .apix-org-chip svg { width: 11px; height: 11px; }
 .apix-org-chip--cat     { background: var(--chipBg, #EFF6FE); color: var(--chipCol, #0A82DF); border-color: var(--chipBorder, #BFDDF8); }
 .apix-org-chip--founded { background: #F4F5F7; color: #4B5563; border-color: #E5E7EB; }
 .apix-org-chip--self    { background: #0A82DF; color: #fff; }
-.apix-org-modal__title { font-size: 21px; font-weight: 700; line-height: 1.2; color: #111; letter-spacing: -.01em; }
+.apix-org-modal__title { font-size: 21px; font-weight: var(--weight-bold); line-height: 1.2; color: #111; letter-spacing: -.01em; } /* D-046 verbatim */
 .apix-org-modal__loc {
   display: inline-flex; align-items: center; gap: 6px; margin-top: 7px;
-  font: 500 13px/1.3 var(--font); color: #6B7280;
+  font: var(--weight-medium) var(--fs-sm)/var(--lh-snug) var(--font); color: #6B7280;
 }
 .apix-org-modal__loc svg { width: 13px; height: 13px; flex-shrink: 0; color: #9CA3AF; }
 .apix-org-modal__desc {
   margin-top: 12px; padding-top: 12px; border-top: 1px solid #F0F1F3;
-  font: 400 13px/1.55 var(--font); color: #4B5563;
+  font: var(--weight-regular) var(--fs-sm)/1.55 var(--font); color: #4B5563;
 }
 .apix-org-modal__desc:empty { display: none; }
 
@@ -223,7 +223,7 @@
   .apix-org-cols { grid-template-columns: 1fr; }
   .apix-org-stage { padding: 12px 12px 18px; }
   .apix-org-top { padding: 10px 12px; }
-  .apix-org-top__meta { font-size: 11px; }
+  .apix-org-top__meta { font-size: var(--fs-xs); }
   .apix-org-modal { padding: 12px; }
   .apix-org-modal__map { height: 200px; }
   .apix-org-modal__body { padding: 16px 18px 20px; }
@@ -232,5 +232,5 @@
 /* ─── Section header above the widget (app CHROME → tokens) ─── */
 .apix-group { padding: var(--space-2) 0; }
 .apix-group-head { margin-bottom: var(--space-6); }
-.apix-group-head .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--space-2); }
-.apix-group-head h1 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; color: var(--text-1); margin: 0; }
+.apix-group-head .eyebrow { font-size: var(--fs-xs); font-weight: var(--weight-semibold); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--space-2); }
+.apix-group-head h1 { font-size: 26px; font-weight: var(--weight-bold); letter-spacing: -.02em; color: var(--text-1); margin: 0; } /* D-046 verbatim */

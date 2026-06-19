@@ -41,24 +41,47 @@ html { scrollbar-gutter: stable; }
 :target { scroll-margin-top: var(--space-20); }
 
 /* ── Sidebar glass panel + nav (shared by drawer and fixed modes) ── */
-.sidebar-inner { background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); border: 1px solid var(--hairline); border-radius: 20px; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-rest); overflow-y: auto; overflow-x: hidden; }
+/* Sticky 3-zone layout: .sidebar-top and .user-block are fixed (flex-shrink:0);
+   only .sidebar-scroll scrolls. The panel itself does not scroll (overflow
+   hidden) so the user block always sticks to the bottom and is never clipped. */
+.sidebar-inner { background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); border: 1px solid var(--hairline); border-radius: var(--sidebar-panel-radius); padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-rest); overflow: hidden; }
+.sidebar-top { flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.sidebar-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: var(--space-4); }
+/* Subtle scrollbar: thin, light thumb, transparent track. */
+.sidebar-scroll { scrollbar-width: thin; scrollbar-color: rgba(120, 120, 128, 0.35) transparent; }
+.sidebar-scroll::-webkit-scrollbar { width: 6px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(120, 120, 128, 0.35); border-radius: var(--radius-full); }
+.sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(120, 120, 128, 0.5); }
+:root[data-theme="ios18-dark"] .sidebar-scroll { scrollbar-color: rgba(235, 235, 245, 0.22) transparent; }
+:root[data-theme="ios18-dark"] .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(235, 235, 245, 0.22); }
+:root[data-theme="ios18-dark"] .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(235, 235, 245, 0.35); }
 
 .brand-mark { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--radius-md); }
-.brand-mark .logo { width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--radius-md); background: var(--quantum); color: white; display: grid; place-items: center; font-weight: 600; font-size: 14px; box-shadow: 0 2px 6px rgba(10,130,223,0.25), inset 0 1px 0 rgba(255,255,255,0.30); }
-.brand-mark .name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; }
-.brand-mark .name span { color: var(--text-3); font-weight: 400; }
+/* Plain "terminal" wordmark — no logo square, no v2 suffix. */
+.brand-mark .name { flex: 1; font-size: 16px; font-weight: var(--weight-medium); letter-spacing: -0.8px; color: var(--text-1); white-space: nowrap; overflow: hidden; }
 
 .collapse-btn { width: 28px; height: 28px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-3); cursor: pointer; display: grid; place-items: center; transition: all 150ms; margin-left: auto; }
 .collapse-btn:hover { background: rgba(120, 120, 128, 0.10); color: var(--text-1); }
 .collapse-btn svg { width: 14px; height: 14px; transition: transform 250ms var(--ease-smooth); }
 
 .nav-section { display: flex; flex-direction: column; gap: 2px; }
-.nav-divider { height: 1px; background: var(--separator); margin: var(--space-2) var(--space-3); }
+/* Slightly larger gap between groups (Dashboard | Brands | IBE/APIX | Resources). */
+.nav-divider { height: 1px; background: var(--separator); margin: var(--space-3); }
 
-.nav-item { display: flex; align-items: center; gap: var(--space-3); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 14px; color: var(--text-2); cursor: pointer; text-decoration: none; transition: all 150ms var(--ease-smooth); white-space: nowrap; position: relative; background: transparent; border: 0; width: 100%; text-align: left; font-family: inherit; }
+/* border is 1px transparent on every item so the active state can add a hairline
+   border without nudging the layout (no width/height reflow between states). */
+.nav-item { display: flex; align-items: center; gap: var(--space-3); padding: 8px 12px; border-radius: var(--sidebar-item-radius); font-size: var(--fs-sm); font-weight: var(--weight-medium); color: var(--nav-label); cursor: pointer; text-decoration: none; transition: all 150ms var(--ease-smooth); white-space: nowrap; position: relative; background: transparent; border: 1px solid transparent; width: 100%; text-align: left; font-family: inherit; }
+/* Hover (state 2): filled neutral grey, raised contrast. No stroke, no shadow. */
 .nav-item:hover { background: rgba(120, 120, 128, 0.08); color: var(--text-1); }
-.nav-item.active { background: var(--accent-soft); color: var(--accent); }
-.nav-item .icon { width: 18px; height: 18px; flex-shrink: 0; display: grid; place-items: center; }
+:root[data-theme="ios18-dark"] .nav-item:hover { background: rgba(120, 120, 128, 0.16); }
+/* Active/selected (state 3): white surface, hairline stroke, subtle shadow; only
+   the icon turns accent-blue, the label keeps the normal nav-label colour. */
+.nav-item.active { background: var(--surface-flat); border-color: var(--hairline); box-shadow: var(--shadow-rest); color: var(--nav-label); }
+.nav-item.active .icon { color: var(--accent); }
+.nav-item .icon { width: 18px; height: 18px; flex-shrink: 0; display: grid; place-items: center; transform-origin: center; transition: transform 180ms var(--ease-smooth); }
+/* Icon micro-animation on hover — only the icon scales/lifts, not the whole item. */
+.nav-item:hover .icon { transform: scale(1.12) translateY(-1px); }
 .nav-item .icon svg { width: 16px; height: 16px; }
 .nav-item .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; opacity: 1; transition: opacity 200ms var(--ease-smooth); }
 .nav-item .chevron { color: var(--text-3); transition: transform 200ms var(--ease-smooth); flex-shrink: 0; display: grid; place-items: center; }
@@ -68,15 +91,15 @@ html { scrollbar-gutter: stable; }
 /* Nested sub-items under IBE */
 .nav-sub { display: flex; flex-direction: column; gap: 2px; padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 300ms var(--ease-smooth); }
 .nav-sub.open { max-height: 400px; }
-.nav-sub .nav-item { padding: 6px 10px; font-size: 13px; }
+.nav-sub .nav-item { padding: 6px 10px; font-size: var(--fs-sm); }
 .nav-sub .nav-item .icon { width: 14px; height: 14px; }
 .nav-sub .nav-item .icon svg { width: 12px; height: 12px; }
 
-.user-block { margin-top: auto; padding: var(--space-3); border-radius: var(--radius-md); background: rgba(120, 120, 128, 0.05); display: flex; align-items: center; gap: var(--space-3); overflow: hidden; }
-.user-block .avatar { width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--quantum); color: white; display: grid; place-items: center; font-weight: 600; font-size: 12px; }
+.user-block { flex-shrink: 0; padding: var(--space-3); border-radius: var(--radius-md); background: rgba(120, 120, 128, 0.05); display: flex; align-items: center; gap: var(--space-3); overflow: hidden; }
+.user-block .avatar { width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--avatar-bg); color: white; display: grid; place-items: center; font-weight: var(--weight-bold); font-size: var(--fs-xs); }
 .user-block .meta { flex: 1; min-width: 0; }
-.user-block .name { font-size: 13px; font-weight: 500; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.user-block .role { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500; }
+.user-block .name { font-size: var(--fs-sm); font-weight: var(--weight-regular); color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-block .role { font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; font-weight: var(--weight-medium); }
 
 /* ── Topbar + main (shared) ── */
 /* Content lives in a centered container: it fills the area to the right of the
@@ -84,11 +107,11 @@ html { scrollbar-gutter: stable; }
    the auto margins center it with equal gutters (never flush to an edge). */
 .main { width: 100%; min-width: 0; max-width: 1680px; margin-inline: auto; padding: var(--space-5) var(--space-4); }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-8); }
-.search { flex: 1; min-width: 0; max-width: 520px; display: flex; align-items: center; gap: var(--space-2); padding: 9px 16px; border-radius: var(--radius-md); background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); border: 1px solid var(--hairline); font-size: 14px; color: var(--text-3); }
+.search { flex: 1; min-width: 0; max-width: 520px; display: flex; align-items: center; gap: var(--space-2); padding: 9px 16px; border-radius: var(--radius-md); background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); border: 1px solid var(--hairline); font-size: var(--fs-base); color: var(--text-3); }
 .search > svg { width: 16px; height: 16px; flex-shrink: 0; }
-.search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: 14px; color: var(--text-1); font-family: inherit; }
+.search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: var(--fs-base); color: var(--text-1); font-family: inherit; }
 .search input::placeholder { color: var(--text-3); }
-.search .key { margin-left: auto; padding: 2px 6px; border-radius: 4px; background: rgba(120, 120, 128, 0.10); font-family: var(--font-mono); font-size: 11px; color: var(--text-2); flex-shrink: 0; }
+.search .key { margin-left: auto; padding: 2px 6px; border-radius: 4px; background: rgba(120, 120, 128, 0.10); font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-2); flex-shrink: 0; }
 .topbar-actions { display: flex; gap: var(--space-2); align-items: center; }
 .icon-btn { width: 36px; height: 36px; border-radius: var(--radius-md); background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); border: 1px solid var(--hairline); display: grid; place-items: center; cursor: pointer; color: var(--text-2); transition: all 150ms var(--ease-smooth); text-decoration: none; flex-shrink: 0; }
 .icon-btn:hover { background: var(--surface-strong); color: var(--text-1); }
@@ -129,7 +152,6 @@ html { scrollbar-gutter: stable; }
   :root[data-sidebar="collapsed"] .sidebar-inner { padding: var(--space-3) var(--space-2); }
   :root[data-sidebar="collapsed"] .brand-mark { justify-content: center; gap: 0; padding: var(--space-1); }
   :root[data-sidebar="collapsed"] .brand-mark .name { display: none; }
-  :root[data-sidebar="collapsed"] .brand-mark .logo { display: none; }
   :root[data-sidebar="collapsed"] .collapse-btn { margin-left: 0; }
   :root[data-sidebar="collapsed"] .collapse-btn svg { transform: rotate(180deg); }
   :root[data-sidebar="collapsed"] .nav-item { justify-content: center; gap: 0; padding: 8px; }
@@ -181,5 +203,7 @@ html { scrollbar-gutter: stable; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .orb { animation: none; }
-  .layout, .sidebar, .sidebar-backdrop, .nav-item, .nav-item .text, .nav-sub, .collapse-btn, .collapse-btn svg, .nav-item .chevron, .icon-btn, .ambient { transition: none; }
+  .layout, .sidebar, .sidebar-backdrop, .nav-item, .nav-item .text, .nav-item .icon, .nav-sub, .collapse-btn, .collapse-btn svg, .nav-item .chevron, .icon-btn, .ambient { transition: none; }
+  /* Disable the icon hover micro-animation. */
+  .nav-item:hover .icon { transform: none; }
 }

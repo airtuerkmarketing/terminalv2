@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import { PanelLeft } from "lucide-react";
 import { useDrawerOpen, setDrawer } from "./drawer";
-import { ChevronIcon, CollapseIcon, NavIcon } from "./icons";
+import { ChevronIcon, NavIcon } from "./icons";
 
 export type NavLeaf = { label: string; href: string; iconKey: string };
 export type NavNode = NavLeaf & { children?: NavLeaf[] };
@@ -122,37 +123,39 @@ export function Sidebar({ nav }: { nav: SidebarNav }) {
         aria-label="Primary navigation"
       >
         <div className="sidebar-inner">
-          <div className="brand-mark">
-            <div className="logo">at</div>
-            <div className="name">
-              terminal<span>v2</span>
+          {/* Fixed top zone: logo + Dashboard (does not scroll). */}
+          <div className="sidebar-top">
+            <div className="brand-mark">
+              <div className="name">terminal</div>
+              <button
+                type="button"
+                className="collapse-btn"
+                onClick={toggleCollapse}
+                aria-expanded={!collapsed}
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                <PanelLeft color="#717171" aria-hidden />
+              </button>
             </div>
-            <button
-              type="button"
-              className="collapse-btn"
-              onClick={toggleCollapse}
-              aria-expanded={!collapsed}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              <CollapseIcon />
-            </button>
+
+            {/* Dashboard */}
+            <nav className="nav-section" aria-label="Dashboard">
+              <NavLink
+                item={nav.dashboard}
+                active={isActive(pathname, nav.dashboard.href, true)}
+                onNavigate={closeDrawer}
+              />
+            </nav>
           </div>
 
-          {/* Dashboard */}
-          <nav className="nav-section" aria-label="Dashboard">
-            <NavLink
-              item={nav.dashboard}
-              active={isActive(pathname, nav.dashboard.href, true)}
-              onNavigate={closeDrawer}
-            />
-          </nav>
-
-          <div className="nav-divider" />
-
-          {/* Brands & Products */}
-          <nav className="nav-section" aria-label="Brands and products">
-            {nav.brands.map((b) => {
+          {/* Scrollable middle zone: brand groups + resources. */}
+          <div className="sidebar-scroll">
+            {/* Brands & Products (Internal Branding is hidden from the sidebar). */}
+            <nav className="nav-section" aria-label="Brands and products">
+              {nav.brands
+                .filter((b) => b.iconKey !== "internal-branding")
+                .map((b) => {
               if (b.children && b.children.length > 0) {
                 // Expandable brand (IBE + the single-page brands): a LINK to the
                 // brand page whose child list expands ONLY while that route is
@@ -208,18 +211,20 @@ export function Sidebar({ nav }: { nav: SidebarNav }) {
 
           <div className="nav-divider" />
 
-          {/* Resources */}
-          <nav className="nav-section" aria-label="Resources">
-            {nav.resources.map((r) => (
-              <NavLink
-                key={r.href}
-                item={r}
-                active={isActive(pathname, r.href, false)}
-                onNavigate={closeDrawer}
-              />
-            ))}
-          </nav>
+            {/* Resources */}
+            <nav className="nav-section" aria-label="Resources">
+              {nav.resources.map((r) => (
+                <NavLink
+                  key={r.href}
+                  item={r}
+                  active={isActive(pathname, r.href, false)}
+                  onNavigate={closeDrawer}
+                />
+              ))}
+            </nav>
+          </div>
 
+          {/* Fixed bottom zone: user block (sticks to the bottom, never clipped). */}
           <div className="user-block">
             <div className="avatar">BD</div>
             <div className="meta">

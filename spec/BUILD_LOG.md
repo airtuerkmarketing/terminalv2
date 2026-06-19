@@ -4,6 +4,29 @@ Running record of what's been built, when. Newest entries on top.
 
 ---
 
+## JetBrains Mono removed — Inter is the sole family (2026-06-18)
+
+Removed JetBrains Mono (introduced in the previous run): dropped the
+`next/font` import and `--font-jetbrains-mono` variable from `layout.tsx`, and
+redefined `--font-mono` in `theme.css` to resolve to Inter (identical to
+`--font`). The variable is kept so the existing `var(--font-mono)` usages
+inherit Inter untouched — no monospace anywhere.
+
+---
+
+## Typography foundation — Inter + canonical type scale (2026-06-18)
+
+Introduced Inter as the single sans family (self-hosted via `next/font`, with
+JetBrains Mono for the mono token) and a canonical type scale as `:root` tokens
+in `theme.css` (`--text-*`, `--leading-*`, `--weight-*`). Replaced every
+hardcoded `font-size`/`line-height`/`font-weight` across `src/` with those
+tokens. The four APIX Webflow ports (`apix-*.css`, `apix-network.tsx`) keep their
+off-scale values verbatim per **D-046** (zero pixel drift) — exact-matching
+values were tokenized, non-matching ones left as literals marked
+`/* D-046 verbatim */`. Removed the dead `--font-geist-*` variables.
+
+---
+
 ## Phase 3.5 — Design system + brand hierarchy (COMPLETE — 2026-06-15)
 
 **Status:** All design decisions locked, DB restructured, docs consolidated.

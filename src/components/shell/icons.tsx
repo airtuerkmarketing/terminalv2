@@ -1,4 +1,12 @@
 import type { ReactNode } from "react";
+import {
+  GalleryVerticalEnd,
+  LayoutDashboard,
+  LibraryBig,
+  Presentation,
+  StickyNote,
+  Users,
+} from "lucide-react";
 
 /**
  * Inline SVG icons ported verbatim from spec/mockups/v3-01-dashboard.html.
@@ -26,14 +34,8 @@ function I({ children }: { children: ReactNode }) {
 export function NavIcon({ name }: { name: string }) {
   switch (name) {
     case "dashboard":
-      return (
-        <I>
-          <rect x="3" y="3" width="7" height="7" />
-          <rect x="14" y="3" width="7" height="7" />
-          <rect x="14" y="14" width="7" height="7" />
-          <rect x="3" y="14" width="7" height="7" />
-        </I>
-      );
+      return <LayoutDashboard aria-hidden />;
+    /* TODO: replace with brand favicon asset */
     case "airtuerk-service":
       return (
         <I>
@@ -41,6 +43,7 @@ export function NavIcon({ name }: { name: string }) {
           <circle cx="12" cy="12" r="9" />
         </I>
       );
+    /* TODO: replace with brand favicon asset */
     case "airtuerk-holidays":
       return (
         <I>
@@ -48,6 +51,7 @@ export function NavIcon({ name }: { name: string }) {
           <line x1="3" y1="12" x2="21" y2="12" />
         </I>
       );
+    /* TODO: replace with brand favicon asset */
     case "atbeds":
       return (
         <I>
@@ -58,6 +62,7 @@ export function NavIcon({ name }: { name: string }) {
           <path d="M9 15h6" />
         </I>
       );
+    /* TODO: replace with brand favicon asset */
     case "service-center-antalya":
       return (
         <I>
@@ -66,13 +71,7 @@ export function NavIcon({ name }: { name: string }) {
         </I>
       );
     case "ibe-product-suite":
-      return (
-        <I>
-          <polygon points="12 2 2 7 12 12 22 7 12 2" />
-          <polyline points="2 17 12 22 22 17" />
-          <polyline points="2 12 12 17 22 12" />
-        </I>
-      );
+      return <GalleryVerticalEnd aria-hidden />;
     case "internal-branding":
       return (
         <I>
@@ -126,35 +125,13 @@ export function NavIcon({ name }: { name: string }) {
         </I>
       );
     case "asset-library":
-      return (
-        <I>
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <polyline points="21 15 16 10 5 21" />
-        </I>
-      );
+      return <LibraryBig aria-hidden />;
     case "document-library":
-      return (
-        <I>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-        </I>
-      );
+      return <StickyNote aria-hidden />;
     case "team":
-      return (
-        <I>
-          <circle cx="9" cy="7" r="4" />
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        </I>
-      );
+      return <Users aria-hidden />;
     case "presentation-hub":
-      return (
-        <I>
-          <rect x="2" y="3" width="20" height="14" rx="2" />
-          <line x1="8" y1="21" x2="16" y2="21" />
-          <line x1="12" y1="17" x2="12" y2="21" />
-        </I>
-      );
+      return <Presentation aria-hidden />;
     default:
       return (
         <I>
@@ -162,15 +139,6 @@ export function NavIcon({ name }: { name: string }) {
         </I>
       );
   }
-}
-
-/** Sidebar collapse chevron (rotates 180° via CSS when collapsed). */
-export function CollapseIcon() {
-  return (
-    <I>
-      <polyline points="15 18 9 12 15 6" />
-    </I>
-  );
 }
 
 /** Expand chevron for the IBE section (rotates 90° via CSS when open). */
