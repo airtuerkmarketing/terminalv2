@@ -24,6 +24,7 @@ import {
   requireAdmin,
   requireSuperAdmin,
   type FileDTO,
+  type FileSortKey,
   type Identity,
 } from "@/lib/documents";
 import {
@@ -41,12 +42,21 @@ export type FileResult = { ok: true; file?: FileDTO } | { ok: false; error: stri
 
 const BUCKET = "library";
 
-/** Read action for client-side "Load more" pagination. RLS-gated (no role required). */
-export async function listFiles(
+/**
+ * Read action backing the folder page's search box, Sort dropdown and "Load
+ * more" — search + sort run DB-side so they cover the whole folder, not just the
+ * loaded page. RLS-gated (no role required; same visibility as the page render).
+ */
+export async function searchFilesInFolder(
   folderId: string,
-  offset: number
+  opts: { q?: string; sort?: FileSortKey; offset?: number; limit?: number }
 ): Promise<{ files: FileDTO[]; hasMore: boolean }> {
-  const page = await getFilesInFolder(folderId, { offset, limit: 60 });
+  const page = await getFilesInFolder(folderId, {
+    q: opts.q,
+    sort: opts.sort,
+    offset: opts.offset ?? 0,
+    limit: opts.limit ?? 60,
+  });
   return { files: page.files, hasMore: page.hasMore };
 }
 

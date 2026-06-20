@@ -47,12 +47,13 @@ export default async function DocumentLibraryPage({ params }: Params) {
   const [trail, childFolders, page, allFolders] = await Promise.all([
     getBreadcrumb(current.path),
     getChildFolders(current.id),
-    getFilesInFolder(current.id, { limit: 60 }),
+    getFilesInFolder(current.id, { limit: 60, sort: "name" }),
     isAdmin ? getAllFolders() : Promise.resolve([]),
   ]);
 
   return (
     <FolderPage
+      key={current.id}
       folder={current}
       trail={trail}
       childFolders={childFolders}

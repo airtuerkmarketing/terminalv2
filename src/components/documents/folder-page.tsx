@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "@/styles/document-library.css";
 import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
-import { listFiles } from "@/app/(public)/documents-library/actions";
-import type { FileDTO, FolderDTO } from "@/lib/documents";
+import { searchFilesInFolder } from "@/app/(public)/documents-library/actions";
+import type { FileDTO, FileSortKey, FolderDTO } from "@/lib/documents";
 import { Breadcrumb } from "./breadcrumb";
 import { FolderChips } from "./folder-chips";
 import { FileCard } from "./file-card";
@@ -13,7 +13,7 @@ import { FileEditModal } from "./file-edit-modal";
 import { UploadModal } from "./upload-modal";
 import { FolderActionsMenu } from "./folder-actions-menu";
 
-type SortKey = "name" | "date" | "size";
+const PAGE_SIZE = 60;
 
 export function FolderPage({
   folder,
@@ -36,16 +36,64 @@ export function FolderPage({
 }) {
   const [files, setFiles] = useState<FileDTO[]>(initialFiles);
   const [hasMore, setHasMore] = useState(initialHasMore);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [view, setView] = useState<ViewMode>("card");
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<SortKey>("name");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sort, setSort] = useState<FileSortKey>("name");
   const [manageFile, setManageFile] = useState<FileDTO | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
 
-  // In-place list updates so mutations reflect without an F5 (revalidatePath only
-  // refreshes server-derived bits, not this client list).
-  const upsertFile = (f: FileDTO) =>
+  // Monotonic token: every fetch captures one; only the latest result is applied,
+  // so out-of-order responses (fast typing, sort flip mid-load) can't clobber.
+  const reqId = useRef(0);
+  // The initial list (q="", sort="name") is server-rendered, so skip the first
+  // run of the query effect and reuse initialFiles (no redundant round-trip).
+  const firstRun = useRef(true);
+
+  // Search + sort run DB-side now, so they cover the whole folder rather than just
+  // the loaded page. Re-query page 1 and replace the list on each change.
+  const fetchReplace = useCallback(
+    (q: string, sortKey: FileSortKey) => {
+      const token = ++reqId.current;
+      setLoading(true);
+      return searchFilesInFolder(folder.id, { q, sort: sortKey, offset: 0, limit: PAGE_SIZE }).then(
+        (res) => {
+          if (token !== reqId.current) return; // a newer query superseded this one
+          setFiles(res.files);
+          setHasMore(res.hasMore);
+          setLoading(false);
+        }
+      );
+    },
+    [folder.id]
+  );
+
+  // Debounce the search box so each keystroke doesn't hit the DB.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Re-query whenever the (debounced) term or sort changes; skip the first run.
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    fetchReplace(debouncedSearch, sort);
+  }, [debouncedSearch, sort, fetchReplace]);
+
+  const isFiltered = debouncedSearch !== "" || sort !== "name";
+
+  // In-place list updates so mutations reflect without an F5. When a query/sort is
+  // active, re-fetch the current view instead — an optimistic local edit would
+  // mis-order or wrongly include/exclude a row under the active query.
+  const upsertFile = (f: FileDTO) => {
+    if (isFiltered) {
+      fetchReplace(debouncedSearch, sort);
+      return;
+    }
     setFiles((prev) => {
       const i = prev.findIndex((x) => x.id === f.id);
       if (i === -1) return [f, ...prev]; // new upload → prepend
@@ -53,29 +101,31 @@ export function FolderPage({
       next[i] = f; // edit / replace → swap by id
       return next;
     });
-  const removeFile = (id: string) => setFiles((prev) => prev.filter((x) => x.id !== id)); // delete / move
-
-  const shown = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const filtered = q ? files.filter((f) => f.title.toLowerCase().includes(q)) : files;
-    const sorted = [...filtered];
-    sorted.sort((a, b) => {
-      if (sort === "name") return a.title.localeCompare(b.title);
-      if (sort === "size") return b.sizeBytes - a.sizeBytes;
-      return b.createdAt.localeCompare(a.createdAt); // date, newest first
-    });
-    return sorted;
-  }, [files, search, sort]);
+  };
+  const removeFile = (id: string) => {
+    if (isFiltered) {
+      fetchReplace(debouncedSearch, sort);
+      return;
+    }
+    setFiles((prev) => prev.filter((x) => x.id !== id)); // delete / move
+  };
 
   async function loadMore() {
-    setLoadingMore(true);
-    const res = await listFiles(folder.id, files.length);
+    const token = ++reqId.current;
+    setLoading(true);
+    const res = await searchFilesInFolder(folder.id, {
+      q: debouncedSearch,
+      sort,
+      offset: files.length,
+      limit: PAGE_SIZE,
+    });
+    if (token !== reqId.current) return; // a newer query superseded this load-more
     setFiles((prev) => [...prev, ...res.files]);
     setHasMore(res.hasMore);
-    setLoadingMore(false);
+    setLoading(false);
   }
 
-  const empty = files.length === 0 && childFolders.length === 0;
+  const noFiles = files.length === 0;
 
   return (
     <article className="document-library">
@@ -111,7 +161,7 @@ export function FolderPage({
           <select
             className="dl-sort"
             value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
+            onChange={(e) => setSort(e.target.value as FileSortKey)}
             aria-label="Sort by"
           >
             <option value="name">Name</option>
@@ -130,15 +180,21 @@ export function FolderPage({
         </div>
       </div>
 
-      {empty ? (
-        <div className="dl-empty">
-          <strong>This folder is empty.</strong>
-          {isAdmin ? <span>Upload a file or create a subfolder to get started.</span> : <span>No files here yet.</span>}
-        </div>
-      ) : shown.length === 0 ? (
-        <div className="dl-empty">
-          <span>No files match “{search}”.</span>
-        </div>
+      {noFiles ? (
+        debouncedSearch ? (
+          <div className="dl-empty">
+            <span>No files match “{search}”.</span>
+          </div>
+        ) : childFolders.length === 0 ? (
+          <div className="dl-empty">
+            <strong>This folder is empty.</strong>
+            {isAdmin ? (
+              <span>Upload a file or create a subfolder to get started.</span>
+            ) : (
+              <span>No files here yet.</span>
+            )}
+          </div>
+        ) : null
       ) : view === "list" ? (
         <div className="dl-list">
           <div className="dl-list-head" aria-hidden="true">
@@ -149,22 +205,22 @@ export function FolderPage({
             <span>Modified</span>
             <span />
           </div>
-          {shown.map((f) => (
+          {files.map((f) => (
             <FileRow key={f.id} file={f} isAdmin={isAdmin} onManage={setManageFile} />
           ))}
         </div>
       ) : (
         <div className="dl-grid" data-view={view}>
-          {shown.map((f) => (
+          {files.map((f) => (
             <FileCard key={f.id} file={f} isAdmin={isAdmin} onManage={setManageFile} />
           ))}
         </div>
       )}
 
-      {hasMore && !search && (
+      {hasMore && (
         <div className="dl-loadmore">
-          <button type="button" className="dl-btn ghost" onClick={loadMore} disabled={loadingMore}>
-            {loadingMore ? "Loading…" : "Load more"}
+          <button type="button" className="dl-btn ghost" onClick={loadMore} disabled={loading}>
+            {loading ? "Loading…" : "Load more"}
           </button>
         </div>
       )}

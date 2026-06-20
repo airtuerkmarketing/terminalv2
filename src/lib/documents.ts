@@ -98,6 +98,9 @@ export interface FilesPage {
   hasMore: boolean;
 }
 
+/** Sort options for the in-folder file list (matches the toolbar dropdown). */
+export type FileSortKey = "name" | "date" | "size";
+
 const FOLDER_COLS = "id, parent_id, name, slug, path, is_public, sort_order";
 const FILE_COLS =
   "id, folder_id, title, description, extension, mime_type, size_bytes, language, group_id, sort_order, created_at, updated_at";
@@ -289,17 +292,25 @@ export async function getBreadcrumb(path: string): Promise<FolderDTO[]> {
     .sort((a, b) => a.path.length - b.path.length);
 }
 
+/** Escape SQL LIKE/ILIKE metacharacters so a search term matches literally. */
+function escapeLike(s: string): string {
+  return s.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
 /**
- * Files in a folder, paginated. `recursive` flattens the whole visible subtree
- * (via the materialized path). Ordering matches the composite index
- * (sort_order, created_at, id). RLS filters both folders and files.
+ * Files in a folder, paginated, with optional title search + sort applied DB-side
+ * so they cover the WHOLE folder, not just the loaded page. `recursive` flattens
+ * the whole visible subtree (via the materialized path) — reserved for a future
+ * "search incl. subfolders" toggle. RLS filters both folders and files.
  */
 export async function getFilesInFolder(
   folderId: string,
-  opts?: { recursive?: boolean; limit?: number; offset?: number }
+  opts?: { recursive?: boolean; limit?: number; offset?: number; q?: string; sort?: FileSortKey }
 ): Promise<FilesPage> {
   const limit = Math.min(Math.max(opts?.limit ?? 60, 1), 200);
   const offset = Math.max(opts?.offset ?? 0, 0);
+  const sort = opts?.sort ?? "name";
+  const q = (opts?.q ?? "").trim();
   const supabase = await createClient();
 
   let folderIds: string[] = [folderId];
@@ -321,14 +332,25 @@ export async function getFilesInFolder(
     }
   }
 
-  // Fetch limit+1 rows so hasMore is correct even if PostgREST returns a null
-  // count (avoids a phantom "load more" on an exact-multiple last page).
-  const { data, count } = await supabase
+  // name → title asc; date → newest first; size → largest first. id is a stable
+  // tiebreaker so pagination can't repeat/skip rows on ties. NOTE: DB collation
+  // orders non-ASCII titles (ä/ö/ü/ß) slightly differently than the client's
+  // locale-aware compare — a known, deliberate trade (no custom collation yet).
+  const orderCol = sort === "date" ? "created_at" : sort === "size" ? "size_bytes" : "title";
+  const ascending = sort === "name";
+
+  let query = supabase
     .from("document_files")
     .select(FILE_COLS, { count: "exact" })
-    .in("folder_id", folderIds)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true })
+    .in("folder_id", folderIds);
+  // Substring title search; the term is escaped so % / _ are matched literally.
+  // Index-backed by document_files_title_trgm_idx (pg_trgm GIN), migration 0031.
+  if (q) query = query.ilike("title", `%${escapeLike(q)}%`);
+
+  // Fetch limit+1 rows so hasMore is correct even if PostgREST returns a null
+  // count (avoids a phantom "load more" on an exact-multiple last page).
+  const { data, count } = await query
+    .order(orderCol, { ascending })
     .order("id", { ascending: true })
     .range(offset, offset + limit);
 
