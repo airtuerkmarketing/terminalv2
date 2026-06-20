@@ -8,8 +8,9 @@ import { useDrawerOpen, setDrawer } from "./drawer";
 import { ChevronIcon, NavIcon } from "./icons";
 import { UserMenu } from "./user-menu";
 import { CreateFolderModal } from "@/components/documents/create-folder-modal";
+import { cn } from "@/lib/utils";
 
-export type NavLeaf = { label: string; href: string; iconKey: string };
+export type NavLeaf = { label: string; href: string; iconKey: string; isPrivate?: boolean };
 export type NavNode = NavLeaf & { children?: NavLeaf[] };
 export interface SidebarNav {
   dashboard: NavLeaf;
@@ -263,7 +264,12 @@ export function Sidebar({
                     </Link>
                     <div id={subnavId} className={`nav-sub${open ? " open" : ""}`}>
                       {(r.children ?? []).map((c) => (
-                        <Link key={c.href} className="nav-item" href={c.href} onClick={closeDrawer}>
+                        <Link
+                          key={c.href}
+                          className={cn("nav-item", c.isPrivate && "is-private")}
+                          href={c.href}
+                          onClick={closeDrawer}
+                        >
                           <span className="icon">
                             <NavIcon name={c.iconKey} />
                           </span>

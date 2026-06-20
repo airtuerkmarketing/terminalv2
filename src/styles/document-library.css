@@ -257,26 +257,32 @@
 }
 
 /* ── File grid (cards) ──────────────────────────────────────────────────── */
-/* Card view: same tiers as .brands-grid (1 → 2 @768 → 3 @1024). */
+/* Large-card (default) view: ~5 per row at 17″ (≥4 on wide), cards fill via 1fr. */
 .dl-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
-@media (min-width: 768px) {
-  .dl-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (min-width: 1024px) {
-  .dl-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-/* Denser "grid" toggle: smaller cards flow to fill. */
+/* Compact ("grid") view: denser, ~6–7 per row; max-width caps it at ~7 columns
+   on ultrawide so it doesn't sprawl (cards stay ≥180px regardless). */
 .dl-grid[data-view="grid"] {
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
+  max-width: 1472px;
+}
+/* Collapse toward 2 columns on tablets, 1 on the smallest screens. */
+@media (max-width: 767px) {
+  .dl-grid,
+  .dl-grid[data-view="grid"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: none;
+  }
+}
+@media (max-width: 479px) {
+  .dl-grid,
+  .dl-grid[data-view="grid"] {
+    grid-template-columns: 1fr;
+  }
 }
 .dl-card {
   position: relative;

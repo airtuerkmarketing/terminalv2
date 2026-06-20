@@ -82,6 +82,9 @@ html { scrollbar-gutter: stable; }
    the icon turns accent-blue, the label keeps the normal nav-label colour. */
 .nav-item.active { background: var(--surface-flat); border-color: var(--hairline); box-shadow: var(--shadow-rest); color: var(--nav-label); }
 .nav-item.active .icon { color: var(--accent); }
+/* Private (is_public=false) folder in the Document Library sub-nav — admin-only
+   cue (only admins see private folders in the tree). Wins over .active. */
+.nav-item.is-private .icon { color: var(--torch); }
 .nav-item .icon { width: 18px; height: 18px; flex-shrink: 0; display: grid; place-items: center; transform-origin: center; transition: transform 180ms var(--ease-smooth); }
 /* Icon micro-animation on hover — only the icon scales/lifts, not the whole item. */
 .nav-item:hover .icon { transform: scale(1.12) translateY(-1px); }
@@ -138,6 +141,11 @@ html { scrollbar-gutter: stable; }
   .sidebar-backdrop { display: none; }
   .hamburger { display: none; }
   .collapse-btn { display: grid; }
+
+  /* The topbar is only the mobile off-canvas trigger; at ≥1024px the hamburger is
+     hidden, so the bar (and its margin-bottom) would just be empty space. Hide it
+     entirely to recover the vertical gap; the Topbar component stays for mobile. */
+  .topbar { display: none; }
 
   .main { padding: var(--space-6) var(--space-8); }
 

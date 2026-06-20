@@ -128,6 +128,7 @@ async function getNav(): Promise<SidebarNav> {
       label: f.name,
       href: `/documents-library/${f.path}`,
       iconKey: "document-library",
+      isPrivate: !f.isPublic, // → Torch icon in the sidebar (admin-only cue)
     })),
   };
 
