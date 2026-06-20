@@ -94,7 +94,6 @@ export interface FileDTO {
 
 export interface FilesPage {
   files: FileDTO[];
-  total: number | null;
   hasMore: boolean;
 }
 
@@ -341,15 +340,15 @@ export async function getFilesInFolder(
 
   let query = supabase
     .from("document_files")
-    .select(FILE_COLS, { count: "exact" })
+    .select(FILE_COLS)
     .in("folder_id", folderIds);
   // Substring title search; the term is escaped so % / _ are matched literally.
   // Index-backed by document_files_title_trgm_idx (pg_trgm GIN), migration 0031.
   if (q) query = query.ilike("title", `%${escapeLike(q)}%`);
 
-  // Fetch limit+1 rows so hasMore is correct even if PostgREST returns a null
-  // count (avoids a phantom "load more" on an exact-multiple last page).
-  const { data, count } = await query
+  // Fetch limit+1 rows so hasMore is correct without a separate count query
+  // (avoids a phantom "load more" on an exact-multiple last page).
+  const { data } = await query
     .order(orderCol, { ascending })
     .order("id", { ascending: true })
     .range(offset, offset + limit);
@@ -357,5 +356,5 @@ export async function getFilesInFolder(
   const rows = (data as FileRow[] | null) ?? [];
   const hasMore = rows.length > limit;
   const files = rows.slice(0, limit).map(mapFile);
-  return { files, total: count ?? null, hasMore };
+  return { files, hasMore };
 }
