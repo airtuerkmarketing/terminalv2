@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import "@/styles/document-library.css";
-import type { FolderDTO } from "@/lib/documents";
+import type { RootFolderDTO } from "@/lib/documents";
 import { CreateFolderModal } from "./create-folder-modal";
+import { FolderCard3D } from "./folder-card-3d";
 
-/** Root index: visible top-level folders as cards, + admin "New folder". */
+/** Root index: visible top-level folders as 3D animated cards, + admin "New folder". */
 export function DocumentLibraryRoot({
   folders,
   isAdmin,
 }: {
-  folders: FolderDTO[];
+  folders: RootFolderDTO[];
   isAdmin: boolean;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
@@ -46,15 +46,14 @@ export function DocumentLibraryRoot({
       ) : (
         <div className="dl-folder-grid">
           {folders.map((f) => (
-            <Link key={f.id} href={`/documents-library/${f.path}`} className="dl-folder-card">
-              <span className="dl-folder-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth={1.6}>
-                  <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                </svg>
-              </span>
-              <span className="dl-folder-name">{f.name}</span>
-              {!f.isPublic && <span className="dl-badge-private sm">Private</span>}
-            </Link>
+            <FolderCard3D
+              key={f.id}
+              name={f.name}
+              href={`/documents-library/${f.path}`}
+              isPublic={f.isPublic}
+              fileCount={f.fileCount}
+              previewFiles={f.previewFiles}
+            />
           ))}
         </div>
       )}

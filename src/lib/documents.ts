@@ -13,7 +13,7 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import type { LanguageCode } from "@/lib/documents-constants";
+import { fileKind, type LanguageCode } from "@/lib/documents-constants";
 
 export type Role = "super_admin" | "admin" | "user";
 
@@ -170,6 +170,49 @@ export const getRootFolders = cache(async (): Promise<FolderDTO[]> => {
 
 /** Sidebar shows top-level folders only (one level); deeper nesting via pages. */
 export const getFolderTreeForSidebar = getRootFolders;
+
+export interface PreviewFileDTO {
+  id: string;
+  title: string;
+  extension: string;
+  isImage: boolean;
+}
+export interface RootFolderDTO extends FolderDTO {
+  fileCount: number;
+  previewFiles: PreviewFileDTO[];
+}
+
+/**
+ * Top-level folders for the root grid, each with a count of its DIRECT files and
+ * up to 3 preview files (for the 3D card fan-out). RLS-scoped. Kept separate from
+ * getRootFolders (which the per-request sidebar uses) so the sidebar stays one
+ * cheap query; there are only a handful of top-level folders, so N small preview
+ * queries here are fine.
+ */
+export async function getRootFoldersWithPreview(): Promise<RootFolderDTO[]> {
+  const folders = await getRootFolders();
+  const supabase = await createClient();
+  return Promise.all(
+    folders.map(async (f) => {
+      const { data, count } = await supabase
+        .from("document_files")
+        .select("id, title, extension", { count: "exact" })
+        .eq("folder_id", f.id)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true })
+        .limit(3);
+      const previewFiles: PreviewFileDTO[] = (
+        (data as { id: string; title: string; extension: string }[] | null) ?? []
+      ).map((r) => ({
+        id: r.id,
+        title: r.title,
+        extension: r.extension,
+        isImage: fileKind(r.extension) === "image",
+      }));
+      return { ...f, fileCount: count ?? previewFiles.length, previewFiles };
+    })
+  );
+}
 
 /** Resolve a slug path ("business-development/contracts") to a folder, or null. */
 export const getFolderByPath = cache(async (path: string): Promise<FolderDTO | null> => {

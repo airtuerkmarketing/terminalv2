@@ -7,7 +7,7 @@ import {
   getFilesInFolder,
   getFolderByPath,
   getIdentity,
-  getRootFolders,
+  getRootFoldersWithPreview,
 } from "@/lib/documents";
 import { DocumentLibraryRoot } from "@/components/documents/document-library-root";
 import { FolderPage } from "@/components/documents/folder-page";
@@ -37,7 +37,7 @@ export default async function DocumentLibraryPage({ params }: Params) {
   const isSuperAdmin = identity?.isSuperAdmin ?? false;
 
   if (segs.length === 0) {
-    const folders = await getRootFolders();
+    const folders = await getRootFoldersWithPreview();
     return <DocumentLibraryRoot folders={folders} isAdmin={isAdmin} />;
   }
 
