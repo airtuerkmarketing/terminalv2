@@ -23,12 +23,18 @@ const FT_VAR: Record<string, string> = {
   file: "var(--ft-file)",
 };
 
+const NAT_W = 56;
+const NAT_H = 72;
+
 export function FileTypeGraphic({
   extension,
   className,
+  scale = 1,
 }: {
   extension: string;
   className?: string;
+  /** Uniformly scale the whole graphic (banner included) — e.g. 0.56 for the list. */
+  scale?: number;
 }) {
   const kind = fileKind(extension); // pdf | word | excel | ppt | image | txt | zip | file
   const banner = FT_VAR[kind] ?? FT_VAR.file;
@@ -38,8 +44,8 @@ export function FileTypeGraphic({
   else if (kind === "ppt") placeholder = <Slide />;
   else if (kind === "zip") placeholder = <ZipRows />;
 
-  return (
-    <div aria-hidden className={cn("relative size-fit", className)}>
+  const inner = (
+    <div className="relative size-fit">
       <div
         className="absolute -right-2 bottom-1.5 z-[2] rounded px-1.5 py-0.5 text-[8px] font-bold uppercase text-white"
         style={{ backgroundColor: banner }}
@@ -48,6 +54,26 @@ export function FileTypeGraphic({
       </div>
       <div className="relative z-[1] h-18 w-14 overflow-hidden rounded-md bg-surface-strong p-2 ring-1 ring-hairline">
         {placeholder}
+      </div>
+    </div>
+  );
+
+  if (scale === 1) {
+    return (
+      <div aria-hidden className={cn("size-fit", className)}>
+        {inner}
+      </div>
+    );
+  }
+  // Scale uniformly from a fixed footprint so the row layout reserves the right box.
+  return (
+    <div
+      aria-hidden
+      className={cn("relative", className)}
+      style={{ width: NAT_W * scale, height: NAT_H * scale }}
+    >
+      <div style={{ position: "absolute", top: 0, left: 0, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+        {inner}
       </div>
     </div>
   );

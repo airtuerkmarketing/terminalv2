@@ -453,71 +453,140 @@
   opacity: 1;
 }
 
-/* ── File rows (list) ───────────────────────────────────────────────────── */
-.dl-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+/* ── File list (iOS grouped list) ───────────────────────────────────────── */
+.dl-list {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-rest);
+  overflow: hidden;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
+
+/* Shared column grid — keeps the header row and every file row aligned. */
+.dl-list-head,
 .dl-row {
-  display: flex;
+  display: grid;
+  /* Fixed (not auto) lang/actions tracks so the header + every row share the
+     exact same column widths — auto would size per-grid and break alignment. */
+  grid-template-columns: 44px minmax(0, 1fr) 72px 96px 120px 84px;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
+  gap: var(--space-3);
+  padding-inline: var(--space-4);
+}
+
+.dl-list-head {
+  height: 38px;
+  border-bottom: 1px solid var(--separator);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.dl-row {
+  min-height: 56px;
+  border-bottom: 1px solid var(--separator);
   transition: background 0.15s;
+}
+.dl-row:last-child {
+  border-bottom: 0;
 }
 .dl-row:hover {
   background: var(--surface-muted);
 }
-.dl-row-main {
+
+.dl-row-type {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-  text-decoration: none;
-  color: var(--text-1);
+  justify-content: center;
 }
-.dl-row-info {
-  min-width: 0;
+.dl-row-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hairline);
 }
-.dl-row-title {
-  display: block;
+
+.dl-row-name {
+  min-width: 0;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
+  color: var(--text-1);
+  text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.dl-row-sub {
-  display: flex;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--text-3);
+.dl-row-name:hover {
+  color: var(--accent);
 }
-.dl-row-actions {
+
+.dl-row-lang {
   display: flex;
   align-items: center;
-  gap: 4px;
 }
-.dl-icon-btn {
+.dl-row-lang .dl-lang {
+  background: var(--surface-muted);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-full);
+  padding: 1px 8px;
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.dl-row-size,
+.dl-row-modified {
+  font-size: 13px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.dl-row-actions {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: 0;
-  background: transparent;
-  border-radius: var(--radius-full);
-  color: var(--text-2);
-  cursor: pointer;
-  text-decoration: none;
-  transition: background 0.15s, color 0.15s;
+  gap: 6px;
+  justify-self: end;
 }
-.dl-icon-btn:hover {
-  background: var(--surface);
-  color: var(--accent);
+/* Reuse the card download + manage buttons inline (not cover-absolute), revealed
+   on row hover/focus. */
+.dl-row .card-dl,
+.dl-row .dl-card-menu {
+  position: static;
+  opacity: 0;
+}
+.dl-row:hover .card-dl,
+.dl-row:hover .dl-card-menu,
+.dl-row:focus-within .card-dl,
+.dl-row:focus-within .dl-card-menu,
+.dl-row .card-dl:focus-visible,
+.dl-row .dl-card-menu:focus-visible {
+  opacity: 1;
+}
+
+/* Responsive: shed Modified, then Size, so a row never crowds. */
+@media (max-width: 900px) {
+  .dl-list-head,
+  .dl-row {
+    grid-template-columns: 44px minmax(0, 1fr) 72px 96px 84px;
+  }
+  .dl-row-modified,
+  .dl-list-head > span:nth-child(5) {
+    display: none;
+  }
+}
+@media (max-width: 768px) {
+  .dl-list-head,
+  .dl-row {
+    grid-template-columns: 44px minmax(0, 1fr) 72px 84px;
+  }
+  .dl-row-size,
+  .dl-list-head > span:nth-child(4) {
+    display: none;
+  }
 }
 
 /* ── Empty + load more ──────────────────────────────────────────────────── */

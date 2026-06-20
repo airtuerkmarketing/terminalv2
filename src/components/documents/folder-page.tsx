@@ -140,7 +140,15 @@ export function FolderPage({
           <span>No files match “{search}”.</span>
         </div>
       ) : view === "list" ? (
-        <div className="dl-rows">
+        <div className="dl-list">
+          <div className="dl-list-head" aria-hidden="true">
+            <span />
+            <span>Name</span>
+            <span>Language</span>
+            <span>Size</span>
+            <span>Modified</span>
+            <span />
+          </div>
           {shown.map((f) => (
             <FileRow key={f.id} file={f} isAdmin={isAdmin} onManage={setManageFile} />
           ))}
