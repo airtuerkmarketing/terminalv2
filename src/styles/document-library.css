@@ -5,7 +5,7 @@
    ============================================================================ */
 
 :root {
-  --ft-pdf: #e5484d;
+  --ft-pdf: var(--torch); /* PDF = brand Torch Red (matches blocks.css doc badge) */
   --ft-word: #3e63dd;
   --ft-excel: #30a46c;
   --ft-ppt: #f76808;

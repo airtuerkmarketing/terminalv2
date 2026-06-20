@@ -1,8 +1,9 @@
 "use client";
 
-import { fileKind, fileKindLabel, formatBytes } from "@/lib/documents-constants";
+import { fileKind, formatBytes } from "@/lib/documents-constants";
 import type { FileDTO } from "@/lib/documents";
 import { RelativeTime } from "./relative-time";
+import { FileTypeGraphic } from "./file-type-graphic";
 
 function fileHref(id: string, download = false) {
   return `/api/library/file/${id}${download ? "?download=1" : ""}`;
@@ -37,9 +38,7 @@ export function FileCard({
             /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
             <img className="dl-thumb" src={href} alt="" loading="lazy" decoding="async" />
           ) : (
-            <span className={`dl-ft ft-${kind}`} aria-hidden="true">
-              {fileKindLabel(file.extension)}
-            </span>
+            <FileTypeGraphic extension={file.extension} />
           )}
         </a>
         {/* manage ⋮ — top-right of the cover (admin only) */}
