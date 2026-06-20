@@ -698,11 +698,9 @@
   }
 }
 
-/* ── Responsive: hide orbit < 768px, let the box go full width ── */
+/* ── Responsive: let the box go full width < 768px. The orbit isn't mounted
+   below this breakpoint (CloudOrbitHero's desktop gate), so no hide rule. ── */
 @media (max-width: 767px) {
-  .dh-orbit {
-    display: none;
-  }
   .ai-search-wrap,
   .ai-search-chips {
     max-width: none;

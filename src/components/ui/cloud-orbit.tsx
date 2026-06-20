@@ -45,30 +45,16 @@ export function CloudOrbit({
   ...props
 }: CloudOrbitProps) {
   const [currentIndex, setCurrentIndex] = React.useState(0)
-  const lastTimestamp = React.useRef(0)
 
+  // Crossfade the centre images on a fixed cadence. The visible index only
+  // changes every `duration` seconds, so a setInterval is enough — no need to
+  // wake React every animation frame. A single image needs no interval.
   React.useEffect(() => {
-    let animationFrameId: number
-
-    const updateFrame = (timestamp: number) => {
-      if (lastTimestamp.current === 0) {
-        lastTimestamp.current = timestamp
-      }
-
-      const elapsedTime = (timestamp - lastTimestamp.current) / 1000
-      const currentImageIndex =
-        Math.floor(elapsedTime / duration) % images.length
-
-      setCurrentIndex(currentImageIndex)
-
-      animationFrameId = requestAnimationFrame(updateFrame)
-    }
-
-    if (images.length > 0) {
-      animationFrameId = requestAnimationFrame(updateFrame)
-    }
-
-    return () => cancelAnimationFrame(animationFrameId)
+    if (images.length < 2) return
+    const id = setInterval(() => {
+      setCurrentIndex((i) => (i + 1) % images.length)
+    }, duration * 1000)
+    return () => clearInterval(id)
   }, [duration, images.length])
 
   return (
@@ -122,7 +108,6 @@ interface OrbitingImageProps {
   size?: number
   className?: string
   images?: Image[]
-  duration?: number
   [key: string]:
     | string
     | number
@@ -139,35 +124,12 @@ export function OrbitingImage({
   size = 80,
   className,
   images = [],
-  duration = 2,
   ...props
 }: OrbitingImageProps) {
-  const [currentIndex, setCurrentIndex] = React.useState(0)
-  const lastTimestamp = React.useRef(0)
-
-  React.useEffect(() => {
-    let animationFrameId: number
-
-    const updateFrame = (timestamp: number) => {
-      if (lastTimestamp.current === 0) {
-        lastTimestamp.current = timestamp
-      }
-
-      const elapsedTime = (timestamp - lastTimestamp.current) / 1000
-      const currentImageIndex =
-        Math.floor(elapsedTime / duration) % images.length
-
-      setCurrentIndex(currentImageIndex)
-
-      animationFrameId = requestAnimationFrame(updateFrame)
-    }
-
-    if (images.length > 0) {
-      animationFrameId = requestAnimationFrame(updateFrame)
-    }
-
-    return () => cancelAnimationFrame(animationFrameId)
-  }, [duration, images.length])
+  // Each coin carries a single image, so there is nothing to cycle — render it
+  // directly. The circular orbit motion below is driven by `motion` (its own
+  // RAF), independent of React state.
+  const image = images[0]
 
   return (
     <motion.div
@@ -200,40 +162,33 @@ export function OrbitingImage({
       )}
       {...props}
     >
-      <AnimatePresence>
-        {images.length > 0 &&
-          images.map(
-            (image, index) =>
-              index === currentIndex && (
-                <motion.div
-                  key={image.url}
-                  style={{
-                    width: `${size}px`,
-                    height: `${size}px`,
-                    position: "absolute",
-                  }}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: [0.8, 1] }}
-                  exit={{ opacity: 0, scale: [1, 0.8] }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 100,
-                    damping: 7,
-                  }}
-                  className={cn(
-                    "rounded-full border border-gray-100 bg-gradient-to-t from-neutral-100 to-white p-[15%] inset-shadow-sm inset-shadow-black/2 dark:border-zinc-900 dark:from-zinc-900 dark:to-zinc-800 dark:inset-shadow-white/7",
-                    className
-                  )}
-                >
-                  <img
-                    src={image.url}
-                    alt={image.name}
-                    className="flex h-full w-full items-center justify-center rounded-full object-contain"
-                  />
-                </motion.div>
-              )
+      {image && (
+        <motion.div
+          key={image.url}
+          style={{
+            width: `${size}px`,
+            height: `${size}px`,
+            position: "absolute",
+          }}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: [0.8, 1] }}
+          transition={{
+            type: "spring",
+            stiffness: 100,
+            damping: 7,
+          }}
+          className={cn(
+            "rounded-full border border-gray-100 bg-gradient-to-t from-neutral-100 to-white p-[15%] inset-shadow-sm inset-shadow-black/2 dark:border-zinc-900 dark:from-zinc-900 dark:to-zinc-800 dark:inset-shadow-white/7",
+            className
           )}
-      </AnimatePresence>
+        >
+          <img
+            src={image.url}
+            alt={image.name}
+            className="flex h-full w-full items-center justify-center rounded-full object-contain"
+          />
+        </motion.div>
+      )}
     </motion.div>
   )
 }
