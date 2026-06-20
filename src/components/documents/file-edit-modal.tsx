@@ -10,6 +10,7 @@ import {
   replaceFile,
 } from "@/app/(public)/documents-library/actions";
 import {
+  ACCEPT_ATTR,
   ALLOWED_EXT,
   LANGUAGES,
   MAX_BYTES,
@@ -23,24 +24,41 @@ export function FileEditModal({
   file,
   allFolders,
   onClose,
+  onUpdated,
+  onRemoved,
 }: {
   file: FileDTO | null;
   allFolders: FolderDTO[];
   onClose: () => void;
+  onUpdated: (file: FileDTO) => void;
+  onRemoved: (id: string) => void;
 }) {
   if (!file) return null;
   // key={file.id} → fresh useState per opened file (no setState-in-effect sync).
-  return <Inner key={file.id} file={file} allFolders={allFolders} onClose={onClose} />;
+  return (
+    <Inner
+      key={file.id}
+      file={file}
+      allFolders={allFolders}
+      onClose={onClose}
+      onUpdated={onUpdated}
+      onRemoved={onRemoved}
+    />
+  );
 }
 
 function Inner({
   file,
   allFolders,
   onClose,
+  onUpdated,
+  onRemoved,
 }: {
   file: FileDTO;
   allFolders: FolderDTO[];
   onClose: () => void;
+  onUpdated: (file: FileDTO) => void;
+  onRemoved: (id: string) => void;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(file.title);
@@ -64,13 +82,17 @@ function Inner({
   async function saveMeta() {
     setBusy("meta");
     setError(null);
-    done(await editFile(file.id, { title, description, language: language || null }));
+    const res = await editFile(file.id, { title, description, language: language || null });
+    if (res.ok && res.file) onUpdated(res.file);
+    done(res);
   }
   async function doMove() {
     if (folderId === file.folderId) return;
     setBusy("move");
     setError(null);
-    done(await moveFile(file.id, folderId));
+    const res = await moveFile(file.id, folderId);
+    if (res.ok) onRemoved(file.id); // the file left this folder
+    done(res);
   }
   async function doReplace(f: File | undefined) {
     if (!f) return;
@@ -87,12 +109,16 @@ function Inner({
     setError(null);
     const fd = new FormData();
     fd.set("file", f);
-    done(await replaceFile(file.id, fd));
+    const res = await replaceFile(file.id, fd);
+    if (res.ok && res.file) onUpdated(res.file);
+    done(res);
   }
   async function doDelete() {
     setBusy("delete");
     setError(null);
-    done(await deleteFile(file.id));
+    const res = await deleteFile(file.id);
+    if (res.ok) onRemoved(file.id);
+    done(res);
   }
 
   return (
@@ -155,6 +181,7 @@ function Inner({
           <span>Replace contents</span>
           <input
             type="file"
+            accept={ACCEPT_ATTR}
             className="dl-input"
             onChange={(e) => doReplace(e.target.files?.[0])}
             disabled={busy !== null}

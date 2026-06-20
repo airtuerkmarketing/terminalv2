@@ -19,6 +19,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  getFileById,
   getFilesInFolder,
   requireAdmin,
   requireSuperAdmin,
@@ -35,6 +36,8 @@ import {
 } from "@/lib/documents-constants";
 
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
+/** File mutations return the affected row so the client can update in place (no F5). */
+export type FileResult = { ok: true; file?: FileDTO } | { ok: false; error: string };
 
 const BUCKET = "library";
 
@@ -220,7 +223,7 @@ export async function deleteFolder(folderId: string): Promise<ActionResult> {
 
 // ── File mutations ──────────────────────────────────────────────────────────
 
-export async function uploadFile(folderId: string, formData: FormData): Promise<ActionResult> {
+export async function uploadFile(folderId: string, formData: FormData): Promise<FileResult> {
   let id: Identity;
   try {
     id = await requireAdmin();
@@ -279,13 +282,13 @@ export async function uploadFile(folderId: string, formData: FormData): Promise<
   }
 
   revalidateFiles();
-  return { ok: true, id: fileId };
+  return { ok: true, file: (await getFileById(fileId)) ?? undefined };
 }
 
 export async function editFile(
   fileId: string,
   fields: { title?: string; description?: string | null; language?: string | null }
-): Promise<ActionResult> {
+): Promise<FileResult> {
   try {
     await requireAdmin();
   } catch (e) {
@@ -299,13 +302,13 @@ export async function editFile(
   }
   if (fields.description !== undefined) patch.description = (fields.description ?? "").trim() || null;
   if (fields.language !== undefined) patch.language = normalizeLanguage(fields.language);
-  if (Object.keys(patch).length === 0) return { ok: true };
+  if (Object.keys(patch).length === 0) return { ok: true, file: (await getFileById(fileId)) ?? undefined };
 
   const admin = createAdminClient();
   const { error } = await admin.from("document_files").update(patch).eq("id", fileId);
   if (error) return { ok: false, error: toMessage(error, "file") };
   revalidateFiles();
-  return { ok: true };
+  return { ok: true, file: (await getFileById(fileId)) ?? undefined };
 }
 
 export async function moveFile(fileId: string, folderId: string): Promise<ActionResult> {
@@ -318,7 +321,7 @@ export async function moveFile(fileId: string, folderId: string): Promise<Action
   const { error } = await admin.from("document_files").update({ folder_id: folderId }).eq("id", fileId);
   if (error) return { ok: false, error: toMessage(error, "file") };
   revalidateFiles();
-  return { ok: true };
+  return { ok: true, id: fileId };
 }
 
 /**
@@ -326,7 +329,7 @@ export async function moveFile(fileId: string, folderId: string): Promise<Action
  * same object; different extension → upload the new key, repoint the row, remove
  * the old object. No version history (D-053).
  */
-export async function replaceFile(fileId: string, formData: FormData): Promise<ActionResult> {
+export async function replaceFile(fileId: string, formData: FormData): Promise<FileResult> {
   try {
     await requireAdmin();
   } catch (e) {
@@ -369,7 +372,7 @@ export async function replaceFile(fileId: string, formData: FormData): Promise<A
 
   if (!sameExt) await admin.storage.from(BUCKET).remove([oldPath]);
   revalidateFiles();
-  return { ok: true };
+  return { ok: true, file: (await getFileById(fileId)) ?? undefined };
 }
 
 export async function deleteFile(fileId: string): Promise<ActionResult> {
@@ -385,11 +388,11 @@ export async function deleteFile(fileId: string): Promise<ActionResult> {
     .eq("id", fileId)
     .maybeSingle();
   if (getErr) return { ok: false, error: toMessage(getErr, "file") };
-  if (!existing) return { ok: true };
+  if (!existing) return { ok: true, id: fileId };
 
   const { error: delErr } = await admin.from("document_files").delete().eq("id", fileId);
   if (delErr) return { ok: false, error: toMessage(delErr, "file") };
   await admin.storage.from(BUCKET).remove([existing.storage_path as string]);
   revalidateFiles();
-  return { ok: true };
+  return { ok: true, id: fileId };
 }

@@ -194,6 +194,17 @@ export async function getFolderById(id: string): Promise<FolderDTO | null> {
   return data ? mapFolder(data as FolderRow) : null;
 }
 
+/** A single file by id (RLS-scoped) — used by mutations to return the affected row. */
+export async function getFileById(id: string): Promise<FileDTO | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("document_files")
+    .select(FILE_COLS)
+    .eq("id", id)
+    .maybeSingle();
+  return data ? mapFile(data as FileRow) : null;
+}
+
 /** All visible folders, ordered by path — for move-target pickers (RLS-scoped). */
 export async function getAllFolders(): Promise<FolderDTO[]> {
   const supabase = await createClient();

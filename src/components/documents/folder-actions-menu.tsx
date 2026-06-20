@@ -91,7 +91,7 @@ export function FolderActionsMenu({
     <div className="dl-folder-menu" ref={rootRef}>
       <button
         type="button"
-        className="dl-btn ghost icon"
+        className="dl-iconbtn"
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((v) => !v)}

@@ -43,6 +43,18 @@ export function FolderPage({
   const [manageFile, setManageFile] = useState<FileDTO | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
 
+  // In-place list updates so mutations reflect without an F5 (revalidatePath only
+  // refreshes server-derived bits, not this client list).
+  const upsertFile = (f: FileDTO) =>
+    setFiles((prev) => {
+      const i = prev.findIndex((x) => x.id === f.id);
+      if (i === -1) return [f, ...prev]; // new upload → prepend
+      const next = [...prev];
+      next[i] = f; // edit / replace → swap by id
+      return next;
+    });
+  const removeFile = (id: string) => setFiles((prev) => prev.filter((x) => x.id !== id)); // delete / move
+
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = q ? files.filter((f) => f.title.toLowerCase().includes(q)) : files;
@@ -150,10 +162,21 @@ export function FolderPage({
       )}
 
       {isAdmin && (
-        <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} folderId={folder.id} />
+        <UploadModal
+          open={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          folderId={folder.id}
+          onUploaded={upsertFile}
+        />
       )}
       {isAdmin && (
-        <FileEditModal file={manageFile} allFolders={allFolders} onClose={() => setManageFile(null)} />
+        <FileEditModal
+          file={manageFile}
+          allFolders={allFolders}
+          onClose={() => setManageFile(null)}
+          onUpdated={upsertFile}
+          onRemoved={removeFile}
+        />
       )}
     </article>
   );

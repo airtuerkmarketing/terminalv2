@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "./modal";
 import { uploadFile } from "@/app/(public)/documents-library/actions";
 import {
+  ACCEPT_ATTR,
   ACCEPT_HINT,
   ALLOWED_EXT,
   LANGUAGES,
@@ -12,16 +13,21 @@ import {
   extFromFilename,
   formatBytes,
 } from "@/lib/documents-constants";
+import type { FileDTO } from "@/lib/documents";
 
-/** Drag-drop upload with extension/size validation (mirrors the server checks). */
+/** Drag-drop upload with EXTENSION-only validation (never file.type — browsers
+ *  report .docx as octet-stream). On success the new row is handed up so the list
+ *  updates in place (no F5). */
 export function UploadModal({
   open,
   onClose,
   folderId,
+  onUploaded,
 }: {
   open: boolean;
   onClose: () => void;
   folderId: string;
+  onUploaded: (file: FileDTO) => void;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -72,9 +78,10 @@ export function UploadModal({
     const res = await uploadFile(folderId, fd);
     setBusy(false);
     if (res.ok) {
+      if (res.file) onUploaded(res.file);
       reset();
       onClose();
-      router.refresh();
+      router.refresh(); // refresh server-derived bits (sidebar tree, counts)
     } else {
       setError(res.error);
     }
@@ -102,6 +109,7 @@ export function UploadModal({
           <input
             ref={inputRef}
             type="file"
+            accept={ACCEPT_ATTR}
             hidden
             onChange={(e) => pick(e.target.files?.[0])}
           />

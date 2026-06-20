@@ -36,6 +36,17 @@ export const EXT_TO_MIME: Record<string, string> = {
 };
 
 export const ALLOWED_EXT = new Set(Object.keys(EXT_TO_MIME));
+
+/**
+ * `accept` value for file inputs — EXTENSIONS, not MIME types. A MIME-only accept
+ * greys out .docx/.pps in the OS picker (browsers report Office files as
+ * application/octet-stream), which looks like "nothing happens". Validation is
+ * also extension-based (never file.type); the server sets contentType from
+ * EXT_TO_MIME.
+ */
+export const ACCEPT_ATTR = Object.keys(EXT_TO_MIME)
+  .map((e) => `.${e}`)
+  .join(",");
 /** Backstop set (the bucket allowlist also accepts the zip alias). */
 export const ALLOWED_MIME = new Set(
   Object.values(EXT_TO_MIME).concat("application/x-zip-compressed")
