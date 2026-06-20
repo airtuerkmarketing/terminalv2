@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
-  getAllFolders,
   getBreadcrumb,
   getChildFolders,
   getFilesInFolder,
@@ -44,11 +43,10 @@ export default async function DocumentLibraryPage({ params }: Params) {
   const current = await getFolderByPath(segs.join("/"));
   if (!current) notFound();
 
-  const [trail, childFolders, page, allFolders] = await Promise.all([
+  const [trail, childFolders, page] = await Promise.all([
     getBreadcrumb(current.path),
     getChildFolders(current.id),
     getFilesInFolder(current.id, { limit: 60, sort: "name" }),
-    isAdmin ? getAllFolders() : Promise.resolve([]),
   ]);
 
   return (
@@ -59,7 +57,6 @@ export default async function DocumentLibraryPage({ params }: Params) {
       childFolders={childFolders}
       initialFiles={page.files}
       initialHasMore={page.hasMore}
-      allFolders={allFolders}
       isAdmin={isAdmin}
       isSuperAdmin={isSuperAdmin}
     />

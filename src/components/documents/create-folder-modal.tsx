@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "./modal";
 import { createFolder } from "@/app/(public)/documents-library/actions";
+import { invalidateMoveTargets } from "./move-targets";
 
 /** Create a folder under `parentId` (null = top level). */
 export function CreateFolderModal({
@@ -34,6 +35,7 @@ export function CreateFolderModal({
     const res = await createFolder(parentId, name);
     setBusy(false);
     if (res.ok) {
+      invalidateMoveTargets(); // new folder → next Move open re-fetches the tree
       setName("");
       onClose();
       router.refresh();

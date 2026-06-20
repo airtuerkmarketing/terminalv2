@@ -19,12 +19,14 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  getAllFolders,
   getFileById,
   getFilesInFolder,
   requireAdmin,
   requireSuperAdmin,
   type FileDTO,
   type FileSortKey,
+  type FolderDTO,
   type Identity,
 } from "@/lib/documents";
 import {
@@ -58,6 +60,16 @@ export async function searchFilesInFolder(
     limit: opts.limit ?? 60,
   });
   return { files: page.files, hasMore: page.hasMore };
+}
+
+/**
+ * Full visible folder list for the admin "Move" pickers (RLS-scoped). Admin-gated
+ * and fetched lazily when a Move modal opens, so the folder tree is no longer
+ * serialized into every folder-page navigation.
+ */
+export async function listAllFolders(): Promise<FolderDTO[]> {
+  await requireAdmin();
+  return getAllFolders();
 }
 
 /** Map thrown auth errors + Postgres error codes to friendly messages. */

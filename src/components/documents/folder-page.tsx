@@ -21,7 +21,6 @@ export function FolderPage({
   childFolders,
   initialFiles,
   initialHasMore,
-  allFolders,
   isAdmin,
   isSuperAdmin,
 }: {
@@ -30,7 +29,6 @@ export function FolderPage({
   childFolders: FolderDTO[];
   initialFiles: FileDTO[];
   initialHasMore: boolean;
-  allFolders: FolderDTO[];
   isAdmin: boolean;
   isSuperAdmin: boolean;
 }) {
@@ -137,7 +135,7 @@ export function FolderPage({
           {!folder.isPublic && <span className="dl-badge-private">Private</span>}
         </div>
         {isAdmin && (
-          <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} allFolders={allFolders} />
+          <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />
         )}
       </header>
 
@@ -236,7 +234,6 @@ export function FolderPage({
       {isAdmin && (
         <FileEditModal
           file={manageFile}
-          allFolders={allFolders}
           onClose={() => setManageFile(null)}
           onUpdated={upsertFile}
           onRemoved={removeFile}

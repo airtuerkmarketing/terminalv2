@@ -11,6 +11,7 @@ import {
   setFolderVisibility,
 } from "@/app/(public)/documents-library/actions";
 import type { FolderDTO } from "@/lib/documents";
+import { invalidateMoveTargets, useMoveTargets } from "./move-targets";
 
 type ActiveModal = "create" | "rename" | "move" | "delete" | null;
 
@@ -19,11 +20,9 @@ type ActiveModal = "create" | "rename" | "move" | "delete" | null;
 export function FolderActionsMenu({
   folder,
   isSuperAdmin,
-  allFolders,
 }: {
   folder: FolderDTO;
   isSuperAdmin: boolean;
-  allFolders: FolderDTO[];
 }) {
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -33,6 +32,10 @@ export function FolderActionsMenu({
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(folder.name);
   const [dest, setDest] = useState<string>(folder.parentId ?? "");
+
+  // Destination list is fetched lazily when the Move modal opens (cached for the
+  // session), not shipped with every page render.
+  const { folders, loading: loadingTargets } = useMoveTargets(modal === "move");
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -53,6 +56,7 @@ export function FolderActionsMenu({
   function after(res: { ok: boolean; error?: string }) {
     setBusy(false);
     if (res.ok) {
+      invalidateMoveTargets(); // folder tree changed → next Move open re-fetches
       setModal(null);
       router.refresh();
     } else {
@@ -80,6 +84,7 @@ export function FolderActionsMenu({
       return;
     }
     setModal(null);
+    invalidateMoveTargets(); // folder tree changed → next Move open re-fetches
     // This menu lives on the current folder's own page, so its URL no longer
     // exists after deletion — navigate to the parent (or root) BEFORE refresh.
     const segs = folder.path.split("/");
@@ -96,7 +101,7 @@ export function FolderActionsMenu({
 
   // Move targets: every folder except self and its own descendants (can't nest
   // a folder inside itself). "Top level" = empty value.
-  const moveTargets = allFolders.filter(
+  const moveTargets = folders.filter(
     (f) => f.id !== folder.id && !f.path.startsWith(folder.path + "/")
   );
 
@@ -166,7 +171,12 @@ export function FolderActionsMenu({
         <div className="dl-form">
           <label className="dl-field">
             <span>Destination</span>
-            <select className="dl-input" value={dest} onChange={(e) => setDest(e.target.value)}>
+            <select
+              className="dl-input"
+              value={dest}
+              onChange={(e) => setDest(e.target.value)}
+              disabled={loadingTargets}
+            >
               <option value="">Top level</option>
               {moveTargets.map((f) => (
                 <option key={f.id} value={f.id}>
@@ -180,7 +190,7 @@ export function FolderActionsMenu({
             <button type="button" className="dl-btn ghost" onClick={() => setModal(null)}>
               Cancel
             </button>
-            <button type="button" className="dl-btn primary" onClick={doMove} disabled={busy}>
+            <button type="button" className="dl-btn primary" onClick={doMove} disabled={busy || loadingTargets}>
               {busy ? "Moving…" : "Move here"}
             </button>
           </div>

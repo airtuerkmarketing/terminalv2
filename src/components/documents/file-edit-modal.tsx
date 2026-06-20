@@ -17,18 +17,17 @@ import {
   extFromFilename,
   formatBytes,
 } from "@/lib/documents-constants";
-import type { FileDTO, FolderDTO } from "@/lib/documents";
+import type { FileDTO } from "@/lib/documents";
+import { useMoveTargets } from "./move-targets";
 
 /** Manage a file: rename/description/language, move, replace contents, delete. */
 export function FileEditModal({
   file,
-  allFolders,
   onClose,
   onUpdated,
   onRemoved,
 }: {
   file: FileDTO | null;
-  allFolders: FolderDTO[];
   onClose: () => void;
   onUpdated: (file: FileDTO) => void;
   onRemoved: (id: string) => void;
@@ -39,7 +38,6 @@ export function FileEditModal({
     <Inner
       key={file.id}
       file={file}
-      allFolders={allFolders}
       onClose={onClose}
       onUpdated={onUpdated}
       onRemoved={onRemoved}
@@ -49,18 +47,19 @@ export function FileEditModal({
 
 function Inner({
   file,
-  allFolders,
   onClose,
   onUpdated,
   onRemoved,
 }: {
   file: FileDTO;
-  allFolders: FolderDTO[];
   onClose: () => void;
   onUpdated: (file: FileDTO) => void;
   onRemoved: (id: string) => void;
 }) {
   const router = useRouter();
+  // Destination list is fetched lazily on open (cached for the session); the
+  // modal mounts only when a file is being managed, so fetch unconditionally.
+  const { folders, loading: loadingTargets } = useMoveTargets(true);
   const [title, setTitle] = useState(file.title);
   const [description, setDescription] = useState(file.description ?? "");
   const [language, setLanguage] = useState<string>(file.language ?? "");
@@ -159,18 +158,27 @@ function Inner({
         <div className="dl-field">
           <span>Move to folder</span>
           <div className="dl-inline-row">
-            <select className="dl-input" value={folderId} onChange={(e) => setFolderId(e.target.value)}>
-              {allFolders.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.path}
-                </option>
-              ))}
+            <select
+              className="dl-input"
+              value={folderId}
+              onChange={(e) => setFolderId(e.target.value)}
+              disabled={loadingTargets}
+            >
+              {loadingTargets ? (
+                <option value={file.folderId}>Loading folders…</option>
+              ) : (
+                folders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.path}
+                  </option>
+                ))
+              )}
             </select>
             <button
               type="button"
               className="dl-btn ghost"
               onClick={doMove}
-              disabled={busy !== null || folderId === file.folderId}
+              disabled={busy !== null || loadingTargets || folderId === file.folderId}
             >
               {busy === "move" ? "Moving…" : "Move"}
             </button>
