@@ -42,28 +42,7 @@ export function FileCard({
             </span>
           )}
         </a>
-        {/* download button — top-right of the cover (reuses block-system .card-dl) */}
-        <a className="card-dl" href={downloadHref} aria-label={`Download ${file.title}`}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-        </a>
-      </div>
-
-      <div className="dl-card-foot">
-        <div className="dl-card-info">
-          {file.language && <span className="dl-lang">{file.language.toUpperCase()}</span>}
-          <div className="dl-card-title" title={file.title}>
-            {file.title}
-          </div>
-          <div className="dl-card-sub">
-            <span>{formatBytes(file.sizeBytes)}</span>
-            <span aria-hidden="true">·</span>
-            <RelativeTime iso={file.createdAt} />
-          </div>
-        </div>
+        {/* manage ⋮ — top-right of the cover (admin only) */}
         {isAdmin && (
           <button
             type="button"
@@ -78,6 +57,33 @@ export function FileCard({
             </svg>
           </button>
         )}
+      </div>
+
+      <div className="dl-card-foot">
+        <div className="dl-card-info">
+          <div className="dl-card-title" title={file.title}>
+            {file.title}
+          </div>
+          <div className="dl-card-sub">
+            {file.language && (
+              <>
+                <span className="dl-lang">{file.language.toUpperCase()}</span>
+                <span aria-hidden="true">·</span>
+              </>
+            )}
+            <span>{formatBytes(file.sizeBytes)}</span>
+            <span aria-hidden="true">·</span>
+            <RelativeTime iso={file.createdAt} />
+          </div>
+        </div>
+        {/* download — footer, next to the title (everyone; reuses .card-dl) */}
+        <a className="card-dl" href={downloadHref} aria-label={`Download ${file.title}`}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </a>
       </div>
     </div>
   );

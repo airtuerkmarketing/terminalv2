@@ -73,7 +73,20 @@ export function FolderActionsMenu({
   async function doDelete() {
     setBusy(true);
     setError(null);
-    after(await deleteFolder(folder.id));
+    const res = await deleteFolder(folder.id);
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.error ?? "Something went wrong.");
+      return;
+    }
+    setModal(null);
+    // This menu lives on the current folder's own page, so its URL no longer
+    // exists after deletion — navigate to the parent (or root) BEFORE refresh.
+    const segs = folder.path.split("/");
+    const parentUrl =
+      segs.length > 1 ? `/documents-library/${segs.slice(0, -1).join("/")}` : "/documents-library";
+    router.push(parentUrl);
+    router.refresh();
   }
   async function toggleVisibility() {
     setMenuOpen(false);

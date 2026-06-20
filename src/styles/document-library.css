@@ -242,7 +242,7 @@
 .dl-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
 }
 /* Compact ("grid") view: denser, ~6–7 per row; max-width caps it at ~7 columns
    on ultrawide so it doesn't sprawl (cards stay ≥180px regardless). */
@@ -317,6 +317,11 @@
   display: inline-block;
   margin-left: 6px;
 }
+/* Lead language label inside the card meta line ("TR · 324 KB · 13 hrs ago"). */
+.dl-card-sub .dl-lang {
+  font-size: inherit;
+  color: var(--text-2);
+}
 
 /* file-type badge */
 .dl-ft {
@@ -371,6 +376,7 @@
   padding: 12px 14px;
 }
 .dl-card-info {
+  flex: 1;
   min-width: 0;
 }
 .dl-card-title {
@@ -409,28 +415,42 @@
   color: var(--text-1);
 }
 
+/* Manage ⋮ — top-right of the cover (admin); glassy so it reads over thumbnails. */
 .dl-card-menu {
-  flex-shrink: 0;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
   width: 36px;
   height: 36px;
   display: grid;
   place-items: center;
   padding: 0;
   line-height: 0;
-  border: 0;
-  background: transparent;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border-radius: var(--radius-md);
   color: var(--text-2);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
 }
 .dl-card:hover .dl-card-menu,
 .dl-card-menu:focus-visible {
   opacity: 1;
 }
 .dl-card-menu:hover {
-  background: var(--surface-muted);
+  color: var(--text-1);
+  border-color: var(--accent-border);
+}
+/* Download moves to the footer (everyone) — override the block-system .card-dl
+   cover-absolute base so it sits inline next to the title, always visible. */
+.dl-card-foot .card-dl {
+  position: static;
+  flex-shrink: 0;
+  opacity: 1;
 }
 
 /* ── File rows (list) ───────────────────────────────────────────────────── */
