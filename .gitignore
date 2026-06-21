@@ -54,4 +54,8 @@ KEYS.txt
 .vercel
 
 # Local maintenance/experiment scripts (not part of the app)
-scripts/
+# Pattern: ignore CONTENTS of scripts/, but whitelist .ts files and README
+# so future app-tooling (e.g. pre-seed-users.ts in Stage 8) can be versioned
+scripts/*
+!scripts/*.ts
+!scripts/README.md

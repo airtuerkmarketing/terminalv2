@@ -1,0 +1,21 @@
+-- 0039_avatars_drop_listing_policy
+--
+-- Korrektur eines Fehlers aus Migration 0038: Der avatars_public_read SELECT-
+-- Policy war zu breit. Sie erlaubt nicht nur direkten Object-Access (was bei
+-- public buckets sowieso ohne RLS funktioniert), sondern auch das LISTING aller
+-- Objekte im Bucket via storage-API. Damit konnte ein anonymer Besucher
+-- theoretisch alle Avatar-Pfade enumerieren.
+--
+-- Etablierte Konvention im Projekt (verifiziert via Befund: images, documents,
+-- fonts, videos sind alle public Buckets ohne SELECT-Policy auf storage.objects):
+-- Public Buckets brauchen KEINE SELECT-Policy. Supabase liefert direkte
+-- Object-URLs (/storage/v1/object/public/<bucket>/<path>) direkt aus, ohne
+-- RLS-Check. Eine SELECT-Policy würde nur Listing ermöglichen — und das
+-- wollen wir explizit NICHT.
+--
+-- Hinweis: storage.objects ist Supabase-managed. DROP wurde zur Laufzeit per
+-- execute_sql ausgeführt; dieses Migration-File ist Audit-Spur.
+
+-- Placeholder: actual DROP happened via execute_sql at runtime.
+-- supabase_migrations.schema_migrations carries this name as audit trail.
+SELECT 1;
