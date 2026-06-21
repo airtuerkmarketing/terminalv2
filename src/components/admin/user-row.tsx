@@ -2,11 +2,10 @@ import { RelativeTime } from "@/components/documents/relative-time";
 import type { TeamMemberListItem } from "@/lib/users";
 
 /**
- * One row of the User-Management table (Stage 7A). Rendered inside the client
- * <UserAdminPanel>. Read-only for now — clicking a row is a no-op until the
- * Stage 7B detail modal lands (the row still gets cursor:pointer to read as
- * interactive). Avatar is the real photo when present, else a stable-coloured
- * initials chip.
+ * One row of the User-Management table. Rendered inside the client
+ * <UserAdminPanel>. Clicking (or Enter/Space when focused) opens the read-only
+ * detail modal (Stage 7B). Avatar is the real photo when present, else a
+ * stable-coloured initials chip.
  */
 
 // Deterministic per-user avatar colour: stable across renders/sessions because
@@ -20,7 +19,7 @@ const AVATAR_COLORS = [
   "#06b6d4",
   "#6366f1",
 ];
-function avatarColor(id: string): string {
+export function avatarColor(id: string): string {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
   return AVATAR_COLORS[h % AVATAR_COLORS.length];
@@ -42,11 +41,21 @@ const STATUS_LABEL: Record<TeamMemberListItem["loginStatus"], string> = {
   not_invited: "Nicht eingeladen",
 };
 
-export function UserRow({ user }: { user: TeamMemberListItem }) {
+export function UserRow({ user, onClick }: { user: TeamMemberListItem; onClick: () => void }) {
   const name = `${user.firstName} ${user.lastName}`.trim();
   return (
-    // TODO Stage 7B: onClick → open user detail modal.
-    <tr className="uap-row">
+    <tr
+      className="uap-row"
+      tabIndex={0}
+      aria-label={`Details zu ${name} öffnen`}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
       <td className="uap-cell-avatar">
         <span
           className="uap-avatar"

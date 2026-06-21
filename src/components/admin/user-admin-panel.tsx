@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { SearchIcon } from "@/components/shell/icons";
 import type { TeamMemberListItem } from "@/lib/users";
 import { UserRow } from "./user-row";
+import { UserDetailModal } from "./user-detail-modal";
 import "@/styles/user-admin.css";
 
 export interface UserAdminPanelFilters {
@@ -28,18 +29,24 @@ export function UserAdminPanel({
   totalCount,
   departments,
   initialFilters,
+  currentUserId,
 }: {
   teamMembers: TeamMemberListItem[];
   totalCount: number;
   departments: string[];
   initialFilters: UserAdminPanelFilters;
-  /** Reserved for the Stage 7C self-lock (current super_admin can't demote self). */
+  /** Forwarded to the detail modal; reserved for the Stage 7C self-lock. */
   currentUserId: string;
 }) {
   const [q, setQ] = useState(initialFilters.q ?? "");
   const [department, setDepartment] = useState(initialFilters.department ?? "");
   const [role, setRole] = useState(initialFilters.role ?? "");
   const [status, setStatus] = useState(initialFilters.status ?? "");
+  const [openUserId, setOpenUserId] = useState<string | null>(null);
+  const closeModal = useCallback(() => setOpenUserId(null), []);
+  const openUser = openUserId
+    ? teamMembers.find((u) => u.teamMemberId === openUserId) ?? null
+    : null;
 
   const hasActiveFilters = q !== "" || department !== "" || role !== "" || status !== "";
 
@@ -159,11 +166,21 @@ export function UserAdminPanel({
                 </td>
               </tr>
             ) : (
-              filtered.map((u) => <UserRow key={u.teamMemberId} user={u} />)
+              filtered.map((u) => (
+                <UserRow
+                  key={u.teamMemberId}
+                  user={u}
+                  onClick={() => setOpenUserId(u.teamMemberId)}
+                />
+              ))
             )}
           </tbody>
         </table>
       </div>
+
+      {openUser && (
+        <UserDetailModal user={openUser} currentUserId={currentUserId} onClose={closeModal} />
+      )}
     </div>
   );
 }

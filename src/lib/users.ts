@@ -810,6 +810,15 @@ export interface TeamMemberListItem {
   role: Role | null;
   lastSignInAt: string | null;
   loginStatus: LoginStatus;
+  // Directory detail (Stage 7B modal) — carried in the list payload (≤63 rows,
+  // negligible size) so opening the modal needs no extra round-trip.
+  /** Tool tags (e.g. ["Figma", "Webflow"]); [] if none. */
+  tools: string[];
+  /** Free-text responsibilities, or null. */
+  tasks: string | null;
+  /** Tenure year (e.g. 2018), or null. */
+  joinedYear: number | null;
+  isLead: boolean;
 }
 
 /** Filters for the team-member directory. All optional; combined with AND. */
@@ -833,6 +842,10 @@ type TeamMemberAdminRow = {
   initials: string;
   email: string | null;
   phone: string | null;
+  joined_year: number | null;
+  is_lead: boolean;
+  tools: string[] | null;
+  tasks: string | null;
   avatar_asset_id: string | null;
   // Avatar + profile use explicit FK hints so PostgREST resolves the embeds
   // deterministically (avatar matches pages.ts; profile FK from migration 0034).
@@ -841,7 +854,8 @@ type TeamMemberAdminRow = {
 };
 
 const TEAM_MEMBER_ADMIN_SELECT =
-  "id, first_name, last_name, position, department, initials, email, phone, avatar_asset_id, " +
+  "id, first_name, last_name, position, department, initials, email, phone, " +
+  "joined_year, is_lead, tools, tasks, avatar_asset_id, " +
   "avatar:assets!team_members_avatar_asset_id_fkey(public_url), " +
   "profile:profiles!profiles_team_member_id_fkey(id, role)";
 
@@ -866,6 +880,10 @@ function mapTeamMember(r0: unknown, signInMap: Map<string, string | null>): Team
     role,
     lastSignInAt,
     loginStatus,
+    tools: r.tools ?? [],
+    tasks: r.tasks,
+    joinedYear: r.joined_year,
+    isLead: r.is_lead,
   };
 }
 
