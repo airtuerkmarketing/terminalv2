@@ -26,6 +26,16 @@ import { AI_TEST_1, AI_TEST_2, AI_TEST_3 } from "@/components/hardcoded/ai-test-
 
 const IBE_PATH = "/ibe-product-suite";
 
+/** Brand routes that use the Webflow two-column section layout (section title
+ *  left ~25%, content right ~75%). IBE gets the same treatment via its own
+ *  render path below. Other brands stay single-column. */
+const TWO_COL_BRAND_SLUGS = new Set([
+  "airtuerk-service",
+  "airtuerk-holidays",
+  "atbeds",
+  "service-center-antalya",
+]);
+
 /**
  * Internal validation pages — interne Daten (Notfallnummern, Konditionen),
  * nicht in Suchmaschinen. noindex on these three routes only.
@@ -130,7 +140,7 @@ export async function renderPage(fullPath: string) {
         <PageHeader page={page} />
         {blocks.length > 0 ? <BlockRenderer blocks={blocks} /> : null}
         {products.map((p) => (
-          <section key={p.slug} id={p.slug} className="anchor-section">
+          <section key={p.slug} id={p.slug} className="anchor-section anchor-section--two-col">
             <h2>{p.name}</h2>
             <BlockEmptyState />
           </section>
@@ -145,22 +155,31 @@ export async function renderPage(fullPath: string) {
   // with embedded=true so the component suppresses its own standalone header.
   if (segments.length === 1 && singlePageSlugs.has(segments[0])) {
     const sections = await getBrandSectionsAll(page.id);
+    const twoCol = TWO_COL_BRAND_SLUGS.has(segments[0]);
     return (
       <article>
         <PageHeader page={page} />
         {blocks.length > 0 ? <BlockRenderer blocks={blocks} /> : null}
-        {sections.map((s) => (
-          <section key={s.slug} id={s.slug} className="anchor-section">
-            {s.rendering_mode === "hardcoded" ? (
-              renderHardcodedEmbedded(s.component_key, s.title)
-            ) : (
-              <>
-                <h2>{s.title}</h2>
-                {s.blocks.length > 0 ? <BlockRenderer blocks={s.blocks} /> : <BlockEmptyState />}
-              </>
-            )}
-          </section>
-        ))}
+        {sections.map((s) => {
+          // Two-column applies only to block-mode sections; hardcoded tool
+          // sections (e.g. email-signature) render no <h2> and stay full-width.
+          const sectionClass =
+            twoCol && s.rendering_mode === "blocks"
+              ? "anchor-section anchor-section--two-col"
+              : "anchor-section";
+          return (
+            <section key={s.slug} id={s.slug} className={sectionClass}>
+              {s.rendering_mode === "hardcoded" ? (
+                renderHardcodedEmbedded(s.component_key, s.title)
+              ) : (
+                <>
+                  <h2>{s.title}</h2>
+                  {s.blocks.length > 0 ? <BlockRenderer blocks={s.blocks} /> : <BlockEmptyState />}
+                </>
+              )}
+            </section>
+          );
+        })}
       </article>
     );
   }

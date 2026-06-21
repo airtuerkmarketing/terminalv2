@@ -243,6 +243,16 @@
    doubled the gap above the heading (space-6 + space-6). */
 .anchor-section > h2 { font-size: var(--fs-lg); font-weight: var(--weight-semibold); letter-spacing: -0.012em; color: var(--text-1); margin-bottom: var(--space-4); }
 
+/* Two-column brand section (Webflow original): section title left ~25%, content
+   right ~75%. Stacks below 1024px, matching .block--two-column and the shell
+   drawer boundary. Applied only on the 5 brand routes (see page-view.tsx). */
+.anchor-section--two-col { display: grid; grid-template-columns: 1fr; gap: var(--space-5); }
+@media (min-width: 1024px) {
+  .anchor-section--two-col { grid-template-columns: 25% 1fr; gap: var(--space-8); align-items: start; }
+}
+.anchor-section--two-col > h2 { margin-bottom: 0; }    /* title owns the left column */
+.anchor-section--two-col > :not(h2) { min-width: 0; }  /* prevent grid blowout of content */
+
 /* ── empty state + unsupported note ── */
 .block-empty { border: 1px dashed var(--hairline); border-radius: var(--radius-xl); padding: var(--space-12) var(--space-6); text-align: center; background: var(--surface); }
 .block-empty p { font-size: var(--fs-base); font-weight: var(--weight-semibold); color: var(--text-2); }
