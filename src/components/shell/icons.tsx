@@ -133,6 +133,8 @@ export function NavIcon({ name }: { name: string }) {
       return <StickyNote aria-hidden />;
     case "team":
       return <Users aria-hidden />;
+    case "users":
+      return <Users aria-hidden />;
     case "presentation-hub":
       return <Presentation aria-hidden />;
     default:

@@ -772,3 +772,149 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
     console.error("[logActivity] unexpected error:", e);
   }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Team-member directory (admin panel — Stage 7A)
+//
+// Distinct from getAllUsers() above, which lists `profiles` (auth users). The
+// admin panel needs the whole 63-person `team_members` directory regardless of
+// whether each person has been invited yet, with their login state overlaid.
+// So this reads `team_members` as the base and LEFT-JOINs the (optional) profile
+// for role + the (optional) avatar asset. getAllUsers() is preserved untouched —
+// Stages 7B/7C use it for the auth-user/orphan side of the panel.
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Login state of a team member, derived from profile presence + last sign-in:
+ * - "active"      → has a profile AND has signed in at least once
+ * - "invited"     → has a profile but never signed in (invite pending)
+ * - "not_invited" → no auth profile linked yet
+ */
+export type LoginStatus = "active" | "invited" | "not_invited";
+
+export interface TeamMemberListItem {
+  teamMemberId: string;
+  firstName: string;
+  lastName: string;
+  position: string | null;
+  department: string | null;
+  /** Precomputed initials (e.g. "BD"); NOT NULL in team_members. */
+  initials: string;
+  email: string | null;
+  phone: string | null;
+  /** avatars-bucket PUBLIC url (safe in a DTO), or null → render initials. */
+  avatarUrl: string | null;
+  /** Linked auth profile id (= auth.users.id), or null if not invited yet. */
+  profileId: string | null;
+  /** Role from the linked profile, or null if not invited yet. */
+  role: Role | null;
+  lastSignInAt: string | null;
+  loginStatus: LoginStatus;
+}
+
+/** Filters for the team-member directory. All optional; combined with AND. */
+export interface TeamMemberFilters {
+  department?: string;
+  /** Role of the linked profile; pass `null` to match "no profile yet". */
+  role?: Role | null;
+  /** true = has a profile, false = has none. */
+  hasLogin?: boolean;
+  /** Free-text over first + last name + email (case-insensitive substring). */
+  q?: string;
+}
+
+type ProfileRel = { id: string; role: string };
+type TeamMemberAdminRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  position: string | null;
+  department: string | null;
+  initials: string;
+  email: string | null;
+  phone: string | null;
+  avatar_asset_id: string | null;
+  // Avatar + profile use explicit FK hints so PostgREST resolves the embeds
+  // deterministically (avatar matches pages.ts; profile FK from migration 0034).
+  avatar: AssetUrlRow | AssetUrlRow[] | null;
+  profile: ProfileRel | ProfileRel[] | null;
+};
+
+const TEAM_MEMBER_ADMIN_SELECT =
+  "id, first_name, last_name, position, department, initials, email, phone, avatar_asset_id, " +
+  "avatar:assets!team_members_avatar_asset_id_fkey(public_url), " +
+  "profile:profiles!profiles_team_member_id_fkey(id, role)";
+
+function mapTeamMember(r0: unknown, signInMap: Map<string, string | null>): TeamMemberListItem {
+  const r = r0 as TeamMemberAdminRow;
+  const profile = one(r.profile);
+  const profileId = profile?.id ?? null;
+  const role = (profile?.role as Role | undefined) ?? null;
+  const lastSignInAt = profileId ? signInMap.get(profileId) ?? null : null;
+  const loginStatus: LoginStatus = !profileId ? "not_invited" : lastSignInAt ? "active" : "invited";
+  return {
+    teamMemberId: r.id,
+    firstName: r.first_name,
+    lastName: r.last_name,
+    position: r.position,
+    department: r.department,
+    initials: r.initials,
+    email: r.email,
+    phone: r.phone,
+    avatarUrl: one(r.avatar)?.public_url ?? null,
+    profileId,
+    role,
+    lastSignInAt,
+    loginStatus,
+  };
+}
+
+/**
+ * The full team-member directory for the admin panel, sorted alphabetically by
+ * last name then first name (NOT sort_order). RLS-scoped: team_members is
+ * authenticated-readable and the embedded profile follows the profiles SELECT
+ * policy (an admin/super_admin sees every linked profile). last_sign_in_at is
+ * enriched from auth.users via the same service-role batch as getAllUsers — but
+ * only when at least one member actually has a linked profile (today: none).
+ *
+ * Filters are applied in memory: the directory is bounded by company headcount
+ * (~63), so one read + in-memory filtering is simplest and keeps totalCount
+ * exact. The Stage 7A page calls this without filters (the client panel filters
+ * the full set); the filters here are for future server-side use.
+ */
+export async function getAllTeamMembers(
+  filters?: TeamMemberFilters
+): Promise<{ teamMembers: TeamMemberListItem[]; totalCount: number }> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("team_members")
+    .select(TEAM_MEMBER_ADMIN_SELECT)
+    .order("last_name", { ascending: true })
+    .order("first_name", { ascending: true })
+    .limit(MAX_USER_FETCH);
+  const rows = (data ?? []) as unknown[];
+
+  // Enrich last_sign_in_at only if some members have a linked profile (else skip
+  // the service-role listUsers round-trip entirely).
+  const hasAnyProfile = rows.some((r) => one((r as TeamMemberAdminRow).profile)?.id);
+  const signInMap = hasAnyProfile ? await fetchLastSignInMap() : new Map<string, string | null>();
+
+  let items = rows.map((r) => mapTeamMember(r, signInMap));
+
+  if (filters?.department) items = items.filter((u) => u.department === filters.department);
+  if (filters?.role !== undefined) {
+    items = items.filter((u) => (filters.role === null ? u.role === null : u.role === filters.role));
+  }
+  if (filters?.hasLogin === true) items = items.filter((u) => u.profileId !== null);
+  else if (filters?.hasLogin === false) items = items.filter((u) => u.profileId === null);
+  if (filters?.q) {
+    const q = filters.q.trim().toLowerCase();
+    if (q) {
+      items = items.filter((u) =>
+        `${u.firstName} ${u.lastName} ${u.email ?? ""}`.toLowerCase().includes(q)
+      );
+    }
+  }
+
+  return { teamMembers: items, totalCount: items.length };
+}

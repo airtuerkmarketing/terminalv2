@@ -1,0 +1,255 @@
+/*
+ * User-Management admin panel (Stage 7A). Dense read-only table view at
+ * /admin/users. Reuses the platform theme tokens from theme.css (surfaces, text,
+ * hairlines, accent/torch, spacing, radii) so it matches the rest of the shell.
+ * Own `uap-` prefix; mirrors the document-library list conventions (hover,
+ * truncation, search/select controls) without sharing classes.
+ */
+
+.uap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5) var(--space-10);
+  min-width: 0;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.uap-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+.uap-title {
+  font-size: var(--fs-xl, 22px);
+  font-weight: var(--weight-semibold);
+  color: var(--text-1);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.uap-sub {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  margin: 0;
+}
+
+/* ── Filter bar ───────────────────────────────────────────────────────────── */
+.uap-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+.uap-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 260px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  color: var(--text-3);
+}
+.uap-search svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.uap-search input {
+  border: 0;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+  font-size: var(--fs-base);
+  color: var(--text-1);
+}
+.uap-select {
+  height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.uap-reset {
+  height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.uap-reset:hover {
+  color: var(--text-1);
+  background: var(--surface-muted);
+}
+
+/* ── Table ────────────────────────────────────────────────────────────────── */
+.uap-table-wrap {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  overflow-x: auto;
+}
+.uap-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+.uap-table thead th {
+  text-align: left;
+  font-size: var(--fs-xs, 12px);
+  font-weight: var(--weight-medium);
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--separator);
+  white-space: nowrap;
+}
+.uap-row {
+  border-bottom: 1px solid var(--separator);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.uap-row:last-child {
+  border-bottom: 0;
+}
+.uap-row:hover {
+  background: var(--surface-muted);
+}
+.uap-row td {
+  padding: var(--space-2) var(--space-3);
+  vertical-align: middle;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+.uap-cell-name,
+.uap-cell-pos,
+.uap-cell-email {
+  max-width: 220px;
+}
+.uap-name,
+.uap-muted {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.uap-name {
+  font-weight: var(--weight-semibold);
+  color: var(--text-1);
+}
+.uap-muted {
+  color: var(--text-2);
+}
+
+/* ── Avatar ───────────────────────────────────────────────────────────────── */
+.uap-cell-avatar {
+  width: 56px;
+}
+.uap-avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-semibold);
+  user-select: none;
+}
+.uap-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+/* ── Role pill ────────────────────────────────────────────────────────────── */
+.uap-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-xs, 12px);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+.uap-pill--super {
+  background: var(--torch);
+  color: #fff;
+}
+.uap-pill--admin {
+  background: var(--accent);
+  color: #fff;
+}
+.uap-pill--user {
+  background: var(--surface-strong);
+  color: var(--text-1);
+  border: 1px solid var(--hairline);
+}
+.uap-pill--none {
+  background: var(--surface-muted);
+  color: var(--text-3);
+}
+
+/* ── Login status ─────────────────────────────────────────────────────────── */
+.uap-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.uap-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  background: var(--text-3);
+}
+.uap-status--active .uap-dot {
+  background: #34c759;
+}
+.uap-status--invited .uap-dot {
+  background: #ff9f0a;
+}
+.uap-status--not_invited .uap-dot {
+  background: var(--text-3);
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.uap-empty {
+  padding: var(--space-10) var(--space-4);
+  text-align: center;
+  color: var(--text-2);
+}
+
+/* Visually-hidden (screen-reader-only) label. */
+.uap-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
