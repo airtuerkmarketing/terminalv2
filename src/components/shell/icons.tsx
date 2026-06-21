@@ -8,6 +8,7 @@ import {
   Settings,
   StickyNote,
   User,
+  UserCog,
   Users,
 } from "lucide-react";
 
@@ -213,6 +214,10 @@ export function SettingsIcon() {
 
 export function ProfileIcon() {
   return <User aria-hidden />;
+}
+
+export function UserCogIcon() {
+  return <UserCog aria-hidden />;
 }
 
 export function LogoutIcon() {

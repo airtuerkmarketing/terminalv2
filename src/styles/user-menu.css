@@ -152,6 +152,7 @@ button.user-block .avatar {
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-1);
+  text-decoration: none;
   font: inherit;
   font-size: var(--fs-sm);
   font-weight: var(--weight-medium);

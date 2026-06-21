@@ -18,7 +18,7 @@ export interface SidebarNav {
   resources: NavNode[];
 }
 
-type SidebarIdentity = { name: string; email: string; role: string; initials: string };
+type SidebarIdentity = { name: string; email: string; role: string; initials: string; isSuperAdmin: boolean };
 
 const SIDEBAR_KEY = "terminalv2-sidebar";
 
@@ -305,6 +305,7 @@ export function Sidebar({
               email={identity.email}
               role={identity.role}
               initials={identity.initials}
+              isSuperAdmin={identity.isSuperAdmin}
             />
           ) : (
             <Link href="/login" className="nav-item" onClick={closeDrawer}>

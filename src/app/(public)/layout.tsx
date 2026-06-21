@@ -31,14 +31,6 @@ const RESOURCES_AFTER: NavLeaf[] = [
   { label: "AI TEST 3", href: "/gold-set/ai-test-3", iconKey: "presentation-hub" },
 ];
 
-/** super_admin-only admin tool — appended to the resources nav below, gated
- *  server-side so the link is never serialized to non-super-admins. */
-const USER_MANAGEMENT_LEAF: NavLeaf = {
-  label: "User-Management",
-  href: "/admin/users",
-  iconKey: "users",
-};
-
 /**
  * IBE products kept in the DB but permanently hidden from the sidebar (D-043).
  * pages.hidden_in_sidebar is the runtime source of truth (ARCHITECTURE.md §3),
@@ -163,10 +155,6 @@ export default async function PublicLayout({ children }: { children: ReactNode }
   const [nav, identity] = await Promise.all([getNav(), getIdentity()]);
   const isAdmin = identity?.isAdmin ?? false;
   const isSuperAdmin = identity?.isSuperAdmin ?? false;
-  // super_admin-only: surface the User-Management panel in the resources nav.
-  const sidebarNav = isSuperAdmin
-    ? { ...nav, resources: [...nav.resources, USER_MANAGEMENT_LEAF] }
-    : nav;
   const displayName = identity
     ? identity.fullName?.trim() || identity.email?.split("@")[0] || "User"
     : null;
@@ -177,6 +165,7 @@ export default async function PublicLayout({ children }: { children: ReactNode }
           email: identity.email ?? "",
           role: isSuperAdmin ? "Super Admin" : isAdmin ? "Admin" : "User",
           initials: initialsOf(displayName),
+          isSuperAdmin,
         }
       : null;
 
@@ -185,7 +174,7 @@ export default async function PublicLayout({ children }: { children: ReactNode }
       <script dangerouslySetInnerHTML={{ __html: PREFS_SCRIPT }} />
       <Ambient />
       <div className="layout">
-        <Sidebar nav={sidebarNav} identity={sidebarIdentity} isAdmin={isAdmin} />
+        <Sidebar nav={nav} identity={sidebarIdentity} isAdmin={isAdmin} />
         <main className="main">
           <Topbar />
           {children}

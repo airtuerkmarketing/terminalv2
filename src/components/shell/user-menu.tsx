@@ -11,6 +11,7 @@ import {
 } from "react";
 import type React from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { logoutAction } from "@/app/login/actions";
 import {
   ChevronIcon,
@@ -20,6 +21,7 @@ import {
   ProfileIcon,
   SettingsIcon,
   SunIcon,
+  UserCogIcon,
 } from "./icons";
 import { UserSettingsModal } from "./user-settings-modal";
 
@@ -69,11 +71,13 @@ export function UserMenu({
   email,
   role,
   initials,
+  isSuperAdmin,
 }: {
   name: string;
   email: string;
   role: string;
   initials: string;
+  isSuperAdmin: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -323,6 +327,27 @@ export function UserMenu({
                 <span className="um-item-label">Ambient-Orbs</span>
                 <span className="um-item-state">{orbsOn ? "An" : "Aus"}</span>
               </button>
+
+              {/* super_admin-only: User-Management lives in the account menu,
+                  not the main sidebar (only 4 of 63 users are super_admins).
+                  Navigates via <Link>; closes the menu on select. The route has
+                  its own notFound() super_admin gate (defense-in-depth). */}
+              {isSuperAdmin && (
+                <>
+                  <div className="um-sep" role="separator" />
+                  <Link
+                    href="/admin/users"
+                    role="menuitem"
+                    className="um-item"
+                    onClick={() => close()}
+                  >
+                    <span className="um-item-icon">
+                      <UserCogIcon />
+                    </span>
+                    <span className="um-item-label">User-Management</span>
+                  </Link>
+                </>
+              )}
 
               <div className="um-sep" role="separator" />
 
