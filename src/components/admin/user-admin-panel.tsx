@@ -179,7 +179,12 @@ export function UserAdminPanel({
       </div>
 
       {openUser && (
-        <UserDetailModal user={openUser} currentUserId={currentUserId} onClose={closeModal} />
+        <UserDetailModal
+          key={openUser.teamMemberId}
+          user={openUser}
+          currentUserId={currentUserId}
+          onClose={closeModal}
+        />
       )}
     </div>
   );

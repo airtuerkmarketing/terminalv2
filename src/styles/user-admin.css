@@ -521,3 +521,66 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Role picker (Stage 7C-light) ─────────────────────────────────────────── */
+.uap-role-view,
+.uap-role-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.uap-role-edit .uap-select {
+  height: 30px;
+}
+.uap-role-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.uap-role-edit-btn:hover:not(:disabled) {
+  background: var(--surface-muted);
+  color: var(--text-1);
+}
+.uap-role-edit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.uap-role-save,
+.uap-role-cancel {
+  height: 30px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  border: 1px solid var(--hairline);
+}
+.uap-role-save {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.uap-role-save:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.uap-role-cancel {
+  background: var(--surface);
+  color: var(--text-1);
+}
+.uap-role-cancel:hover:not(:disabled) {
+  background: var(--surface-muted);
+}
+.uap-role-error {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: var(--fs-xs, 12px);
+  color: var(--torch);
+}

@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { RelativeTime } from "@/components/documents/relative-time";
-import type { ActivityLogPage, TeamMemberListItem } from "@/lib/users";
-import { loadUserActivity } from "@/app/(public)/admin/users/actions";
+import type { ActivityLogPage, Role, TeamMemberListItem } from "@/lib/users";
+import { loadUserActivity, updateUserRoleAction } from "@/app/(public)/admin/users/actions";
 import { avatarColor } from "./user-row";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -36,21 +37,51 @@ const STATUS_LABEL: Record<TeamMemberListItem["loginStatus"], string> = {
  */
 export function UserDetailModal({
   user,
+  currentUserId,
   onClose,
 }: {
   user: TeamMemberListItem;
-  /** Reserved for the Stage 7C self-lock (current super_admin acting on self). */
+  /** Self-lock: a super_admin can't change their OWN role (lockout guard). */
   currentUserId: string;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const isTabbed = user.loginStatus !== "not_invited";
   const [tab, setTab] = useState<"profile" | "activity">("profile");
   const [activity, setActivity] = useState<ActivityLogPage | null>(null);
   const [activityError, setActivityError] = useState(false);
 
+  // Role picker (Stage 7C-light). `role` is the live displayed value; `pendingRole`
+  // is the in-flight select value. Editing is blocked for your own row — the
+  // backend SELF_LOCK rejects any self role change, so we don't even offer it.
+  const [role, setRole] = useState<Role | null>(user.role);
+  const [editingRole, setEditingRole] = useState(false);
+  const [pendingRole, setPendingRole] = useState<Role>(user.role ?? "user");
+  const [savingRole, setSavingRole] = useState(false);
+  const [roleError, setRoleError] = useState<string | null>(null);
+  const isSelf = user.profileId != null && user.profileId === currentUserId;
+
   const modalRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const name = `${user.firstName} ${user.lastName}`.trim();
+
+  async function saveRole() {
+    if (!user.profileId || pendingRole === role) {
+      setEditingRole(false);
+      return;
+    }
+    setSavingRole(true);
+    setRoleError(null);
+    const res = await updateUserRoleAction(user.profileId, pendingRole);
+    setSavingRole(false);
+    if (res.ok) {
+      setRole(pendingRole);
+      setEditingRole(false);
+      router.refresh(); // refresh the list behind the modal with the new role
+    } else {
+      setRoleError(res.error);
+    }
+  }
 
   // Escape + focus-trap + restore focus on close (adapted from the sidebar drawer).
   useEffect(() => {
@@ -127,11 +158,61 @@ export function UserDetailModal({
         <div>
           <dt>Rolle</dt>
           <dd>
-            {user.role ? (
-              <span className={`uap-pill ${ROLE_CLASS[user.role]}`}>{ROLE_LABEL[user.role]}</span>
+            {editingRole ? (
+              <span className="uap-role-edit">
+                <select
+                  className="uap-select"
+                  value={pendingRole}
+                  onChange={(e) => setPendingRole(e.target.value as Role)}
+                  disabled={savingRole}
+                  aria-label="Rolle wählen"
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                  <option value="super_admin">Super-Admin</option>
+                </select>
+                <button type="button" className="uap-role-save" onClick={saveRole} disabled={savingRole}>
+                  {savingRole ? "…" : "Speichern"}
+                </button>
+                <button
+                  type="button"
+                  className="uap-role-cancel"
+                  onClick={() => {
+                    setEditingRole(false);
+                    setRoleError(null);
+                  }}
+                  disabled={savingRole}
+                >
+                  Abbrechen
+                </button>
+              </span>
             ) : (
-              "—"
+              <span className="uap-role-view">
+                {role ? (
+                  <span className={`uap-pill ${ROLE_CLASS[role]}`}>{ROLE_LABEL[role]}</span>
+                ) : (
+                  "—"
+                )}
+                <button
+                  type="button"
+                  className="uap-role-edit-btn"
+                  onClick={() => {
+                    setPendingRole(role ?? "user");
+                    setRoleError(null);
+                    setEditingRole(true);
+                  }}
+                  disabled={isSelf}
+                  title={isSelf ? "Du kannst deine eigene Rolle nicht ändern." : "Rolle ändern"}
+                  aria-label="Rolle ändern"
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                  </svg>
+                </button>
+              </span>
             )}
+            {roleError && <span className="uap-role-error">{roleError}</span>}
           </dd>
         </div>
       )}
