@@ -21,6 +21,7 @@ import { ApixPresentation } from "@/components/hardcoded/apix-presentation";
 import { ApixGroup } from "@/components/hardcoded/apix-group";
 import { TeamDirectory } from "@/components/hardcoded/team";
 import { ReviewQuiz } from "@/components/hardcoded/review-quiz";
+import { GoldSetIndex } from "@/components/hardcoded/gold-set";
 import { AI_TEST_1, AI_TEST_2, AI_TEST_3 } from "@/components/hardcoded/ai-test-data";
 
 const IBE_PATH = "/ibe-product-suite";
@@ -30,9 +31,10 @@ const IBE_PATH = "/ibe-product-suite";
  * nicht in Suchmaschinen. noindex on these three routes only.
  */
 const NOINDEX_PATHS = new Set([
-  "/presentation-hub/ai-test-1",
-  "/presentation-hub/ai-test-2",
-  "/presentation-hub/ai-test-3",
+  "/gold-set",
+  "/gold-set/ai-test-1",
+  "/gold-set/ai-test-2",
+  "/gold-set/ai-test-3",
 ]);
 
 /** Build <head> metadata from the page row. */
@@ -109,12 +111,10 @@ export async function renderPage(fullPath: string) {
     if (page.component_key === "ai-test-3") {
       return <ReviewQuiz title={page.title} questions={AI_TEST_3} testSet="ai_test_3" />;
     }
-    // Transitional alias: the legacy gold-set page row (component_key='gold-set')
-    // is repurposed to ai-test-1 by migration 0029. Until that migration runs,
-    // keep the old route rendering AI TEST 1 so the deploy/migration order is
-    // safe (it never falls through to HardcodedStub).
+    // /gold-set parent index: links to the three relocated AI TEST pages
+    // (/gold-set/ai-test-{1,2,3}). hidden_in_sidebar=true; noindex via NOINDEX_PATHS.
     if (page.component_key === "gold-set") {
-      return <ReviewQuiz title={page.title} questions={AI_TEST_1} testSet="ai_test_1" />;
+      return <GoldSetIndex title={page.title} />;
     }
     return <HardcodedStub title={page.title} componentKey={page.component_key} />;
   }

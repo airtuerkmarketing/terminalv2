@@ -1,0 +1,889 @@
+/* ============================================================================
+   Presentation Hub (V1) — iOS 18 Liquid Glass, tokens only. Structurally mirrors
+   document-library.css but fully decoupled (`ph-` prefix, own tokens). Login-only
+   hub: no public/private chrome. File-type colors are the documented semantic
+   exception; everything else comes from theme tokens.
+   ============================================================================ */
+
+:root {
+  --ph-pdf: var(--torch); /* PDF = brand Torch Red */
+  --ph-ppt: #f76808; /* PowerPoint orange */
+  --ph-img: #8e4ec6;
+  --ph-file: #8b8d98;
+  --ph-danger: #e5484d;
+  --ph-danger-soft: rgba(229, 72, 77, 0.1);
+}
+
+.ph-hub {
+  width: 100%;
+}
+
+/* ── Breadcrumb ─────────────────────────────────────────────────────────── */
+.ph-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--text-2);
+  margin-bottom: 14px;
+}
+.ph-crumb-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.ph-crumb {
+  color: var(--text-2);
+  text-decoration: none;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+}
+.ph-crumb:hover {
+  color: var(--text-1);
+  background: var(--surface-muted);
+}
+.ph-crumb.current {
+  color: var(--text-1);
+  font-weight: 600;
+}
+.ph-crumb-sep {
+  color: var(--text-3);
+  padding: 0 2px;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.ph-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.ph-head-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ph-head-title h1 {
+  font-size: clamp(20px, 2.4vw, 26px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+  margin: 0;
+}
+
+/* ── Chips (child folders) ──────────────────────────────────────────────── */
+.ph-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.ph-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  backdrop-filter: blur(12px);
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.ph-chip:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+/* ── Toolbar ────────────────────────────────────────────────────────────── */
+.ph-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.ph-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 12px;
+  height: 40px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  color: var(--text-3);
+}
+.ph-search input {
+  border: 0;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: 14px;
+  color: var(--text-1);
+}
+.ph-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.ph-sort {
+  height: 40px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: 13px;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.ph-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+.ph-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ph-btn.primary {
+  background: var(--accent);
+  color: #fff;
+}
+.ph-btn.primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.ph-btn.ghost {
+  background: var(--surface);
+  border-color: var(--hairline);
+  color: var(--text-1);
+}
+.ph-btn.ghost:hover:not(:disabled) {
+  background: var(--surface-muted);
+}
+.ph-btn.danger {
+  background: var(--ph-danger);
+  color: #fff;
+}
+.ph-btn.danger-ghost {
+  background: transparent;
+  border-color: var(--hairline);
+  color: var(--ph-danger);
+}
+.ph-btn.danger-ghost:hover {
+  background: var(--ph-danger-soft);
+}
+
+/* ── Folder grid (root index) — flat cards, no 3D ───────────────────────── */
+.ph-folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+.ph-folder-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-rest);
+  color: var(--text-1);
+  text-decoration: none;
+  backdrop-filter: blur(14px);
+  transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
+}
+.ph-folder-card:hover {
+  box-shadow: var(--shadow-hover);
+  border-color: var(--accent-border);
+  transform: translateY(-2px);
+}
+.ph-folder-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ph-folder-name {
+  font-size: 15px;
+  font-weight: 600;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── File grid (cards) ──────────────────────────────────────────────────── */
+.ph-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+}
+.ph-grid[data-view="grid"] {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  max-width: 1472px;
+}
+@media (max-width: 767px) {
+  .ph-grid,
+  .ph-grid[data-view="grid"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: none;
+  }
+}
+@media (max-width: 479px) {
+  .ph-grid,
+  .ph-grid[data-view="grid"] {
+    grid-template-columns: 1fr;
+  }
+}
+.ph-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-rest);
+  overflow: hidden;
+  backdrop-filter: blur(14px);
+  transition: box-shadow 0.18s, border-color 0.18s;
+}
+.ph-card:hover {
+  box-shadow: var(--shadow-hover);
+  border-color: var(--accent-border);
+}
+.ph-cover {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+.ph-card-preview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.ph-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Featured ribbon (top-left) */
+.ph-featured {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.ph-card-foot {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 12px 14px;
+}
+.ph-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.ph-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ph-card-sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+.ph-card-sub .ph-lang {
+  font-size: inherit;
+  color: var(--text-2);
+}
+.ph-lang {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* download button (always visible in the footer next to the title) */
+.ph-dl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.ph-dl svg {
+  width: 17px;
+  height: 17px;
+}
+.ph-dl:hover {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+/* Manage ⋮ — top-right of the cover (admin) */
+.ph-card-menu {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  line-height: 0;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-md);
+  color: var(--text-2);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+.ph-card:hover .ph-card-menu,
+.ph-card-menu:focus-visible {
+  opacity: 1;
+}
+.ph-card-menu:hover {
+  color: var(--text-1);
+  border-color: var(--accent-border);
+}
+.ph-iconbtn {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  line-height: 0;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.ph-iconbtn:hover {
+  background: var(--surface-muted);
+  color: var(--text-1);
+}
+
+/* ── Type icon (PDF / PPT) — mini document with colored banner ──────────── */
+.ph-typeicon {
+  position: relative;
+  width: 56px;
+  height: 72px;
+}
+.ph-typeicon-face {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-strong);
+  border: 1px solid var(--hairline);
+  overflow: hidden;
+}
+.ph-typeicon-line {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text-1) 12%, transparent);
+}
+.ph-typeicon-banner {
+  position: absolute;
+  right: -6px;
+  bottom: 10px;
+  z-index: 2;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.ph-typeicon[data-kind="pdf"] .ph-typeicon-banner {
+  background: var(--ph-pdf);
+}
+.ph-typeicon[data-kind="ppt"] .ph-typeicon-banner {
+  background: var(--ph-ppt);
+}
+.ph-typeicon[data-kind="image"] .ph-typeicon-banner {
+  background: var(--ph-img);
+}
+
+/* ── Tags ───────────────────────────────────────────────────────────────── */
+.ph-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+.ph-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--surface-muted);
+  border: 1px solid var(--hairline);
+}
+.ph-tag-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-3);
+}
+
+/* ── File list (rows) ───────────────────────────────────────────────────── */
+.ph-list {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-rest);
+  overflow: hidden;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+.ph-list-head,
+.ph-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 72px 96px 120px 84px;
+  align-items: center;
+  gap: var(--space-3);
+  padding-inline: var(--space-4);
+}
+.ph-list-head {
+  height: 38px;
+  border-bottom: 1px solid var(--separator);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.ph-row {
+  min-height: 60px;
+  border-bottom: 1px solid var(--separator);
+  transition: background 0.15s;
+}
+.ph-row:last-child {
+  border-bottom: 0;
+}
+.ph-row:hover {
+  background: var(--surface-muted);
+}
+.ph-row-type {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ph-row-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hairline);
+}
+.ph-row-name {
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-1);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ph-row-name:hover {
+  color: var(--accent);
+}
+.ph-row-lang {
+  display: flex;
+  align-items: center;
+}
+.ph-row-lang .ph-lang {
+  background: var(--surface-muted);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-full);
+  padding: 1px 8px;
+  font-size: 11px;
+  color: var(--text-2);
+}
+.ph-row-size,
+.ph-row-modified {
+  font-size: 13px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.ph-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: end;
+}
+.ph-row .ph-dl,
+.ph-row .ph-card-menu {
+  position: static;
+  opacity: 0;
+}
+.ph-row:hover .ph-dl,
+.ph-row:hover .ph-card-menu,
+.ph-row:focus-within .ph-dl,
+.ph-row:focus-within .ph-card-menu,
+.ph-row .ph-dl:focus-visible,
+.ph-row .ph-card-menu:focus-visible {
+  opacity: 1;
+}
+@media (max-width: 900px) {
+  .ph-list-head,
+  .ph-row {
+    grid-template-columns: 56px minmax(0, 1fr) 72px 96px 84px;
+  }
+  .ph-row-modified,
+  .ph-list-head > span:nth-child(5) {
+    display: none;
+  }
+}
+@media (max-width: 768px) {
+  .ph-list-head,
+  .ph-row {
+    grid-template-columns: 56px minmax(0, 1fr) 72px 84px;
+  }
+  .ph-row-size,
+  .ph-list-head > span:nth-child(4) {
+    display: none;
+  }
+}
+
+/* ── Empty + load more ──────────────────────────────────────────────────── */
+.ph-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  text-align: center;
+  padding: 56px 24px;
+  color: var(--text-2);
+  background: var(--surface-muted);
+  border-radius: var(--radius-xl);
+}
+.ph-empty strong {
+  color: var(--text-1);
+  font-size: 15px;
+}
+.ph-loadmore {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+/* ── Folder ⋮ menu ──────────────────────────────────────────────────────── */
+.ph-folder-menu {
+  position: relative;
+}
+.ph-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  min-width: 180px;
+  padding: 6px;
+  background: var(--surface-strong);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-hover);
+  backdrop-filter: blur(18px);
+}
+.ph-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-1);
+  cursor: pointer;
+}
+.ph-menu button:hover {
+  background: var(--surface-muted);
+}
+.ph-menu button.danger {
+  color: var(--ph-danger);
+}
+.ph-menu-sep {
+  height: 1px;
+  background: var(--hairline);
+  margin: 5px 4px;
+}
+
+/* ── Modals ─────────────────────────────────────────────────────────────── */
+.ph-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+}
+.ph-modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--surface-strong);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-hover);
+  backdrop-filter: blur(24px);
+}
+.ph-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--hairline);
+}
+.ph-modal-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.ph-modal-close {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.ph-modal-close:hover {
+  background: var(--surface-muted);
+}
+.ph-modal-body {
+  padding: 18px;
+}
+
+/* ── Forms ──────────────────────────────────────────────────────────────── */
+.ph-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ph-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ph-field > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.ph-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  background: var(--surface-flat);
+  color: var(--text-1);
+  font-size: 14px;
+  outline: none;
+}
+.ph-input:focus {
+  border-color: var(--accent-border);
+}
+.ph-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.ph-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ph-danger);
+}
+.ph-sep {
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  margin: 4px 0;
+}
+.ph-inline-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ph-inline-row .ph-input {
+  flex: 1;
+}
+.ph-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ph-confirm-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-1);
+  line-height: 1.5;
+}
+/* checkbox row (tags, featured toggle) */
+.ph-checkrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ph-checkpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+.ph-checkpill.on {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ph-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+/* ── Dropzone ───────────────────────────────────────────────────────────── */
+.ph-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 130px;
+  padding: 20px;
+  border: 1.5px dashed var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ph-dropzone.over {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+.ph-drop-hint,
+.ph-drop-file {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ph-drop-hint strong,
+.ph-drop-file strong {
+  color: var(--text-1);
+  font-size: 14px;
+}
+.ph-drop-hint span,
+.ph-drop-file span {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .ph-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ph-toolbar-right {
+    justify-content: space-between;
+  }
+  .ph-modal {
+    max-width: none;
+  }
+}

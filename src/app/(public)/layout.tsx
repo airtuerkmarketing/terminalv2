@@ -24,10 +24,11 @@ const RESOURCES_BEFORE: NavLeaf[] = [
 const RESOURCES_AFTER: NavLeaf[] = [
   { label: "Team", href: "/team", iconKey: "team" },
   { label: "Presentation Hub", href: "/presentation-hub", iconKey: "presentation-hub" },
-  // Three AI TEST review pages — flat siblings directly under Presentation Hub.
-  { label: "AI TEST 1", href: "/presentation-hub/ai-test-1", iconKey: "presentation-hub" },
-  { label: "AI TEST 2", href: "/presentation-hub/ai-test-2", iconKey: "presentation-hub" },
-  { label: "AI TEST 3", href: "/presentation-hub/ai-test-3", iconKey: "presentation-hub" },
+  // Three AI TEST review pages — relocated under /gold-set/* (DB move 2026-06-21).
+  // The /gold-set parent itself is hidden_in_sidebar=true (no leaf for it).
+  { label: "AI TEST 1", href: "/gold-set/ai-test-1", iconKey: "presentation-hub" },
+  { label: "AI TEST 2", href: "/gold-set/ai-test-2", iconKey: "presentation-hub" },
+  { label: "AI TEST 3", href: "/gold-set/ai-test-3", iconKey: "presentation-hub" },
 ];
 
 /**
