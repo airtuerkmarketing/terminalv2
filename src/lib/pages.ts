@@ -13,10 +13,26 @@
  *   - OFF → read via the anon server client; RLS restricts to published rows,
  *           so drafts 404 for anonymous visitors (correct production behavior).
  *
+ * CACHING (Phase A, D-056): the three public read functions — getPageByPath,
+ * getBlocks, getBrandSectionsAll — are wrapped in unstable_cache with a 24h TTL
+ * (brand content changes 3-5x/year, so the window is deliberately conservative)
+ * and a tag hierarchy:
+ *   - pages:all                 global invalidation
+ *   - page:{fullPath}           a single page row
+ *   - blocks:page:{pageId}      one page's blocks
+ *   - brand-sections:{parentId} one brand's section tree
+ * The cache is GUARDED on SHOW_DRAFTS: only the SHOW_DRAFTS=true path (admin
+ * client, cookie-free, deterministic) is cached. The SHOW_DRAFTS=false path reads
+ * via the anon client with cookies(), which cannot run inside unstable_cache, so
+ * it stays uncached until Phase C extracts a cookie-free read path.
+ * No revalidateTag wiring exists yet (Phase A1 follow-up); until then the 24h TTL
+ * is the only invalidation, so edits can take up to 24h to reflect on production.
+ *
  * Do not import this module from a Client Component.
  */
 import "server-only";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { BlockRow } from "@/lib/blocks/types";
@@ -55,22 +71,36 @@ async function readClient() {
  * per request.
  */
 export const getPageByPath = cache(async (fullPath: string): Promise<PageRow | null> => {
-  const supabase = await readClient();
-  let query = supabase.from("pages").select(PAGE_COLUMNS).eq("full_path", fullPath);
-  if (!SHOW_DRAFTS) query = query.eq("status", "published");
-  const { data } = await query.maybeSingle();
-  return (data as PageRow | null) ?? null;
+  const run = async (): Promise<PageRow | null> => {
+    const supabase = await readClient();
+    let query = supabase.from("pages").select(PAGE_COLUMNS).eq("full_path", fullPath);
+    if (!SHOW_DRAFTS) query = query.eq("status", "published");
+    const { data } = await query.maybeSingle();
+    return (data as PageRow | null) ?? null;
+  };
+  if (!SHOW_DRAFTS) return run(); // cookie-bound anon path — uncached (see file header)
+  return unstable_cache(run, ["page-by-path", fullPath], {
+    tags: ["pages:all", `page:${fullPath}`],
+    revalidate: 86400,
+  })();
 });
 
 /** Ordered blocks for a page (empty array if none authored yet). */
 export async function getBlocks(pageId: string): Promise<BlockRow[]> {
-  const supabase = await readClient();
-  const { data } = await supabase
-    .from("blocks")
-    .select("id, type, position, layout, heading, anchor, content")
-    .eq("page_id", pageId)
-    .order("position", { ascending: true });
-  return (data as BlockRow[] | null) ?? [];
+  const run = async (): Promise<BlockRow[]> => {
+    const supabase = await readClient();
+    const { data } = await supabase
+      .from("blocks")
+      .select("id, type, position, layout, heading, anchor, content")
+      .eq("page_id", pageId)
+      .order("position", { ascending: true });
+    return (data as BlockRow[] | null) ?? [];
+  };
+  if (!SHOW_DRAFTS) return run(); // cookie-bound anon path — uncached (see file header)
+  return unstable_cache(run, ["blocks-by-page", pageId], {
+    tags: ["pages:all", `blocks:page:${pageId}`],
+    revalidate: 86400,
+  })();
 }
 
 /** Visible IBE products (for the /ibe-product-suite anchor sections). */
@@ -198,27 +228,38 @@ export type BrandSectionAny =
  * Draft-aware.
  */
 export async function getBrandSectionsAll(parentId: string): Promise<BrandSectionAny[]> {
-  const supabase = await readClient();
-  let query = supabase
-    .from("pages")
-    .select("id, slug, title, sort_order, status, rendering_mode, component_key")
-    .eq("parent_id", parentId)
-    .eq("hidden_in_sidebar", false)
-    .order("sort_order", { ascending: true });
-  if (!SHOW_DRAFTS) query = query.eq("status", "published");
-  const { data } = await query;
-  const kids = (data ?? []) as {
-    id: string; slug: string; title: string;
-    rendering_mode: "blocks" | "hardcoded"; component_key: string | null;
-  }[];
-  return Promise.all(
-    kids.map(async (k): Promise<BrandSectionAny> => {
-      if (k.rendering_mode === "hardcoded") {
-        return { slug: k.slug, title: k.title, rendering_mode: "hardcoded", component_key: k.component_key ?? k.slug, blocks: [] };
-      }
-      return { slug: k.slug, title: k.title, rendering_mode: "blocks", component_key: null, blocks: await getBlocks(k.id) };
-    })
-  );
+  const run = async (): Promise<BrandSectionAny[]> => {
+    const supabase = await readClient();
+    let query = supabase
+      .from("pages")
+      .select("id, slug, title, sort_order, status, rendering_mode, component_key")
+      .eq("parent_id", parentId)
+      .eq("hidden_in_sidebar", false)
+      .order("sort_order", { ascending: true });
+    if (!SHOW_DRAFTS) query = query.eq("status", "published");
+    const { data } = await query;
+    const kids = (data ?? []) as {
+      id: string; slug: string; title: string;
+      rendering_mode: "blocks" | "hardcoded"; component_key: string | null;
+    }[];
+    return Promise.all(
+      kids.map(async (k): Promise<BrandSectionAny> => {
+        if (k.rendering_mode === "hardcoded") {
+          return { slug: k.slug, title: k.title, rendering_mode: "hardcoded", component_key: k.component_key ?? k.slug, blocks: [] };
+        }
+        return { slug: k.slug, title: k.title, rendering_mode: "blocks", component_key: null, blocks: await getBlocks(k.id) };
+      })
+    );
+  };
+  if (!SHOW_DRAFTS) return run(); // cookie-bound anon path — uncached (see file header)
+  // Nested cache: run() calls getBlocks (itself cached). A future
+  // revalidateTag("blocks:page:X") would hit only the inner getBlocks entry, not
+  // this outer brand-sections entry — the clean lever is pages:all (or the 24h
+  // TTL). The Phase A1 invalidation task should fire pages:all on every edit.
+  return unstable_cache(run, ["brand-sections", parentId], {
+    tags: ["pages:all", `brand-sections:${parentId}`],
+    revalidate: 86400,
+  })();
 }
 
 // ── Assets (Asset Library, Task 5a) ──
