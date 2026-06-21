@@ -54,6 +54,8 @@ export interface PresentationFileDTO {
   groupId: string | null;
   slideCount: number;
   hasThumbnail: boolean;
+  /** Derived from thumbnail_path: 'thumbnail' → show cover, 'no-thumbnail' → type-icon fallback (stage 4). */
+  processingStatus: "thumbnail" | "no-thumbnail";
   isFeatured: boolean;
   featuredUntil: string | null;
   parentFileId: string | null;
@@ -172,6 +174,7 @@ function mapFile(r0: unknown): PresentationFileDTO {
     groupId: r.group_id,
     slideCount: r.slide_count ?? 0,
     hasThumbnail: !!r.thumbnail_path,
+    processingStatus: r.thumbnail_path != null ? "thumbnail" : "no-thumbnail",
     isFeatured: r.is_featured,
     featuredUntil: r.featured_until,
     parentFileId: r.parent_file_id,

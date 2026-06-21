@@ -22,6 +22,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { generateImageThumbnail } from "@/lib/presentations-thumbnail";
 import { getIdentity, requireAdmin, requireSuperAdmin, type Identity } from "@/lib/documents";
 import {
   getAllPresentationFolders,
@@ -109,6 +110,24 @@ function collectStoragePaths(
     if (Array.isArray(r.slide_paths)) out.push(...r.slide_paths);
   }
   return out;
+}
+
+const IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "webp"]);
+
+/**
+ * V1 (Strategy C): image uploads get a real thumbnail via sharp; PDF/PPTX get
+ * none (UI shows a type icon). Non-blocking by contract — the result is only
+ * logged, never thrown, so a thumbnail failure can't fail the upload.
+ *
+ * The source-blob upload hands supabase-js the `File` directly (it accepts
+ * File/Blob, so no Buffer is materialized there → nothing to recycle); we read
+ * the bytes into a Buffer here, only for image extensions.
+ */
+async function maybeGenerateThumbnail(fileId: string, ext: string, file: File): Promise<void> {
+  if (!IMAGE_EXTS.has(ext)) return;
+  const buf = Buffer.from(await file.arrayBuffer());
+  const res = await generateImageThumbnail(fileId, buf, ext as "jpg" | "jpeg" | "png" | "webp");
+  if (!res.ok) console.error("[presentation thumbnail]", fileId, res.error);
 }
 
 /** Replace a file's department tags (delete-all then insert the valid set). */
@@ -336,7 +355,8 @@ export async function uploadPresentation(folderId: string, formData: FormData): 
 
   if (tagIds.length > 0) await syncFileTags(admin, fileId, tagIds);
 
-  // TODO Stufe 3: await processUploadedFile(fileId)  // thumbnail + slide extraction + OCR
+  // V1.1: Pipeline für PDF/PPTX via Background-Jobs (Supabase Edge Functions oder externe API)
+  await maybeGenerateThumbnail(fileId, ext, file);
 
   revalidateFiles();
   return { ok: true, file: (await getPresentationFileById(fileId)) ?? undefined };
@@ -470,7 +490,8 @@ export async function replacePresentation(fileId: string, formData: FormData): P
     .eq("id", fileId);
   if (archErr) return { ok: false, error: toMessage(archErr, "file") };
 
-  // TODO Stufe 3: await processUploadedFile(newId)  // re-extract slides for the new version
+  // V1.1: Pipeline für PDF/PPTX via Background-Jobs (Supabase Edge Functions oder externe API)
+  await maybeGenerateThumbnail(newId, ext, file);
 
   revalidateFiles();
   return { ok: true, file: (await getPresentationFileById(newId)) ?? undefined };
