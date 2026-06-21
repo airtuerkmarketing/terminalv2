@@ -15,55 +15,11 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { fileKind, type LanguageCode } from "@/lib/documents-constants";
 
-export type Role = "super_admin" | "admin" | "user";
-
-export interface Identity {
-  userId: string;
-  email: string | null;
-  fullName: string | null;
-  role: Role;
-  isAdmin: boolean;
-  isSuperAdmin: boolean;
-}
-
-/** Current viewer identity (role-resolved), or null when not signed in. Cached per request. */
-export const getIdentity = cache(async (): Promise<Identity | null> => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, email, full_name")
-    .eq("id", user.id)
-    .single();
-  const role = ((profile?.role as Role) ?? "user") as Role;
-  return {
-    userId: user.id,
-    email: (profile?.email as string | null) ?? user.email ?? null,
-    fullName: (profile?.full_name as string | null) ?? null,
-    role,
-    isAdmin: role === "admin" || role === "super_admin",
-    isSuperAdmin: role === "super_admin",
-  };
-});
-
-/** Throw NOT_AUTHENTICATED / NOT_AUTHORIZED unless the viewer is an admin. */
-export async function requireAdmin(): Promise<Identity> {
-  const id = await getIdentity();
-  if (!id) throw new Error("NOT_AUTHENTICATED");
-  if (!id.isAdmin) throw new Error("NOT_AUTHORIZED");
-  return id;
-}
-
-/** Throw unless the viewer is a super_admin (folder delete / visibility / roles). */
-export async function requireSuperAdmin(): Promise<Identity> {
-  const id = await getIdentity();
-  if (!id) throw new Error("NOT_AUTHENTICATED");
-  if (!id.isSuperAdmin) throw new Error("NOT_AUTHORIZED");
-  return id;
-}
+// Auth helpers moved to src/lib/auth.ts in Stage 5 of the user panel work.
+// Re-exported here for backward compatibility — existing importers
+// (16 files across the repo) continue to work without edits.
+export { getIdentity, requireAdmin, requireSuperAdmin } from "./auth";
+export type { Identity, Role } from "./auth";
 
 // ── DTOs (plain, client-safe shapes) ───────────────────────────────────────
 
