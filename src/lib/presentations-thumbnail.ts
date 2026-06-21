@@ -1,6 +1,5 @@
 import "server-only";
 
-import sharp from "sharp";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -16,6 +15,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
  *
  * NON-FATAL by contract: every failure path returns { ok: false, error } — this
  * function NEVER throws, so a thumbnail failure can never break an upload.
+ *
+ * sharp is imported DYNAMICALLY (not a top-level import): this module is pulled
+ * into the actions.ts "use server" graph, and a static `import sharp` would make
+ * EVERY action (createFolder, move, delete, PDF upload — none of which touch
+ * sharp) eager-load the native binary at lambda init and 500 if it can't load.
+ * Deferring the import to call-time keeps non-image actions completely free of
+ * sharp; a broken native binary then only fails thumbnail generation, caught by
+ * the try/catch below (still non-fatal). `serverExternalPackages: ["sharp"]`
+ * keeps it external for the dynamic import too.
  */
 const BUCKET = "presentations";
 const IMAGE_EXTS = ["jpg", "jpeg", "png", "webp"] as const;
@@ -34,6 +42,7 @@ export async function generateImageThumbnail(
   const thumbnailPath = `${fileId}/thumbnail.webp`;
 
   try {
+    const sharp = (await import("sharp")).default;
     // resize → max 640px wide, no crop, no upscale; re-encode as WebP q80.
     const webp = await sharp(sourceBuffer)
       .resize({ width: 640, fit: "inside", withoutEnlargement: true })

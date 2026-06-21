@@ -31,6 +31,12 @@
     "topojson-client": "^3.1.0",
     "zod": "^4.4.3"
   },
+  "pnpm": {
+    "supportedArchitectures": {
+      "os": ["current", "linux"],
+      "cpu": ["current", "x64"]
+    }
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.1",
     "@types/d3": "^7.4.3",
