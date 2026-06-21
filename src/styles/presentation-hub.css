@@ -195,48 +195,19 @@
   background: var(--ph-danger-soft);
 }
 
-/* ── Folder grid (root index) — flat cards, no 3D ───────────────────────── */
+/* ── Folder grid (root index) — 3D animated cards ───────────────────────── */
 .ph-folder-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
 }
-.ph-folder-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 18px;
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  box-shadow: var(--shadow-rest);
-  color: var(--text-1);
-  text-decoration: none;
+/* The 3D folder card (PresentationFolderCard3D) self-styles via bridged Tailwind
+   utilities + JS-driven inline transforms (the overshoot hover is scoped there,
+   not global). Only the glass blur is added — NO layout/color props, since
+   unlayered CSS would otherwise override the component's Tailwind utilities. */
+.ph-folder-card-3d {
   backdrop-filter: blur(14px);
-  transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
-}
-.ph-folder-card:hover {
-  box-shadow: var(--shadow-hover);
-  border-color: var(--accent-border);
-  transform: translateY(-2px);
-}
-.ph-folder-icon {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.ph-folder-name {
-  font-size: 15px;
-  font-weight: 600;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  -webkit-backdrop-filter: blur(14px);
 }
 
 /* ── File grid (cards) ──────────────────────────────────────────────────── */

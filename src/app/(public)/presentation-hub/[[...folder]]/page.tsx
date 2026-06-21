@@ -6,7 +6,7 @@ import {
   getPresentationBreadcrumb,
   getPresentationFiles,
   getPresentationFolderByPath,
-  getRootPresentationFolders,
+  getRootPresentationFoldersWithPreview,
 } from "@/lib/presentations";
 import { PresentationHubRoot } from "@/components/presentations/presentation-hub-root";
 import { PresentationFolderPage } from "@/components/presentations/presentation-folder-page";
@@ -41,7 +41,7 @@ export default async function PresentationHubPage({ params }: Params) {
   const isSuperAdmin = identity.isSuperAdmin;
 
   if (segs.length === 0) {
-    const folders = await getRootPresentationFolders();
+    const folders = await getRootPresentationFoldersWithPreview();
     return <PresentationHubRoot folders={folders} isAdmin={isAdmin} />;
   }
 

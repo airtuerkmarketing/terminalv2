@@ -214,6 +214,51 @@ export const getRootPresentationFolders = cache(async (): Promise<PresentationFo
   return ((data as FolderRow[] | null) ?? []).map(mapFolder);
 });
 
+export interface PresentationPreviewFileDTO {
+  id: string;
+  title: string;
+  fileType: string;
+  hasThumbnail: boolean;
+}
+export interface RootPresentationFolderDTO extends PresentationFolderDTO {
+  fileCount: number;
+  previewFiles: PresentationPreviewFileDTO[];
+}
+
+/**
+ * Top-level folders for the root grid, each with a count of its DIRECT (live,
+ * non-archived) files and up to 3 preview files for the 3D card fan-out. Mirrors
+ * the Document Library's getRootFoldersWithPreview. RLS-scoped (createClient);
+ * there are only a handful of top-level folders, so N small preview queries are
+ * fine. Preview images are served by the gated route via `<img>` (no signed URL
+ * minted here — same as the doc library).
+ */
+export async function getRootPresentationFoldersWithPreview(): Promise<RootPresentationFolderDTO[]> {
+  const folders = await getRootPresentationFolders();
+  const supabase = await createClient();
+  return Promise.all(
+    folders.map(async (f) => {
+      const { data, count } = await supabase
+        .from("presentation_files")
+        .select("id, title, file_type, thumbnail_path", { count: "exact" })
+        .eq("folder_id", f.id)
+        .eq("is_archived", false)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true })
+        .limit(3);
+      const previewFiles: PresentationPreviewFileDTO[] = (
+        (data as { id: string; title: string; file_type: string; thumbnail_path: string | null }[] | null) ?? []
+      ).map((r) => ({
+        id: r.id,
+        title: r.title,
+        fileType: r.file_type,
+        hasThumbnail: r.thumbnail_path != null,
+      }));
+      return { ...f, fileCount: count ?? previewFiles.length, previewFiles };
+    })
+  );
+}
+
 /** Resolve a slug path ("sales/q3") to a folder, or null. */
 export const getPresentationFolderByPath = cache(
   async (path: string): Promise<PresentationFolderDTO | null> => {

@@ -2,17 +2,17 @@
 
 import { useState } from "react";
 import "@/styles/presentation-hub.css";
-import type { PresentationFolderDTO } from "@/lib/presentations";
+import type { RootPresentationFolderDTO } from "@/lib/presentations";
 import { CreateFolderModal } from "./create-folder-modal";
-import { PresentationFolderCard } from "./presentation-folder-card";
+import { PresentationFolderCard3D } from "./presentation-folder-card-3d";
 
-/** Root index: top-level folders as flat cards + admin "New folder".
- *  (Featured hero + global search land in Stufe 6.) */
+/** Root index: top-level folders as 3D animated cards with file-peek + admin
+ *  "New folder". (Featured hero + global search land in Stufe 6.) */
 export function PresentationHubRoot({
   folders,
   isAdmin,
 }: {
-  folders: PresentationFolderDTO[];
+  folders: RootPresentationFolderDTO[];
   isAdmin: boolean;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
@@ -47,7 +47,13 @@ export function PresentationHubRoot({
       ) : (
         <div className="ph-folder-grid">
           {folders.map((f) => (
-            <PresentationFolderCard key={f.id} folder={f} />
+            <PresentationFolderCard3D
+              key={f.id}
+              name={f.name}
+              href={`/presentation-hub/${f.path}`}
+              fileCount={f.fileCount}
+              previewFiles={f.previewFiles}
+            />
           ))}
         </div>
       )}
