@@ -32,12 +32,11 @@ export default async function DocumentLibraryPage({ params }: Params) {
   const segs = folder ?? [];
 
   const identity = await getIdentity();
-  const isAdmin = identity?.isAdmin ?? false;
   const isSuperAdmin = identity?.isSuperAdmin ?? false;
 
   if (segs.length === 0) {
     const folders = await getRootFoldersWithPreview();
-    return <DocumentLibraryRoot folders={folders} isAdmin={isAdmin} />;
+    return <DocumentLibraryRoot folders={folders} isSuperAdmin={isSuperAdmin} />;
   }
 
   const current = await getFolderByPath(segs.join("/"));
@@ -57,7 +56,6 @@ export default async function DocumentLibraryPage({ params }: Params) {
       childFolders={childFolders}
       initialFiles={page.files}
       initialHasMore={page.hasMore}
-      isAdmin={isAdmin}
       isSuperAdmin={isSuperAdmin}
     />
   );

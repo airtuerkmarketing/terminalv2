@@ -64,6 +64,17 @@ export const LANGUAGES = [
 export type LanguageCode = (typeof LANGUAGES)[number]["code"];
 const LANGUAGE_CODES = new Set<string>(LANGUAGES.map((l) => l.code));
 
+/** Unicode flag emoji for a language code (en→🇬🇧). Null for unset/unknown. */
+export function languageFlag(language: string | null | undefined): string | null {
+  if (!language) return null;
+  const flags: Record<string, string> = {
+    de: "🇩🇪",
+    en: "🇬🇧",
+    tr: "🇹🇷",
+  };
+  return flags[language] ?? null;
+}
+
 /** Normalize a free-form language value to a supported code, or null. */
 export function normalizeLanguage(v: string | null | undefined): LanguageCode | null {
   if (!v) return null;

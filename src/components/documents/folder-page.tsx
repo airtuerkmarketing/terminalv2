@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import "@/styles/document-library.css";
 import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
 import { searchFilesInFolder } from "@/app/(public)/documents-library/actions";
@@ -21,7 +22,6 @@ export function FolderPage({
   childFolders,
   initialFiles,
   initialHasMore,
-  isAdmin,
   isSuperAdmin,
 }: {
   folder: FolderDTO;
@@ -29,7 +29,6 @@ export function FolderPage({
   childFolders: FolderDTO[];
   initialFiles: FileDTO[];
   initialHasMore: boolean;
-  isAdmin: boolean;
   isSuperAdmin: boolean;
 }) {
   const [files, setFiles] = useState<FileDTO[]>(initialFiles);
@@ -125,6 +124,19 @@ export function FolderPage({
 
   const noFiles = files.length === 0;
 
+  // List-view column header: a sort button (active column gets a chevron).
+  const SortTh = ({ label, sortKey }: { label: string; sortKey: FileSortKey }) => (
+    <button
+      type="button"
+      className={`dl-sort-th${sort === sortKey ? " active" : ""}`}
+      aria-pressed={sort === sortKey}
+      onClick={() => setSort(sortKey)}
+    >
+      {label}
+      {sort === sortKey && <ChevronDown size={14} aria-hidden="true" />}
+    </button>
+  );
+
   return (
     <article className="document-library">
       <Breadcrumb trail={trail} />
@@ -134,7 +146,7 @@ export function FolderPage({
           <h1>{folder.name}</h1>
           {!folder.isPublic && <span className="dl-badge-private">Private</span>}
         </div>
-        {isAdmin && (
+        {isSuperAdmin && (
           <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />
         )}
       </header>
@@ -167,7 +179,7 @@ export function FolderPage({
             <option value="size">Size</option>
           </select>
           <ViewToggle value={view} onChange={setView} storageKey="terminalv2-doclib-view" />
-          {isAdmin && (
+          {isSuperAdmin && (
             <button type="button" className="dl-btn primary" onClick={() => setUploadOpen(true)}>
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 5v14M5 12h14" />
@@ -186,7 +198,7 @@ export function FolderPage({
         ) : childFolders.length === 0 ? (
           <div className="dl-empty">
             <strong>This folder is empty.</strong>
-            {isAdmin ? (
+            {isSuperAdmin ? (
               <span>Upload a file or create a subfolder to get started.</span>
             ) : (
               <span>No files here yet.</span>
@@ -195,22 +207,22 @@ export function FolderPage({
         ) : null
       ) : view === "list" ? (
         <div className="dl-list">
-          <div className="dl-list-head" aria-hidden="true">
+          <div className="dl-list-head">
             <span />
-            <span>Name</span>
+            <SortTh label="Name" sortKey="name" />
             <span>Language</span>
-            <span>Size</span>
-            <span>Modified</span>
+            <SortTh label="Size" sortKey="size" />
+            <SortTh label="Modified" sortKey="date" />
             <span />
           </div>
           {files.map((f) => (
-            <FileRow key={f.id} file={f} isAdmin={isAdmin} onManage={setManageFile} />
+            <FileRow key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
           ))}
         </div>
       ) : (
         <div className="dl-grid" data-view={view}>
           {files.map((f) => (
-            <FileCard key={f.id} file={f} isAdmin={isAdmin} onManage={setManageFile} />
+            <FileCard key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
           ))}
         </div>
       )}
@@ -223,7 +235,7 @@ export function FolderPage({
         </div>
       )}
 
-      {isAdmin && (
+      {isSuperAdmin && (
         <UploadModal
           open={uploadOpen}
           onClose={() => setUploadOpen(false)}
@@ -231,7 +243,7 @@ export function FolderPage({
           onUploaded={upsertFile}
         />
       )}
-      {isAdmin && (
+      {isSuperAdmin && (
         <FileEditModal
           file={manageFile}
           onClose={() => setManageFile(null)}

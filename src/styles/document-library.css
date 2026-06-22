@@ -239,7 +239,7 @@
 .dl-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 /* Compact ("grid") view: denser, ~6–7 per row; max-width caps it at ~7 columns
    on ultrawide so it doesn't sprawl (cards stay ≥180px regardless). */
@@ -266,7 +266,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--surface);
   border: 1px solid var(--hairline);
   box-shadow: var(--shadow-rest);
@@ -364,24 +364,28 @@
   background: var(--ft-file);
 }
 
+/* Option A: roomier card foot — vertical stack (title · meta · action bar). */
 .dl-card-foot {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 12px 14px;
+  flex-direction: column;
+  padding: 16px;
 }
 .dl-card-info {
   flex: 1;
   min-width: 0;
 }
+/* Two-line title (no ellipsis-on-one-line); reserve height so cards align. */
 .dl-card-title {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 1.4;
   color: var(--text-1);
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  min-height: 38px;
 }
 .dl-card-sub {
   display: flex;
@@ -390,6 +394,86 @@
   font-size: 12px;
   color: var(--text-3);
   margin-top: 2px;
+}
+/* Stacked meta line: flag · size · date. */
+.dl-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+/* Pure-emoji flag — no background/border. Used in cards and list rows. */
+.dl-flag {
+  font-size: 18px;
+  line-height: 1;
+}
+.dl-row-lang .dl-flag {
+  font-size: 16px;
+}
+/* Always-visible action bar (no hover-reveal). */
+.dl-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+.dl-card-dl {
+  flex: 1;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.dl-card-dl:hover {
+  border-color: var(--accent-border);
+}
+.dl-card-edit {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.dl-card-edit:hover {
+  color: var(--text-1);
+  border-color: var(--accent-border);
+}
+/* Clickable list-view column headers (sort triggers; no asc/desc toggle). */
+.dl-sort-th {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.dl-sort-th.active {
+  color: var(--text-1);
+  font-weight: 600;
 }
 /* Centered icon button (folder ⋮ trigger). */
 .dl-iconbtn {

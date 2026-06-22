@@ -1,6 +1,6 @@
 "use client";
 
-import { fileKind, formatBytes } from "@/lib/documents-constants";
+import { fileKind, formatBytes, languageFlag } from "@/lib/documents-constants";
 import type { FileDTO } from "@/lib/documents";
 import { RelativeTime } from "./relative-time";
 import { FileTypeGraphic } from "./file-type-graphic";
@@ -13,15 +13,16 @@ import { FileTypeGraphic } from "./file-type-graphic";
  */
 export function FileRow({
   file,
-  isAdmin,
+  isSuperAdmin,
   onManage,
 }: {
   file: FileDTO;
-  isAdmin: boolean;
+  isSuperAdmin: boolean;
   onManage: (file: FileDTO) => void;
 }) {
   const isImage = fileKind(file.extension) === "image";
   const href = `/api/library/file/${file.id}`;
+  const flag = languageFlag(file.language);
 
   return (
     <div className="dl-row">
@@ -45,7 +46,9 @@ export function FileRow({
       </a>
 
       <span className="dl-row-lang">
-        {file.language && <span className="dl-lang">{file.language.toUpperCase()}</span>}
+        {flag && (
+          <span className="dl-flag" aria-label={`Language: ${file.language}`}>{flag}</span>
+        )}
       </span>
 
       <span className="dl-row-size">{formatBytes(file.sizeBytes)}</span>
@@ -67,7 +70,7 @@ export function FileRow({
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
         </a>
-        {isAdmin && (
+        {isSuperAdmin && (
           <button
             type="button"
             className="dl-card-menu"
