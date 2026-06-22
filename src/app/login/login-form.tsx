@@ -23,7 +23,7 @@ export function LoginForm({
 
   return (
     <form action={onSubmit} className="space-y-4">
-      <input type="hidden" name="next" value={nextPath || "/admin"} />
+      <input type="hidden" name="next" value={nextPath || "/"} />
 
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -68,6 +68,15 @@ export function LoginForm({
       >
         {isPending ? "Signing in..." : "Sign in"}
       </button>
+
+      <div className="text-center">
+        <a
+          href="/login/forgot-password"
+          className="text-xs text-gray-500 underline underline-offset-4 hover:text-gray-700"
+        >
+          Passwort vergessen?
+        </a>
+      </div>
     </form>
   );
 }

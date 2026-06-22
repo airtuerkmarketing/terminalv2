@@ -1,6 +1,7 @@
 import "@/styles/shell.css";
 import "@/styles/blocks.css";
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSinglePageBrandSlugs, getSidebarChildren } from "@/lib/pages";
 import { getFolderTreeForSidebar, getIdentity } from "@/lib/documents";
@@ -152,6 +153,15 @@ export default async function PublicLayout({ children }: { children: ReactNode }
   // getIdentity() is React-cached, so this auth read is shared with the pages
   // rendered inside this layout (no duplicate query per request).
   const [nav, identity] = await Promise.all([getNav(), getIdentity()]);
+
+  // Global login gate: anonymous visitors hitting ANY (public) route are sent
+  // to /login. The /admin shell keeps its own gate; /login* sits outside this
+  // group, so there's no redirect loop. Default post-login landing is / (the
+  // ?next param is read inside login/page.tsx when present).
+  if (!identity) {
+    redirect("/login");
+  }
+
   const isAdmin = identity?.isAdmin ?? false;
   const isSuperAdmin = identity?.isSuperAdmin ?? false;
   const displayName = identity
