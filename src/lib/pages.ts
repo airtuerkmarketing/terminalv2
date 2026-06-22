@@ -187,35 +187,6 @@ export async function getSidebarChildren(): Promise<Map<string, SidebarChild[]>>
   return byParent;
 }
 
-export interface BrandSection {
-  slug: string;
-  title: string;
-  blocks: BlockRow[];
-}
-
-/**
- * Block-mode child pages of a single-page brand parent, each with its blocks,
- * ordered by sort_order — these become the in-page anchor sections. Hardcoded
- * children (email-signature, etc.) are excluded (they stay standalone routes).
- * Draft-aware.
- */
-export async function getBrandSections(parentId: string): Promise<BrandSection[]> {
-  const supabase = await readClient();
-  let query = supabase
-    .from("pages")
-    .select("id, slug, title, sort_order, status")
-    .eq("parent_id", parentId)
-    .eq("rendering_mode", "blocks")
-    .eq("hidden_in_sidebar", false)
-    .order("sort_order", { ascending: true });
-  if (!SHOW_DRAFTS) query = query.eq("status", "published");
-  const { data } = await query;
-  const kids = (data ?? []) as { id: string; slug: string; title: string }[];
-  return Promise.all(
-    kids.map(async (k) => ({ slug: k.slug, title: k.title, blocks: await getBlocks(k.id) }))
-  );
-}
-
 /** A single in-page anchor section — either block-driven or a hardcoded tool. */
 export type BrandSectionAny =
   | { slug: string; title: string; rendering_mode: "blocks"; component_key: null; blocks: BlockRow[] }
@@ -312,137 +283,11 @@ export async function getImageAssets(): Promise<AssetDTO[]> {
   }));
 }
 
-// ── Document Library (Task 5d/5e) ──
-// `documents` are paired via pair_id (self-FK → documents.id): rows sharing a
-// pair_id are the PDF + Office versions of one logical document and collapse into
-// ONE card. `department` (Task 5d) is the coarse filter chip; rows with NULL
-// department are intentionally excluded (master-deck / logos / misc live
-// elsewhere). documents + assets are public-read, so the anon client works in
-// dev and prod.
-
-export type DocFormatKind = "PDF" | "Word" | "PPTX" | "ZIP" | "File";
-
-export interface DocFormat {
-  kind: DocFormatKind;
-  url: string;
-  filename: string;
-}
-
-export interface DocCardDTO {
-  pairId: string;
-  title: string;
-  department: string;
-  category: string;
-  language: string | null;
-  version: string | null;
-  /** Per-document preview cover; null → caller uses the shared fallback. */
-  coverUrl: string | null;
-  formats: DocFormat[];
-}
-
-export interface DocumentLibraryData {
-  cards: DocCardDTO[];
-  /** Shared fallback cover used until a document's preview_asset_id is set. */
-  sampleCoverUrl: string | null;
-}
-
-const SAMPLE_COVER_PATH = "misc/Partner-Framework-Cover.jpg";
-const FORMAT_RANK: Record<DocFormatKind, number> = { PDF: 0, Word: 1, PPTX: 2, ZIP: 3, File: 4 };
-
-function docFormatKind(mime: string): DocFormatKind {
-  if (mime === "application/pdf") return "PDF";
-  if (mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return "Word";
-  if (mime === "application/vnd.openxmlformats-officedocument.presentationml.presentation") return "PPTX";
-  if (mime === "application/zip") return "ZIP";
-  return "File";
-}
-
-type AssetEmbed = { public_url: string | null; filename: string | null; mime_type: string | null };
-interface DocRow {
-  id: string;
-  pair_id: string | null;
-  title: string;
-  department: string | null;
-  category: string;
-  language: string | null;
-  version: string | null;
-  asset: AssetEmbed | AssetEmbed[] | null;
-  preview: { public_url: string | null } | { public_url: string | null }[] | null;
-}
-
 // PostgREST embeds a to-one relation as an object, but the generated types widen
 // it to an array; normalize either shape to a single row.
 function one<T>(v: T | T[] | null | undefined): T | null {
   if (v == null) return null;
   return Array.isArray(v) ? (v[0] ?? null) : v;
-}
-
-/**
- * Document Library data: only documents WITH a department (the chip groups),
- * collapsed by pair_id into one card per logical document carrying its available
- * download formats. `coverUrl` resolves preview_asset_id (per-doc cover); when
- * null the page falls back to `sampleCoverUrl`. documents has two FKs to assets
- * (asset_id, preview_asset_id) — disambiguated by constraint name in the embed.
- */
-export async function getDocumentLibrary(): Promise<DocumentLibraryData> {
-  const supabase = await createClient(); // documents + assets are public-read
-
-  const { data: coverRow } = await supabase
-    .from("assets")
-    .select("public_url")
-    .eq("storage_path", SAMPLE_COVER_PATH)
-    .maybeSingle();
-  const sampleCoverUrl = (coverRow?.public_url as string | undefined) ?? null;
-
-  const { data } = await supabase
-    .from("documents")
-    .select(
-      "id, pair_id, title, department, category, language, version, sort_order, " +
-        "asset:assets!documents_asset_id_fkey(public_url, filename, mime_type), " +
-        "preview:assets!documents_preview_asset_id_fkey(public_url)"
-    )
-    .not("department", "is", null)
-    .order("category", { ascending: true })
-    .order("sort_order", { ascending: true })
-    .order("title", { ascending: true });
-
-  const rows = (data ?? []) as unknown as DocRow[];
-  const byPair = new Map<string, DocCardDTO>();
-
-  for (const row of rows) {
-    const asset = one(row.asset);
-    if (!asset?.public_url) continue; // every shown doc has a URL (gate-verified); defensive
-    const pairId = row.pair_id ?? row.id;
-    let card = byPair.get(pairId);
-    if (!card) {
-      card = {
-        pairId,
-        title: row.title,
-        department: row.department as string,
-        category: row.category,
-        language: row.language,
-        version: row.version,
-        coverUrl: null,
-        formats: [],
-      };
-      byPair.set(pairId, card);
-    }
-    // First non-null preview in the group wins; per-doc cover overrides the fallback.
-    card.coverUrl = card.coverUrl ?? one(row.preview)?.public_url ?? null;
-    card.formats.push({
-      kind: docFormatKind(asset.mime_type ?? ""),
-      url: asset.public_url,
-      filename: asset.filename ?? "",
-    });
-  }
-
-  return {
-    cards: [...byPair.values()].map((c) => ({
-      ...c,
-      formats: c.formats.sort((a, b) => FORMAT_RANK[a.kind] - FORMAT_RANK[b.kind]),
-    })),
-    sampleCoverUrl,
-  };
 }
 
 // ── Team Directory (/team) ──
