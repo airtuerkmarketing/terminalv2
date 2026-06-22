@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import "@/styles/document-library.css";
 import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
+import TreeNodeTooltip, { type TreeNode } from "@/components/ui/tree-node-tooltip";
 import { searchFilesInFolder } from "@/app/(public)/documents-library/actions";
 import type { FileDTO, FileSortKey, FolderDTO } from "@/lib/documents";
 import { Breadcrumb } from "./breadcrumb";
-import { FolderChips } from "./folder-chips";
 import { FileCard } from "./file-card";
 import { FileRow } from "./file-row";
 import { FileEditModal } from "./file-edit-modal";
@@ -123,6 +123,7 @@ export function FolderPage({
   }
 
   const noFiles = files.length === 0;
+  const hasSubfolders = childFolders.length > 0;
 
   // List-view column header: a sort button (active column gets a chevron).
   const SortTh = ({ label, sortKey }: { label: string; sortKey: FileSortKey }) => (
@@ -135,6 +136,78 @@ export function FolderPage({
       {label}
       {sort === sortKey && <ChevronDown size={14} aria-hidden="true" />}
     </button>
+  );
+
+  // Right-hand (or full-width) area: files list/grid + load-more.
+  const filesArea = (
+    <>
+      {noFiles ? (
+        debouncedSearch ? (
+          <div className="dl-empty">
+            <span>No files match “{search}”.</span>
+          </div>
+        ) : !hasSubfolders ? (
+          <div className="dl-empty">
+            <strong>This folder is empty.</strong>
+            {isSuperAdmin ? (
+              <span>Upload a file or create a subfolder to get started.</span>
+            ) : (
+              <span>No files here yet.</span>
+            )}
+          </div>
+        ) : (
+          <div className="dl-empty">
+            <span>No files in this folder — open a subfolder on the left.</span>
+          </div>
+        )
+      ) : view === "list" ? (
+        <div className="dl-list">
+          <div className="dl-list-head">
+            <span />
+            <SortTh label="Name" sortKey="name" />
+            <span>Language</span>
+            <SortTh label="Size" sortKey="size" />
+            <SortTh label="Modified" sortKey="date" />
+            <span />
+          </div>
+          {files.map((f) => (
+            <FileRow key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
+          ))}
+        </div>
+      ) : (
+        <div className="dl-grid" data-view={view}>
+          {files.map((f) => (
+            <FileCard key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
+          ))}
+        </div>
+      )}
+
+      {hasMore && (
+        <div className="dl-loadmore">
+          <button type="button" className="dl-btn ghost" onClick={loadMore} disabled={loading}>
+            {loading ? "Loading…" : "Load more"}
+          </button>
+        </div>
+      )}
+    </>
+  );
+
+  // Subfolder tree (left nav). Direct children only → flat node list, one
+  // TreeNodeTooltip per child (mirrors the component's demo usage).
+  const treePanel = (
+    <aside className="dl-tree-panel" aria-label="Subfolders">
+      <div className="dl-tree-head">Folders</div>
+      {childFolders.map((f) => {
+        const node: TreeNode = {
+          id: f.id,
+          name: f.name,
+          tooltip: f.name,
+          type: "folder",
+          href: `/documents-library/${f.path}`,
+        };
+        return <TreeNodeTooltip key={f.id} node={node} />;
+      })}
+    </aside>
   );
 
   return (
@@ -150,8 +223,6 @@ export function FolderPage({
           <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />
         )}
       </header>
-
-      <FolderChips folders={childFolders} />
 
       <div className="dl-toolbar">
         <div className="dl-search">
@@ -190,49 +261,15 @@ export function FolderPage({
         </div>
       </div>
 
-      {noFiles ? (
-        debouncedSearch ? (
-          <div className="dl-empty">
-            <span>No files match “{search}”.</span>
-          </div>
-        ) : childFolders.length === 0 ? (
-          <div className="dl-empty">
-            <strong>This folder is empty.</strong>
-            {isSuperAdmin ? (
-              <span>Upload a file or create a subfolder to get started.</span>
-            ) : (
-              <span>No files here yet.</span>
-            )}
-          </div>
-        ) : null
-      ) : view === "list" ? (
-        <div className="dl-list">
-          <div className="dl-list-head">
-            <span />
-            <SortTh label="Name" sortKey="name" />
-            <span>Language</span>
-            <SortTh label="Size" sortKey="size" />
-            <SortTh label="Modified" sortKey="date" />
-            <span />
-          </div>
-          {files.map((f) => (
-            <FileRow key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
-          ))}
+      {/* Below the search bar: split into a subfolder tree (≈15%) + the file
+          area (rest) when this folder has subfolders; otherwise full width. */}
+      {hasSubfolders ? (
+        <div className="dl-split">
+          {treePanel}
+          <div className="dl-split-main">{filesArea}</div>
         </div>
       ) : (
-        <div className="dl-grid" data-view={view}>
-          {files.map((f) => (
-            <FileCard key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
-          ))}
-        </div>
-      )}
-
-      {hasMore && (
-        <div className="dl-loadmore">
-          <button type="button" className="dl-btn ghost" onClick={loadMore} disabled={loading}>
-            {loading ? "Loading…" : "Load more"}
-          </button>
-        </div>
+        filesArea
       )}
 
       {isSuperAdmin && (
