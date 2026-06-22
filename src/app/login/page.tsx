@@ -38,10 +38,10 @@ export default async function LoginPage({
       {/* Particles Background */}
       <Particles
         className="absolute inset-0 z-0"
-        quantity={120}
-        ease={80}
-        color="#888888"
-        size={0.6}
+        quantity={350}
+        ease={50}
+        color="#000000"
+        size={0.8}
         refresh={false}
       />
 
