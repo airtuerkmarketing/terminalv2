@@ -37,12 +37,11 @@ export default async function PresentationHubPage({ params }: Params) {
     const next = segs.length > 0 ? `/presentation-hub/${segs.join("/")}` : "/presentation-hub";
     redirect(`/login?next=${encodeURIComponent(next)}`);
   }
-  const isAdmin = identity.isAdmin;
   const isSuperAdmin = identity.isSuperAdmin;
 
   if (segs.length === 0) {
     const folders = await getRootPresentationFoldersWithPreview();
-    return <PresentationHubRoot folders={folders} isAdmin={isAdmin} />;
+    return <PresentationHubRoot folders={folders} isSuperAdmin={isSuperAdmin} />;
   }
 
   const current = await getPresentationFolderByPath(segs.join("/"));
@@ -62,7 +61,6 @@ export default async function PresentationHubPage({ params }: Params) {
       childFolders={childFolders}
       initialFiles={page.files}
       initialHasMore={page.hasMore}
-      isAdmin={isAdmin}
       isSuperAdmin={isSuperAdmin}
     />
   );

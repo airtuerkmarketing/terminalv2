@@ -211,15 +211,27 @@
 .ph-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+/* Card view (roomy): wider cards + shorter landscape cover, distinct from grid. */
+.ph-grid[data-view="card"] {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+.ph-grid[data-view="card"] .ph-cover {
+  aspect-ratio: 3 / 2;
 }
 .ph-grid[data-view="grid"] {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
   max-width: 1472px;
 }
+.ph-grid[data-view="grid"] .ph-card-foot {
+  padding: 12px;
+}
 @media (max-width: 767px) {
   .ph-grid,
+  .ph-grid[data-view="card"],
   .ph-grid[data-view="grid"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     max-width: none;
@@ -227,6 +239,7 @@
 }
 @media (max-width: 479px) {
   .ph-grid,
+  .ph-grid[data-view="card"],
   .ph-grid[data-view="grid"] {
     grid-template-columns: 1fr;
   }
@@ -235,7 +248,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--surface);
   border: 1px solid var(--hairline);
   box-shadow: var(--shadow-rest);
@@ -284,44 +297,131 @@
   background: var(--accent);
 }
 
+/* Option A: roomier card foot — vertical stack (title · meta · tags · actions). */
 .ph-card-foot {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 12px 14px;
-}
-.ph-card-info {
-  flex: 1;
-  min-width: 0;
+  flex-direction: column;
+  padding: 16px;
 }
 .ph-card-title {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 1.4;
   color: var(--text-1);
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  min-height: 38px;
 }
-.ph-card-sub {
+.ph-card-meta {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  margin-top: 12px;
   font-size: 12px;
-  color: var(--text-3);
-  margin-top: 2px;
-}
-.ph-card-sub .ph-lang {
-  font-size: inherit;
   color: var(--text-2);
 }
-.ph-lang {
-  display: inline-block;
-  font-size: 10px;
+/* Always-visible action bar (no hover-reveal). */
+.ph-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+.ph-card-dl {
+  flex: 1;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ph-card-dl:hover {
+  border-color: var(--accent-border);
+}
+.ph-card-edit {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.ph-card-edit:hover {
+  color: var(--text-1);
+  border-color: var(--accent-border);
+}
+/* Clickable list-view column headers (sort triggers; no asc/desc toggle). */
+.ph-sort-th {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.ph-sort-th.active {
+  color: var(--text-1);
   font-weight: 700;
-  letter-spacing: 0.04em;
+}
+/* Subfolder split: tree nav (≈15%) + presentation area (rest). */
+.ph-split {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.ph-tree-panel {
+  flex: 0 0 15%;
+  max-width: 15%;
+  min-width: 0;
+  position: sticky;
+  top: 16px;
+}
+.ph-tree-head {
+  font-size: 11px;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
   color: var(--text-3);
+  margin-bottom: 8px;
+  padding-left: 6px;
+}
+.ph-split-main {
+  flex: 1 1 0;
+  min-width: 0;
+}
+@media (max-width: 767px) {
+  .ph-split {
+    flex-direction: column;
+  }
+  .ph-tree-panel {
+    flex-basis: auto;
+    max-width: none;
+    width: 100%;
+    position: static;
+  }
 }
 
 /* download button (always visible in the footer next to the title) */

@@ -2,6 +2,7 @@
 
 import { formatBytes } from "@/lib/presentations-constants";
 import type { PresentationFileDTO } from "@/lib/presentations";
+import { FlagIcon } from "@/components/ui/flag-icon";
 import { RelativeTime } from "./relative-time";
 import { PresentationTypeIcon } from "./presentation-type-icon";
 
@@ -13,11 +14,11 @@ function fileHref(id: string, download = false) {
  *  a real square thumbnail; other types show the type icon. */
 export function PresentationFileRow({
   file,
-  isAdmin,
+  isSuperAdmin,
   onManage,
 }: {
   file: PresentationFileDTO;
-  isAdmin: boolean;
+  isSuperAdmin: boolean;
   onManage: (file: PresentationFileDTO) => void;
 }) {
   const href = fileHref(file.id);
@@ -39,7 +40,7 @@ export function PresentationFileRow({
       </a>
 
       <span className="ph-row-lang">
-        {file.language && <span className="ph-lang">{file.language.toUpperCase()}</span>}
+        <FlagIcon code={file.language} />
       </span>
 
       <span className="ph-row-size">{formatBytes(file.sizeBytes)}</span>
@@ -56,7 +57,7 @@ export function PresentationFileRow({
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
         </a>
-        {isAdmin && (
+        {isSuperAdmin && (
           <button type="button" className="ph-card-menu" onClick={() => onManage(file)} aria-label={`Manage ${file.title}`}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
               <circle cx="5" cy="12" r="1.6" />

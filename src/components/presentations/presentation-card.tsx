@@ -2,6 +2,7 @@
 
 import { formatBytes } from "@/lib/presentations-constants";
 import type { PresentationFileDTO } from "@/lib/presentations";
+import { FlagIcon } from "@/components/ui/flag-icon";
 import { RelativeTime } from "./relative-time";
 import { PresentationTypeIcon } from "./presentation-type-icon";
 import { PresentationTagPill } from "./presentation-tag-pill";
@@ -15,18 +16,22 @@ function thumbHref(id: string) {
   return `/api/presentations/file/${id}?asset=thumb`;
 }
 
-/** Grid card: real thumbnail (image uploads) OR type icon (PDF/PPT), title,
- *  meta line, department tags, ⋮ manage (admin), download. */
+/**
+ * Grid card (Option A): thumbnail/type-icon cover, 2-line title, stacked meta
+ * (flag · type · size · date), department tags, and an always-visible action
+ * bar — Download for everyone, Edit (manage modal) for super_admin only.
+ */
 export function PresentationCard({
   file,
-  isAdmin,
+  isSuperAdmin,
   onManage,
 }: {
   file: PresentationFileDTO;
-  isAdmin: boolean;
+  isSuperAdmin: boolean;
   onManage: (file: PresentationFileDTO) => void;
 }) {
   const href = fileHref(file.id);
+  const downloadHref = fileHref(file.id, true);
   const hasThumb = file.processingStatus === "thumbnail";
 
   return (
@@ -47,55 +52,53 @@ export function PresentationCard({
             <PresentationTypeIcon extension={file.fileType} />
           )}
         </a>
-        {isAdmin && (
-          <button
-            type="button"
-            className="ph-card-menu"
-            onClick={() => onManage(file)}
-            aria-label={`Manage ${file.title}`}
-          >
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
-              <circle cx="12" cy="5" r="1.6" />
-              <circle cx="12" cy="12" r="1.6" />
-              <circle cx="12" cy="19" r="1.6" />
-            </svg>
-          </button>
-        )}
       </div>
 
       <div className="ph-card-foot">
-        <div className="ph-card-info">
-          <div className="ph-card-title" title={file.title}>
-            {file.title}
+        <div className="ph-card-title" title={file.title}>
+          {file.title}
+        </div>
+
+        <div className="ph-card-meta">
+          <FlagIcon code={file.language} />
+          <span>{file.fileType.toUpperCase()}</span>
+          <span aria-hidden="true">·</span>
+          <span>{formatBytes(file.sizeBytes)}</span>
+          <span aria-hidden="true">·</span>
+          <RelativeTime iso={file.createdAt} />
+        </div>
+
+        {file.tags.length > 0 && (
+          <div className="ph-tags">
+            {file.tags.map((t) => (
+              <PresentationTagPill key={t.id} tag={t} />
+            ))}
           </div>
-          <div className="ph-card-sub">
-            {file.language && (
-              <>
-                <span className="ph-lang">{file.language.toUpperCase()}</span>
-                <span aria-hidden="true">·</span>
-              </>
-            )}
-            <span>{file.fileType.toUpperCase()}</span>
-            <span aria-hidden="true">·</span>
-            <span>{formatBytes(file.sizeBytes)}</span>
-            <span aria-hidden="true">·</span>
-            <RelativeTime iso={file.createdAt} />
-          </div>
-          {file.tags.length > 0 && (
-            <div className="ph-tags">
-              {file.tags.map((t) => (
-                <PresentationTagPill key={t.id} tag={t} />
-              ))}
-            </div>
+        )}
+
+        <div className="ph-card-actions">
+          <a className="ph-card-dl" href={downloadHref} aria-label={`Download ${file.title}`}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Download
+          </a>
+          {isSuperAdmin && (
+            <button
+              type="button"
+              className="ph-card-edit"
+              onClick={() => onManage(file)}
+              aria-label={`Manage ${file.title}`}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
           )}
         </div>
-        <a className="ph-dl" href={fileHref(file.id, true)} aria-label={`Download ${file.title}`}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-        </a>
       </div>
     </div>
   );

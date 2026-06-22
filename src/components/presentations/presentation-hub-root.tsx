@@ -10,10 +10,10 @@ import { PresentationFolderCard3D } from "./presentation-folder-card-3d";
  *  "New folder". (Featured hero + global search land in Stufe 6.) */
 export function PresentationHubRoot({
   folders,
-  isAdmin,
+  isSuperAdmin,
 }: {
   folders: RootPresentationFolderDTO[];
-  isAdmin: boolean;
+  isSuperAdmin: boolean;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -29,7 +29,7 @@ export function PresentationHubRoot({
         <div className="ph-head-title">
           <h1>Presentation Hub</h1>
         </div>
-        {isAdmin && (
+        {isSuperAdmin && (
           <button type="button" className="ph-btn primary" onClick={() => setCreateOpen(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
@@ -42,7 +42,7 @@ export function PresentationHubRoot({
       {folders.length === 0 ? (
         <div className="ph-empty">
           <strong>No folders yet.</strong>
-          {isAdmin ? <span>Create your first folder to get started.</span> : <span>Nothing here yet.</span>}
+          {isSuperAdmin ? <span>Create your first folder to get started.</span> : <span>Nothing here yet.</span>}
         </div>
       ) : (
         <div className="ph-folder-grid">
@@ -58,7 +58,7 @@ export function PresentationHubRoot({
         </div>
       )}
 
-      {isAdmin && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={null} />}
+      {isSuperAdmin && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={null} />}
     </article>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import "@/styles/presentation-hub.css";
 import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
+import TreeNodeTooltip, { type TreeNode } from "@/components/ui/tree-node-tooltip";
 import { listPresentationFilesInFolder } from "@/app/(public)/presentation-hub/actions";
 import type { PresentationFileDTO, PresentationFolderDTO, PresentationSortKey } from "@/lib/presentations";
 import { PresentationBreadcrumb } from "./presentation-breadcrumb";
@@ -21,7 +22,6 @@ export function PresentationFolderPage({
   childFolders,
   initialFiles,
   initialHasMore,
-  isAdmin,
   isSuperAdmin,
 }: {
   folder: PresentationFolderDTO;
@@ -29,7 +29,6 @@ export function PresentationFolderPage({
   childFolders: PresentationFolderDTO[];
   initialFiles: PresentationFileDTO[];
   initialHasMore: boolean;
-  isAdmin: boolean;
   isSuperAdmin: boolean;
 }) {
   const [files, setFiles] = useState<PresentationFileDTO[]>(initialFiles);
@@ -113,6 +112,89 @@ export function PresentationFolderPage({
   }
 
   const noFiles = files.length === 0;
+  const hasSubfolders = childFolders.length > 0;
+
+  // List-view column header: a sort button (active column gets a chevron).
+  const SortTh = ({ label, sortKey }: { label: string; sortKey: PresentationSortKey }) => (
+    <button
+      type="button"
+      className={`ph-sort-th${sort === sortKey ? " active" : ""}`}
+      aria-pressed={sort === sortKey}
+      onClick={() => setSort(sortKey)}
+    >
+      {label}
+      {sort === sortKey && <ChevronDown size={14} aria-hidden="true" />}
+    </button>
+  );
+
+  const filesArea = (
+    <>
+      {noFiles ? (
+        debouncedSearch ? (
+          <div className="ph-empty">
+            <span>No presentations match “{search}”.</span>
+          </div>
+        ) : !hasSubfolders ? (
+          <div className="ph-empty">
+            <strong>This folder is empty.</strong>
+            {isSuperAdmin ? (
+              <span>Upload a presentation or create a subfolder to get started.</span>
+            ) : (
+              <span>Nothing here yet.</span>
+            )}
+          </div>
+        ) : (
+          <div className="ph-empty">
+            <span>No presentations in this folder — open a subfolder on the left.</span>
+          </div>
+        )
+      ) : view === "list" ? (
+        <div className="ph-list">
+          <div className="ph-list-head">
+            <span />
+            <SortTh label="Name" sortKey="name" />
+            <span>Language</span>
+            <SortTh label="Size" sortKey="size" />
+            <SortTh label="Modified" sortKey="date" />
+            <span />
+          </div>
+          {files.map((f) => (
+            <PresentationFileRow key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
+          ))}
+        </div>
+      ) : (
+        <div className="ph-grid" data-view={view}>
+          {files.map((f) => (
+            <PresentationCard key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
+          ))}
+        </div>
+      )}
+
+      {hasMore && (
+        <div className="ph-loadmore">
+          <button type="button" className="ph-btn ghost" onClick={loadMore} disabled={loading}>
+            {loading ? "Loading…" : "Load more"}
+          </button>
+        </div>
+      )}
+    </>
+  );
+
+  const treePanel = (
+    <aside className="ph-tree-panel" aria-label="Subfolders">
+      <div className="ph-tree-head">Folders</div>
+      {childFolders.map((f) => {
+        const node: TreeNode = {
+          id: f.id,
+          name: f.name,
+          tooltip: f.name,
+          type: "folder",
+          href: `/presentation-hub/${f.path}`,
+        };
+        return <TreeNodeTooltip key={f.id} node={node} />;
+      })}
+    </aside>
+  );
 
   return (
     <article className="ph-hub">
@@ -122,21 +204,8 @@ export function PresentationFolderPage({
         <div className="ph-head-title">
           <h1>{folder.name}</h1>
         </div>
-        {isAdmin && <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />}
+        {isSuperAdmin && <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />}
       </header>
-
-      {childFolders.length > 0 && (
-        <div className="ph-chips" role="list" aria-label="Subfolders">
-          {childFolders.map((f) => (
-            <Link key={f.id} href={`/presentation-hub/${f.path}`} className="ph-chip" role="listitem">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-                <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              </svg>
-              <span>{f.name}</span>
-            </Link>
-          ))}
-        </div>
-      )}
 
       <div className="ph-toolbar">
         <div className="ph-search">
@@ -164,7 +233,7 @@ export function PresentationFolderPage({
             <option value="size">Size</option>
           </select>
           <ViewToggle value={view} onChange={setView} storageKey="terminalv2-prezhub-view" />
-          {isAdmin && (
+          {isSuperAdmin && (
             <button type="button" className="ph-btn primary" onClick={() => setUploadOpen(true)}>
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 5v14M5 12h14" />
@@ -175,55 +244,21 @@ export function PresentationFolderPage({
         </div>
       </div>
 
-      {noFiles ? (
-        debouncedSearch ? (
-          <div className="ph-empty">
-            <span>No presentations match “{search}”.</span>
-          </div>
-        ) : childFolders.length === 0 ? (
-          <div className="ph-empty">
-            <strong>This folder is empty.</strong>
-            {isAdmin ? (
-              <span>Upload a presentation or create a subfolder to get started.</span>
-            ) : (
-              <span>Nothing here yet.</span>
-            )}
-          </div>
-        ) : null
-      ) : view === "list" ? (
-        <div className="ph-list">
-          <div className="ph-list-head" aria-hidden="true">
-            <span />
-            <span>Name</span>
-            <span>Language</span>
-            <span>Size</span>
-            <span>Modified</span>
-            <span />
-          </div>
-          {files.map((f) => (
-            <PresentationFileRow key={f.id} file={f} isAdmin={isAdmin} onManage={setManageFile} />
-          ))}
+      {/* Below the search bar: subfolder tree (≈15%) + presentation area (rest)
+          when this folder has subfolders; otherwise full width. */}
+      {hasSubfolders ? (
+        <div className="ph-split">
+          {treePanel}
+          <div className="ph-split-main">{filesArea}</div>
         </div>
       ) : (
-        <div className="ph-grid" data-view={view}>
-          {files.map((f) => (
-            <PresentationCard key={f.id} file={f} isAdmin={isAdmin} onManage={setManageFile} />
-          ))}
-        </div>
+        filesArea
       )}
 
-      {hasMore && (
-        <div className="ph-loadmore">
-          <button type="button" className="ph-btn ghost" onClick={loadMore} disabled={loading}>
-            {loading ? "Loading…" : "Load more"}
-          </button>
-        </div>
-      )}
-
-      {isAdmin && (
+      {isSuperAdmin && (
         <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} folderId={folder.id} onUploaded={upsertFile} />
       )}
-      {isAdmin && (
+      {isSuperAdmin && (
         <PresentationFileManageModal
           file={manageFile}
           onClose={() => setManageFile(null)}

@@ -1,7 +1,8 @@
 "use client";
 
-import { fileKind, formatBytes, languageFlag } from "@/lib/documents-constants";
+import { fileKind, formatBytes } from "@/lib/documents-constants";
 import type { FileDTO } from "@/lib/documents";
+import { FlagIcon } from "@/components/ui/flag-icon";
 import { RelativeTime } from "./relative-time";
 import { FileTypeGraphic } from "./file-type-graphic";
 
@@ -22,7 +23,6 @@ export function FileRow({
 }) {
   const isImage = fileKind(file.extension) === "image";
   const href = `/api/library/file/${file.id}`;
-  const flag = languageFlag(file.language);
 
   return (
     <div className="dl-row">
@@ -46,9 +46,7 @@ export function FileRow({
       </a>
 
       <span className="dl-row-lang">
-        {flag && (
-          <span className="dl-flag" aria-label={`Language: ${file.language}`}>{flag}</span>
-        )}
+        <FlagIcon code={file.language} />
       </span>
 
       <span className="dl-row-size">{formatBytes(file.sizeBytes)}</span>

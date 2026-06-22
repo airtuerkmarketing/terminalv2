@@ -1,7 +1,8 @@
 "use client";
 
-import { fileKind, formatBytes, languageFlag } from "@/lib/documents-constants";
+import { fileKind, formatBytes } from "@/lib/documents-constants";
 import type { FileDTO } from "@/lib/documents";
+import { FlagIcon } from "@/components/ui/flag-icon";
 import { RelativeTime } from "./relative-time";
 import { FileTypeGraphic } from "./file-type-graphic";
 
@@ -27,7 +28,6 @@ export function FileCard({
   const isImage = kind === "image";
   const href = fileHref(file.id);
   const downloadHref = fileHref(file.id, true);
-  const flag = languageFlag(file.language);
 
   return (
     <div className="dl-card">
@@ -54,11 +54,7 @@ export function FileCard({
         </div>
 
         <div className="dl-card-meta">
-          {flag && (
-            <span className="dl-flag" aria-label={`Language: ${file.language}`}>
-              {flag}
-            </span>
-          )}
+          <FlagIcon code={file.language} />
           <span>{formatBytes(file.sizeBytes)}</span>
           <span aria-hidden="true">·</span>
           <RelativeTime iso={file.createdAt} />

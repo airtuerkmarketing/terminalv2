@@ -147,7 +147,7 @@ html { scrollbar-gutter: stable; }
      entirely to recover the vertical gap; the Topbar component stays for mobile. */
   .topbar { display: none; }
 
-  .main { padding: var(--space-6) var(--space-8); }
+  .main { padding: var(--space-6) var(--space-5); }
 
   /* Collapsed rail (64px) — collapse exists only at this tier.
      Labels collapse to zero width + fade out (NOT display:none) so the expand

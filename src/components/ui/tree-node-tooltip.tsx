@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import "./tree-node-tooltip.css";
 
 /**
  * Recursive tree row with a hover tooltip — modelled on the ruixenui
@@ -48,8 +49,8 @@ function TreeRow({ node, depth }: { node: TreeNode; depth: number }) {
 
   return (
     <li className="tnt-node">
-      <div className="tnt-row" style={{ paddingLeft: 6 + depth * 14 }}>
-        {hasChildren ? (
+      <div className="tnt-row" style={{ paddingLeft: depth * 14 }}>
+        {hasChildren && (
           <button
             type="button"
             className={`tnt-toggle${open ? " open" : ""}`}
@@ -61,8 +62,6 @@ function TreeRow({ node, depth }: { node: TreeNode; depth: number }) {
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
-        ) : (
-          <span className="tnt-toggle-spacer" aria-hidden="true" />
         )}
 
         <span className="tnt-tipwrap">

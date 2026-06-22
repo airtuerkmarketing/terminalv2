@@ -419,14 +419,6 @@
   font-size: 12px;
   color: var(--text-2);
 }
-/* Pure-emoji flag — no background/border. Used in cards and list rows. */
-.dl-flag {
-  font-size: 18px;
-  line-height: 1;
-}
-.dl-row-lang .dl-flag {
-  font-size: 16px;
-}
 /* Always-visible action bar (no hover-reveal). */
 .dl-card-actions {
   display: flex;
@@ -528,96 +520,6 @@
     width: 100%;
     position: static;
   }
-}
-
-/* Tree (tree-node-tooltip) styling. */
-.tnt-root,
-.tnt-children {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.tnt-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.tnt-toggle,
-.tnt-toggle-spacer {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.tnt-toggle {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--text-3);
-  cursor: pointer;
-}
-.tnt-toggle svg {
-  transition: transform 0.15s;
-}
-.tnt-toggle.open svg {
-  transform: rotate(90deg);
-}
-.tnt-tipwrap {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-}
-.tnt-link,
-.tnt-static {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  padding: 5px 6px;
-  border-radius: var(--radius-md);
-  text-decoration: none;
-  color: var(--text-1);
-  transition: background 0.12s;
-}
-.tnt-link:hover {
-  background: var(--surface-muted);
-}
-.tnt-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
-}
-.tnt-icon {
-  flex-shrink: 0;
-  color: var(--text-3);
-}
-.tnt-name {
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.tnt-tip {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 6px);
-  transform: translateX(-50%);
-  z-index: 5;
-  white-space: nowrap;
-  pointer-events: none;
-  background: var(--text-1);
-  color: var(--surface);
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-hover);
-  opacity: 0;
-  transition: opacity 0.12s;
-}
-.tnt-tipwrap:hover .tnt-tip {
-  opacity: 1;
 }
 /* Centered icon button (folder ⋮ trigger). */
 .dl-iconbtn {
