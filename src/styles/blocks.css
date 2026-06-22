@@ -52,9 +52,12 @@
 
 /* ── color_palette — tall hover-expand panels ── */
 .palette { display: flex; gap: var(--space-2); height: 340px; position: relative; }
-.color-panel { flex: 1; border-radius: var(--radius-lg); padding: var(--space-4); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: flex 600ms var(--ease-smooth); position: relative; overflow: hidden; color: white; }
-.palette:hover .color-panel { flex: 0.7; }
-.palette .color-panel:hover { flex: 2.2; }
+.color-panel { flex: 1; border-radius: var(--radius-lg); padding: var(--space-4); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: flex 0.65s cubic-bezier(.22, 1, .36, 1), opacity 0.5s cubic-bezier(.22, 1, .36, 1), filter 0.5s cubic-bezier(.22, 1, .36, 1); position: relative; overflow: hidden; color: white; }
+/* Tall variant only (:not strips): hovering one panel grows it softly while the
+   siblings shrink AND fade + desaturate, pulling focus to the hovered strip. The
+   .palette--strips variant is intentionally excluded. */
+.palette:not(.palette--strips):hover .color-panel { flex: 0.7; opacity: 0.75; filter: saturate(0.88); }
+.palette:not(.palette--strips) .color-panel:hover { flex: 1.8; opacity: 1; filter: saturate(1); }
 .color-panel .idx { font-family: var(--font-mono); font-size: var(--fs-sm); opacity: 0.7; }
 .color-panel .role { font-size: var(--fs-xs); font-weight: var(--weight-semibold); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
 .color-panel .cname { font-size: var(--fs-xl); font-weight: var(--weight-semibold); letter-spacing: -0.01em; }
