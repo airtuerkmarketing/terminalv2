@@ -342,6 +342,12 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 **Decision:** Admins may still update profiles, but the `role` column may only change when the actor is `super_admin` (else the new role must equal the existing one — same MVCC subquery lock as `profiles_update_own`).
 **Migration:** `0032_profiles_role_escalation_guard.sql`.
 
+## D-056 — internal-branding/configurator removed instead of built
+**Date:** 2026-06-22
+**Status:** Adopted. Updates D-006 (drops the route from the hardcoded list) and closes out D-025 (Identity Configurator scope).
+**Context:** The `/internal-branding/configurator` page carried `component_key` `identity-configurator`, but no backing component existed in `src/` — it only rendered the generic `HardcodedStub`. Not demo-relevant.
+**Decision:** Remove the page rather than build the tool. `internal-branding` stays as Hero + applied-identity. The removal was a direct DB data change (`execute_sql`); a reproducibility migration is planned with the next `db push`.
+
 ---
 
 ## Anti-decisions (explicitly NOT doing)

@@ -4,6 +4,28 @@ Running record of what's been built, when. Newest entries on top.
 
 ---
 
+## Dead-code cleanup + configurator page removal (2026-06-22)
+
+**Status:** Pushed to `main` (`c397b29`), deploy READY. Decision **D-056**.
+
+- **Dead-code cleanup (`c397b29`):** removed the legacy pre-File-System-v2
+  document-library path (the `<DocumentLibrary>` component + `getDocumentLibrary`
+  + its DTOs, superseded by D-053), the superseded
+  `getBrandSections`/`BrandSection` (replaced by `getBrandSectionsAll`), the
+  unused `ExternalIcon`, and four unused deps (`react-hook-form`,
+  `@hookform/resolvers`, `class-variance-authority`, `tailwindcss-animate` — an
+  abandoned form stack + shadcn scaffolding that was never wired up). `pnpm
+  typecheck` + `build` green, deploy READY, page visually unchanged. ~474 LOC
+  removed.
+- **DB — `/internal-branding/configurator` removed:** its `component_key`
+  `identity-configurator` had no backing component in `src/`, so the route only
+  rendered the generic `HardcodedStub`. Judged not demo-relevant and removed.
+  ⚠️ Done via `execute_sql` (a data change), **not yet a migration** — a fresh
+  `db reset` would re-seed the page until the removal migration lands with the
+  next `db push`. Deleted row saved in chat. See **D-056**.
+
+---
+
 ## File System v2 — roles + folder Document Library (2026-06-20)
 
 **Status:** Built + applied to prod (`zkydrymygjrscjbhusxp`) + pushed to `main`.
