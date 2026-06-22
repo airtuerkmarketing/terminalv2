@@ -115,7 +115,7 @@
 .oo-copy-btn:hover { background: #1a1a1a; }
 .oo-copy-btn:active { transform: scale(0.97); }
 .oo-copy-btn svg { width: 14px; height: 14px; }
-.oo-copy-btn.oo-just-copied { background: var(--accent-soft); color: var(--accent); }
+.oo-copy-btn.oo-just-copied { background: var(--success); color: #fff; }
 .oo-copy-btn.oo-just-copied:hover { filter: none; }
 .oo-outlook-btn {
   height: 32px; padding: 0 12px; background: transparent; color: var(--text-2);
