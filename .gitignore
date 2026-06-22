@@ -53,6 +53,10 @@ KEYS.txt
 # Vercel CLI
 .vercel
 
+# Local cleanup/health reports (root-anchored, not /spec)
+/delete-candidates-*.md
+/health-check-*.md
+
 # Local maintenance/experiment scripts (not part of the app)
 # Pattern: ignore CONTENTS of scripts/, but whitelist .ts files and README
 # so future app-tooling (e.g. pre-seed-users.ts in Stage 8) can be versioned

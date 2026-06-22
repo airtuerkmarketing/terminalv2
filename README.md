@@ -12,7 +12,10 @@ documentation across **15 brand records** organized in a two-level hierarchy.
 
 ## Status
 
-**Current phase:** Phase 3.5 COMPLETE (design system + brand hierarchy). Phase 4 next.
+**Current phase:** Phase 4 COMPLETE and deployed. File System v2 (roles + folder
+Document Library), the User Panel, and the Presentation Hub rebuild have shipped since;
+much of Phase 6/7 (APIX ports, signatures, search, DNS cutover) is also done. Phase 5
+(full Admin CMS) is the main remaining block.
 
 See `spec/BUILD_LOG.md` for full progress.
 
@@ -25,7 +28,7 @@ See `spec/BUILD_LOG.md` for full progress.
 | Styling | Tailwind CSS 4 + iOS 18 Liquid Glass tokens | latest |
 | Database | Supabase Postgres | 17 (Frankfurt) |
 | Auth | Supabase Auth | publishable+secret keys |
-| Storage | Supabase Storage | 4 buckets |
+| Storage | Supabase Storage | 9 buckets |
 | Hosting | Vercel | Edge runtime |
 | Package manager | pnpm | 11.x |
 | Repo | github.com/airtuerkmarketing/terminalv2 | private |
@@ -35,7 +38,7 @@ See `spec/BUILD_LOG.md` for full progress.
 | File | Purpose |
 |---|---|
 | `ARCHITECTURE.md` | System design, schema, block taxonomy, routing, brand hierarchy |
-| `DECISIONS.md` | Locked design decisions (D-001 through D-046) |
+| `DECISIONS.md` | Locked design decisions (D-001 through D-056) |
 | `DESIGN_SYSTEM.md` | iOS 18 Liquid Glass design language |
 | `EMBEDS_INVENTORY.md` | Webflow embeds preserved for Phase 6 |
 | `SOURCE_INVENTORY.md` | Full inventory of the Webflow zip |
@@ -54,7 +57,7 @@ See `spec/BUILD_LOG.md` for full progress.
 |---|---|
 | `0001_initial_schema.sql` | Full DDL with types, constraints, indexes |
 | `0002_rls_policies.sql` | Row Level Security |
-| `0003_storage_buckets.sql` | 4 storage buckets |
+| `0003_storage_buckets.sql` | Initial 4 storage buckets (now 9 — see 0025/0031/0033 + avatars; D-007 superseded) |
 | `0004_seed_brands.sql` | Initial 8 brands |
 | `0005_seed_pages.sql` | Initial 56-page tree |
 | `0006_profiles_trigger.sql` | Auto-create profile on signup |
@@ -66,6 +69,10 @@ See `spec/BUILD_LOG.md` for full progress.
 | `0030_role_model.sql` | Three-tier roles (super_admin/admin/user), `is_super_admin()`, `user_role_defaults` (D-047/048) |
 | `0031_document_library_filesystem.sql` | Document Library v2: folder tree + files, RLS, private `library` bucket, pg_trgm (D-049–054) |
 | `0032_profiles_role_escalation_guard.sql` | Restrict profile role changes to super-admins (D-055) |
+| `0033_presentation_hub.sql` | Presentation Hub folder/file model + tables |
+| `20260621*`–`20260622*` (10 migrations) | User Panel: profiles↔team_members link, `user_activity_log`, `profiles_v` view, avatars bucket, RLS recursion / search_path fixes |
+
+Highest applied migration: `20260622193003_profiles_update_own_use_helper.sql`.
 
 ## Design system
 

@@ -1,12 +1,23 @@
 # terminalv2 — Embeds Inventory
 
 Inventory of the custom HTML/CSS/JS embeds extracted from the original
-Webflow site (`airtuerk-terminal_webflow.zip`). These are preserved verbatim
-and will be ported to React components in Phase 6.
+Webflow site (`airtuerk-terminal_webflow.zip`), preserved verbatim in `spec/embeds/`.
 
 **Extracted:** Phase 3.5 (2026-06-15)
 **Location in repo:** `spec/embeds/`
 **Total size:** ~224 KB of custom code
+
+**Porting status (2026-06-22): mostly shipped, ahead of the original "Phase 6" plan.**
+- ✅ APIX Workflow → `src/components/hardcoded/apix-workflow.tsx` (migrations 0014–0016)
+- ✅ APIX Network map → `src/components/hardcoded/apix-network.tsx`
+- ✅ APIX Presentation player + Group structure → `apix-presentation.tsx` / `apix-group.tsx`
+- ✅ Signature Generator → `src/components/hardcoded/email-signature.tsx`
+- ✅ Out-of-Office Generator → `src/components/hardcoded/out-of-office.tsx`
+- ✅ Color Strip → the `color_palette` block (`src/components/blocks/color-palette.tsx`)
+- ⏳ IBE Tools Showcase → `/ibe-product-suite` body — still pending
+- ❌ Jersey Customizer → its target route `/internal-branding/configurator` was removed (D-056)
+
+The per-component "Phase 6 plan" sections below are the original plan, kept for reference.
 
 ---
 
@@ -128,7 +139,8 @@ the videos.
 **Phase 6 plan:**
 - This is **the reference implementation** for the `color_palette` block
   type (D-005). The block renderer matches this CSS/animation exactly.
-- Not a separate component — gets absorbed into `src/components/blocks/brand/color-palette.tsx`
+- ✅ Ported into the `color_palette` block at `src/components/blocks/color-palette.tsx`
+  (no `brand/` subdirectory).
 
 ---
 
@@ -141,7 +153,7 @@ the videos.
 | atbeds.html | `/atbeds` + 6 sub-pages | Same schablone as airtuerk Service. |
 | service-center-antalya.html | `/service-center-antalya` + 5 sub-pages | Same schablone (note URL rename). |
 | ibe-product-suite.html | `/ibe-product-suite` (hardcoded) | Embed becomes the page body. Product sub-pages = new brand records. |
-| internal-branding.html | `/internal-branding` + 2 sub-pages | Configurator embed → `/internal-branding/configurator` hardcoded route. |
+| internal-branding.html | `/internal-branding` + 1 sub-page | Configurator embed was **dropped** — `/internal-branding/configurator` removed (D-056). |
 | airtuerk-apix.html | `/airtuerk-apix` + 8 sub-pages | Workflow + Global Network embeds → 2 hardcoded routes. |
 
 ---

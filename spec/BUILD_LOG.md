@@ -2,6 +2,54 @@
 
 Running record of what's been built, when. Newest entries on top.
 
+The **Current State** block below is the only present-tense status; everything under
+it is append-only history (do not rewrite past entries — add new ones).
+
+---
+
+## Current State (updated 2026-06-22)
+
+- **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
+  pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
+  (Webflow/`terminal.airtuerk.de` retired).
+- **Database:** 22 tables + the `profiles_v` view. **55 pages**, **15 brands**,
+  **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
+  private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
+  Highest migration: `20260622193003`. Highest decision: **D-056**.
+- **Auth/roles:** `super_admin | admin | user`; RLS via `is_admin()` /
+  `is_super_admin()` / `get_profile_role()`; profile role-changes are
+  super-admin-only (D-055).
+- **Shipped:** Phases 0–4 + design system; File System v2 (roles + folder Document
+  Library); User Panel (admin/users list + detail, role picker, seeded key users,
+  profiles↔team_members link, `user_activity_log`); Presentation Hub rebuild (0033);
+  all four APIX tool ports (0014–0016); signature + out-of-office generators;
+  intelligence/RAG groundwork (0025–0029) + live `/api/search`; dead-code cleanup
+  (`c397b29`); `/internal-branding/configurator` removed (D-056).
+- **Remaining:** full Admin CMS (Phase 5), IBE Tools Showcase port, RAG embedding
+  pipeline.
+
+---
+
+## Dead-code cleanup + configurator page removal (2026-06-22)
+
+**Status:** Pushed to `main` (`c397b29`), deploy READY. Decision **D-056**.
+
+- **Dead-code cleanup (`c397b29`):** removed the legacy pre-File-System-v2
+  document-library path (the `<DocumentLibrary>` component + `getDocumentLibrary`
+  + its DTOs, superseded by D-053), the superseded
+  `getBrandSections`/`BrandSection` (replaced by `getBrandSectionsAll`), the
+  unused `ExternalIcon`, and four unused deps (`react-hook-form`,
+  `@hookform/resolvers`, `class-variance-authority`, `tailwindcss-animate` — an
+  abandoned form stack + shadcn scaffolding that was never wired up). `pnpm
+  typecheck` + `build` green, deploy READY, page visually unchanged. ~474 LOC
+  removed.
+- **DB — `/internal-branding/configurator` removed:** its `component_key`
+  `identity-configurator` had no backing component in `src/`, so the route only
+  rendered the generic `HardcodedStub`. Judged not demo-relevant and removed.
+  ⚠️ Done via `execute_sql` (a data change), **not yet a migration** — a fresh
+  `db reset` would re-seed the page until the removal migration lands with the
+  next `db push`. Deleted row saved in chat. See **D-056**.
+
 ---
 
 ## Flat design language — opaque surfaces, no orbs, no glass blur (2026-06-22)

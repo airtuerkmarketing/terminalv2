@@ -41,10 +41,17 @@ Escape: `raw_html`
 blocks: `/team`, `/asset-library`, `/documents-library`, `/search`, `/presentation-hub`,
 `/ibe-product-suite`, `/airtuerk-apix/workflow`, `/airtuerk-apix/global-network`,
 all `email-signature` paths, `/internal-branding/configurator`.
-**Updated by:** D-040 (Presentation Hub) and D-041 (IBE landing) in Phase 3.5.
+**Updated by:** D-040 (Presentation Hub) and D-041 (IBE landing) in Phase 3.5;
+D-056 removed `/internal-branding/configurator` from this list.
 
-## D-007 — Four storage buckets
+## D-007 — Four storage buckets ⚠️ SUPERSEDED
 **Decision:** `images`, `documents`, `videos`, `fonts`.
+**Superseded (2026-06-22):** the bucket set has since grown to nine as features
+shipped — added `confluence-attachments` (migration 0025), `library` (0031, private —
+D-052), `presentations` (0033), and `avatars` (`20260621142305`). A ninth bucket,
+`rag-knowledge`, exists in the live DB but has **no creating migration** (made
+out-of-band; only referenced as "future" in 0025). This is accumulated reality, not a
+new decision — current set in ARCHITECTURE §8.
 
 ## D-008 — Catch-all routing
 **Decision:** `(public)/[...slug]/page.tsx` handles every DB-driven page.
@@ -107,9 +114,11 @@ for sub-pages and standalone pages.
 ## D-024 — Local dev runs against remote Supabase
 **Decision:** `pnpm dev` connects to remote Frankfurt Supabase.
 
-## D-025 — Identity Configurator scoped
+## D-025 — Identity Configurator scoped ⚠️ CLOSED (see D-056)
 **Decision:** Form-driven tool generating PDF letterhead + HTML email signature.
 **Reinforced by:** D-041 — Jersey Customizer is the Phase 6 visual implementation.
+**Closed by:** D-056 — the `/internal-branding/configurator` route was removed
+(never built; no backing component).
 
 ## D-026 — Team-to-brand is many-to-many
 **Decision:** `team_member_brands` junction table.
@@ -247,6 +256,10 @@ The renderer in `src/components/shell/sidebar.tsx` (Phase 4) builds the tree fro
 **Decision:** Remove the 4 standalone pages entirely. Final page count is 52: 13 top-level + 39 sub-pages.
 **Migration:** `0008_restructure_brands.sql` deletes them.
 **Trade-offs:** Inbound links to these URLs break. Acceptable — these are unlinked internal scratch pages.
+**Note (current: 55 as of 2026-06-22):** the live page count has since grown to 55
+(12 top-level + 43 sub-pages) via the APIX group page (0016) and Presentation Hub
+(0033), minus `/internal-branding/configurator` (D-056). The "52" above is the
+point-in-time Phase 3.5 decision, not the current count — see ARCHITECTURE §4.
 
 ## D-043 — airLounge kept in DB, hidden from sidebar
 **Date:** 2026-06-15
@@ -341,6 +354,12 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 **Context:** The adversarial review of the v2 server layer found that `profiles_update_admin` (0002) let any `admin` UPDATE any profile's `role` — self-promotion to `super_admin` via the REST API, defeating D-047's tier split.
 **Decision:** Admins may still update profiles, but the `role` column may only change when the actor is `super_admin` (else the new role must equal the existing one — same MVCC subquery lock as `profiles_update_own`).
 **Migration:** `0032_profiles_role_escalation_guard.sql`.
+
+## D-056 — internal-branding/configurator removed instead of built
+**Date:** 2026-06-22
+**Status:** Adopted. Updates D-006 (drops the route from the hardcoded list) and closes out D-025 (Identity Configurator scope).
+**Context:** The `/internal-branding/configurator` page carried `component_key` `identity-configurator`, but no backing component existed in `src/` — it only rendered the generic `HardcodedStub`. Not demo-relevant.
+**Decision:** Remove the page rather than build the tool. `internal-branding` stays as Hero + applied-identity. The removal was a direct DB data change (`execute_sql`); a reproducibility migration is planned with the next `db push`.
 
 ---
 

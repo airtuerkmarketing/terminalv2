@@ -6,17 +6,23 @@ How code flows from idea to production.
 
 ## Branches
 
-| Branch | Purpose | Protected | Deploys to |
-|---|---|---|---|
-| `main` | Production-ready code | ✅ yes | `terminal.airtuerk.de` |
-| `feature/*` | New work | no | Vercel preview URL |
-| `fix/*` | Bug fixes | no | Vercel preview URL |
-| `docs/*` | Documentation only | no | Vercel preview URL |
+| Branch | Purpose | Deploys to |
+|---|---|---|
+| `main` | Working + production branch — commits land here directly | [www.airtuerk.dev](https://www.airtuerk.dev) |
+| `feature/*` | Larger / parallel work (e.g. the UI-redesign branch) | Vercel preview URL |
+| `fix/*` | Bug fixes (optional) | Vercel preview URL |
+| `docs/*` | Documentation only (optional) | Vercel preview URL |
 
 **Rules:**
-- Never commit directly to `main`. Always PR.
+- `main` is the working-and-deploy branch: routine work commits and pushes
+  **directly to `main`**. GitHub branch protection ("changes must be made through a
+  pull request") exists but is **bypassed by the repo owner** on push — that bypass is
+  the intended flow today, not a violation.
+- A PR-based workflow has been considered but is **not yet adopted**; until it is,
+  direct-to-main stands.
+- Use a `feature/*` branch only for larger or parallel work that benefits from an
+  isolated preview deploy.
 - Branch names: lowercase, hyphen-separated, prefixed by type.
-- One branch per logical change.
 
 ---
 
@@ -35,19 +41,22 @@ Longer explanation if needed. Reference decisions: D-005, D-012.
 - `feat(blocks): add product_showcase renderer`
 - `fix(sidebar): correct active state for sub-pages`
 - `docs(decisions): add D-027 profile creation trigger`
-- `chore(deps): bump next to 15.0.3`
+- `chore(deps): bump next to 16.2.9`
 
 ---
 
 ## Pull requests
 
-Required checks before merge:
+PRs are **optional** today (see Branches — routine work goes direct to `main`). When
+you do open one for a `feature/*` branch, the sanity checks are:
 - [ ] Branch up to date with `main`
-- [ ] CI green (typecheck, lint, build)
+- [ ] `pnpm typecheck` + `pnpm build` green (these are the real gates)
 - [ ] No console errors introduced
-- [ ] BUILD_LOG.md updated for phase milestones
-- [ ] DECISIONS.md updated if architecture changed
+- [ ] BUILD_LOG.md updated for milestones; DECISIONS.md updated if architecture changed
 - [ ] Vercel preview deployment verified working
+
+Note: `pnpm lint` is **not** a hard gate — `next build` skips ESLint, and lint is
+currently red on `main` with known pre-existing findings.
 
 **Merge style:** Squash and merge.
 
@@ -56,8 +65,8 @@ Required checks before merge:
 ## Deployment
 
 Vercel automatically:
-- Every PR → preview URL (`terminalv2-git-<branch>.vercel.app`)
-- Every merge to `main` → production (`terminal.airtuerk.de`)
+- Every push to a `feature/*` branch / PR → preview URL (`terminalv2-git-<branch>.vercel.app`)
+- Every push to `main` → production ([www.airtuerk.dev](https://www.airtuerk.dev))
 
 **Rollback:** In Vercel dashboard, promote a previous deployment to
 production. Never use `git revert` for emergencies — promote first, fix
@@ -78,7 +87,7 @@ pnpm install
 # Copy env, fill from Supabase Studio
 cp .env.example .env.local
 # Set NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-# SUPABASE_SECRET_KEY, NEXT_PUBLIC_SITE_URL, INITIAL_ADMIN_EMAIL
+# SUPABASE_SECRET_KEY, NEXT_PUBLIC_SITE_URL
 
 # Generate database types from remote
 pnpm db:types
@@ -90,6 +99,13 @@ pnpm dev
 `pnpm dev` connects directly to the remote Frankfurt Supabase project. No
 local Docker required (D-024).
 
+**Roles / first admin:** there is no `INITIAL_ADMIN_EMAIL` step. Role assignment is
+data-driven via the `user_role_defaults` table (migration 0030, D-048): the signup
+trigger `handle_new_user()` reads it and stamps each new profile's role (default
+`user`). To grant admin / super_admin, add or edit the email→role row in
+`user_role_defaults` (super-admin-only via RLS), or change the role through the admin
+User Panel.
+
 ---
 
 ## pnpm scripts (defined in package.json)
@@ -100,24 +116,17 @@ local Docker required (D-024).
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-
-    "db:types": "npx supabase gen types typescript --project-id $SUPABASE_PROJECT_REF > src/types/database.ts",
-    "db:diff":  "npx supabase db diff --linked --schema public",
-    "db:push":  "npx supabase db push --linked",
-    "db:reset": "echo 'Use Supabase Studio or migrations carefully — this would wipe data'",
-
-    "manifest:assets":    "tsx scripts/build-asset-manifest.ts",
-    "manifest:documents": "tsx scripts/build-document-manifest.ts",
-    "manifest:team":      "tsx scripts/build-team-manifest.ts",
-
-    "upload:assets":      "tsx scripts/upload-assets.ts"
+    "db:types": "supabase gen types typescript --project-id zkydrymygjrscjbhusxp > src/lib/database.types.ts"
   }
 }
 ```
 
-`$SUPABASE_PROJECT_REF` lives in `.env.local`.
+`db:types` writes to `src/lib/database.types.ts` and has the prod project ref
+(`zkydrymygjrscjbhusxp`) hardcoded. There are no `db:diff`/`db:push`/`db:reset` or
+`manifest:*`/`upload:*` scripts — one-off scripts live in `scripts/` and are run
+directly (e.g. `node --env-file=.env.local scripts/seed-key-users.ts`).
 
 ---
 
@@ -125,22 +134,21 @@ local Docker required (D-024).
 
 All schema changes go through Supabase migrations.
 
-**For v1 development:**
-- Claude applies migrations via Supabase MCP `apply_migration`
-- Buhara verifies the change in Supabase Studio
-- The migration file is committed to `supabase/migrations/`
-
-**For later (after Phase 5):**
-- Optional: install Supabase CLI for local-only development
-- `pnpm db:push` to apply locally-written migrations to remote
-- `pnpm db:diff` to generate migrations from Studio changes
+**Current method:**
+- Claude applies migrations via the Supabase MCP `apply_migration` **when the MCP is
+  connected**; otherwise via the Management API with `SUPABASE_ACCESS_TOKEN` (the MCP
+  is often not connected in a given session).
+- Each applied migration is recorded in `schema_migrations` and committed to
+  `supabase/migrations/`. Migration files are mixed: sequential `0001`–`0033` plus
+  timestamped `20260621*`/`20260622*`.
+- Prod writes need explicit user (Buhara) sign-off first.
 
 **Never:**
 - Edit the database directly via Studio in production without a matching
   migration file checked in
-- Skip writing a migration for a "small change"
+- Skip writing a migration for a "small change" (a direct `execute_sql` data change
+  still needs a follow-up reproducibility migration — see D-056)
 - Modify an existing migration after it's been applied
-- Mix MCP-applied and CLI-applied migrations in the same session
 
 If a deployed migration needs change, write a new migration that supersedes
 it.

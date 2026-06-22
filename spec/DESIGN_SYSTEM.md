@@ -113,8 +113,8 @@ the database, NOT from CSS tokens.
 
 | Role | Family | Sizes |
 |---|---|---|
-| Sans (default) | `-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter', system-ui, sans-serif` | 11–44px |
-| Mono | `ui-monospace, 'SF Mono', 'JetBrains Mono', 'Menlo', monospace` | Code, numerals, color values |
+| Sans (default) | **Inter** (self-hosted via `next/font`), then `system-ui, -apple-system, sans-serif` fallback | 11–44px |
+| Mono | **Inter** — `--font-mono` aliases the sole Inter family (no separate monospace) | numerals, color values |
 
 ### Type scale (tracks landing page hero down to fine print)
 
@@ -317,15 +317,15 @@ Full mobile spec lives in Phase 4 implementation.
 
 | Layer | Location |
 |---|---|
-| Design tokens | `src/styles/theme.css` (Phase 4) |
+| Design tokens | `src/styles/theme.css` |
 | Tailwind config bridge | `tailwind.config.ts` reads tokens via CSS vars |
 | Material components | `src/components/ui/material-card.tsx` etc. |
-| Block renderers | `src/components/blocks/*` (Phase 4) |
-| Sidebar | `src/components/shell/sidebar.tsx` (Phase 4) |
+| Block renderers | `src/components/blocks/*` |
+| Sidebar | `src/components/shell/sidebar.tsx` |
 
-The full token CSS file from the reference implementation lives at
-`spec/mockups/v3-01-dashboard.html` (inline `<style>` block) and is the
-canonical source until Phase 4 ports it to `src/styles/theme.css`.
+The token CSS originated as an inline `<style>` block in the reference mockup
+(`spec/mockups/v3-01-dashboard.html`) and has since been ported to
+`src/styles/theme.css`, which is now the canonical source.
 
 ---
 

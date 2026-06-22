@@ -2,7 +2,13 @@
 
 What gets built, in what order, with exit criteria.
 
-**Current status:** Phase 0–3 + Phase 3.5 COMPLETE. Phase 4 next.
+**Current status (2026-06-22):** Phases 0–4 COMPLETE and deployed. Much of Phase 6
+(APIX ports, signature + out-of-office generators, Presentation Hub) and the Phase 7
+search + DNS cutover also shipped — out of the original order. Post-Phase-4 work since:
+File System v2 (roles + folder Document Library), the User Panel (admin/users list +
+detail, role picker, seeded key users), and the Presentation Hub rebuild. Highest
+migration: `20260622193003`; highest decision: **D-056**. The main remaining block is
+Phase 5 (full Admin CMS).
 
 ---
 
@@ -37,21 +43,25 @@ migrations), docs consolidated. See `BUILD_LOG.md` Phase 3.5 entry.
 
 **Outcome:**
 - 15 brands (was 8) — 7 top-level + 7 IBE products + 1 resources (Presentation Hub)
-- 52 pages (was 56) — 4 standalone deleted
+- 52 pages at the time (was 56) — 4 standalone deleted; live count is now 55 (ARCHITECTURE §4)
 - iOS 18 Liquid Glass design system locked
 - Quantum Blue as UI accent
 - Sidebar: Dashboard / Brands+Products / Resources, IBE expandable
 
 ---
 
-## Phase 4 — Public frontend
+## Phase 4 — Public frontend ✅ COMPLETE
 
 **Goal:** Site visually 1:1 with the target design (per mockup v3) using the new structure.
+
+**Status:** Shipped and deployed — theme tokens are in `src/styles/theme.css`, the
+app shell, block renderer, catch-all route, landing page, and hardcoded routes are
+all live. (Checklist below kept for reference.)
 
 ### Pre-Phase-4 prep
 
 - Verify migrations 0007/0008/0009 applied in production Supabase
-- Verify brand count = 15, page count = 52
+- Verify brand count = 15, page count = 52 (now 55 live)
 - Pull `spec/embeds/` files for reference (will be ported in Phase 6, but
   Phase 4 needs the color_palette pattern from `color-strip-pattern.html`)
 
@@ -96,7 +106,7 @@ migrations), docs consolidated. See `BUILD_LOG.md` Phase 3.5 entry.
 
 ### Exit criteria
 
-- [ ] Every URL from the 52-page tree returns a working page
+- [ ] Every URL from the 55-page tree returns a working page
 - [ ] Sidebar renders correctly with active state
 - [ ] IBE expandable works (chevron toggles 6 sub-products)
 - [ ] Orbs toggleable, theme toggleable, sidebar collapsible
@@ -130,20 +140,21 @@ migrations), docs consolidated. See `BUILD_LOG.md` Phase 3.5 entry.
 
 ---
 
-## Phase 6 — Hardcoded interactives + embed port
+## Phase 6 — Hardcoded interactives + embed port — ⚠️ MOSTLY SHIPPED
 
 **Goal:** Restore the special components from the Webflow embeds.
 
 ### Steps
 
-1. **Team directory** (`/team`) — search, filter by department/brand
-2. **IBE Tools Showcase** (`/ibe-product-suite`) — port from `ibe-tools-showcase.html`
-3. **Presentation Hub** (`/presentation-hub`) — sectioned doc list from settings.presentation_hub.sections
-4. **APIX Workflow** (`/airtuerk-apix/workflow`) — port from `apix-page-embeds.html`
-5. **APIX Global Network** (`/airtuerk-apix/global-network`) — port from `apix-page-embeds.html`
-6. **Email Signature Generator** — shared component, 4 brand routes (Service, Holidays, atBeds, Service Center Antalya)
-7. **Out-of-Office Generator** — `/airtuerk-service/out-of-office` (new hardcoded route)
-8. **Jersey Customizer** (`/internal-branding/configurator`) — port from `jersey-customizer-full.css/.js`
+1. ✅ **Team directory** (`/team`) — search, filter by department/brand
+2. ⏳ **IBE Tools Showcase** (`/ibe-product-suite`) — port from `ibe-tools-showcase.html` (still pending)
+3. ✅ **Presentation Hub** (`/presentation-hub`) — rebuilt (migration 0033, folder model)
+4. ✅ **APIX Workflow** (`/airtuerk-apix/workflow`) — ported (`apix-workflow.tsx`)
+5. ✅ **APIX Network map** (`/airtuerk-apix/global-network` → `apix-network`) — ported (`apix-network.tsx`, 0014)
+   - Plus **APIX Presentation player** (0015) and **APIX Group structure** (0016) — all four APIX tools ported.
+6. ✅ **Email Signature Generator** — shipped (`email-signature.tsx`, 4 brand routes)
+7. ✅ **Out-of-Office Generator** — shipped (`out-of-office.tsx`)
+8. ❌ **Jersey Customizer** — dropped; the `/internal-branding/configurator` route was removed (D-056, never built)
 
 ### Exit criteria
 
@@ -153,15 +164,18 @@ migrations), docs consolidated. See `BUILD_LOG.md` Phase 3.5 entry.
 
 ---
 
-## Phase 7 — Polish + cutover
+## Phase 7 — Polish + cutover — ⚠️ PARTIALLY SHIPPED
 
-**Goal:** Production launch on `terminal.airtuerk.de`.
+**Goal:** Production launch. DNS cutover is **done** — prod serves
+[www.airtuerk.dev](https://www.airtuerk.dev) (the old `terminal.airtuerk.de`/Webflow is retired).
 
 ### Steps
 
-1. **Migration `0010_fulltext_search.sql`** — generated `search_vector` columns
-   on `pages`, `documents`, `team_members`, `block_searchable_text` view, GIN indexes
-2. **`/api/search` route handler** — uses `to_tsquery` against the indexes
+1. **Search** — shipped differently than planned: there is a live `/api/search` route
+   (admin/service-role backed). The originally planned `0010_fulltext_search.sql`
+   migration name is obsolete (`0010` is `fix_brand_card_colors`); no generated
+   `search_vector` columns were added.
+2. ✅ **`/api/search` route handler** — live (Dashboard search box)
 3. Performance audit (Lighthouse, Core Web Vitals)
 4. Accessibility audit (Lighthouse a11y, keyboard nav, screen reader)
 5. SEO — sitemap.xml, robots.txt, OG tags per page
@@ -194,12 +208,16 @@ citations.
 
 ## Estimating effort (rough, remaining)
 
-| Phase | Sessions |
+Re-baselined 2026-06-22 — most of this is now done out of order:
+
+| Phase | Status |
 |---|---|
-| ~~0-3.5~~ | done |
-| 4 — Public frontend | 3-5 |
-| 5 — Admin CMS | 4-6 |
-| 6 — Interactives | 2-3 |
-| 7 — Polish + cutover | 1-2 |
-| **Total to v1 launch** | **10-16 sessions remaining** |
-| 8 — RAG | separate scope |
+| ~~0–3.5~~ | done |
+| ~~4 — Public frontend~~ | done (shipped + deployed) |
+| 5 — Admin CMS | partially done; main remaining block |
+| ~~6 — Interactives~~ | mostly done (only IBE Tools Showcase pending) |
+| ~~7 — Polish + cutover~~ | cutover done; search shipped; audits ongoing |
+| 8 — RAG | groundwork shipped (gold-set + AI test sets, 0025–0029); embedding eval next |
+
+Plus shipped beyond the original plan: File System v2 (roles + folder Document
+Library), the User Panel, and the Presentation Hub rebuild.
