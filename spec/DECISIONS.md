@@ -361,6 +361,12 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 **Context:** The `/internal-branding/configurator` page carried `component_key` `identity-configurator`, but no backing component existed in `src/` — it only rendered the generic `HardcodedStub`. Not demo-relevant.
 **Decision:** Remove the page rather than build the tool. `internal-branding` stays as Hero + applied-identity. The removal was a direct DB data change (`execute_sql`); a reproducibility migration is planned with the next `db push`.
 
+## D-057 — Browser direct-to-Storage upload (signed URL), not through the Server Action
+**Date:** 2026-06-22
+**Status:** Adopted. **Supersedes the original "stream the file through the upload Server Action" upload path.**
+**Context:** Library + Presentation Hub uploads streamed the file bytes THROUGH a Next.js Server Action (`uploadFile`/`uploadPresentation`). Next.js caps Server-Action request bodies at 1 MB by default (not raised in `next.config.ts`), and Vercel adds its own request-body cap — so any file over ~1 MB was rejected at the framework boundary. The client had no try/catch, so the rejected promise left the modal stuck on "Uploading…" with no error and no file. Production data showed all 8 uploaded files were < 1 MB (largest 0.955 MB) against a 15 MB ceiling.
+**Decision:** Two-step upload. (1) An admin-gated Server Action mints a one-time **signed upload URL** (`createSignedUploadUrl`) — no bytes cross it. (2) The browser PUTs the bytes **straight to Storage** (`uploadToSignedUrl`), bypassing both the Next.js and Vercel body limits; the bucket's own `file_size_limit` (library 15 MB / presentations 25 MB) + `allowed_mime_types` still gate the PUT. (3) A second admin-gated action finalizes the DB row, reading the true size back via `.info()` (which also confirms the object landed) and rolling the object back on row failure. The upload modals wrap the whole flow in try/catch/finally so "Uploading…" always clears and errors always surface. App-layer only — no schema/migration change. `replaceFile`/`replacePresentation` keep the old through-action path for now (same root cause; out of scope for this fix).
+
 ---
 
 ## Anti-decisions (explicitly NOT doing)

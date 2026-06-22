@@ -15,7 +15,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 - **Database:** 22 tables + the `profiles_v` view. **55 pages**, **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  Highest migration: `20260622193003`. Highest decision: **D-056**.
+  Highest migration: `20260622193003`. Highest decision: **D-057**.
 - **Auth/roles:** `super_admin | admin | user`; RLS via `is_admin()` /
   `is_super_admin()` / `get_profile_role()`; profile role-changes are
   super-admin-only (D-055).
@@ -27,6 +27,36 @@ it is append-only history (do not rewrite past entries — add new ones).
   (`c397b29`); `/internal-branding/configurator` removed (D-056).
 - **Remaining:** full Admin CMS (Phase 5), IBE Tools Showcase port, RAG embedding
   pipeline.
+
+---
+
+## Upload fix — browser direct-to-Storage signed-URL upload (2026-06-22)
+
+**Status:** On feature branch → PR into `main`. Decision **D-057**. App-layer only, no migration.
+
+Reported bug: on `/documents-library/business-development/03-tour-operator-agreement`
+the upload modal showed "Uploading…" then hung — no file, no error. **Diagnosed** (not
+guessed): the file streamed THROUGH the Next.js Server Action, which caps bodies at
+1 MB by default (not raised in `next.config.ts`); files over ~1 MB were rejected at the
+framework boundary, and the client had no try/catch, so the rejected promise left the
+modal stuck. Production data corroborated — all 8 uploaded files were < 1 MB (largest
+0.955 MB) against a 15 MB ceiling.
+
+**Fix (D-057):** two-step signed-URL upload for BOTH `documents-library` and
+`presentation-hub`. (1) an admin-gated action mints `createSignedUploadUrl` (no bytes
+cross it); (2) the browser PUTs straight to Storage via `uploadToSignedUrl` (bypasses
+the Next.js + Vercel body limits; the bucket `file_size_limit` 15/25 MB + MIME allowlist
+still gate the PUT); (3) a second admin-gated `finalize…` action inserts the row, reads
+the true size back via `.info()` (also confirms the object landed) and rolls the object
+back on row failure. Both upload modals now wrap the flow in try/catch/finally so
+"Uploading…" always clears and errors surface. Presentations keep tag-sync + the image
+thumbnail (downloaded from Storage in finalize, since it no longer receives the File).
+`replaceFile`/`replacePresentation` keep the old through-action path (same root cause,
+out of scope here).
+
+**Verify:** `pnpm typecheck` + `pnpm build` green; `pnpm lint` unchanged (no new findings
+in the 4 changed files). A live >1 MB admin upload is to be verified on the PR preview
+deploy — the sandbox lacks the Supabase publishable/secret keys for an E2E run.
 
 ---
 
