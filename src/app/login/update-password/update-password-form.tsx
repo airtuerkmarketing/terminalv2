@@ -14,6 +14,7 @@ export default function UpdatePasswordForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(initialError ?? null);
+  const [success, setSuccess] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -34,13 +35,40 @@ export default function UpdatePasswordForm({
     }
 
     startTransition(async () => {
-      const result = await updatePasswordAction(formData);
-      if (result?.error) {
-        setError(result.error);
-      } else {
-        // Erfolg — redirect zum Dashboard
-        router.push("/");
-        router.refresh();
+      setError(null);
+      try {
+        const result = await updatePasswordAction(formData);
+
+        if (!result) {
+          setError("Keine Antwort vom Server. Bitte erneut versuchen.");
+          return;
+        }
+
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+
+        if (result.success) {
+          // Wichtig: refresh ZUERST damit getIdentity() das neue
+          // metadata holt, dann push damit Layout-Gate korrekt läuft
+          router.refresh();
+          setSuccess(true);
+          // Kurz warten damit refresh durchlaufen kann
+          await new Promise(resolve => setTimeout(resolve, 100));
+          router.push("/");
+          return;
+        }
+
+        // Sollte nie passieren, aber falls doch:
+        setError("Unerwartete Antwort. Bitte logge dich aus und wieder ein.");
+      } catch (e) {
+        console.error("Submit error:", e);
+        setError(
+          e instanceof Error
+            ? `Fehler: ${e.message}`
+            : "Unbekannter Fehler beim Speichern."
+        );
       }
     });
   }
@@ -109,6 +137,19 @@ export default function UpdatePasswordForm({
           }}
         />
       </div>
+
+      {success && (
+        <div style={{
+          padding: "0.75rem",
+          background: "#efe",
+          border: "1px solid #cfc",
+          borderRadius: "0.375rem",
+          color: "#060",
+          fontSize: "0.875rem",
+        }}>
+          ✓ Passwort gespeichert! Du wirst weitergeleitet…
+        </div>
+      )}
 
       {error && (
         <div style={{

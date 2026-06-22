@@ -7,7 +7,7 @@ export async function updatePasswordAction(formData: FormData) {
   const password = formData.get("password") as string;
   const confirm = formData.get("confirm") as string;
 
-  // Server-side validation (doppelt zur Client-Seite)
+  // Validation
   if (!password || password.length < 12) {
     return { error: "Passwort muss mindestens 12 Zeichen lang sein." };
   }
@@ -23,29 +23,58 @@ export async function updatePasswordAction(formData: FormData) {
     return { error: "Nicht eingeloggt. Bitte erneut anmelden." };
   }
 
-  // Passwort updaten (über RLS-Client - User aktualisiert sein eigenes PW)
+  // Step 1: Passwort updaten via RLS-Client
   const { error: updateError } = await supabase.auth.updateUser({ password });
   if (updateError) {
-    return { error: updateError.message };
+    return { error: `Passwort konnte nicht gespeichert werden: ${updateError.message}` };
   }
 
-  // force_password_change Flag entfernen via service-role admin client
-  // (User selbst kann app_metadata nicht ändern). createAdminClient() ist der
-  // kanonische Service-Role-Client des Projekts (SUPABASE_SECRET_KEY, RLS-bypass).
-  const serviceClient = createAdminClient();
+  // Step 2: Flag entfernen via service-role admin client
+  let adminClient;
+  try {
+    adminClient = createAdminClient();
+  } catch (initError) {
+    console.error("Admin client init failed:", initError);
+    return {
+      error: "Passwort gespeichert. Aber System-Update fehlgeschlagen. Bitte logge dich aus und kontaktiere bdemir@airtuerk.de."
+    };
+  }
 
   const newMetadata = { ...(user.app_metadata || {}) };
   delete newMetadata.force_password_change;
 
-  const { error: metaError } = await serviceClient.auth.admin.updateUserById(
+  const { error: metaError } = await adminClient.auth.admin.updateUserById(
     user.id,
     { app_metadata: newMetadata }
   );
 
   if (metaError) {
-    // Flag-Removal failed - log but don't block (Passwort ist ja gesetzt)
-    console.error("Failed to remove force_password_change flag:", metaError);
+    console.error("Flag removal failed:", metaError);
+    return {
+      error: `Passwort gespeichert. Aber Flag konnte nicht entfernt werden: ${metaError.message}. Bitte kontaktiere bdemir@airtuerk.de.`
+    };
   }
 
+  // Step 3: VERIFY — lies User nochmal um sicher zu sein
+  const { data: verifyData, error: verifyError } = await adminClient.auth.admin.getUserById(user.id);
+
+  if (verifyError || !verifyData?.user) {
+    console.error("Verify failed:", verifyError);
+    return {
+      error: "Passwort gespeichert, aber System-Verify fehlgeschlagen. Bitte logge dich aus und wieder ein."
+    };
+  }
+
+  const flagStillThere =
+    verifyData.user.app_metadata?.force_password_change === true;
+
+  if (flagStillThere) {
+    console.error("Flag still set after removal attempt!");
+    return {
+      error: "Passwort gespeichert, aber Flag-Removal hat nicht durchgegriffen. Bitte logge dich aus und kontaktiere bdemir@airtuerk.de."
+    };
+  }
+
+  // Echter Erfolg
   return { success: true };
 }
