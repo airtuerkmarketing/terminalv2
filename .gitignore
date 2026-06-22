@@ -50,6 +50,10 @@ coverage/
 KEYS.txt
 *.keys.txt
 
+# Local Claude/dev notes — never commit
+CLAUDE.local.md
+*.local.md
+
 # Vercel CLI
 .vercel
 

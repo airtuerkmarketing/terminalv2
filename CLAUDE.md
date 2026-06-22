@@ -48,3 +48,7 @@ Specifically:
 
 See `spec/CONTRIBUTING.md` for the full workflow and `spec/ARCHITECTURE.md` for the
 canonical system design.
+
+## Preview Test Account
+
+See `CLAUDE.local.md` (gitignored) for credentials.
