@@ -110,7 +110,7 @@ html { scrollbar-gutter: stable; }
 /* Content lives in a centered container: it fills the area to the right of the
    sidebar with comfortable padding, and once that area exceeds the 1680px cap
    the auto margins center it with equal gutters (never flush to an edge). */
-.main { width: 100%; min-width: 0; max-width: 1680px; margin-inline: auto; padding: var(--space-5) var(--space-4); }
+.main { width: 100%; min-width: 0; max-width: 1200px; margin-inline: auto; padding: var(--space-5) var(--space-4); }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-8); }
 /* The topbar's placeholder search field and action buttons were both removed:
    the dashboard hero provides the real Such+KI-Box, and the orbs/theme/settings
