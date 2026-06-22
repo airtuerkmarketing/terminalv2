@@ -19,6 +19,16 @@ export const metadata: Metadata = {
   title: "terminalv2 · airtuerk Brand Hub",
   description:
     "Internal brand and resource hub for airtuerk and the AERTiCKET Group — brand guidelines, assets, documents and tools.",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
 };
 
 export default function RootLayout({

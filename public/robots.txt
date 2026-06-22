@@ -1,0 +1,8 @@
+# airtuerk.dev — Internal platform for airtuerk Service GmbH.
+# Not for public indexing. All paths disallowed for all crawlers.
+#
+# Note: airtuerk.de (marketing site) is a separate project and is
+# NOT affected by this file.
+
+User-agent: *
+Disallow: /
