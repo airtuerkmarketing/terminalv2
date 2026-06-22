@@ -28,15 +28,13 @@
 
 /* ── Form column ── */
 .sig-form { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
-.sig-form-title { margin: 0; font-size: var(--fs-md); font-weight: var(--weight-semibold); letter-spacing: -0.01em; color: var(--text-1); }
-.sig-form-sub { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-normal); color: var(--text-2); }
 
 .sig-field { display: flex; flex-direction: column; gap: 6px; }
 .sig-field > label { font-size: var(--fs-xs); font-weight: var(--weight-medium); letter-spacing: 0.02em; color: var(--text-2); }
 .sig-input {
   height: 38px; padding: 0 12px; width: 100%; min-width: 0; box-sizing: border-box;
   background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-rest);
+  box-shadow: var(--shadow-input);
   font-family: inherit; font-size: var(--fs-sm); font-weight: var(--weight-medium); color: var(--text-1);
   outline: none; transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }
@@ -72,7 +70,7 @@
 .sig-prefix-input {
   display: flex; align-items: stretch; background: var(--surface-flat);
   border: 1px solid var(--hairline); border-radius: var(--radius-sm); overflow: hidden;
-  box-shadow: var(--shadow-rest);
+  box-shadow: var(--shadow-input);
   transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }
 .sig-prefix-input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }

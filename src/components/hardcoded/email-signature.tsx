@@ -250,7 +250,7 @@ function buildPlain(f: SigFields, tab: "main" | "reply"): string {
 
 const NONE = { main: false, reply: false } as const;
 
-export function EmailSignature({ title, embedded }: { title: string; embedded?: boolean }) {
+export function EmailSignature(_props: { title: string; embedded?: boolean }) {
   const [name, setName] = useState("");
   const [position, setPosition] = useState("");
   const [email, setEmail] = useState("");
@@ -327,25 +327,18 @@ export function EmailSignature({ title, embedded }: { title: string; embedded?: 
 
   return (
     <article className="email-signature">
-      {!embedded && (
-        <header className="page-hero">
-          <h1>{title}</h1>
-          <p className="lead">
-            Build a consistent airtuerk email signature in seconds — fill in your
-            details, then copy the Main version for new mails and the Reply version
-            for responses.
-          </p>
-        </header>
-      )}
+      {/* Heading outside the box — same shared style as the out-of-office tool;
+          always shown (independent of `embedded`), exactly one heading. */}
+      <div className="tool-section-head">
+        <h2>Your Signature</h2>
+        <p className="tool-lead">
+          Fill in your details. Both previews update live. Copy each version when ready.
+        </p>
+      </div>
 
       <div className="sig-wrap">
         {/* ── Form ── */}
         <div className="sig-form">
-          <h2 className="sig-form-title">Your Signature</h2>
-          <p className="sig-form-sub">
-            Fill in your details. Both previews update live. Copy each version when ready.
-          </p>
-
           <div className="sig-field">
             <label htmlFor="sig-name">Full name</label>
             <input

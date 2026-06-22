@@ -11,9 +11,6 @@
   padding-top: var(--space-12);
   border-top: 1px solid var(--separator);
 }
-.oo-section-head { margin-bottom: var(--space-6); }
-.oo-section-head h2 { font-size: var(--fs-xl); font-weight: var(--weight-bold); letter-spacing: -0.02em; color: var(--text-1); margin: 0; }
-.oo-lead { margin: var(--space-2) 0 0; font-size: var(--fs-base); line-height: var(--lh-normal); color: var(--text-2); max-width: 60ch; }
 
 .oo-wrap {
   display: grid;
@@ -58,6 +55,7 @@
 .oo-field input {
   height: 38px; padding: 0 12px; width: 100%; min-width: 0; box-sizing: border-box;
   background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-input);
   font-family: inherit; font-size: var(--fs-sm); font-weight: var(--weight-medium); color: var(--text-1); outline: none;
   transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }

@@ -276,9 +276,9 @@ export function OutOfOffice() {
 
   return (
     <section className="oo">
-      <div className="oo-section-head">
+      <div className="tool-section-head">
         <h2>Out-of-Office</h2>
-        <p className="oo-lead">
+        <p className="tool-lead">
           Generate an automatic out-of-office reply in German, English or Turkish — pick your
           dates and tone, then copy it straight into Outlook.
         </p>

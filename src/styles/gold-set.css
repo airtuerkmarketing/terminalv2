@@ -86,6 +86,7 @@
   background: var(--surface-flat);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-input);
   font-family: inherit;
   font-size: 13px;
   font-weight: 500;

@@ -26,6 +26,12 @@
 .page-hero h1 { font-size: var(--fs-2xl); font-weight: var(--weight-semibold); letter-spacing: -0.022em; line-height: var(--lh-tight); color: var(--text-1); margin-bottom: var(--space-4); }
 .page-hero .lead { font-size: var(--fs-md); line-height: var(--lh-normal); color: var(--text-2); max-width: 620px; }
 
+/* ── Shared heading for the embedded generator tools (signature, out-of-office).
+   Sits OUTSIDE the grey tool box; one class so both stay identical. ── */
+.tool-section-head { margin-bottom: var(--space-6); }
+.tool-section-head h2 { font-size: var(--fs-xl); font-weight: var(--weight-bold); letter-spacing: -0.02em; color: var(--text-1); margin: 0; }
+.tool-lead { margin: var(--space-2) 0 0; font-size: var(--fs-base); line-height: var(--lh-normal); color: var(--text-2); max-width: 60ch; }
+
 /* ── description / raw_html (rich text) ── */
 /* max-width 720 is an intentional readable-measure cap (~70-character lines),
    consistent with the .lead cap (620) and the shell's "readable measure"
