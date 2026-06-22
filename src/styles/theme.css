@@ -73,7 +73,7 @@
      the nav-label colour. --nav-label defaults to Jet (#222) for light; the
      dark theme overrides it to --text-1 so labels stay legible in both modes. */
   --sidebar-panel-radius: 10px;
-  --sidebar-item-radius: 8px;
+  --sidebar-item-radius: 10px;
   --avatar-bg: #B0B0B0;
   --nav-label: var(--jet);
 }

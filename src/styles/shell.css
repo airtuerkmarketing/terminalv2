@@ -46,7 +46,7 @@ html { scrollbar-gutter: stable; }
    hidden) so the user block always sticks to the bottom and is never clipped. */
 /* Panel: flush on the left (square corners), rounded 20px on the right only —
    the sidebar sits attached to the viewport's left edge. */
-.sidebar-inner { background-color: var(--surface); border: 1px solid var(--hairline); border-radius: 0 var(--sidebar-panel-radius) var(--sidebar-panel-radius) 0; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-rest); overflow: hidden; }
+.sidebar-inner { background-color: var(--surface-flat); border: 1px solid var(--hairline); border-radius: 0 var(--sidebar-panel-radius) var(--sidebar-panel-radius) 0; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-rest); overflow: hidden; }
 
 .sidebar-top { flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-4); }
 .sidebar-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: var(--space-4); }
@@ -74,7 +74,7 @@ html { scrollbar-gutter: stable; }
 
 /* border is 1px transparent on every item so the active state can add a hairline
    border without nudging the layout (no width/height reflow between states). */
-.nav-item { display: flex; align-items: center; gap: var(--space-3); padding: 8px 12px; border-radius: var(--sidebar-item-radius); font-size: var(--fs-sm); font-weight: var(--weight-medium); color: var(--nav-label); cursor: pointer; text-decoration: none; transition: all 150ms var(--ease-smooth); white-space: nowrap; position: relative; background: transparent; border: 1px solid transparent; width: 100%; text-align: left; font-family: inherit; }
+.nav-item { display: flex; align-items: center; gap: var(--space-3); min-height: 40px; padding: 8px 12px; border-radius: var(--sidebar-item-radius); font-size: var(--fs-sm); font-weight: var(--weight-medium); color: var(--nav-label); cursor: pointer; text-decoration: none; transition: all 150ms var(--ease-smooth); white-space: nowrap; position: relative; background: transparent; border: 1px solid transparent; width: 100%; text-align: left; font-family: inherit; }
 /* Hover (state 2): filled neutral grey, raised contrast. No stroke, no shadow. */
 .nav-item:hover { background: rgba(120, 120, 128, 0.08); color: var(--text-1); }
 :root[data-theme="ios18-dark"] .nav-item:hover { background: rgba(120, 120, 128, 0.16); }
@@ -97,7 +97,7 @@ html { scrollbar-gutter: stable; }
 /* Nested sub-items under IBE */
 .nav-sub { display: flex; flex-direction: column; gap: 2px; padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 300ms var(--ease-smooth); }
 .nav-sub.open { max-height: 400px; }
-.nav-sub .nav-item { padding: 6px 10px; font-size: var(--fs-sm); }
+.nav-sub .nav-item { min-height: 0; padding: 6px 10px; font-size: var(--fs-sm); }
 .nav-sub .nav-item .icon { width: 14px; height: 14px; }
 .nav-sub .nav-item .icon svg { width: 12px; height: 12px; }
 
@@ -156,20 +156,29 @@ html { scrollbar-gutter: stable; }
      and its opacity fades in alongside the 64→252 grid-track transition, instead
      of snapping to full width and overflowing the narrow rail mid-animation.
      Icons stay centered on a clean vertical centerline; collapse toggle reachable. */
+  /* Collapsed rail: keep VERTICAL paddings identical to expanded so the logo,
+     every nav item and the user block stay on the exact same Y when toggling —
+     only horizontal paddings shrink. (sidebar-inner space-4 v / brand-mark
+     space-2 v / user-block space-3 v all match the expanded values.) */
   :root[data-sidebar="collapsed"] .sidebar { padding: 0; }
-  :root[data-sidebar="collapsed"] .sidebar-inner { padding: var(--space-3) var(--space-2); }
-  :root[data-sidebar="collapsed"] .brand-mark { justify-content: center; gap: 0; padding: var(--space-1); }
+  :root[data-sidebar="collapsed"] .sidebar-inner { padding: var(--space-4) var(--space-2); }
+  :root[data-sidebar="collapsed"] .brand-mark { justify-content: center; gap: 0; padding: var(--space-2); }
   :root[data-sidebar="collapsed"] .brand-mark .name { display: none; }
   :root[data-sidebar="collapsed"] .collapse-btn { margin-left: 0; }
   :root[data-sidebar="collapsed"] .collapse-btn svg { transform: rotate(180deg); }
-  :root[data-sidebar="collapsed"] .nav-item { justify-content: center; gap: 0; padding: 8px; }
+  /* Squared 40×40 hover/active centered on the rail. min-height:40 (base) keeps
+     the item height identical to expanded; width:40 + margin auto centers it. */
+  :root[data-sidebar="collapsed"] .nav-item { justify-content: center; gap: 0; width: 40px; margin-inline: auto; padding: 8px 0; }
   :root[data-sidebar="collapsed"] .nav-item .text { flex: 0; width: 0; opacity: 0; }
   :root[data-sidebar="collapsed"] .nav-item .chevron { display: none; }
-  :root[data-sidebar="collapsed"] .nav-divider { margin: var(--space-2); }
+  /* White-on-white active square needs a touch more shadow to read at 64px. */
+  :root[data-sidebar="collapsed"] .nav-item.active { box-shadow: 0 1px 3px rgba(0,0,0,0.10); }
+  :root[data-theme="ios18-dark"][data-sidebar="collapsed"] .nav-item.active { box-shadow: 0 1px 3px rgba(0,0,0,0.55); }
+  :root[data-sidebar="collapsed"] .nav-divider { margin: var(--space-3) var(--space-2); }
   :root[data-sidebar="collapsed"] .nav-sub { display: none; }
-  /* Collapsed footer: center just the avatar on the rail centerline (offset 0),
-     no horizontal padding so it stays inside the 64px rail; hide name/role. */
-  :root[data-sidebar="collapsed"] .user-block { justify-content: center; gap: 0; padding: var(--space-2) 0; }
+  /* Collapsed footer: center just the avatar on the rail centerline; keep the
+     vertical padding (space-3) equal to expanded so the block doesn't jump. */
+  :root[data-sidebar="collapsed"] .user-block { justify-content: center; gap: 0; padding: var(--space-3) 0; }
   :root[data-sidebar="collapsed"] .user-block .meta { display: none; }
 }
 
