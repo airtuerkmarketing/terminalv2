@@ -1,0 +1,156 @@
+/* Toast system — co-located with the provider. Tokens only (theme.css);
+   error has no theme token, so its color is a documented semantic exception
+   (same basis as the doc-library --dl-danger), themed light/dark below. */
+
+.toast-viewport {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 1050; /* F10 — above modals */
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column; /* F4 — newest appended at the bottom */
+  gap: 10px;
+  pointer-events: none; /* let clicks through the gaps; toasts re-enable it */
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--toast-accent);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-hover);
+  animation: toast-in 0.2s var(--ease-smooth);
+}
+.toast.leaving {
+  animation: toast-out 0.2s var(--ease-smooth) forwards;
+}
+
+/* Variant accents. success/info use theme tokens; error is the documented
+   semantic exception (no theme token exists for danger globally). */
+.toast.success {
+  --toast-accent: var(--success);
+  --toast-soft: var(--success-soft);
+}
+.toast.info {
+  --toast-accent: var(--accent);
+  --toast-soft: var(--accent-soft);
+}
+.toast.error {
+  --toast-accent: #dc2626;
+  --toast-soft: #fee2e2;
+}
+:root[data-theme="ios18-dark"] .toast.error {
+  --toast-accent: #ef4444;
+  --toast-soft: rgba(239, 68, 68, 0.15);
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  color: var(--toast-accent);
+  background: var(--toast-soft);
+}
+
+.toast-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 1px;
+}
+.toast-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+  line-height: 1.35;
+}
+.toast-count {
+  color: var(--text-3);
+  font-weight: 500;
+}
+.toast-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+.toast-action {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--toast-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toast-action:hover {
+  text-decoration: underline;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: -2px -4px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+.toast-close:hover {
+  color: var(--text-1);
+  background: var(--surface-muted);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (max-width: 479px) {
+  .toast-viewport {
+    width: auto;
+    left: 16px;
+    right: 16px;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .toast.leaving {
+    animation: none;
+  }
+}
