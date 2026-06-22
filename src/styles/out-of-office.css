@@ -20,9 +20,8 @@
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
   padding: var(--space-6);
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius-lg);
+  background: var(--surface-muted);
+  border-radius: var(--radius-16);
   position: relative;
   max-width: 100%;
   align-items: start;
@@ -97,8 +96,8 @@
 /* ── Preview ── */
 .oo-preview-wrap { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 .oo-card {
-  background: var(--surface-flat); border: 1px solid var(--accent); border-radius: var(--radius-md);
-  overflow: hidden; box-shadow: 0 8px 28px -6px var(--accent-soft), 0 4px 10px -4px var(--accent-soft);
+  background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-md);
+  overflow: hidden; box-shadow: var(--shadow-rest);
 }
 .oo-card-head {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
@@ -108,13 +107,14 @@
 .oo-card-title { font-size: var(--fs-sm); font-weight: var(--weight-semibold); letter-spacing: -0.01em; color: var(--text-1); }
 .oo-card-sub { margin-top: 2px; font-size: var(--fs-xs); color: var(--text-2); }
 .oo-card-btns { display: flex; gap: var(--space-2); flex-shrink: 0; }
+/* Copy button: solid black (out-of-office + signature only — not global). */
 .oo-copy-btn {
-  height: 32px; padding: 0 12px; background: var(--accent); color: #fff; border: none;
+  height: 32px; padding: 0 12px; background: #000; color: #fff; border: none;
   border-radius: var(--radius-sm); font-family: inherit; font-size: var(--fs-sm); font-weight: var(--weight-semibold);
   cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
-  transition: filter 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
+  transition: background-color 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
 }
-.oo-copy-btn:hover { filter: brightness(0.93); }
+.oo-copy-btn:hover { background: #1a1a1a; }
 .oo-copy-btn:active { transform: scale(0.97); }
 .oo-copy-btn svg { width: 14px; height: 14px; }
 .oo-copy-btn.oo-just-copied { background: var(--accent-soft); color: var(--accent); }
