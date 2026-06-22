@@ -245,66 +245,112 @@ export async function deleteFolder(folderId: string): Promise<ActionResult> {
 
 // ── File mutations ──────────────────────────────────────────────────────────
 
-export async function uploadFile(folderId: string, formData: FormData): Promise<FileResult> {
+/** Step-1 payload: a one-time signed upload URL the browser PUTs the bytes to. */
+export type UploadTicket =
+  | { ok: true; bucket: string; path: string; token: string; fileId: string; contentType: string }
+  | { ok: false; error: string };
+
+/**
+ * Two-step upload, step 1 (D-057). Admin-gated; mints a one-time signed upload
+ * URL so the browser sends the bytes STRAIGHT to Storage. This is the whole point
+ * of the rewrite: the previous single-action upload streamed the file THROUGH the
+ * Server Action, which silently failed for anything over the Next.js 1 MB
+ * Server-Action body limit (and Vercel's ~4.5 MB request cap) — the modal hung on
+ * "Uploading…" with no error. No file bytes cross this action now; the bucket's
+ * own file_size_limit (15 MB) + allowed_mime_types still gate the actual PUT.
+ */
+export async function createDocumentUploadTicket(
+  folderId: string,
+  filename: string
+): Promise<UploadTicket> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  if (!UUID_RE.test(folderId)) return { ok: false, error: "That destination no longer exists." };
+  const ext = extFromFilename(filename);
+  if (!ALLOWED_EXT.has(ext)) return { ok: false, error: "That file type isn't allowed." };
+  const contentType = EXT_TO_MIME[ext];
+  if (!contentType) return { ok: false, error: "That file type isn't allowed." };
+
+  const fileId = randomUUID();
+  const path = `${fileId}.${ext}`;
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage.from(BUCKET).createSignedUploadUrl(path);
+  if (error || !data) return { ok: false, error: toMessage(error, "file") };
+  return { ok: true, bucket: BUCKET, path, token: data.token, fileId, contentType };
+}
+
+/**
+ * Two-step upload, step 2. After the browser finishes the signed PUT, insert the
+ * row (a tiny metadata-only body — no size limit applies). The true byte size is
+ * read back from Storage via `.info()`, which also CONFIRMS the object landed, so
+ * a client can neither spoof the size nor finalize an upload that never happened.
+ * Any row failure rolls the just-uploaded object back, exactly as before.
+ */
+export async function finalizeDocumentUpload(
+  folderId: string,
+  meta: {
+    fileId: string;
+    ext: string;
+    title: string;
+    description?: string | null;
+    language?: string | null;
+    groupId?: string | null;
+  }
+): Promise<FileResult> {
   let id: Identity;
   try {
     id = await requireAdmin();
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
-
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Please choose a file." };
+  if (!UUID_RE.test(meta.fileId) || !UUID_RE.test(folderId)) {
+    return { ok: false, error: "Something went wrong. Please try again." };
   }
-  const ext = extFromFilename(file.name);
-  if (!ALLOWED_EXT.has(ext)) {
-    return { ok: false, error: "That file type isn't allowed." };
-  }
-  if (file.size > MAX_BYTES) {
-    return { ok: false, error: "That file is larger than the 15 MB limit." };
-  }
-
-  const title =
-    (formData.get("title") as string)?.trim() || file.name.replace(/\.[a-z0-9]+$/i, "");
-  const description = ((formData.get("description") as string) ?? "").trim() || null;
-  const language = normalizeLanguage(formData.get("language") as string | null);
-  const rawGroupId = ((formData.get("groupId") as string) ?? "").trim();
-  const groupId = rawGroupId && UUID_RE.test(rawGroupId) ? rawGroupId : null;
-
+  const ext = (meta.ext ?? "").toLowerCase();
+  if (!ALLOWED_EXT.has(ext)) return { ok: false, error: "That file type isn't allowed." };
   const contentType = EXT_TO_MIME[ext];
   if (!contentType) return { ok: false, error: "That file type isn't allowed." };
 
-  const fileId = randomUUID();
-  const storagePath = `${fileId}.${ext}`;
-
+  const storagePath = `${meta.fileId}.${ext}`;
   const admin = createAdminClient();
-  const { error: upErr } = await admin.storage
-    .from(BUCKET)
-    .upload(storagePath, file, { contentType, upsert: false });
-  if (upErr) return { ok: false, error: toMessage(upErr, "file") };
+
+  // Confirm the object landed + read its real size (never trust a client size).
+  const { data: info, error: infoErr } = await admin.storage.from(BUCKET).info(storagePath);
+  if (infoErr || !info) return { ok: false, error: "Upload didn't complete. Please try again." };
+  const sizeBytes = info.size ?? 0;
+  if (sizeBytes <= 0 || sizeBytes > MAX_BYTES) {
+    await admin.storage.from(BUCKET).remove([storagePath]);
+    return { ok: false, error: "That file is larger than the 15 MB limit." };
+  }
+
+  const title = (meta.title ?? "").trim() || meta.fileId;
+  const description = (meta.description ?? "").trim() || null;
+  const language = normalizeLanguage(meta.language ?? null);
+  const groupId = meta.groupId && UUID_RE.test(meta.groupId) ? meta.groupId : null;
 
   const { error: rowErr } = await admin.from("document_files").insert({
-    id: fileId,
+    id: meta.fileId,
     folder_id: folderId,
     title,
     description,
     storage_path: storagePath,
     mime_type: contentType,
     extension: ext,
-    size_bytes: file.size,
+    size_bytes: sizeBytes,
     language,
     group_id: groupId,
     uploaded_by: id.userId,
   });
   if (rowErr) {
-    // roll back the orphaned object
-    await admin.storage.from(BUCKET).remove([storagePath]);
+    await admin.storage.from(BUCKET).remove([storagePath]); // roll back the orphan
     return { ok: false, error: toMessage(rowErr, "file") };
   }
 
   revalidateFiles();
-  return { ok: true, file: (await getFileById(fileId)) ?? undefined };
+  return { ok: true, file: (await getFileById(meta.fileId)) ?? undefined };
 }
 
 export async function editFile(

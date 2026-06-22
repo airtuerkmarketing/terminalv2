@@ -3,7 +3,11 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "./modal";
-import { uploadPresentation } from "@/app/(public)/presentation-hub/actions";
+import {
+  createPresentationUploadTicket,
+  finalizePresentationUpload,
+} from "@/app/(public)/presentation-hub/actions";
+import { createClient } from "@/lib/supabase/client";
 import {
   ACCEPT_ATTR,
   ACCEPT_HINT,
@@ -74,23 +78,46 @@ export function UploadModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!file) return;
+    if (!file || busy) return;
     setBusy(true);
     setError(null);
-    const fd = new FormData();
-    fd.set("file", file);
-    fd.set("title", title);
-    if (language) fd.set("language", language);
-    if (tagIds.length > 0) fd.set("tags", tagIds.join(","));
-    const res = await uploadPresentation(folderId, fd);
-    setBusy(false);
-    if (res.ok) {
+    // Two-step signed-URL upload (see the documents UploadModal) so files over the
+    // Next.js 1 MB Server-Action body limit no longer hang silently; the wrapper
+    // guarantees "Uploading…" always clears and errors surface.
+    try {
+      const finalTitle = title.trim() || file.name.replace(/\.[a-z0-9]+$/i, "");
+      const ticket = await createPresentationUploadTicket(folderId, file.name);
+      if (!ticket.ok) {
+        setError(ticket.error);
+        return;
+      }
+      const supabase = createClient();
+      const { error: upErr } = await supabase.storage
+        .from(ticket.bucket)
+        .uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: ticket.contentType });
+      if (upErr) {
+        setError("Upload failed — please try again.");
+        return;
+      }
+      const res = await finalizePresentationUpload(folderId, {
+        fileId: ticket.fileId,
+        ext: extFromFilename(file.name),
+        title: finalTitle,
+        language: language || null,
+        tagIds,
+      });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
       if (res.file) onUploaded(res.file);
       reset();
       onClose();
       router.refresh();
-    } else {
-      setError(res.error);
+    } catch {
+      setError("Upload failed — please try again.");
+    } finally {
+      setBusy(false);
     }
   }
 
