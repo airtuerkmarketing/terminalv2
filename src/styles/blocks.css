@@ -21,12 +21,16 @@
 .block-label h2 { font-size: var(--fs-lg); font-weight: var(--weight-semibold); letter-spacing: -0.012em; color: var(--text-1); margin-bottom: var(--space-3); }
 .block-body { min-width: 0; }
 
-/* ── page_hero ── */
+/* ── page_hero ── (the index-number eyebrow was removed; see page-hero.tsx) */
 .page-hero { padding-top: var(--space-4); margin-bottom: var(--space-12); }
-.page-hero .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-xs); font-weight: var(--weight-semibold); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--space-3); }
-.page-hero .eyebrow .num { font-family: var(--font-mono); color: var(--text-3); }
 .page-hero h1 { font-size: var(--fs-2xl); font-weight: var(--weight-semibold); letter-spacing: -0.022em; line-height: var(--lh-tight); color: var(--text-1); margin-bottom: var(--space-4); }
 .page-hero .lead { font-size: var(--fs-md); line-height: var(--lh-normal); color: var(--text-2); max-width: 620px; }
+
+/* ── Shared heading for the embedded generator tools (signature, out-of-office).
+   Sits OUTSIDE the grey tool box; one class so both stay identical. ── */
+.tool-section-head { margin-bottom: var(--space-6); }
+.tool-section-head h2 { font-size: var(--fs-xl); font-weight: var(--weight-bold); letter-spacing: -0.02em; color: var(--text-1); margin: 0; }
+.tool-lead { margin: var(--space-2) 0 0; font-size: var(--fs-base); line-height: var(--lh-normal); color: var(--text-2); max-width: 60ch; }
 
 /* ── description / raw_html (rich text) ── */
 /* max-width 720 is an intentional readable-measure cap (~70-character lines),
@@ -54,14 +58,27 @@
 
 /* ── color_palette — tall hover-expand panels ── */
 .palette { display: flex; gap: var(--space-2); height: 340px; position: relative; }
-.color-panel { flex: 1; border-radius: var(--radius-lg); padding: var(--space-4); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: flex 600ms var(--ease-smooth); position: relative; overflow: hidden; color: white; }
-.palette:hover .color-panel { flex: 0.7; }
-.palette .color-panel:hover { flex: 2.2; }
+.color-panel { flex: 1; border-radius: var(--radius-lg); padding: var(--space-4); display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: flex 0.65s cubic-bezier(.22, 1, .36, 1), opacity 0.5s cubic-bezier(.22, 1, .36, 1), filter 0.5s cubic-bezier(.22, 1, .36, 1); position: relative; overflow: hidden; color: white; }
 .color-panel .idx { font-family: var(--font-mono); font-size: var(--fs-sm); opacity: 0.7; }
 .color-panel .role { font-size: var(--fs-xs); font-weight: var(--weight-semibold); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
 .color-panel .cname { font-size: var(--fs-xl); font-weight: var(--weight-semibold); letter-spacing: -0.01em; }
 .color-panel .vals { font-family: var(--font-mono); font-size: var(--fs-sm); opacity: 0; transition: opacity 300ms var(--ease-smooth); display: flex; flex-direction: column; gap: 2px; }
 .palette .color-panel:hover .vals { opacity: 0.95; }
+
+/* ── Tall variant (:not strips): the three swatches read as ONE box — shared
+   outer hairline + radius, panels clipped (overflow:hidden), 2px gaps between.
+   Everything here is scoped so the .palette--strips variant stays untouched. ── */
+.palette:not(.palette--strips) { gap: 2px; height: 520px; border: 1px solid var(--hairline); border-radius: var(--radius-lg); overflow: hidden; }
+.palette:not(.palette--strips) .color-panel { border-radius: 0; padding: var(--space-8); justify-content: flex-start; }
+/* Meta row: number + role side by side, plain text (no badge frame). */
+.palette:not(.palette--strips) .color-panel-meta { display: flex; align-items: baseline; gap: var(--space-2); }
+/* Name on top (right under the meta), values pinned to the bottom. */
+.palette:not(.palette--strips) .cname { margin-top: var(--space-3); font-weight: var(--weight-medium); letter-spacing: -0.03em; }
+.palette:not(.palette--strips) .vals { margin-top: auto; opacity: 0.7; }
+.palette:not(.palette--strips) .color-panel:hover .vals { opacity: 1; }
+/* Softer growth; siblings fade + desaturate; hovered panel restored to full. */
+.palette:not(.palette--strips):hover .color-panel { flex: 0.7; opacity: 0.75; filter: saturate(0.88); }
+.palette:not(.palette--strips) .color-panel:hover { flex: 1.8; opacity: 1; filter: saturate(1); }
 /* strips variant — compact horizontal */
 .palette--strips { height: auto; flex-direction: column; gap: var(--space-2); }
 .palette--strips .color-panel { flex: none; flex-direction: row; align-items: center; justify-content: space-between; height: 52px; padding: 0 var(--space-4); }
@@ -79,6 +96,22 @@
 .color-copy:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; opacity: 1; }
 .color-copy.is-copied { opacity: 1; }
 .color-copy svg { width: 16px; height: 16px; }
+/* Tall variant copy button: round, ~44px, pinned top-right, translucent fill that
+   auto-adapts to the swatch (white-ish on dark cards, dark-ish on light) via
+   color-mix on currentColor — no blur, no hardcoded hex. */
+.palette:not(.palette--strips) .color-copy {
+  position: absolute; top: var(--space-5); right: var(--space-5);
+  width: 44px; height: 44px; margin: 0; opacity: 1;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  transition: background-color 150ms var(--ease-smooth), transform 150ms var(--ease-smooth);
+}
+.palette:not(.palette--strips) .color-copy:hover,
+.palette:not(.palette--strips) .color-copy.is-copied {
+  background: color-mix(in srgb, currentColor 22%, transparent);
+}
+.palette:not(.palette--strips) .color-copy:hover { transform: scale(1.08); }
 /* Copied confirmation toast — accent + check icon (NOT green; mirrors the signature
    copied state). Brand swatch colours stay as content; only this chrome follows tokens. */
 .palette-toast {
@@ -236,7 +269,10 @@
    the target clear of the topbar when jumped to via the sidebar #slug anchors
    (more robust than relying on :target alone). ── */
 .anchor-section { padding-top: var(--space-6); scroll-margin-top: var(--space-20); }
-.anchor-section + .anchor-section { margin-top: var(--section-gap); border-top: 1px solid var(--separator); }
+/* Full-width solid divider between sections (sits on the full-width section box,
+   so two-col and full-width sections get the same continuous line). --hairline
+   reads clearly on the white content background. */
+.anchor-section + .anchor-section { margin-top: var(--section-gap); border-top: 1px solid var(--hairline); }
 /* No padding-top here: .anchor-section already owns the space-6 top padding
    (and scroll-margin-top for the anchor jump offset). Adding it to the h2 too
    doubled the gap above the heading (space-6 + space-6). */

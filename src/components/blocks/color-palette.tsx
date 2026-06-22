@@ -48,6 +48,14 @@ export function ColorPalette({ content }: { content: ColorPaletteContent }) {
     <div className={`palette${strips ? " palette--strips" : ""}`}>
       {content.colors.map((c, i) => {
         const copied = copiedIdx === i;
+        const cname = <div className="cname">{c.name}</div>;
+        const vals = (
+          <div className="vals">
+            <span>HEX {c.hex}</span>
+            {c.rgb ? <span>RGB {c.rgb}</span> : null}
+            {c.cmyk ? <span>CMYK {c.cmyk}</span> : null}
+          </div>
+        );
         return (
           <div
             key={i}
@@ -56,7 +64,7 @@ export function ColorPalette({ content }: { content: ColorPaletteContent }) {
             onClick={() => copyHex(i, c.hex)}
           >
             <div className="color-panel-top">
-              <div>
+              <div className="color-panel-meta">
                 <div className="idx">{String(i + 1).padStart(2, "0")}</div>
                 {c.role ? <div className="role">{c.role}</div> : null}
               </div>
@@ -72,14 +80,21 @@ export function ColorPalette({ content }: { content: ColorPaletteContent }) {
                 {copied ? <CheckIcon /> : <CopyIcon />}
               </button>
             </div>
-            <div>
-              <div className="cname">{c.name}</div>
-              <div className="vals">
-                <span>HEX {c.hex}</span>
-                {c.rgb ? <span>RGB {c.rgb}</span> : null}
-                {c.cmyk ? <span>CMYK {c.cmyk}</span> : null}
+            {strips ? (
+              // strips variant: keep the original grouped order (name over values);
+              // its compact-row layout stays exactly as before.
+              <div>
+                {cname}
+                {vals}
               </div>
-            </div>
+            ) : (
+              // tall variant: name directly under the meta row, values pinned to
+              // the bottom (CSS margin-top:auto on .vals).
+              <>
+                {cname}
+                {vals}
+              </>
+            )}
           </div>
         );
       })}

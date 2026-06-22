@@ -250,7 +250,7 @@ function buildPlain(f: SigFields, tab: "main" | "reply"): string {
 
 const NONE = { main: false, reply: false } as const;
 
-export function EmailSignature({ title, embedded }: { title: string; embedded?: boolean }) {
+export function EmailSignature(_props: { title: string; embedded?: boolean }) {
   const [name, setName] = useState("");
   const [position, setPosition] = useState("");
   const [email, setEmail] = useState("");
@@ -327,24 +327,18 @@ export function EmailSignature({ title, embedded }: { title: string; embedded?: 
 
   return (
     <article className="email-signature">
-      {!embedded && (
-        <header className="page-hero">
-          <div className="eyebrow">Brand Tools</div>
-          <h1>{title}</h1>
-          <p className="lead">
-            Build a consistent airtuerk email signature in seconds — fill in your
-            details, then copy the Main version for new mails and the Reply version
-            for responses.
-          </p>
-        </header>
-      )}
+      {/* Heading outside the box — same shared style as the out-of-office tool;
+          always shown (independent of `embedded`), exactly one heading. */}
+      <div className="tool-section-head">
+        <h2>Your Signature</h2>
+        <p className="tool-lead">
+          Fill in your details. Both previews update live. Copy each version when ready.
+        </p>
+      </div>
 
       <div className="sig-wrap">
         {/* ── Form ── */}
         <div className="sig-form">
-          <h2 className="sig-form-title">Your details</h2>
-          <p className="sig-form-sub">The preview updates live as you type.</p>
-
           <div className="sig-field">
             <label htmlFor="sig-name">Full name</label>
             <input
@@ -574,6 +568,29 @@ export function EmailSignature({ title, embedded }: { title: string; embedded?: 
               logo &amp; icons before rolling this out company-wide.
             </span>
           </p>
+
+          {/* Copy progress — derived purely from the existing `copied` state. */}
+          <div className="sig-progress">
+            {(["main", "reply"] as const).map((t) => {
+              const done = copied[t];
+              return (
+                <div key={t} className={`sig-progress-row${done ? " is-done" : ""}`}>
+                  <span className="sig-progress-icon">
+                    {done ? <CheckSvg /> : <CircleSvg />}
+                  </span>
+                  <span className="sig-progress-label">
+                    {t === "main" ? "Main signature" : "Reply signature"}
+                  </span>
+                  <span className="sig-progress-state">{done ? "Copied" : "Not copied"}</span>
+                </div>
+              );
+            })}
+            {copied.main && copied.reply ? (
+              <div className="sig-progress-allset">
+                <CheckSvg /> All set — install both in Outlook
+              </div>
+            ) : null}
+          </div>
         </div>
 
         {/* ── Previews ── */}
@@ -664,6 +681,13 @@ export function EmailSignature({ title, embedded }: { title: string; embedded?: 
                       forwards.
                     </span>
                   </div>
+                  <div className="sig-info-tip">
+                    <InfoSvg />
+                    <span>
+                      <strong>Pro tip:</strong> Always install both versions. Main for new
+                      messages keeps branding consistent; Reply stays compact in long threads.
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -683,6 +707,13 @@ function CopySvg() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="9" y="9" width="13" height="13" rx="2" />
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+function CircleSvg() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
     </svg>
   );
 }

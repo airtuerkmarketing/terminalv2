@@ -44,15 +44,14 @@ button.user-block:focus-visible {
 }
 
 /* The trigger now shows only the name; identity (name + e-mail + role) lives in
-   the popup header. Gradient-filled initials in place of the flat token fill —
-   the element-qualified selector outranks shell.css's `.user-block .avatar`
-   regardless of stylesheet order. White glyph reads on both gradient stops. */
+   the popup header. Avatar uses the neutral --avatar-bg fill (flat language, no
+   gradient); the element-qualified selector matches shell.css's token fill. */
 .user-block .meta {
   display: flex;
   min-width: 0;
 }
 button.user-block .avatar {
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: var(--avatar-bg);
 }
 
 /* Collapsed rail (≥lg): hide the caret alongside the meta block. */
@@ -117,7 +116,7 @@ button.user-block .avatar {
 .um-header-role {
   flex-shrink: 0;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--surface-muted);
   font-size: var(--fs-xs);
   font-weight: var(--weight-medium);

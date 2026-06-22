@@ -11,22 +11,14 @@
   padding-top: var(--space-12);
   border-top: 1px solid var(--separator);
 }
-.oo-section-head { margin-bottom: var(--space-6); }
-.oo-eyebrow {
-  font-size: var(--fs-xs); font-weight: var(--weight-semibold); letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--accent); margin-bottom: var(--space-2);
-}
-.oo-section-head h2 { font-size: var(--fs-xl); font-weight: var(--weight-bold); letter-spacing: -0.02em; color: var(--text-1); margin: 0; }
-.oo-lead { margin: var(--space-2) 0 0; font-size: var(--fs-base); line-height: var(--lh-normal); color: var(--text-2); max-width: 60ch; }
 
 .oo-wrap {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
   padding: var(--space-6);
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius-lg);
+  background: var(--surface-muted);
+  border-radius: var(--radius-16);
   position: relative;
   max-width: 100%;
   align-items: start;
@@ -63,6 +55,7 @@
 .oo-field input {
   height: 38px; padding: 0 12px; width: 100%; min-width: 0; box-sizing: border-box;
   background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-input);
   font-family: inherit; font-size: var(--fs-sm); font-weight: var(--weight-medium); color: var(--text-1); outline: none;
   transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }
@@ -101,8 +94,8 @@
 /* ── Preview ── */
 .oo-preview-wrap { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 .oo-card {
-  background: var(--surface-flat); border: 1px solid var(--accent); border-radius: var(--radius-md);
-  overflow: hidden; box-shadow: 0 8px 28px -6px var(--accent-soft), 0 4px 10px -4px var(--accent-soft);
+  background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-md);
+  overflow: hidden; box-shadow: var(--shadow-rest);
 }
 .oo-card-head {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
@@ -112,13 +105,14 @@
 .oo-card-title { font-size: var(--fs-sm); font-weight: var(--weight-semibold); letter-spacing: -0.01em; color: var(--text-1); }
 .oo-card-sub { margin-top: 2px; font-size: var(--fs-xs); color: var(--text-2); }
 .oo-card-btns { display: flex; gap: var(--space-2); flex-shrink: 0; }
+/* Copy button: solid black (out-of-office + signature only — not global). */
 .oo-copy-btn {
-  height: 32px; padding: 0 12px; background: var(--accent); color: #fff; border: none;
+  height: 32px; padding: 0 12px; background: #000; color: #fff; border: none;
   border-radius: var(--radius-sm); font-family: inherit; font-size: var(--fs-sm); font-weight: var(--weight-semibold);
   cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
-  transition: filter 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
+  transition: background-color 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
 }
-.oo-copy-btn:hover { filter: brightness(0.93); }
+.oo-copy-btn:hover { background: #1a1a1a; }
 .oo-copy-btn:active { transform: scale(0.97); }
 .oo-copy-btn svg { width: 14px; height: 14px; }
 .oo-copy-btn.oo-just-copied { background: var(--accent-soft); color: var(--accent); }
