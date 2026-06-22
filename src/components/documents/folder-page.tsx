@@ -177,7 +177,13 @@ export function FolderPage({
       ) : (
         <div className="dl-grid" data-view={view}>
           {files.map((f) => (
-            <FileCard key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
+            <FileCard
+              key={f.id}
+              file={f}
+              view={view === "grid" ? "grid" : "card"}
+              isSuperAdmin={isSuperAdmin}
+              onManage={setManageFile}
+            />
           ))}
         </div>
       )}

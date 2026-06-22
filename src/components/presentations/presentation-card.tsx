@@ -16,17 +16,39 @@ function thumbHref(id: string) {
   return `/api/presentations/file/${id}?asset=thumb`;
 }
 
+const DownloadIcon = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+const EditIcon = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </svg>
+);
+
 /**
- * Grid card (Option A): thumbnail/type-icon cover, 2-line title, stacked meta
- * (flag · type · size · date), department tags, and an always-visible action
- * bar — Download for everyone, Edit (manage modal) for super_admin only.
+ * One presentation in the grid. The SAME data renders two distinct tiles by view:
+ *   - "grid" → .ph-grid-tile (compact, unchanged from the long-standing card:
+ *     4/3 cover, featured ribbon, 2-line title, meta, tags, action bar).
+ *   - "card" → .ph-tile (Option A, adapted for presentations): 16/10 cover with a
+ *     filetype badge + featured star top-left and an always-visible Edit overlay
+ *     top-right, then a tight meta row (flag · type · size) with an always-visible
+ *     Download bottom-right. Tags are omitted in this compact tile (they stay in
+ *     grid/list view) to keep the card short.
+ * Download is for everyone; Edit (manage modal) stays super_admin-only.
  */
 export function PresentationCard({
   file,
+  view,
   isSuperAdmin,
   onManage,
 }: {
   file: PresentationFileDTO;
+  view: "grid" | "card";
   isSuperAdmin: boolean;
   onManage: (file: PresentationFileDTO) => void;
 }) {
@@ -34,12 +56,76 @@ export function PresentationCard({
   const downloadHref = fileHref(file.id, true);
   const hasThumb = file.processingStatus === "thumbnail";
 
+  const preview = hasThumb ? (
+    /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
+    <img src={thumbHref(file.id)} alt="" loading="lazy" decoding="async" />
+  ) : (
+    <PresentationTypeIcon extension={file.fileType} />
+  );
+
+  // ── Card view (Option A, adapted) ─────────────────────────────────────────
+  if (view === "card") {
+    return (
+      <div className="ph-tile">
+        <div className="ph-tile__cover">
+          <a
+            className="ph-tile__preview"
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Open ${file.title}`}
+          >
+            {preview}
+          </a>
+          <div className="ph-tile__badges">
+            {file.isFeatured && (
+              <span className="ph-tile__featured" title="Featured" aria-label="Featured">
+                ★
+              </span>
+            )}
+            <span className="ph-tile__badge">{file.fileType.toUpperCase()}</span>
+          </div>
+          {isSuperAdmin && (
+            <button
+              type="button"
+              className="ph-tile__edit"
+              onClick={() => onManage(file)}
+              aria-label={`Edit ${file.title}`}
+            >
+              <EditIcon />
+            </button>
+          )}
+        </div>
+
+        <div className="ph-tile__meta">
+          <div className="ph-tile__title" title={file.title}>
+            {file.title}
+          </div>
+          <div className="ph-tile__sub">
+            <FlagIcon code={file.language} />
+            <span>{file.fileType.toUpperCase()}</span>
+            <span aria-hidden="true">·</span>
+            <span>{formatBytes(file.sizeBytes)}</span>
+          </div>
+          <a
+            className="ph-tile__download"
+            href={downloadHref}
+            aria-label={`Download ${file.title}`}
+          >
+            <DownloadIcon />
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Grid view (compact — unchanged appearance, renamed to .ph-grid-tile) ────
   return (
-    <div className="ph-card">
-      <div className="ph-cover">
+    <div className="ph-grid-tile">
+      <div className="ph-grid-tile__cover">
         {file.isFeatured && <span className="ph-featured">★ Featured</span>}
         <a
-          className="ph-card-preview"
+          className="ph-grid-tile__preview"
           href={href}
           target="_blank"
           rel="noopener noreferrer"
@@ -47,19 +133,19 @@ export function PresentationCard({
         >
           {hasThumb ? (
             /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
-            <img className="ph-thumb" src={thumbHref(file.id)} alt="" loading="lazy" decoding="async" />
+            <img className="ph-grid-tile__thumb" src={thumbHref(file.id)} alt="" loading="lazy" decoding="async" />
           ) : (
             <PresentationTypeIcon extension={file.fileType} />
           )}
         </a>
       </div>
 
-      <div className="ph-card-foot">
-        <div className="ph-card-title" title={file.title}>
+      <div className="ph-grid-tile__foot">
+        <div className="ph-grid-tile__title" title={file.title}>
           {file.title}
         </div>
 
-        <div className="ph-card-meta">
+        <div className="ph-grid-tile__meta">
           <FlagIcon code={file.language} />
           <span>{file.fileType.toUpperCase()}</span>
           <span aria-hidden="true">·</span>
@@ -76,26 +162,19 @@ export function PresentationCard({
           </div>
         )}
 
-        <div className="ph-card-actions">
-          <a className="ph-card-dl" href={downloadHref} aria-label={`Download ${file.title}`}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
+        <div className="ph-grid-tile__actions">
+          <a className="ph-grid-tile__dl" href={downloadHref} aria-label={`Download ${file.title}`}>
+            <DownloadIcon />
             Download
           </a>
           {isSuperAdmin && (
             <button
               type="button"
-              className="ph-card-edit"
+              className="ph-grid-tile__edit"
               onClick={() => onManage(file)}
-              aria-label={`Manage ${file.title}`}
+              aria-label={`Edit ${file.title}`}
             >
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-              </svg>
+              <EditIcon />
             </button>
           )}
         </div>

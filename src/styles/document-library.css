@@ -241,15 +241,12 @@
   gap: 16px;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
-/* Card view (default, roomy): ~25% wider cards than the grid view and a shorter
-   landscape cover (3/2 vs 4/3 ≈ 10% less tall) — deliberately distinct from the
-   compact grid view so the two toggle states don't look the same. */
+/* Card view (Option A): compact ~135px tiles — a 16/10 cover with a filetype
+   badge + always-visible Edit/Download actions. Renders .dl-tile (defined below),
+   deliberately distinct from the compact .dl-grid-tile so the toggle states differ. */
 .dl-grid[data-view="card"] {
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 18px;
-}
-.dl-grid[data-view="card"] .dl-cover {
-  aspect-ratio: 3 / 2;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-4);
 }
 /* Compact ("grid") view: denser, ~6–7 per row; max-width caps it at ~7 columns
    on ultrawide so it doesn't sprawl (cards stay ≥180px regardless). */
@@ -257,9 +254,6 @@
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
   max-width: 1472px;
-}
-.dl-grid[data-view="grid"] .dl-card-foot {
-  padding: 12px;
 }
 /* Collapse toward 2 columns on tablets, 1 on the smallest screens. */
 @media (max-width: 767px) {
@@ -277,7 +271,8 @@
     grid-template-columns: 1fr;
   }
 }
-.dl-card {
+/* ── Grid tile (compact view — unchanged appearance, renamed from .dl-card) ── */
+.dl-grid-tile {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -288,17 +283,17 @@
   overflow: hidden;
   transition: box-shadow 0.18s, border-color 0.18s;
 }
-.dl-card:hover {
+.dl-grid-tile:hover {
   box-shadow: var(--shadow-hover);
   border-color: var(--accent-border);
 }
-.dl-cover {
+.dl-grid-tile__cover {
   position: relative;
   aspect-ratio: 4 / 3;
   background: var(--surface-muted);
   overflow: hidden;
 }
-.dl-card-preview {
+.dl-grid-tile__preview {
   position: absolute;
   inset: 0;
   display: flex;
@@ -306,14 +301,10 @@
   justify-content: center;
   text-decoration: none;
 }
-.dl-thumb {
+.dl-grid-tile__thumb {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-/* Reveal the cover download button fully on card hover (base is 0.65). */
-.dl-card:hover .card-dl {
-  opacity: 1;
 }
 /* Small uppercase language label — footer, above the title (and inline in rows). */
 .dl-lang {
@@ -379,18 +370,16 @@
   background: var(--ft-file);
 }
 
-/* Option A: roomier card foot — vertical stack (title · meta · action bar). */
-.dl-card-foot {
+/* Grid-tile foot (compact): vertical stack — title · meta · action bar. The
+   12px padding is the value the grid view always used (baked in, since the tile
+   is now grid-only). */
+.dl-grid-tile__foot {
   display: flex;
   flex-direction: column;
-  padding: 16px;
-}
-.dl-card-info {
-  flex: 1;
-  min-width: 0;
+  padding: 12px;
 }
 /* Two-line title (no ellipsis-on-one-line); reserve height so cards align. */
-.dl-card-title {
+.dl-grid-tile__title {
   font-size: 14px;
   font-weight: 500;
   line-height: 1.4;
@@ -402,16 +391,8 @@
   white-space: normal;
   min-height: 38px;
 }
-.dl-card-sub {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--text-3);
-  margin-top: 2px;
-}
 /* Stacked meta line: flag · size · date. */
-.dl-card-meta {
+.dl-grid-tile__meta {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -420,14 +401,14 @@
   color: var(--text-2);
 }
 /* Always-visible action bar (no hover-reveal). */
-.dl-card-actions {
+.dl-grid-tile__actions {
   display: flex;
   gap: 8px;
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--hairline);
 }
-.dl-card-dl {
+.dl-grid-tile__dl {
   flex: 1;
   height: 32px;
   display: inline-flex;
@@ -443,10 +424,10 @@
   text-decoration: none;
   transition: background 0.15s, border-color 0.15s;
 }
-.dl-card-dl:hover {
+.dl-grid-tile__dl:hover {
   border-color: var(--accent-border);
 }
-.dl-card-edit {
+.dl-grid-tile__edit {
   width: 32px;
   height: 32px;
   padding: 0;
@@ -461,9 +442,128 @@
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
 }
-.dl-card-edit:hover {
+.dl-grid-tile__edit:hover {
   color: var(--text-1);
   border-color: var(--accent-border);
+}
+
+/* ── Card tile (Option A) — 16/10 cover, badge + overlay Edit, tight meta with
+   an overlay Download. Edit shows for super_admin only; Download for everyone. ── */
+.dl-tile {
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 200ms var(--ease-smooth), background-color 200ms var(--ease-smooth);
+}
+.dl-tile:hover {
+  box-shadow: var(--shadow-hover);
+  background-color: var(--surface-strong);
+}
+.dl-tile__cover {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  position: relative;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--surface-muted);
+}
+.dl-tile__preview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.dl-tile__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dl-tile__badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  backdrop-filter: blur(8px);
+}
+.dl-tile__edit {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  display: grid;
+  place-items: center;
+  color: var(--text-1);
+  opacity: 1;
+  cursor: pointer;
+  transition: color 150ms var(--ease-smooth), border-color 150ms;
+}
+.dl-tile__edit:hover {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+.dl-tile__meta {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  position: relative;
+}
+.dl-tile__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 36px;
+}
+.dl-tile__sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.dl-tile__download {
+  position: absolute;
+  bottom: var(--space-3);
+  right: var(--space-3);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  display: grid;
+  place-items: center;
+  color: var(--text-1);
+  text-decoration: none;
+  opacity: 1;
+  transition: color 150ms var(--ease-smooth), border-color 150ms;
+}
+.dl-tile__download:hover {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+.dl-tile__edit svg,
+.dl-tile__download svg {
+  width: 14px;
+  height: 14px;
 }
 /* Clickable list-view column headers (sort triggers; no asc/desc toggle). */
 .dl-sort-th {
@@ -561,20 +661,12 @@
   opacity: 0;
   transition: opacity 0.15s, color 0.15s, border-color 0.15s;
 }
-.dl-card:hover .dl-card-menu,
 .dl-card-menu:focus-visible {
   opacity: 1;
 }
 .dl-card-menu:hover {
   color: var(--text-1);
   border-color: var(--accent-border);
-}
-/* Download moves to the footer (everyone) — override the block-system .card-dl
-   cover-absolute base so it sits inline next to the title, always visible. */
-.dl-card-foot .card-dl {
-  position: static;
-  flex-shrink: 0;
-  opacity: 1;
 }
 
 /* ── File list (iOS grouped list) ───────────────────────────────────────── */
