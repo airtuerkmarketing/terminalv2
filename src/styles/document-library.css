@@ -241,6 +241,16 @@
   gap: 16px;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
+/* Card view (default, roomy): ~25% wider cards than the grid view and a shorter
+   landscape cover (3/2 vs 4/3 ≈ 10% less tall) — deliberately distinct from the
+   compact grid view so the two toggle states don't look the same. */
+.dl-grid[data-view="card"] {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+.dl-grid[data-view="card"] .dl-cover {
+  aspect-ratio: 3 / 2;
+}
 /* Compact ("grid") view: denser, ~6–7 per row; max-width caps it at ~7 columns
    on ultrawide so it doesn't sprawl (cards stay ≥180px regardless). */
 .dl-grid[data-view="grid"] {
@@ -248,9 +258,13 @@
   gap: 12px;
   max-width: 1472px;
 }
+.dl-grid[data-view="grid"] .dl-card-foot {
+  padding: 12px;
+}
 /* Collapse toward 2 columns on tablets, 1 on the smallest screens. */
 @media (max-width: 767px) {
   .dl-grid,
+  .dl-grid[data-view="card"],
   .dl-grid[data-view="grid"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     max-width: none;
@@ -258,6 +272,7 @@
 }
 @media (max-width: 479px) {
   .dl-grid,
+  .dl-grid[data-view="card"],
   .dl-grid[data-view="grid"] {
     grid-template-columns: 1fr;
   }
