@@ -184,6 +184,38 @@
 .sig-info-text { font-size: var(--fs-xs); color: var(--text-2); line-height: var(--lh-normal); }
 .sig-info-text strong { color: var(--text-1); font-weight: var(--weight-semibold); }
 
+/* Pro-tip row in the install guide — muted surface, small dimmed text. */
+.sig-info-tip {
+  display: flex; gap: var(--space-2); align-items: flex-start; margin-top: var(--space-2);
+  padding: 10px 12px; background: var(--surface-muted); border-radius: var(--radius-sm);
+  font-size: var(--fs-xs); line-height: var(--lh-normal); color: var(--text-2);
+}
+.sig-info-tip svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; color: var(--text-3); }
+.sig-info-tip strong { color: var(--text-1); font-weight: var(--weight-semibold); }
+
+/* Copy-progress box (form column): two status rows + an "all set" line. No new
+   success colour — the project has no success token, so confirmation uses the
+   existing --accent / --accent-soft pair (same as the copy button is-copied). */
+.sig-progress {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  background: var(--surface-flat); border: 1px solid var(--hairline);
+  border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+}
+.sig-progress-row { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-xs); color: var(--text-2); }
+.sig-progress-icon { flex-shrink: 0; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-3); }
+.sig-progress-icon svg { width: 14px; height: 14px; }
+.sig-progress-row.is-done .sig-progress-icon { color: var(--accent); }
+.sig-progress-label { flex: 1; min-width: 0; }
+.sig-progress-state { flex-shrink: 0; font-weight: var(--weight-medium); color: var(--text-3); }
+.sig-progress-row.is-done .sig-progress-state { color: var(--accent); }
+.sig-progress-allset {
+  display: flex; align-items: center; gap: 6px; margin-top: 2px;
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  background: var(--accent-soft); color: var(--accent);
+  font-size: var(--fs-xs); font-weight: var(--weight-semibold);
+}
+.sig-progress-allset svg { width: 14px; height: 14px; flex-shrink: 0; }
+
 /* Caveat note (image-rendering guidance) */
 .sig-note {
   display: flex; gap: var(--space-2); align-items: flex-start;
