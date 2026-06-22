@@ -20,6 +20,7 @@ export default function UpdatePasswordForm({
 
   function handleSubmit(formData: FormData) {
     setError(null);
+    setSuccess(false);
 
     const pw = formData.get("password") as string;
     const confirm = formData.get("confirm") as string;
@@ -35,7 +36,6 @@ export default function UpdatePasswordForm({
     }
 
     startTransition(async () => {
-      setError(null);
       try {
         const result = await updatePasswordAction(formData);
 
@@ -50,17 +50,15 @@ export default function UpdatePasswordForm({
         }
 
         if (result.success) {
-          // Wichtig: refresh ZUERST damit getIdentity() das neue
-          // metadata holt, dann push damit Layout-Gate korrekt läuft
-          router.refresh();
           setSuccess(true);
-          // Kurz warten damit refresh durchlaufen kann
-          await new Promise(resolve => setTimeout(resolve, 100));
+          router.refresh();
+          // Kurze Pause damit User die Bestätigung sieht +
+          // refresh durchläuft bevor Layout-Gate neu evaluiert
+          await new Promise(resolve => setTimeout(resolve, 800));
           router.push("/");
           return;
         }
 
-        // Sollte nie passieren, aber falls doch:
         setError("Unerwartete Antwort. Bitte logge dich aus und wieder ein.");
       } catch (e) {
         console.error("Submit error:", e);
@@ -80,13 +78,18 @@ export default function UpdatePasswordForm({
         display: "flex",
         flexDirection: "column",
         gap: "1rem",
-        width: "100%",
       }}
     >
       <div>
         <label
           htmlFor="password"
-          style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.9rem" }}
+          style={{
+            display: "block",
+            marginBottom: "0.375rem",
+            fontSize: "0.875rem",
+            fontWeight: 500,
+            color: "#333",
+          }}
         >
           Neues Passwort
         </label>
@@ -99,15 +102,22 @@ export default function UpdatePasswordForm({
           minLength={12}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          disabled={isPending || success}
           style={{
             width: "100%",
-            padding: "0.5rem 0.75rem",
-            border: "1px solid #ccc",
-            borderRadius: "0.375rem",
-            fontSize: "1rem",
+            padding: "0.625rem 0.875rem",
+            border: "1px solid #d1d5db",
+            borderRadius: "0.5rem",
+            fontSize: "0.95rem",
+            transition: "border-color 0.15s",
+            outline: "none",
           }}
         />
-        <p style={{ fontSize: "0.75rem", color: "#666", marginTop: "0.25rem" }}>
+        <p style={{
+          fontSize: "0.75rem",
+          color: "#888",
+          marginTop: "0.375rem",
+        }}>
           Mindestens 12 Zeichen
         </p>
       </div>
@@ -115,7 +125,13 @@ export default function UpdatePasswordForm({
       <div>
         <label
           htmlFor="confirm"
-          style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.9rem" }}
+          style={{
+            display: "block",
+            marginBottom: "0.375rem",
+            fontSize: "0.875rem",
+            fontWeight: 500,
+            color: "#333",
+          }}
         >
           Passwort wiederholen
         </label>
@@ -128,57 +144,65 @@ export default function UpdatePasswordForm({
           minLength={12}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
+          disabled={isPending || success}
           style={{
             width: "100%",
-            padding: "0.5rem 0.75rem",
-            border: "1px solid #ccc",
-            borderRadius: "0.375rem",
-            fontSize: "1rem",
+            padding: "0.625rem 0.875rem",
+            border: "1px solid #d1d5db",
+            borderRadius: "0.5rem",
+            fontSize: "0.95rem",
+            transition: "border-color 0.15s",
+            outline: "none",
           }}
         />
       </div>
 
-      {success && (
-        <div style={{
-          padding: "0.75rem",
-          background: "#efe",
-          border: "1px solid #cfc",
-          borderRadius: "0.375rem",
-          color: "#060",
-          fontSize: "0.875rem",
-        }}>
-          ✓ Passwort gespeichert! Du wirst weitergeleitet…
-        </div>
-      )}
-
       {error && (
         <div style={{
-          padding: "0.75rem",
-          background: "#fee",
-          border: "1px solid #fcc",
-          borderRadius: "0.375rem",
-          color: "#c00",
+          padding: "0.75rem 0.875rem",
+          background: "#fef2f2",
+          border: "1px solid #fecaca",
+          borderRadius: "0.5rem",
+          color: "#991b1b",
           fontSize: "0.875rem",
+          lineHeight: 1.4,
         }}>
           {error}
         </div>
       )}
 
+      {success && (
+        <div style={{
+          padding: "0.75rem 0.875rem",
+          background: "#f0fdf4",
+          border: "1px solid #bbf7d0",
+          borderRadius: "0.5rem",
+          color: "#166534",
+          fontSize: "0.875rem",
+          fontWeight: 500,
+          textAlign: "center",
+        }}>
+          ✓ Passwort gespeichert! Du wirst weitergeleitet…
+        </div>
+      )}
+
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || success}
         style={{
-          padding: "0.75rem 1.5rem",
-          background: isPending ? "#999" : "#000",
+          padding: "0.75rem 1rem",
+          background: success ? "#10b981" : isPending ? "#666" : "#000",
           color: "white",
           border: "none",
-          borderRadius: "0.375rem",
-          fontSize: "1rem",
+          borderRadius: "0.5rem",
+          fontSize: "0.95rem",
           fontWeight: 500,
-          cursor: isPending ? "not-allowed" : "pointer",
+          cursor: (isPending || success) ? "not-allowed" : "pointer",
+          transition: "background 0.15s",
+          marginTop: "0.5rem",
         }}
       >
-        {isPending ? "Passwort wird gesetzt..." : "Passwort speichern"}
+        {success ? "Erfolgreich" : isPending ? "Wird gespeichert..." : "Passwort speichern"}
       </button>
     </form>
   );

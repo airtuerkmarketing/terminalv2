@@ -7,7 +7,6 @@ export async function updatePasswordAction(formData: FormData) {
   const password = formData.get("password") as string;
   const confirm = formData.get("confirm") as string;
 
-  // Validation
   if (!password || password.length < 12) {
     return { error: "Passwort muss mindestens 12 Zeichen lang sein." };
   }
@@ -17,19 +16,18 @@ export async function updatePasswordAction(formData: FormData) {
 
   const supabase = await createClient();
 
-  // Auth-Check
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
     return { error: "Nicht eingeloggt. Bitte erneut anmelden." };
   }
 
-  // Step 1: Passwort updaten via RLS-Client
+  // Step 1: Passwort via RLS-Client setzen
   const { error: updateError } = await supabase.auth.updateUser({ password });
   if (updateError) {
     return { error: `Passwort konnte nicht gespeichert werden: ${updateError.message}` };
   }
 
-  // Step 2: Flag entfernen via service-role admin client
+  // Step 2: Flag via service-role admin client entfernen
   let adminClient;
   try {
     adminClient = createAdminClient();
@@ -51,11 +49,11 @@ export async function updatePasswordAction(formData: FormData) {
   if (metaError) {
     console.error("Flag removal failed:", metaError);
     return {
-      error: `Passwort gespeichert. Aber Flag konnte nicht entfernt werden: ${metaError.message}. Bitte kontaktiere bdemir@airtuerk.de.`
+      error: `Passwort gespeichert. Aber Flag konnte nicht entfernt werden (${metaError.message}). Bitte kontaktiere bdemir@airtuerk.de.`
     };
   }
 
-  // Step 3: VERIFY — lies User nochmal um sicher zu sein
+  // Step 3: Self-verify dass Flag wirklich weg ist
   const { data: verifyData, error: verifyError } = await adminClient.auth.admin.getUserById(user.id);
 
   if (verifyError || !verifyData?.user) {
@@ -75,6 +73,5 @@ export async function updatePasswordAction(formData: FormData) {
     };
   }
 
-  // Echter Erfolg
   return { success: true };
 }

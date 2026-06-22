@@ -3,11 +3,11 @@
 import { useState, useTransition } from "react";
 import { loginAction } from "./actions";
 
-export function LoginForm({
-  nextPath,
+export default function LoginForm({
+  next,
   initialError,
 }: {
-  nextPath?: string;
+  next?: string;
   initialError?: string;
 }) {
   const [error, setError] = useState<string | undefined>(initialError);
@@ -23,7 +23,7 @@ export function LoginForm({
 
   return (
     <form action={onSubmit} className="space-y-4">
-      <input type="hidden" name="next" value={nextPath || "/"} />
+      <input type="hidden" name="next" value={next || "/"} />
 
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700">

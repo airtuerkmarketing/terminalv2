@@ -16,9 +16,17 @@ const inter = Inter({
 // composes "<title> · terminalv2" — so no title.template here (it would
 // double-suffix those pages).
 export const metadata: Metadata = {
-  title: "terminalv2 · airtuerk Brand Hub",
+  title: "terminal · airtuerk Brand Hub",
   description:
     "Internal brand and resource hub for airtuerk and the AERTiCKET Group — brand guidelines, assets, documents and tools.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.svg", type: "image/svg+xml" },
+    ],
+  },
   robots: {
     index: false,
     follow: false,

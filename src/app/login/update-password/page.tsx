@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Particles } from "@/components/effects/particles";
+import { TerminalMark } from "@/components/brand/terminal-mark";
 import UpdatePasswordForm from "./update-password-form";
 
 type SearchParams = Promise<{
@@ -8,7 +10,7 @@ type SearchParams = Promise<{
 }>;
 
 export const metadata = {
-  title: "Passwort ändern — terminalv2",
+  title: "Passwort ändern — terminal",
 };
 
 export default async function UpdatePasswordPage({
@@ -18,7 +20,6 @@ export default async function UpdatePasswordPage({
 }) {
   const { type, error } = await searchParams;
 
-  // Auth-Check: User muss eingeloggt sein um Passwort zu ändern
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -39,26 +40,66 @@ export default async function UpdatePasswordPage({
 
   return (
     <main style={{
+      position: "relative",
+      minHeight: "100vh",
       display: "flex",
-      flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
-      minHeight: "100vh",
-      padding: "2rem",
-      gap: "1.5rem",
-      maxWidth: "32rem",
-      margin: "0 auto",
+      padding: "2rem 1rem",
+      background: "#fafafa",
+      overflow: "hidden",
     }}>
-      <div style={{ textAlign: "center", marginBottom: "1rem" }}>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 600, marginBottom: "0.5rem" }}>
-          {heading}
-        </h1>
-        <p style={{ color: "#666", fontSize: "0.9rem", lineHeight: 1.5 }}>
-          {subtitle}
-        </p>
-      </div>
+      <Particles
+        className="absolute inset-0 z-0"
+        quantity={120}
+        ease={80}
+        color="#888888"
+        size={0.6}
+        refresh={false}
+      />
 
-      <UpdatePasswordForm type={type} error={error} />
+      <div style={{
+        position: "relative",
+        zIndex: 1,
+        background: "#ffffff",
+        borderRadius: "16px",
+        boxShadow: "0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)",
+        padding: "2.5rem",
+        width: "100%",
+        maxWidth: "420px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "1.5rem",
+      }}>
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "1rem",
+          textAlign: "center",
+        }}>
+          <TerminalMark size={40} />
+          <div>
+            <h1 style={{
+              fontSize: "1.25rem",
+              fontWeight: 600,
+              margin: "0 0 0.5rem",
+            }}>
+              {heading}
+            </h1>
+            <p style={{
+              color: "#666",
+              fontSize: "0.875rem",
+              lineHeight: 1.5,
+              margin: 0,
+            }}>
+              {subtitle}
+            </p>
+          </div>
+        </div>
+
+        <UpdatePasswordForm type={type} error={error} />
+      </div>
     </main>
   );
 }
