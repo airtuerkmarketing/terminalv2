@@ -212,13 +212,8 @@ function renderHardcodedEmbedded(componentKey: string, title: string) {
 function PageHeader({ page }: { page: PageRow }) {
   return (
     <header className="page-hero">
-      <div className="eyebrow">
-        {page.number != null ? (
-          <span className="num">{String(page.number).padStart(2, "0")}</span>
-        ) : (
-          "Page"
-        )}
-      </div>
+      {/* Index number (page.number) intentionally not shown — data kept, display
+          removed. Title only. */}
       <h1>{page.title}</h1>
     </header>
   );
