@@ -17,8 +17,7 @@
   margin-top: var(--space-6);
   padding: var(--space-6);
   background: var(--surface-muted);
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-16);
   position: relative;
   max-width: 100%;
   overflow: hidden;
