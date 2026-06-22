@@ -4,7 +4,7 @@ This document is the **canonical system design** for terminalv2. Every
 decision below is locked. Changes require a new entry in `DECISIONS.md` and
 an update here.
 
-**Last consolidated:** Phase 3.5 (2026-06-15)
+**Last consolidated:** 2026-06-22 (User Panel + Presentation Hub; reconciled against migrations through `20260622193003`)
 
 ---
 
@@ -36,23 +36,24 @@ deploy together to Vercel as one unit.
                 ┌──────────────────────────────────────────────────────┐
                 │  Supabase project: terminalv2   (Frankfurt)          │
                 │  ┌──────────────────┬──────────────────────────────┐ │
-                │  │  Postgres        │  Storage (4 buckets)         │ │
-                │  │  • brands (15)   │  • images   (CDN-cached)     │ │
-                │  │  • pages (52)    │  • documents (CDN)           │ │
-                │  │  • blocks        │  • videos   (streaming)      │ │
-                │  │  • assets        │  • fonts    (immutable)      │ │
-                │  │  • documents     │                              │ │
-                │  │  • team_members  │  Auth (admin users)          │ │
-                │  │  • tm_brands*    │                              │ │
-                │  │  • settings      │  *junction: team_members ↔   │ │
-                │  │  • profiles      │   brands (many-to-many)      │ │
+                │  │  Postgres        │  Storage — 9 buckets:        │ │
+                │  │  (22 tables      │  public: images, documents,  │ │
+                │  │   + profiles_v)  │    videos, fonts, avatars    │ │
+                │  │  • brands (15)   │  private: library,           │ │
+                │  │  • pages (55)    │    presentations,            │ │
+                │  │  • blocks        │    rag-knowledge,            │ │
+                │  │  • documents +   │    confluence-attachments    │ │
+                │  │    document_*    │                              │ │
+                │  │  • team_members  │  Auth (super_admin /         │ │
+                │  │  • profiles +    │    admin / user)             │ │
+                │  │    profiles_v    │                              │ │
                 │  └──────────────────┴──────────────────────────────┘ │
                 └──────────────────────────────────────────────────────┘
 ```
 
 **Brand count is 15:** 7 top-level brands + 7 IBE product sub-brands + 1 Presentation Hub (resources section). See §2 for breakdown.
 
-**Page count is 52:** 13 top-level + 39 sub-pages, after removing 4 standalone pages in Phase 3.5.
+**Page count is 55** (as of 2026-06-22, live DB): 12 top-level + 43 sub-pages, 2 hidden in sidebar. Was 52 at Phase 3.5; grew with the APIX group page (0016) and Presentation Hub (0033), while `/internal-branding/configurator` was removed (D-056).
 
 ---
 
@@ -130,7 +131,7 @@ Deleted entirely in Phase 3.5:
 
 ---
 
-## 4. Site structure (52 pages — canonical)
+## 4. Site structure (55 pages — as of 2026-06-22)
 
 ### Group A — Brand sections (collapsible parents, 7 brands)
 
@@ -181,9 +182,9 @@ Same as Service minus the UX page.
 - `/ibe-product-suite/mystats`
 - `/ibe-product-suite/airlounge` (hidden in sidebar)
 
-#### Internal Branding (2)
+#### Internal Branding (1)
 - `/internal-branding/applied-identity`
-- `/internal-branding/configurator` (hardcoded — Jersey Customizer)
+  (`/internal-branding/configurator` was removed — D-056)
 
 #### airtuerk APIX (8)
 - `/airtuerk-apix/presentation`
@@ -210,7 +211,7 @@ Same as Service minus the UX page.
 |---|---|---|
 | `/team` | `team-directory` | Queries `team_members`, filter UI |
 | `/asset-library` | `asset-library` | Queries `assets`, filter UI |
-| `/documents-library` | `document-library` | Queries `documents`, filter UI |
+| `/documents-library/*` | _(own route, not `component_key`)_ | File System v2 folder browser — `documents-library/[[...folder]]/page.tsx` (§9); legacy `document-library` component deleted (`c397b29`) |
 | `/presentation-hub` | `presentation-hub` | Sectioned doc list (NEW in 3.5) |
 | `/search` | `search` | RAG chat interface |
 | `/ibe-product-suite` | `ibe-tools-showcase` | Adapted from Webflow embed (NEW in 3.5) |
@@ -220,9 +221,9 @@ Same as Service minus the UX page.
 | `/airtuerk-holidays/email-signature` | `email-signature` | Same component, branded |
 | `/atbeds/email-signature` | `email-signature` | Same component, branded |
 | `/service-center-antalya/email-signature` | `email-signature` | Same component, branded |
-| `/internal-branding/configurator` | `identity-configurator` | Jersey Customizer (D-025) |
 
-Hardcoded pages still have a `pages` row.
+Hardcoded pages still have a `pages` row. (`/internal-branding/configurator` /
+`identity-configurator` was removed — D-056; it had no backing component.)
 
 ---
 
@@ -281,13 +282,31 @@ A "new block type" PR touches these five files plus a migration if needed.
 
 ## 7. Database schema
 
-### Tables (10 total — 1 added in Phase 3.5 logic, no new tables)
+### Tables (22 base tables + 1 view, as of 2026-06-22)
 
-Schema lives in:
-- `supabase/migrations/0001_initial_schema.sql` — initial 9 tables + 1 junction
-- `supabase/migrations/0007_brand_hierarchy_and_sidebar.sql` — adds columns: `brands.parent_id`, `brands.is_product`, `brands.sidebar_section`, `pages.hidden_in_sidebar`
-- `supabase/migrations/0008_restructure_brands.sql` — data migration
-- `supabase/migrations/0009_design_system_settings.sql` — settings seed + `documents.download_style` + `documents.presentation_section`
+The schema has grown well past the original 10. Current `public` tables, by area:
+
+- **Core CMS:** `brands`, `pages`, `blocks`, `assets`, `documents`, `settings`,
+  `team_members`, `team_member_brands` (junction).
+- **Auth & users:** `profiles`, `user_role_defaults` (0030), `user_activity_log`
+  (audit trail), plus the `profiles_v` **view**. `profiles` gained `team_member_id`
+  (FK → `team_members`, `ON DELETE SET NULL`, unique partial index) and `updated_at`.
+- **Document Library v2 (0031):** `document_folders`, `document_files`.
+- **Presentation Hub (0033):** `presentation_folders`, `presentation_files`,
+  `presentation_tags`, `presentation_file_tags`, `presentation_views`.
+- **Intelligence layer (0025–0029):** `confluence_raw`, `confluence_attachments`,
+  `confluence_comments`, `gold_set_answers`.
+
+Schema entry points:
+- `0001_initial_schema.sql` — initial 9 tables + 1 junction
+- `0007`/`0008` — brand hierarchy columns + restructure data migration
+- `0009` — design-system settings + `documents.download_style`/`presentation_section`
+- `0030` — role model (`user_role_defaults`, role CHECK swap, helper functions)
+- `0031` — Document Library v2 tables + private `library` bucket
+- `0033` — Presentation Hub tables
+- timestamped `20260621*`/`20260622*` — User Panel (profiles↔team_members link,
+  `user_activity_log`, `profiles_v`, avatars bucket, RLS recursion / search_path fixes).
+  Highest applied migration: `20260622193003_profiles_update_own_use_helper.sql`.
 
 ### `brands` (Phase 3.5 schema)
 
@@ -326,20 +345,31 @@ Note: superseded for the Document Library by the v2 tables below (D-053). The
   `library` bucket (no `public_url`), pg_trgm index on `title`.
 - **`user_role_defaults`** (migration 0030) — email→role seed for the signup trigger.
 
+The legacy `documents`/`assets` Document Library path is superseded (D-053) and its
+React component was deleted in the dead-code cleanup (commit `c397b29`); rows remain
+for rollback but are no longer read.
+
 ### Row Level Security
 
-`is_admin()` now means admin OR super_admin; `is_super_admin()` added (migration
-0030). Public read where applicable, admin write everywhere. The v2 library tables
-ENABLE **and FORCE** RLS, keyed on per-folder `is_public` (D-051); `profiles` role
-changes are super-admin-only (D-055).
+See §10 for the full auth model. In short: `is_admin()` = admin OR super_admin,
+`is_super_admin()` gates structural ops, and `get_profile_role(uuid)` reads a role
+without tripping the profiles SELECT policies (added 20260622 to break an RLS
+recursion). Public read where applicable, admin write everywhere. The v2 library
+tables and `user_activity_log` ENABLE **and FORCE** RLS (library keyed on per-folder
+`is_public`, D-051); `profiles` role changes are super-admin-only (D-055).
 
 ---
 
 ## 8. Storage buckets
 
-Four public buckets from 0003 (`images`, `documents`, `videos`, `fonts`) + a
-fifth **private** bucket `library` (migration 0031) for Document Library v2 files,
-served only via short-TTL signed URLs through `/api/library/file/[id]` (D-052).
+**9 buckets** (as of 2026-06-22):
+
+- **Public** (4 from 0003 + `avatars`): `images`, `documents`, `videos`, `fonts`,
+  `avatars` (added for the User Panel).
+- **Private** (signed-URL / service-role only): `library` (Document Library v2 files,
+  served via `/api/library/file/[id]`, D-052), `presentations` (Presentation Hub,
+  served via `/api/presentations/file/[id]`), `rag-knowledge` and
+  `confluence-attachments` (intelligence layer).
 
 ---
 
@@ -381,38 +411,49 @@ In Next.js 16, `params`, `searchParams`, `cookies()`, and `headers()` are async.
 
 ## 10. Authentication & access
 
-- Public site: no auth needed
-- Admin (`/admin/*`): Supabase Auth, email+password
-- Auth-gating happens in Server Component layouts (D-033), not in proxy.ts
-- `proxy.ts` only refreshes session cookies (D-032)
-- Roles: `super_admin` | `admin` | `user` (migration 0030, D-047). `is_admin()` =
-  admin OR super_admin; `is_super_admin()` gates structural ops (folder delete,
-  visibility toggle, role management). Assignment is data-driven via
-  `user_role_defaults` + the signup trigger (D-048).
-- The public site now reads the session in `(public)/layout.tsx` to drive role-aware
-  affordances (admin upload/manage, "+ Create New Folder"); every mutation
-  re-verifies the role server-side. The login gate for normal users is still later
-  (a one-clause RLS change, D-051).
+- Public site: no auth needed for published content.
+- Admin (`/admin/*`): Supabase Auth, email+password; gating in Server Component
+  layouts (D-033), not in `proxy.ts`. `proxy.ts` only refreshes session cookies (D-032).
+- **Roles:** `super_admin | admin | user` (migration 0030, D-047). Assignment is
+  data-driven: `handle_new_user()` (trigger `on_auth_user_created` from 0006,
+  rewritten in 0030) reads `user_role_defaults` on signup, falling back to `'user'` (D-048).
+- **RLS helpers** (all `LANGUAGE sql SECURITY DEFINER`, `search_path`-pinned, `STABLE`):
+  - `is_admin()` — TRUE for admin OR super_admin (used by every existing policy, kept
+    by name/signature so 0002-era policies still work).
+  - `is_super_admin()` — gates structural/sensitive ops (folder delete, visibility
+    toggle, role management).
+  - `get_profile_role(uuid)` — reads a profile's role WITHOUT tripping the profiles
+    SELECT policies; added 20260622 to break an RLS recursion in the role-change policies.
+- **Role-change guard (D-055):** `profiles_update_admin` lets admins update profiles,
+  but `role` may change only when the actor `is_super_admin()`; otherwise the new
+  value must equal `get_profile_role(id)`. `profiles_update_own` applies the same lock
+  to self-updates. Originally inline subqueries (0032); recursion-fixed to use the
+  helper in `20260622193001`/`20260622193003`.
+- **`user_activity_log`** (audit trail): RLS forced; reads are tiered (super_admin =
+  all, admin = own department via `team_members`, every user = own rows); **writes are
+  service-role only** — no authenticated write policy, so logs are unforgeable.
+- **`profiles_v`**: `SECURITY INVOKER` view joining `profiles` + `auth.users`
+  (`last_sign_in_at`, `email_confirmed_at`) + `team_members`; the admin user panel's
+  single read source. Source-table RLS applies through it; writes go to the base tables.
+- The public site reads the session in `(public)/layout.tsx` to drive role-aware
+  affordances (admin upload/manage, "+ Create New Folder"); every mutation re-verifies
+  the role server-side.
 
 ---
 
 ## 11. Search
 
-### Phase A — Postgres full-text search (Phase 7)
+**Live now:** a `/api/search` route handler backed by the service-role client (queries
+`pages` / `documents` / `team_members`), surfaced in the Dashboard search box. It does
+**not** use generated `search_vector` columns — the originally planned
+`0010_fulltext_search.sql` migration was never created (`0010` is
+`fix_brand_card_colors`).
 
-Migration `0010_fulltext_search.sql` (was 0007 in old plan, renumbered after 3.5):
-- Generated `search_vector` columns on `pages`, `documents`, `team_members`
-- `block_searchable_text` view
-- GIN indexes
-- `/api/search` route handler
-
-### Phase B — RAG (Phase 8, deferred)
-
-- pgvector extension
-- Embeddings of pages, blocks, documents
-- Chat-style UI at `/search`
-- Claude API integration
-- Stubs reserved from day one in `src/lib/search/rag.ts`
+**RAG (in progress, not deferred):** the intelligence-layer groundwork has shipped —
+Confluence ingestion + extracted attachments (`confluence_*` tables, migrations
+0025–0026), a gold-set Q&A eval set (`gold_set_answers`, 0027–0028), and AI test sets
+(0029). Next: embedding evaluation → a `knowledge_chunks` / pgvector store → chat-style
+retrieval with the Claude API.
 
 ---
 
@@ -429,23 +470,26 @@ The visual language is documented in `DESIGN_SYSTEM.md`. Quick reference:
 - **Shadows** soft but visible (+5% over initial proposal)
 - **No card-bounce on hover** — calm background + shadow swap only
 
-The reference implementation is `spec/mockups/v3-01-dashboard.html`. Phase 4 ports the tokens to `src/styles/theme.css`.
+The reference implementation is `spec/mockups/v3-01-dashboard.html`. Phase 4 ported the tokens to `src/styles/theme.css`, which is now canonical.
 
 ---
 
 ## 13. Custom embeds preserved from Webflow
 
 See `EMBEDS_INVENTORY.md`. ~224 KB of custom HTML/CSS/JS extracted from the
-original site:
+original site. Porting status (was planned for "Phase 6", now largely shipped):
 
-- APIX Workflow + Global Network (largest)
-- IBE Tools Showcase → becomes the `/ibe-product-suite` page body
-- Jersey Customizer → `/internal-branding/configurator`
-- Signature Generator → 4 brand sub-routes
-- Out-of-Office Generator → `/airtuerk-service/out-of-office`
-- Color Strip Pattern → reference for `color_palette` block
+- APIX Workflow, Network map, Presentation player, Group structure — **ported** to
+  `src/components/hardcoded/apix-*.tsx` (migrations 0014–0016).
+- Signature Generator — **ported** (`src/components/hardcoded/email-signature.tsx`,
+  4 brand sub-routes).
+- Out-of-Office Generator — **ported** (`src/components/hardcoded/out-of-office.tsx`).
+- Color Strip Pattern — **ported** into the `color_palette` block
+  (`src/components/blocks/color-palette.tsx`).
+- IBE Tools Showcase → `/ibe-product-suite` page body — still pending.
 
-These get ported to React in Phase 6.
+(The Jersey Customizer embed targeted `/internal-branding/configurator`, a route that
+has since been removed — D-056.)
 
 ---
 

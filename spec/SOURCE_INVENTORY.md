@@ -106,7 +106,7 @@ Each IBE product has its own brand record (added in migration 0008) with
 
 ### Internal Branding (2)
 - `#applied` → `/internal-branding/applied-identity`
-- `#configurator` → `/internal-branding/configurator` (hardcoded — Jersey Customizer)
+- ~~`#configurator` → `/internal-branding/configurator`~~ — removed (D-056; never built)
 
 ### airtuerk APIX (8)
 - `#present` → `/airtuerk-apix/presentation`
@@ -125,8 +125,10 @@ Each IBE product has its own brand record (added in migration 0008) with
 ## 3. Custom embeds preserved
 
 The Webflow source has hand-written HTML/CSS/JS embeds that don't fit any
-block type. **All preserved in `spec/embeds/`** (per D-046), to be ported 1:1
-to React in Phase 6. Total ~224 KB:
+block type. **All preserved in `spec/embeds/`** (per D-046). **Partially ported**
+as of 2026-06-22 — the four APIX tools, signature, out-of-office, and color-strip
+families are shipped; only the IBE Tools Showcase remains, and the Jersey Customizer
+was dropped (D-056). See `EMBEDS_INVENTORY.md` for component paths. Total ~224 KB:
 
 | File | Source page | Phase 6 target |
 |---|---|---|
