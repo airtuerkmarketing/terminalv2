@@ -79,11 +79,13 @@
 }
 
 :root[data-theme="ios18-light"] {
-  --bg: #FAFAFA;
+  --bg: #FFFFFF;
   --surface: #FFFFFF;
   --surface-strong: #FFFFFF;
   --surface-flat: #FFFFFF;
   --surface-muted: #F4F4F5;
+  /* Sidebar is a hair off the white content so its right hairline edge reads. */
+  --sidebar-bg: #FCFCFC;
   --hairline: rgba(0, 0, 0, 0.08);
   --separator: rgba(0, 0, 0, 0.06);
   --text-1: rgba(0, 0, 0, 0.92);
@@ -103,6 +105,8 @@
   --surface-strong: #1C1C1F;
   --surface-flat: #18181B;
   --surface-muted: #232327;
+  /* Sidebar keeps the dark surface value (unchanged from the flat dark theme). */
+  --sidebar-bg: #18181B;
   --hairline: rgba(255, 255, 255, 0.08);
   --separator: rgba(255, 255, 255, 0.06);
   --text-1: rgba(255, 255, 255, 0.95);

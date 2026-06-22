@@ -21,10 +21,8 @@
 .block-label h2 { font-size: var(--fs-lg); font-weight: var(--weight-semibold); letter-spacing: -0.012em; color: var(--text-1); margin-bottom: var(--space-3); }
 .block-body { min-width: 0; }
 
-/* ── page_hero ── */
+/* ── page_hero ── (the index-number eyebrow was removed; see page-hero.tsx) */
 .page-hero { padding-top: var(--space-4); margin-bottom: var(--space-12); }
-.page-hero .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-xs); font-weight: var(--weight-semibold); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--space-3); }
-.page-hero .eyebrow .num { font-family: var(--font-mono); color: var(--text-3); }
 .page-hero h1 { font-size: var(--fs-2xl); font-weight: var(--weight-semibold); letter-spacing: -0.022em; line-height: var(--lh-tight); color: var(--text-1); margin-bottom: var(--space-4); }
 .page-hero .lead { font-size: var(--fs-md); line-height: var(--lh-normal); color: var(--text-2); max-width: 620px; }
 
@@ -236,7 +234,10 @@
    the target clear of the topbar when jumped to via the sidebar #slug anchors
    (more robust than relying on :target alone). ── */
 .anchor-section { padding-top: var(--space-6); scroll-margin-top: var(--space-20); }
-.anchor-section + .anchor-section { margin-top: var(--section-gap); border-top: 1px solid var(--separator); }
+/* Full-width solid divider between sections (sits on the full-width section box,
+   so two-col and full-width sections get the same continuous line). --hairline
+   reads clearly on the white content background. */
+.anchor-section + .anchor-section { margin-top: var(--section-gap); border-top: 1px solid var(--hairline); }
 /* No padding-top here: .anchor-section already owns the space-6 top padding
    (and scroll-margin-top for the anchor jump offset). Adding it to the h2 too
    doubled the gap above the heading (space-6 + space-6). */

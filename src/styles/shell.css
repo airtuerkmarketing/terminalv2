@@ -46,7 +46,7 @@ html { scrollbar-gutter: stable; }
    hidden) so the user block always sticks to the bottom and is never clipped. */
 /* Panel: flush on the left (square corners), rounded 20px on the right only —
    the sidebar sits attached to the viewport's left edge. */
-.sidebar-inner { background-color: var(--surface-flat); border: 1px solid var(--hairline); border-radius: 0 var(--sidebar-panel-radius) var(--sidebar-panel-radius) 0; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-rest); overflow: hidden; }
+.sidebar-inner { background-color: var(--sidebar-bg); border: 1px solid var(--hairline); border-radius: 0 var(--sidebar-panel-radius) var(--sidebar-panel-radius) 0; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-rest); overflow: hidden; }
 
 .sidebar-top { flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-4); }
 .sidebar-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: var(--space-4); }
