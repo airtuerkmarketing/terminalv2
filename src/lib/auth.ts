@@ -35,6 +35,9 @@ export interface Identity {
   lastName: string | null;
   department: string | null;
   avatarAssetId: string | null;
+  // Block 2: true when auth.users.raw_app_meta_data.force_password_change is set
+  // (seeded for not-yet-signed-in accounts). Gated in (public)/layout.tsx.
+  forcePasswordChange: boolean;
 }
 
 /**
@@ -87,6 +90,7 @@ export const getIdentity = cache(async (): Promise<Identity | null> => {
     lastName: tm?.last_name ?? null,
     department: tm?.department ?? null,
     avatarAssetId: tm?.avatar_asset_id ?? null,
+    forcePasswordChange: user.app_metadata?.force_password_change === true,
   };
 });
 

@@ -162,6 +162,13 @@ export default async function PublicLayout({ children }: { children: ReactNode }
     redirect("/login");
   }
 
+  // Force-Password-Change Gate (Block 2): a seeded user who has never set their
+  // own password is held at /login/update-password until they do. That route is
+  // OUTSIDE the (public) group, so this layout never runs there → no loop.
+  if (identity.forcePasswordChange) {
+    redirect("/login/update-password?type=force");
+  }
+
   const isAdmin = identity?.isAdmin ?? false;
   const isSuperAdmin = identity?.isSuperAdmin ?? false;
   const displayName = identity
