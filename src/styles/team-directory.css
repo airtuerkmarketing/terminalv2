@@ -10,7 +10,6 @@
 .tm-search {
   flex: 1; min-width: 240px; display: flex; align-items: center; gap: var(--space-3);
   padding: 10px var(--space-4); border-radius: var(--radius-full); background-color: var(--surface);
-  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
   border: 1px solid var(--hairline); box-shadow: var(--shadow-rest);
 }
 .tm-search svg { width: 18px; height: 18px; color: var(--text-3); flex-shrink: 0; }
@@ -21,7 +20,7 @@
 .tm-filters { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-5); }
 .tm-chip {
   display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius-full);
-  background-color: var(--surface); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  background-color: var(--surface); 
   border: 1px solid var(--hairline); font-size: var(--fs-sm); font-weight: var(--weight-medium); color: var(--text-2); cursor: pointer;
   transition: color 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth);
 }

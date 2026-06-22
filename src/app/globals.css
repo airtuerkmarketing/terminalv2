@@ -40,11 +40,6 @@
   --color-accent-soft: var(--accent-soft);
   --color-accent-border: var(--accent-border);
 
-  /* Ambient orb tints */
-  --color-orb-1: var(--orb-1);
-  --color-orb-2: var(--orb-2);
-  --color-orb-3: var(--orb-3);
-
   /* Brand-content palette — render brand identity only, never UI chrome */
   --color-quantum: var(--quantum);
   --color-quantum-soft: var(--quantum-soft);

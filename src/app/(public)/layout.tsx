@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getSinglePageBrandSlugs, getSidebarChildren } from "@/lib/pages";
 import { getFolderTreeForSidebar, getIdentity } from "@/lib/documents";
-import { Ambient } from "@/components/shell/ambient";
 import {
   Sidebar,
   type NavLeaf,
@@ -140,8 +139,8 @@ async function getNav(): Promise<SidebarNav> {
   };
 }
 
-// Apply persisted theme/orbs/sidebar before paint to avoid a flash.
-const PREFS_SCRIPT = `(function(){try{var d=document.documentElement;var t=localStorage.getItem('terminalv2-theme');if(t==='ios18-light'||t==='ios18-dark')d.dataset.theme=t;var o=localStorage.getItem('terminalv2-orbs');if(o==='on'||o==='off')d.dataset.orbs=o;var s=localStorage.getItem('terminalv2-sidebar');if(s==='expanded'||s==='collapsed')d.dataset.sidebar=s;}catch(e){}})();`;
+// Apply persisted theme/sidebar before paint to avoid a flash.
+const PREFS_SCRIPT = `(function(){try{var d=document.documentElement;var t=localStorage.getItem('terminalv2-theme');if(t==='ios18-light'||t==='ios18-dark')d.dataset.theme=t;var s=localStorage.getItem('terminalv2-sidebar');if(s==='expanded'||s==='collapsed')d.dataset.sidebar=s;}catch(e){}})();`;
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -172,7 +171,6 @@ export default async function PublicLayout({ children }: { children: ReactNode }
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: PREFS_SCRIPT }} />
-      <Ambient />
       <div className="layout">
         <Sidebar nav={nav} identity={sidebarIdentity} isAdmin={isAdmin} />
         <main className="main">

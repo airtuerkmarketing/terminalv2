@@ -17,7 +17,6 @@ import {
   ChevronIcon,
   LogoutIcon,
   MoonIcon,
-  OrbsIcon,
   ProfileIcon,
   SettingsIcon,
   SunIcon,
@@ -25,7 +24,6 @@ import {
 } from "./icons";
 import { UserSettingsModal } from "./user-settings-modal";
 
-const ORBS_KEY = "terminalv2-orbs";
 const THEME_KEY = "terminalv2-theme";
 
 // ── data-attribute mirrors (same useSyncExternalStore pattern as the rest of
@@ -41,9 +39,7 @@ function makeMirror(attr: string) {
     return () => observer.disconnect();
   };
 }
-const subscribeOrbs = makeMirror("data-orbs");
 const subscribeTheme = makeMirror("data-theme");
-const getOrbsOn = () => document.documentElement.dataset.orbs !== "off";
 const getDark = () => document.documentElement.dataset.theme === "ios18-dark";
 
 interface MenuPos {
@@ -87,7 +83,6 @@ export function UserMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
 
-  const orbsOn = useSyncExternalStore(subscribeOrbs, getOrbsOn, () => true);
   const dark = useSyncExternalStore(subscribeTheme, getDark, () => false);
 
   // The roving set excludes the disabled Profile row (aria-disabled) so keyboard
@@ -190,16 +185,6 @@ export function UserMenu({
     } else if (e.key === "End") {
       e.preventDefault();
       items[items.length - 1].focus();
-    }
-  }
-
-  function toggleOrbs() {
-    const next = orbsOn ? "off" : "on";
-    document.documentElement.dataset.orbs = next;
-    try {
-      localStorage.setItem(ORBS_KEY, next);
-    } catch {
-      // ignore
     }
   }
 
@@ -312,20 +297,6 @@ export function UserMenu({
                 <span className="um-item-icon">{dark ? <MoonIcon /> : <SunIcon />}</span>
                 <span className="um-item-label">Erscheinungsbild</span>
                 <span className="um-item-state">{dark ? "Dunkel" : "Hell"}</span>
-              </button>
-
-              <button
-                type="button"
-                role="menuitemcheckbox"
-                aria-checked={orbsOn}
-                className="um-item"
-                onClick={toggleOrbs}
-              >
-                <span className="um-item-icon">
-                  <OrbsIcon />
-                </span>
-                <span className="um-item-label">Ambient-Orbs</span>
-                <span className="um-item-state">{orbsOn ? "An" : "Aus"}</span>
               </button>
 
               {/* super_admin-only: User-Management lives in the account menu,

@@ -4,6 +4,35 @@ Running record of what's been built, when. Newest entries on top.
 
 ---
 
+## Flat design language — opaque surfaces, no orbs, no glass blur (2026-06-22)
+
+Flattened the "iOS 18 Liquid Glass" look into "flat with subtle depth", almost
+entirely via `theme.css` token values since the app is token-based:
+
+- **Surfaces opaque** (light: `--surface`/`--surface-strong`/`--surface-flat`
+  all `#FFFFFF`, `--bg #FAFAFA`, `--surface-muted #F4F4F5`; dark: `--surface`
+  `#18181B`, `--bg #0E0E10`, `--surface-muted #232327`).
+- **Shadows reduced** to a single soft layer (`--shadow-rest`/`--shadow-hover`).
+- **Radii tightened**: `--radius-sm/md/lg/xl` → 6/8/10/12px;
+  `--sidebar-panel-radius` 10px, `--sidebar-item-radius` 8px.
+- **Glass blur removed** from all of `src/` except the APIX D-046 Webflow ports
+  (`apix-*.css` keep their `backdrop-filter` verbatim).
+- **Ambient orbs removed**: deleted `ambient.tsx`, the `.orb`/`.ambient`/orb
+  keyframes in `shell.css`, `--orb-*` tokens (theme.css + the globals.css
+  `@theme` bridge), the orbs menu item in `user-menu.tsx`, `OrbsIcon`,
+  `data-orbs` on `<html>`, and the orbs branch of the pre-paint PREFS script.
+
+**Known pre-existing issue (unrelated to this change):** `pnpm lint` reports 8
+`react-hooks/set-state-in-effect` errors from the merged intelligence layer —
+identical on clean HEAD, in files this change does not touch. typecheck + build
+are green. Locations:
+`dashboard/hero/AIChatWindow.tsx:52`, `dashboard/hero/SearchAIBox.tsx:101` &
+`:127`, `dashboard/hero/useTypewriterText.ts:23`,
+`documents/move-targets.ts:36`, `presentations/move-targets.ts:30`,
+`presentations/presentation-tags.ts:25`, `shell/user-settings-modal.tsx:24`.
+
+---
+
 ## File System v2 — roles + folder Document Library (2026-06-20)
 
 **Status:** Built + applied to prod (`zkydrymygjrscjbhusxp`) + pushed to `main`.

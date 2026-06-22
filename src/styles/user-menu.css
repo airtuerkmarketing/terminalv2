@@ -73,8 +73,6 @@ button.user-block .avatar {
   border: 1px solid var(--hairline);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-hover);
-  -webkit-backdrop-filter: saturate(180%) blur(24px);
-  backdrop-filter: saturate(180%) blur(24px);
   transform-origin: bottom left;
   animation: um-pop 160ms var(--ease-smooth);
 }

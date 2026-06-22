@@ -31,7 +31,6 @@ export default function RootLayout({
       lang="en"
       data-theme="ios18-light"
       data-sidebar="expanded"
-      data-orbs="on"
       data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={`${inter.variable} h-full antialiased`}

@@ -46,8 +46,8 @@
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
   --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
   --space-12: 48px; --space-16: 64px; --space-20: 80px;
-  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
-  --radius-xl: 20px; --radius-full: 9999px;
+  --radius-sm: 6px; --radius-md: 8px; --radius-lg: 10px;
+  --radius-xl: 12px; --radius-full: 9999px;
   /* Card-System (UX-Sweep 2026-06-18) — alias existing scale tokens so values
      stay identical (no visual drift); gives card/button/section one named knob. */
   --button-radius: var(--radius-sm);   /* 8px — Buhara: downloads "eckig" */
@@ -72,42 +72,39 @@
   /* Sidebar redesign (2026-06-18) — named radii + the neutral avatar fill and
      the nav-label colour. --nav-label defaults to Jet (#222) for light; the
      dark theme overrides it to --text-1 so labels stay legible in both modes. */
-  --sidebar-panel-radius: 20px;
-  --sidebar-item-radius: 10px;
+  --sidebar-panel-radius: 10px;
+  --sidebar-item-radius: 8px;
   --avatar-bg: #B0B0B0;
   --nav-label: var(--jet);
 }
 
 :root[data-theme="ios18-light"] {
-  --bg: #F7F8FC;
-  --surface: rgba(255, 255, 255, 0.78);
-  --surface-strong: rgba(255, 255, 255, 0.92);
+  --bg: #FAFAFA;
+  --surface: #FFFFFF;
+  --surface-strong: #FFFFFF;
   --surface-flat: #FFFFFF;
-  --surface-muted: #F1F2F6;
+  --surface-muted: #F4F4F5;
   --hairline: rgba(0, 0, 0, 0.08);
-  --separator: rgba(60, 60, 67, 0.10);
+  --separator: rgba(0, 0, 0, 0.06);
   --text-1: rgba(0, 0, 0, 0.92);
   --text-2: rgba(60, 60, 67, 0.62);
   --text-3: rgba(60, 60, 67, 0.38);
   --accent: var(--quantum);
   --accent-soft: var(--quantum-soft);
   --accent-border: var(--quantum-border);
-  --orb-1: rgba(10, 130, 223, 0.08);
-  --orb-2: rgba(23, 71, 158, 0.06);
-  --orb-3: rgba(120, 130, 180, 0.05);
-  /* +5% shadow strength per feedback */
-  --shadow-rest: 0 1px 2px rgba(0,0,0,0.05), 0 3px 10px -1px rgba(0,0,0,0.06);
-  --shadow-hover: 0 1px 3px rgba(0,0,0,0.07), 0 6px 18px -2px rgba(0,0,0,0.10);
+  /* Flat with subtle depth: single soft shadow, no ambient orbs. */
+  --shadow-rest: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-hover: 0 1px 3px rgba(0,0,0,0.07);
 }
 
 :root[data-theme="ios18-dark"] {
-  --bg: #0b0e14;
-  --surface: rgba(28, 30, 36, 0.68);
-  --surface-strong: rgba(38, 40, 46, 0.85);
-  --surface-flat: #16181D;
-  --surface-muted: #1A1C22;
+  --bg: #0E0E10;
+  --surface: #18181B;
+  --surface-strong: #1C1C1F;
+  --surface-flat: #18181B;
+  --surface-muted: #232327;
   --hairline: rgba(255, 255, 255, 0.08);
-  --separator: rgba(200, 200, 210, 0.08);
+  --separator: rgba(255, 255, 255, 0.06);
   --text-1: rgba(255, 255, 255, 0.95);
   --text-2: rgba(235, 235, 245, 0.62);
   --text-3: rgba(235, 235, 245, 0.38);
@@ -118,9 +115,6 @@
      damped grey so the white "BD" initials stay legible. */
   --nav-label: var(--text-1);
   --avatar-bg: rgba(160, 160, 160, 0.45);
-  --orb-1: rgba(10, 130, 223, 0.16);
-  --orb-2: rgba(23, 71, 158, 0.12);
-  --orb-3: rgba(140, 100, 220, 0.08);
-  --shadow-rest: 0 1px 2px rgba(0,0,0,0.35), 0 3px 10px -1px rgba(0,0,0,0.45);
-  --shadow-hover: 0 1px 3px rgba(0,0,0,0.40), 0 6px 18px -2px rgba(0,0,0,0.50);
+  --shadow-rest: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-hover: 0 1px 3px rgba(0,0,0,0.5);
 }

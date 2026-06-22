@@ -10,8 +10,6 @@
   place-items: center;
   padding: var(--space-4);
   background: rgba(0, 0, 0, 0.4);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
 }
 
 .usm-panel {
