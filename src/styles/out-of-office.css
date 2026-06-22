@@ -12,10 +12,6 @@
   border-top: 1px solid var(--separator);
 }
 .oo-section-head { margin-bottom: var(--space-6); }
-.oo-eyebrow {
-  font-size: var(--fs-xs); font-weight: var(--weight-semibold); letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--accent); margin-bottom: var(--space-2);
-}
 .oo-section-head h2 { font-size: var(--fs-xl); font-weight: var(--weight-bold); letter-spacing: -0.02em; color: var(--text-1); margin: 0; }
 .oo-lead { margin: var(--space-2) 0 0; font-size: var(--fs-base); line-height: var(--lh-normal); color: var(--text-2); max-width: 60ch; }
 

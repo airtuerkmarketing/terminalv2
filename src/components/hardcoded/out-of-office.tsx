@@ -277,7 +277,6 @@ export function OutOfOffice() {
   return (
     <section className="oo">
       <div className="oo-section-head">
-        <div className="oo-eyebrow">Brand Tools</div>
         <h2>Out-of-Office</h2>
         <p className="oo-lead">
           Generate an automatic out-of-office reply in German, English or Turkish — pick your

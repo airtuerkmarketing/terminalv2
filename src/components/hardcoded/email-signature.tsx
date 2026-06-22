@@ -329,7 +329,6 @@ export function EmailSignature({ title, embedded }: { title: string; embedded?: 
     <article className="email-signature">
       {!embedded && (
         <header className="page-hero">
-          <div className="eyebrow">Brand Tools</div>
           <h1>{title}</h1>
           <p className="lead">
             Build a consistent airtuerk email signature in seconds — fill in your
