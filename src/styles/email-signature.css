@@ -16,9 +16,9 @@
   gap: var(--space-6);
   margin-top: var(--space-6);
   padding: var(--space-6);
-  background: var(--surface);
+  background: var(--surface-muted);
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   position: relative;
   max-width: 100%;
   overflow: hidden;
@@ -37,6 +37,7 @@
 .sig-input {
   height: 38px; padding: 0 12px; width: 100%; min-width: 0; box-sizing: border-box;
   background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-rest);
   font-family: inherit; font-size: var(--fs-sm); font-weight: var(--weight-medium); color: var(--text-1);
   outline: none; transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }
@@ -72,6 +73,7 @@
 .sig-prefix-input {
   display: flex; align-items: stretch; background: var(--surface-flat);
   border: 1px solid var(--hairline); border-radius: var(--radius-sm); overflow: hidden;
+  box-shadow: var(--shadow-rest);
   transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }
 .sig-prefix-input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -135,17 +137,20 @@
 .sig-card-info { min-width: 0; flex: 1; }
 .sig-card-title { font-size: var(--fs-sm); font-weight: var(--weight-semibold); letter-spacing: -0.01em; color: var(--text-1); line-height: var(--lh-snug); }
 .sig-card-sub { margin-top: 2px; font-size: var(--fs-xs); color: var(--text-2); line-height: var(--lh-normal); }
+/* Copy button: solid black (signature tool only — not global), white label. */
 .sig-copy-btn {
-  flex-shrink: 0; height: 32px; padding: 0 14px; background: var(--accent); color: #fff;
+  flex-shrink: 0; height: 32px; padding: 0 14px; background: #000; color: #fff;
   border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: var(--fs-sm); font-weight: var(--weight-semibold);
   cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
-  transition: filter 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
+  transition: background-color 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
 }
-.sig-copy-btn:hover { filter: brightness(0.93); }
+.sig-copy-btn:hover { background: #1a1a1a; }
 .sig-copy-btn:active { transform: scale(0.97); }
 .sig-copy-btn svg { width: 14px; height: 14px; }
+/* Inactive card's button reads muted/grey (like the embed's grey "Copy Reply"),
+   not full black; the active card keeps the solid black button. */
+.sig-card:not(.is-active) .sig-copy-btn { background: var(--surface-muted); color: var(--text-2); }
 .sig-copy-btn.is-copied { background: var(--accent-soft); color: var(--accent); }
-.sig-copy-btn.is-copied:hover { filter: none; }
 
 .sig-card-body { padding: var(--space-6); overflow-x: auto; -webkit-overflow-scrolling: touch; }
 /* The email signature is authored on white; keep the preview "paper" white in
@@ -162,6 +167,8 @@
 .sig-info-toggle:hover { background: var(--surface-muted); }
 .sig-info-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .sig-info-title { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); font-weight: var(--weight-semibold); color: var(--text-1); }
+/* Small inline info icon next to the title (not a large standalone circle). */
+.sig-info-title svg { width: 15px; height: 15px; flex-shrink: 0; }
 .sig-info-chevron { color: var(--text-3); flex-shrink: 0; width: 16px; height: 16px; transition: transform 250ms var(--ease-smooth); }
 .sig-info-card.is-open .sig-info-chevron { transform: rotate(180deg); }
 /* grid-rows 0fr→1fr trick for a smooth auto-height reveal */

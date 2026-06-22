@@ -342,8 +342,10 @@ export function EmailSignature({ title, embedded }: { title: string; embedded?: 
       <div className="sig-wrap">
         {/* ── Form ── */}
         <div className="sig-form">
-          <h2 className="sig-form-title">Your details</h2>
-          <p className="sig-form-sub">The preview updates live as you type.</p>
+          <h2 className="sig-form-title">Your Signature</h2>
+          <p className="sig-form-sub">
+            Fill in your details. Both previews update live. Copy each version when ready.
+          </p>
 
           <div className="sig-field">
             <label htmlFor="sig-name">Full name</label>
