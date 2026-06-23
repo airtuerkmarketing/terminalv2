@@ -90,9 +90,12 @@ html { scrollbar-gutter: stable; }
 .nav-item:hover .icon { transform: scale(1.12) translateY(-1px); }
 .nav-item .icon svg { width: 16px; height: 16px; }
 .nav-item .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; opacity: 1; transition: opacity 200ms var(--ease-smooth); }
-.nav-item .chevron { color: var(--text-3); transition: transform 200ms var(--ease-smooth); flex-shrink: 0; display: grid; place-items: center; }
+.nav-item .chevron { color: var(--text-3); opacity: 0; transition: opacity 150ms var(--ease-smooth), transform 200ms var(--ease-smooth); flex-shrink: 0; display: grid; place-items: center; }
 .nav-item .chevron svg { width: 14px; height: 14px; }
-.nav-item.expandable[data-open="true"] .chevron { transform: rotate(90deg); }
+/* Route-driven, not a manual toggle: hide the chevron at rest so it doesn't look
+   like a button; reveal on row hover, and keep it shown on the open row. */
+.nav-item.expandable:hover .chevron { opacity: 1; color: var(--text-2); }
+.nav-item.expandable[data-open="true"] .chevron { opacity: 1; transform: rotate(90deg); }
 
 /* Nested sub-items under a brand / IBE — text-only, muted, clearly indented. */
 .nav-sub { display: flex; flex-direction: column; gap: 4px; padding-left: 26px; max-height: 0; overflow: hidden; transition: max-height 300ms var(--ease-smooth); }
