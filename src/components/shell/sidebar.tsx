@@ -22,6 +22,10 @@ type SidebarIdentity = { name: string; email: string; role: string; initials: st
 
 const SIDEBAR_KEY = "terminalv2-sidebar";
 
+// Brands split into two visual groups (slug-keyed, position-independent): the
+// platform group (IBE suite + APIX) renders below a divider, the rest above.
+const PLATFORM_SLUGS = new Set(["ibe-product-suite", "airtuerk-apix"]);
+
 function isActive(pathname: string, href: string, exact: boolean) {
   if (href === "/") return pathname === "/";
   if (exact) return pathname === href;
@@ -126,6 +130,59 @@ export function Sidebar({
   // Close the drawer after following any nav link (no-op at lg+).
   const closeDrawer = () => setDrawer("closed");
 
+  // One brand nav item: expandable (with anchor children) when it has children,
+  // else a flat link. Shared by both brand groups so the markup stays identical.
+  function renderBrandItem(b: NavNode) {
+    if (b.children && b.children.length > 0) {
+      const open = isActive(pathname, b.href, false);
+      const subnavId = `subnav-${b.href.replace(/[^a-z0-9]+/gi, "-").replace(/(^-|-$)/g, "")}`;
+      return (
+        <div key={b.href}>
+          <Link
+            href={b.href}
+            className={`nav-item expandable${open ? " active" : ""}`}
+            data-open={open}
+            aria-expanded={open}
+            aria-controls={subnavId}
+            aria-current={open ? "page" : undefined}
+            onClick={closeDrawer}
+          >
+            <span className="icon">
+              <NavIcon name={b.iconKey} />
+            </span>
+            <span className="text">{b.label}</span>
+            <span className="chevron">
+              <ChevronIcon />
+            </span>
+          </Link>
+          <div id={subnavId} className={`nav-sub${open ? " open" : ""}`}>
+            {b.children.map((c) => (
+              <a key={c.href} className="nav-item" href={c.href} onClick={closeDrawer}>
+                <span className="icon">
+                  <NavIcon name={c.iconKey} />
+                </span>
+                <span className="text">{c.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <NavLink
+        key={b.href}
+        item={b}
+        active={isActive(pathname, b.href, false)}
+        onNavigate={closeDrawer}
+      />
+    );
+  }
+
+  // Internal Branding is hidden; the rest split into brand vs platform groups.
+  const visibleBrands = nav.brands.filter((b) => b.iconKey !== "internal-branding");
+  const brandGroup = visibleBrands.filter((b) => !PLATFORM_SLUGS.has(b.iconKey));
+  const platformGroup = visibleBrands.filter((b) => PLATFORM_SLUGS.has(b.iconKey));
+
   return (
     <>
       <div className="sidebar-backdrop" aria-hidden="true" onClick={closeDrawer} />
@@ -165,65 +222,26 @@ export function Sidebar({
 
           {/* Scrollable middle zone: brand groups + resources. */}
           <div className="sidebar-scroll">
-            {/* Brands & Products (Internal Branding is hidden from the sidebar). */}
-            <nav className="nav-section" aria-label="Brands and products">
-              {nav.brands
-                .filter((b) => b.iconKey !== "internal-branding")
-                .map((b) => {
-              if (b.children && b.children.length > 0) {
-                // Expandable brand (IBE + the single-page brands): a LINK to the
-                // brand page whose child list expands ONLY while that route is
-                // active (route-driven) — it collapses when you navigate away.
-                // Children are in-page anchor links (/<brand>#<section>) for block
-                // sections, or route links (/<brand>/<slug>) for hardcoded
-                // sub-pages. The sub-nav id is per-brand so multiple expanded
-                // brands never collide on one DOM id.
-                const open = isActive(pathname, b.href, false);
-                const subnavId = `subnav-${b.href.replace(/[^a-z0-9]+/gi, "-").replace(/(^-|-$)/g, "")}`;
-                return (
-                  <div key={b.href}>
-                    <Link
-                      href={b.href}
-                      className={`nav-item expandable${open ? " active" : ""}`}
-                      data-open={open}
-                      aria-expanded={open}
-                      aria-controls={subnavId}
-                      aria-current={open ? "page" : undefined}
-                      onClick={closeDrawer}
-                    >
-                      <span className="icon">
-                        <NavIcon name={b.iconKey} />
-                      </span>
-                      <span className="text">{b.label}</span>
-                      <span className="chevron">
-                        <ChevronIcon />
-                      </span>
-                    </Link>
-                    <div id={subnavId} className={`nav-sub${open ? " open" : ""}`}>
-                      {b.children.map((c) => (
-                        <a key={c.href} className="nav-item" href={c.href} onClick={closeDrawer}>
-                          <span className="icon">
-                            <NavIcon name={c.iconKey} />
-                          </span>
-                          <span className="text">{c.label}</span>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                );
-              }
-              return (
-                <NavLink
-                  key={b.href}
-                  item={b}
-                  active={isActive(pathname, b.href, false)}
-                  onNavigate={closeDrawer}
-                />
-              );
-            })}
-          </nav>
+            {/* Brand group (Internal Branding is hidden from the sidebar). */}
+            {brandGroup.length > 0 && (
+              <nav className="nav-section" aria-label="Brands">
+                {brandGroup.map(renderBrandItem)}
+              </nav>
+            )}
 
-          <div className="nav-divider" />
+            {/* Divider only when both groups have items. */}
+            {brandGroup.length > 0 && platformGroup.length > 0 && (
+              <div className="nav-divider" />
+            )}
+
+            {/* Platform group: IBE Product Suite + airtuerk APIX. */}
+            {platformGroup.length > 0 && (
+              <nav className="nav-section" aria-label="Platform">
+                {platformGroup.map(renderBrandItem)}
+              </nav>
+            )}
+
+            <div className="nav-divider" />
 
             {/* Resources — Document Library is an expandable folder node
                 (reuses the brand expandable markup); the rest are flat leaves. */}
