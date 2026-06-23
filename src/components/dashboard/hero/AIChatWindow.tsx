@@ -19,9 +19,19 @@ interface Props {
   onClose: () => void;
   onSubmit: (text: string) => void;
   onNewChat: () => void;
+  onCorrect?: (turn: AiTurn) => void;
+  onFeedbackChange?: (turnId: string, feedback: "helpful" | "not_helpful") => void;
 }
 
-export function AIChatWindow({ open, turns, onClose, onSubmit, onNewChat }: Props) {
+export function AIChatWindow({
+  open,
+  turns,
+  onClose,
+  onSubmit,
+  onNewChat,
+  onCorrect,
+  onFeedbackChange,
+}: Props) {
   const [draft, setDraft] = useState("");
   const [confirming, setConfirming] = useState(false); // "Neuer Chat" two-step arm
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -141,7 +151,13 @@ export function AIChatWindow({ open, turns, onClose, onSubmit, onNewChat }: Prop
 
       <div className="ai-chat-body" ref={bodyRef}>
         {turns.map((t, i) => (
-          <AIAnswerBlock key={t.id} turn={t} typewriter={i === turns.length - 1} />
+          <AIAnswerBlock
+            key={t.id}
+            turn={t}
+            typewriter={i === turns.length - 1}
+            onCorrect={onCorrect}
+            onFeedbackChange={onFeedbackChange}
+          />
         ))}
       </div>
 

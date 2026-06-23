@@ -771,3 +771,47 @@
   opacity: 0.7;
   font-style: italic;
 }
+
+/* ── AnswerFeedback (Atomic 3.5) — modeled after .ai-chat-source aesthetic ── */
+.ai-chat-feedback {
+  margin-top: var(--space-3);
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.ai-chat-feedback-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: background 150ms var(--ease-smooth),
+              border-color 150ms var(--ease-smooth),
+              color 150ms var(--ease-smooth);
+}
+
+.ai-chat-feedback-btn:hover:not(:disabled) {
+  background: var(--surface-muted);
+  color: var(--text-1);
+}
+
+.ai-chat-feedback-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ai-chat-feedback-btn--active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.ai-chat-feedback-btn--correct .ai-chat-feedback-label {
+  display: inline-block;
+}

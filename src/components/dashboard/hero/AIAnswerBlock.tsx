@@ -2,6 +2,7 @@
 
 import { Loader2, ExternalLink } from "lucide-react";
 import { useTypewriterText } from "@/components/dashboard/hero/useTypewriterText";
+import { AnswerFeedback } from "@/components/dashboard/hero/AnswerFeedback";
 import type { AiKonfidenz, AiTurn } from "@/lib/search/types";
 import { isOutOfScope } from "@/lib/rag/client";
 
@@ -25,9 +26,13 @@ const KONFIDENZ_LABEL: Record<AiKonfidenz, string> = {
 export function AIAnswerBlock({
   turn,
   typewriter = false,
+  onCorrect,
+  onFeedbackChange,
 }: {
   turn: AiTurn;
   typewriter?: boolean;
+  onCorrect?: (turn: AiTurn) => void;
+  onFeedbackChange?: (turnId: string, feedback: "helpful" | "not_helpful") => void;
 }) {
   // Spinner until the first token; once text streams it renders live.
   const showLoading =
@@ -46,7 +51,12 @@ export function AIAnswerBlock({
             <span>KI denkt nach…</span>
           </div>
         ) : (
-          <AITurnAnswer turn={turn} typewriter={typewriter} />
+          <AITurnAnswer
+            turn={turn}
+            typewriter={typewriter}
+            onCorrect={onCorrect}
+            onFeedbackChange={onFeedbackChange}
+          />
         )}
       </div>
     </div>
@@ -58,9 +68,13 @@ export function AIAnswerBlock({
 function AITurnAnswer({
   turn,
   typewriter,
+  onCorrect,
+  onFeedbackChange,
 }: {
   turn: AiTurn;
   typewriter: boolean;
+  onCorrect?: (turn: AiTurn) => void;
+  onFeedbackChange?: (turnId: string, feedback: "helpful" | "not_helpful") => void;
 }) {
   const answer = turn.answer!;
   const streaming = turn.isStreaming === true;
@@ -135,6 +149,16 @@ function AITurnAnswer({
             {KONFIDENZ_LABEL[answer.konfidenz]}
           </span>
         </div>
+      )}
+
+      {finished && turn.messageId && onCorrect && onFeedbackChange && (
+        <AnswerFeedback
+          messageId={turn.messageId}
+          currentFeedback={turn.feedback ?? null}
+          onCorrect={() => onCorrect(turn)}
+          onFeedbackChange={(fb) => onFeedbackChange(turn.id, fb)}
+          disabled={turn.isStreaming}
+        />
       )}
     </>
   );

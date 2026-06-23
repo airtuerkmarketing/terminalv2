@@ -263,6 +263,18 @@ export function SearchAIBox() {
     [model, sessionId]
   );
 
+  const handleFeedbackChange = useCallback(
+    (turnId: string, feedback: "helpful" | "not_helpful") => {
+      setTurns((prev) => prev.map((t) => (t.id === turnId ? { ...t, feedback } : t)));
+    },
+    []
+  );
+
+  const handleCorrect = useCallback((turn: AiTurn) => {
+    // Stub — CorrectionModal launch comes in Atomic 3.6
+    console.log("[Atomic 3.5 stub] Correction requested for turn:", turn.id, turn.messageId);
+  }, []);
+
   const closeChat = useCallback(() => setChatOpen(false), []);
   // Reset the thread: clearing turns lets the persist effect write [] back to
   // terminal_chat_history (the "Neuer Chat" button guards this behind a confirm).
@@ -424,6 +436,8 @@ export function SearchAIBox() {
         onClose={closeChat}
         onSubmit={submitAi}
         onNewChat={newChat}
+        onCorrect={handleCorrect}
+        onFeedbackChange={handleFeedbackChange}
       />
     </div>
   );
