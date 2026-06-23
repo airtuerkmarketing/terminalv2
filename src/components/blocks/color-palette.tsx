@@ -37,7 +37,7 @@ export function ColorPalette({ content }: { content: ColorPaletteContent }) {
     const ok = await copyPlainText(hex);
     if (!ok) return;
     setCopiedIdx(i);
-    toast({ title: "Copied to clipboard", description: hex, variant: "success" });
+    toast({ title: `Copied ${hex}`, variant: "success" });
     if (timer.current) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setCopiedIdx(null), 1500);
   }
