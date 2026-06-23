@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import {
+  Files,
   GalleryVerticalEnd,
   LayoutDashboard,
   LibraryBig,
   LogOut,
   Presentation,
   Settings,
-  StickyNote,
   User,
   UserCog,
   Users,
@@ -131,7 +131,7 @@ export function NavIcon({ name }: { name: string }) {
     case "asset-library":
       return <LibraryBig aria-hidden />;
     case "document-library":
-      return <StickyNote aria-hidden />;
+      return <Files aria-hidden />;
     case "team":
       return <Users aria-hidden />;
     case "users":
