@@ -815,3 +815,290 @@
 .ai-chat-feedback-btn--correct .ai-chat-feedback-label {
   display: inline-block;
 }
+
+/* ── CorrectionModal (Atomic 3.6) — follows the repo overlay convention
+   (fixed / inset-0 / z-1000 / flex-center, like .uap-modal-backdrop). ── */
+.ai-correction-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  animation: ai-correction-fade 0.2s var(--ease-smooth);
+}
+
+@keyframes ai-correction-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ai-correction-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: ai-correction-pop 0.2s var(--ease-smooth);
+}
+
+@keyframes ai-correction-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ai-correction-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--separator);
+}
+
+.ai-correction-header h2 {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-1);
+}
+
+.ai-correction-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+
+.ai-correction-close:hover:not(:disabled) {
+  background: var(--surface-muted);
+  color: var(--text-1);
+}
+
+.ai-correction-close:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ai-correction-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.ai-correction-context {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.ai-correction-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-3);
+}
+
+.ai-correction-label:not(:first-child) {
+  margin-top: var(--space-3);
+}
+
+.ai-correction-original-q {
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-1);
+}
+
+.ai-correction-original-a {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  white-space: pre-wrap;
+}
+
+.ai-correction-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.ai-correction-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-correction-field-label {
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-1);
+}
+
+.ai-correction-required {
+  color: var(--accent);
+}
+
+.ai-correction-optional {
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+.ai-correction-types {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.ai-correction-type {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth);
+}
+
+.ai-correction-type:hover {
+  background: var(--surface-muted);
+}
+
+.ai-correction-type--selected {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+}
+
+.ai-correction-type input {
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.ai-correction-type-label {
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-1);
+}
+
+.ai-correction-type-desc {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.ai-correction-textarea,
+.ai-correction-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--fs-sm);
+  resize: none;
+  outline: none;
+  transition: border-color 150ms var(--ease-smooth);
+}
+
+.ai-correction-textarea:focus,
+.ai-correction-input:focus {
+  border-color: var(--accent-border);
+}
+
+.ai-correction-textarea:disabled,
+.ai-correction-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-correction-error {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  border: 1px solid var(--hairline);
+  font-size: var(--fs-sm);
+  color: var(--text-1);
+}
+
+.ai-correction-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--separator);
+  background: var(--surface-flat);
+}
+
+.ai-correction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+
+.ai-correction-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-correction-btn--secondary {
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--text-2);
+}
+
+.ai-correction-btn--secondary:hover:not(:disabled) {
+  background: var(--surface-muted);
+  color: var(--text-1);
+}
+
+.ai-correction-btn--primary {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.ai-correction-btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, black);
+}
+
+/* Reuse the existing spin keyframe (defined for .ai-chat-spin). */
+.ai-correction-spin {
+  animation: ai-chat-spin 0.8s linear infinite;
+}
+
+@media (max-width: 540px) {
+  .ai-correction-types {
+    grid-template-columns: 1fr;
+  }
+}
