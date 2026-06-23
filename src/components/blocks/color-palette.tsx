@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { copyPlainText } from "@/lib/email-tools";
+import { useToast } from "@/components/ui/toast";
 // Type-only import (blocks/types.ts has no server-only code; this keeps the
 // boundary clean regardless).
 import type { ColorPaletteContent } from "@/lib/blocks/types";
@@ -21,27 +22,24 @@ function isLight(hex: string) {
 export function ColorPalette({ content }: { content: ColorPaletteContent }) {
   const strips = content.display === "strips";
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<number | null>(null);
+  const { toast } = useToast();
 
-  // Clear any pending dismiss timer if the palette unmounts mid-toast.
+  // Clear any pending swatch-check reset timer if the palette unmounts.
   useEffect(() => () => {
     if (timer.current) window.clearTimeout(timer.current);
   }, []);
 
   // Reuses copyPlainText from email-tools (Clipboard API + textarea fallback) —
-  // clipboard logic is not reimplemented here. Copied state mirrors the signature
-  // generator: accent + check icon, transient, NO green (no success token exists).
+  // clipboard logic is not reimplemented here. The transient check on the swatch
+  // stays as inline feedback; a central success toast fires in addition.
   async function copyHex(i: number, hex: string) {
     const ok = await copyPlainText(hex);
     if (!ok) return;
     setCopiedIdx(i);
-    setToast(`HEX ${hex} copied`);
+    toast({ title: "Copied to clipboard", description: hex, variant: "success" });
     if (timer.current) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      setCopiedIdx(null);
-      setToast(null);
-    }, 1500);
+    timer.current = window.setTimeout(() => setCopiedIdx(null), 1500);
   }
 
   return (
@@ -98,14 +96,6 @@ export function ColorPalette({ content }: { content: ColorPaletteContent }) {
           </div>
         );
       })}
-      <div className={`palette-toast${toast ? " is-visible" : ""}`} role="status" aria-live="polite">
-        {toast ? (
-          <>
-            <CheckIcon />
-            <span>{toast}</span>
-          </>
-        ) : null}
-      </div>
     </div>
   );
 }
