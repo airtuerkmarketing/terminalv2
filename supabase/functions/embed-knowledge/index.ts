@@ -19,6 +19,16 @@ const CHUNK_SIZE_TOKENS = 700
 const CHUNK_OVERLAP_TOKENS = 100
 const VOYAGE_BATCH_SIZE = 128
 
+// Curated Intelligence Knowledge Base (D-061) — read from Storage so the content
+// can be re-curated without a redeploy. Embedded into confluence_chunks under
+// source_type='knowledge_base'.
+const KNOWLEDGE_BASE_BUCKET = 'rag-knowledge'
+// Versioned filename: future re-curations land as -v1.3.md etc. without
+// overwriting, so old embeddings stay reproducible / rollback-able.
+const KNOWLEDGE_BASE_PATH = 'airtuerk-intelligence-knowledge-base-v1.2.md'
+const KNOWLEDGE_BASE_ID = 'airtuerk-core-v1.2'
+const KNOWLEDGE_BASE_VERSION = '1.2'
+
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
 
 Deno.serve(async (req: Request) => {
@@ -61,6 +71,8 @@ Deno.serve(async (req: Request) => {
         return await embedCompanyContext(supabase, voyageKey, force)
       case 'corrections':
         return await embedApprovedCorrections(supabase, voyageKey, force)
+      case 'knowledge_base':
+        return await embedKnowledgeBase(supabase, voyageKey, force)
       case 'all':
         return await embedAll(supabase, voyageKey, force)
       default:
@@ -574,7 +586,7 @@ async function embedAll(
   force: boolean,
 ): Promise<Response> {
   const results: unknown[] = []
-  const sources = ['context', 'confluence', 'attachments', 'brands', 'corrections']
+  const sources = ['context', 'confluence', 'attachments', 'brands', 'knowledge_base', 'corrections']
 
   for (const source of sources) {
     try {
@@ -584,6 +596,7 @@ async function embedAll(
         case 'confluence': result = await embedConfluence(supabase, voyageKey, force); break
         case 'attachments': result = await embedAttachments(supabase, voyageKey, force); break
         case 'brands': result = await embedBrands(supabase, voyageKey, force); break
+        case 'knowledge_base': result = await embedKnowledgeBase(supabase, voyageKey, force); break
         case 'corrections': result = await embedApprovedCorrections(supabase, voyageKey, force); break
         default: continue
       }
@@ -594,6 +607,100 @@ async function embedAll(
   }
 
   return new Response(JSON.stringify({ source: 'all', results }), { headers: JSON_HEADERS })
+}
+
+// ============ Handler 7: curated knowledge base (D-061) ============
+// Reads the MD from Storage, strips the HTML comment header, splits into H2
+// sections (each self-contained for clean retrieval), and DROPS the
+// "Excluded / Review Items" meta-section (it lists facts NOT to assert —
+// conflicting revenue, unconfirmed URLs — which must never surface). Chunks via
+// the shared chunker; stored under source_type='knowledge_base'.
+async function embedKnowledgeBase(
+  supabase: ReturnType<typeof createClient>,
+  voyageKey: string,
+  force: boolean,
+): Promise<Response> {
+  const startTime = Date.now()
+
+  const { data: file, error: dlErr } = await supabase.storage
+    .from(KNOWLEDGE_BASE_BUCKET)
+    .download(KNOWLEDGE_BASE_PATH)
+  if (dlErr || !file) {
+    return new Response(
+      JSON.stringify({
+        source: 'knowledge_base',
+        error: `Storage download failed: ${dlErr?.message ?? 'no file'}`,
+      }),
+      { status: 500, headers: JSON_HEADERS },
+    )
+  }
+  const raw = await file.text()
+
+  const body = raw.replace(/<!--[\s\S]*?-->/g, '').trim()
+  const sections = body
+    .split(/^## /m)
+    .slice(1) // drop the preamble (# title + intro blockquote, no own H2)
+    .map((s) => '## ' + s.trim())
+    .filter((s) => s.length > 4 && !s.startsWith('## Excluded / Review Items'))
+
+  let created = 0, skipped = 0
+  const errors: Array<{ source_id: string; error: string }> = []
+
+  for (let secIdx = 0; secIdx < sections.length; secIdx++) {
+    const section = sections[secIdx]
+    const sectionTitle = section.split('\n')[0].replace(/^##\s*/, '').trim()
+    try {
+      const chunks = chunkText(section, {
+        knowledge_base_id: KNOWLEDGE_BASE_ID,
+        knowledge_base_version: KNOWLEDGE_BASE_VERSION,
+        section_index: secIdx,
+        section_title: sectionTitle,
+        title: sectionTitle, // so rag-query labels the citation by section
+        source_name: 'airtuerk Intelligence Core Knowledge Base v1.2',
+        storage_path: `${KNOWLEDGE_BASE_BUCKET}/${KNOWLEDGE_BASE_PATH}`,
+      })
+      if (chunks.length === 0) continue
+
+      const embeddings = await embedBatch(chunks.map((c) => c.content), voyageKey)
+
+      for (let i = 0; i < chunks.length; i++) {
+        const syntheticId = `kb:${KNOWLEDGE_BASE_ID}:${secIdx}:${i}`
+        const { error: insertErr } = await supabase
+          .from('confluence_chunks')
+          .upsert({
+            page_id: null,
+            attachment_id: null,
+            chunk_index: i,
+            content: chunks[i].content,
+            token_count: chunks[i].token_count,
+            embedding: embeddings[i],
+            metadata: { ...chunks[i].metadata, synthetic_source_id: syntheticId },
+            source_type: 'knowledge_base',
+          }, { onConflict: 'content_hash', ignoreDuplicates: !force })
+
+        if (insertErr) {
+          if (insertErr.code === '23505' && !force) skipped++
+          else errors.push({ source_id: syntheticId, error: insertErr.message })
+        } else {
+          created++
+        }
+      }
+    } catch (err) {
+      errors.push({ source_id: `section-${secIdx}`, error: String(err) })
+    }
+  }
+
+  return new Response(
+    JSON.stringify({
+      source: 'knowledge_base',
+      chunks_created: created,
+      chunks_skipped: skipped,
+      sections_processed: sections.length,
+      errors,
+      duration_ms: Date.now() - startTime,
+    }),
+    { headers: JSON_HEADERS },
+  )
 }
 
 // ============ Shared response shape ============

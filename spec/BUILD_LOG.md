@@ -18,9 +18,10 @@ it is append-only history (do not rewrite past entries — add new ones).
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
   `pgvector 0.8.0` + `pg_trgm 1.6` installed. Highest migration:
-  `20260623082750_rag_retrieval_function`. Highest decision: **D-060**.
-  RAG corpus: **424 chunks** embedded (page 134 / pdf 159 / office 60 / brand 43 /
-  context 28). Edge functions: `embed-knowledge`, `rag-query` (+ 3 confluence fns).
+  `20260623093507_seed_company_context_knowledge_base`. Highest decision: **D-061**.
+  RAG corpus: **438 chunks** (page 134 / pdf 159 / office 60 / brand 43 /
+  knowledge_base 14) + **34 company_context** entries. Edge functions:
+  `embed-knowledge` (7 source modes), `rag-query` (+ 3 confluence fns).
 - **Auth/roles:** `super_admin | admin | user`; RLS via `is_admin()` /
   `is_super_admin()` / `get_profile_role()`; profile role-changes are
   super-admin-only (D-055).
@@ -32,6 +33,24 @@ it is append-only history (do not rewrite past entries — add new ones).
   (`c397b29`); `/internal-branding/configurator` removed (D-056).
 - **Remaining:** full Admin CMS (Phase 5), IBE Tools Showcase port, RAG chat UI +
   correction workflow (File 03), email notify + gold-set re-run (File 04).
+
+---
+
+## RAG-airtuerk V2 — curated knowledge base (2026-06-24)
+
+**Status:** Applied/deployed to prod. Decision **D-061**. Demo-critical priority insert.
+
+Integrated the curated `airtuerk-intelligence-knowledge-base.md` (v1.2, Business
+Development) to close content gaps (PAX/year, ~170 airline partners, B2B product
+suite, ATBeds/airtuerk International leads, no-setup-fee onboarding). Added
+`'knowledge_base'` to the `confluence_chunks.source_type` CHECK; uploaded the MD to
+the `rag-knowledge` bucket (Storage, not hardcoded — the file has backticks that
+break a template literal, and Storage allows re-curation without redeploy); new
+`embedKnowledgeBase` handler downloads it, splits on H2, **drops the "Excluded /
+Review Items" meta-section** (conflicting revenue / unconfirmed URLs that must not
+surface) → 14 chunks (148–692 tok) from 8 sections. Plus 6 priority-1
+`company_context` entries. `rag-query` labels these "airtuerk Intelligence: <section>".
+QA verified: PAX/year, ATBeds lead, setup-fees all answer correctly + cited.
 
 ---
 

@@ -388,6 +388,13 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 **Weiss-nicht handling:** priority-1 `company_context` entries are always injected via `rag_hybrid_search`, making `rawChunks.length===0` structurally unreachable in normal operation. Refusals are handled by Claude via system-prompt rule 7 ("Diese Frage liegt außerhalb meiner Wissensbasis") and rule 3 ("Das geht aus unseren Quellen nicht eindeutig hervor"). Both produce normal assistant messages with valid `messageId`, so the correction workflow (C14 goal) functions on them. `streamWeissNichtResponse` remains as a logged safety-net for theoretical edge cases (empty priority-1 table / DB corruption).
 **Verified:** "Wer ist der CEO?" → "Ümit Tenekeci [Quelle: Kontext: Geschäftsführung]"; "Wetter auf dem Mars?" → rule-7 refusal; both persisted with tokens + latency; warm TTFB ~3s (watch in Atomic 2.5).
 
+## D-061 — Curated Intelligence Knowledge Base as a RAG source
+**Date:** 2026-06-24
+**Status:** Adopted. Migrations `20260623093159_add_knowledge_base_source_type` + `20260623093507_seed_company_context_knowledge_base`. Demo-critical priority insert before File 03.
+**Context:** A curated, partner-facing knowledge base (`airtuerk-intelligence-knowledge-base.md`, v1.2, authored by Business Development) closes content gaps the Confluence/brand corpus didn't cover: ~2.5M PAX/year, ~170 airline partners, the B2B product suite (Cockpit/multicheck/ATBeds), ATBeds lead (Tarık Öztürk) / airtuerk International (Burak Akpinar), and no-setup-fee onboarding.
+**Decision:** Add `'knowledge_base'` to the `confluence_chunks.source_type` CHECK and embed the MD as a new source. The MD lives in the **`rag-knowledge` Storage bucket** (not hardcoded — the file contains backticks that would break a template literal, and Storage lets it be re-curated without a redeploy); the new `embedKnowledgeBase` handler downloads it, strips the HTML-comment header, splits on H2 headings (each section self-contained), and **drops the "Excluded / Review Items" meta-section** (it lists facts NOT to assert — conflicting revenue, unconfirmed staging URLs — which must never surface). Chunks go through the shared chunker (14 chunks from 8 sections, 148–692 tok). Plus **6 priority-1 `company_context` entries** for the highest-value facts (always-injected). `rag-query`'s citation label maps `source_type='knowledge_base'` → "airtuerk Intelligence: <section>".
+**Verified:** "Wie viele PAX/Jahr?" → "2,5 Millionen PAX [Quellen: airtuerk Intelligence: Key Facts, …]"; ATBeds-Leitung → Tarık Öztürk / Istanbul; setup-fees → "keine Setup-Gebühren". KB + context blend in citations. TTFB 2–3.4s.
+
 ---
 
 ## Anti-decisions (explicitly NOT doing)

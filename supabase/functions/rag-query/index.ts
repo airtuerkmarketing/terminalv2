@@ -292,7 +292,9 @@ function buildSystemPrompt(chunks: RetrievedChunk[]): string {
         c.source === 'confluence'
           ? meta.source_type === 'correction'
             ? `Korrektur: ${meta.title || 'Internes Wissen'}`
-            : `Confluence: ${meta.title || meta.bereich || 'Operations'}`
+            : meta.source_type === 'knowledge_base'
+              ? `airtuerk Intelligence: ${meta.title || 'Wissensbasis'}`
+              : `Confluence: ${meta.title || meta.bereich || 'Operations'}`
           : c.source === 'brand'
             ? `Brand: ${meta.brand_name || 'Unbekannt'}`
             : `Kontext: ${meta.topic || 'Allgemein'}`
