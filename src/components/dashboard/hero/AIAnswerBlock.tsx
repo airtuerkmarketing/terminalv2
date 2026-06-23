@@ -96,23 +96,18 @@ function AITurnAnswer({
       </p>
 
       {finished && answer.quellen.length > 0 && (
-        <div className="ai-chat-sources">
+        <div className="ai-chat-sources-row">
           {answer.quellen.map((s, i) => (
             <a
               key={`${s.dokument_titel}-${i}`}
-              className="ai-chat-source"
+              className="ai-chat-source-chip"
               href={s.link}
               target={s.link.startsWith("http") ? "_blank" : undefined}
               rel={s.link.startsWith("http") ? "noreferrer" : undefined}
+              title={s.dokument_titel}
             >
-              <span className="ai-chat-source-head">
-                <span className="ai-chat-source-title">{s.dokument_titel}</span>
-                <ExternalLink className="ai-chat-source-ext" aria-hidden="true" />
-              </span>
-              <span className="ai-chat-source-meta">
-                <span className="ai-chat-badge">{s.domain}</span>
-                <span className="ai-chat-source-stand">Stand {s.stand}</span>
-              </span>
+              <ExternalLink className="ai-chat-source-chip-icon" aria-hidden="true" />
+              <span className="ai-chat-source-chip-title">{s.dokument_titel}</span>
             </a>
           ))}
         </div>
