@@ -7,15 +7,18 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## Current State (updated 2026-06-22)
+## Current State (updated 2026-06-23)
 
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
-- **Database:** 22 tables + the `profiles_v` view. **55 pages**, **15 brands**,
+- **Database:** 28 tables + the `profiles_v` view (RAG foundation added 6:
+  `company_context`, `confluence_chunks`, `brand_chunks`, `ai_chat_sessions`,
+  `ai_chat_messages`, `ai_corrections`). **55 pages**, **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  Highest migration: `20260622193003`. Highest decision: **D-057**.
+  `pgvector 0.8.0` + `pg_trgm 1.6` installed. Highest migration:
+  `20260623060259_rag_foundation`. Highest decision: **D-058**.
 - **Auth/roles:** `super_admin | admin | user`; RLS via `is_admin()` /
   `is_super_admin()` / `get_profile_role()`; profile role-changes are
   super-admin-only (D-055).
@@ -26,7 +29,45 @@ it is append-only history (do not rewrite past entries — add new ones).
   intelligence/RAG groundwork (0025–0029) + live `/api/search`; dead-code cleanup
   (`c397b29`); `/internal-branding/configurator` removed (D-056).
 - **Remaining:** full Admin CMS (Phase 5), IBE Tools Showcase port, RAG embedding
-  pipeline.
+  pipeline (embed-knowledge + rag-query edge fns), RAG chat UI + correction workflow,
+  email notify + gold-set re-run.
+
+---
+
+## RAG-airtuerk V2 — foundation migration (2026-06-23)
+
+**Status:** Applied to prod. Decision **D-058**. Migration `20260623060259_rag_foundation`.
+
+Start of the airtuerk-KI build (learnable, source-citing internal RAG; plan in
+`OneDrive/terminal/`, 4 files / 35 atomic prompts). Recon (Atomic 1.1) verified live
+DB before any write — confirmed 86 confluence_raw, 116 attachments w/ text, 15 brands,
+55 published pages, 43 blocks, 84 gold-set rows; existing helpers `set_updated_at` /
+`is_admin` / `is_super_admin` / `get_profile_role` all present; pg_trgm in, vector +
+pg_net not yet. Caught plan drift: D-057 was already taken (→ RAG uses D-058+),
+migration naming is timestamped, and the frontend already renders AI answers through a
+turn-based `AIChatWindow` (not the inline shape the plan assumed) — frontend phase will
+get its own recon + diff-approval round before code.
+
+**Applied (D-058):** pgvector + the 4-layer schema (`company_context`,
+`confluence_chunks`, `brand_chunks`, `ai_corrections`) plus `ai_chat_sessions` /
+`ai_chat_messages`. HNSW on all embedding columns, pg_trgm GIN on chunk content, RLS
+FORCED on all six, reuse of `set_updated_at`. FK types verified against live schema
+(text↔text for Confluence, uuid↔uuid for brand/page/block) before apply. Post-apply
+verification green: pgvector 0.8.0, 6 tables RLS+FORCE, 3 HNSW + 1 trgm index,
+`set_updated_at` unchanged.
+
+Then deployed the `embed-knowledge` edge function (6 source handlers; Voyage key
+checked lazily so a zero-work call returns `chunks_created:0` without a key;
+`tsconfig` already excludes `supabase/functions` so no Vercel-build impact) and
+seeded `company_context` — migration `20260623070454_seed_company_context`, **28
+identity entries** (20 priority-1, 5 `needs_review`) pulled from live
+brands/team_members/`kanal` data, not plan templates. Design rule (approved): no
+unverified operational facts at priority-1 (always-injected → would poison every
+answer); PNR/cancellation/check-in are priority-2 pointers, real values come from
+Layer 2 (`confluence_chunks`). Ran `{source:'context'}` → **28/28 embedded** (Voyage
+voyage-4-large, 1024-dim). Edge Function Secrets (VOYAGE/ANTHROPIC/RESEND) +
+Vault (SERVICE_ROLE_KEY) all set. **Next:** Atomic 2.1 bulk embedding run
+(confluence + attachments + brands, ~2300 chunks) → `rag-query` pipeline.
 
 ---
 
