@@ -19,16 +19,11 @@ const IBE_SLUG = "ibe-product-suite";
  *  Library is an EXPANDABLE node whose children are the visible top-level folders
  *  (built in getNav, RLS-scoped); the rest stay flat leaves. */
 const RESOURCES_BEFORE: NavLeaf[] = [
-  { label: "Asset Library", href: "/asset-library", iconKey: "asset-library" },
+  { label: "Assets", href: "/asset-library", iconKey: "asset-library" },
 ];
 const RESOURCES_AFTER: NavLeaf[] = [
   { label: "Team", href: "/team", iconKey: "team" },
-  { label: "Presentation Hub", href: "/presentation-hub", iconKey: "presentation-hub" },
-  // Three AI TEST review pages — relocated under /gold-set/* (DB move 2026-06-21).
-  // The /gold-set parent itself is hidden_in_sidebar=true (no leaf for it).
-  { label: "AI TEST 1", href: "/gold-set/ai-test-1", iconKey: "presentation-hub" },
-  { label: "AI TEST 2", href: "/gold-set/ai-test-2", iconKey: "presentation-hub" },
-  { label: "AI TEST 3", href: "/gold-set/ai-test-3", iconKey: "presentation-hub" },
+  { label: "Presentations", href: "/presentation-hub", iconKey: "presentation-hub" },
 ];
 
 /**
@@ -122,7 +117,7 @@ async function getNav(): Promise<SidebarNav> {
   });
 
   const documentLibrary: NavNode = {
-    label: "Document Library",
+    label: "Documents",
     href: "/documents-library",
     iconKey: "document-library",
     children: libraryFolders.map((f) => ({
