@@ -83,15 +83,6 @@ function revalidateFiles() {
   revalidatePath("/presentation-hub", "layout");
 }
 
-/** Parse a comma-separated list of tag UUIDs from form data (invalid ids dropped). */
-function parseTagIds(raw: FormDataEntryValue | null): string[] {
-  if (typeof raw !== "string") return [];
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => UUID_RE.test(s));
-}
-
 /** Validate + normalize an optional ISO datetime ("" / invalid → null). */
 function normalizeIsoOrNull(v: string | null | undefined): string | null {
   if (!v) return null;
@@ -126,6 +117,28 @@ const IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "webp"]);
 async function maybeGenerateThumbnail(fileId: string, ext: string, file: File): Promise<void> {
   if (!IMAGE_EXTS.has(ext)) return;
   const buf = Buffer.from(await file.arrayBuffer());
+  const res = await generateImageThumbnail(fileId, buf, ext as "jpg" | "jpeg" | "png" | "webp");
+  if (!res.ok) console.error("[presentation thumbnail]", fileId, res.error);
+}
+
+/**
+ * Thumbnail variant for the signed-URL upload flow: the bytes go straight to
+ * Storage (finalize never receives the File), so for image uploads we pull the
+ * object back down to feed the same generator. Non-fatal + image-only, like above.
+ */
+async function maybeGenerateThumbnailFromStorage(
+  fileId: string,
+  ext: string,
+  storagePath: string
+): Promise<void> {
+  if (!IMAGE_EXTS.has(ext)) return;
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage.from(BUCKET).download(storagePath);
+  if (error || !data) {
+    console.error("[presentation thumbnail] download", fileId, error?.message ?? "no data");
+    return;
+  }
+  const buf = Buffer.from(await data.arrayBuffer());
   const res = await generateImageThumbnail(fileId, buf, ext as "jpg" | "jpeg" | "png" | "webp");
   if (!res.ok) console.error("[presentation thumbnail]", fileId, res.error);
 }
@@ -302,64 +315,115 @@ export async function deleteFolder(folderId: string): Promise<ActionResult> {
 
 // ── File mutations ──────────────────────────────────────────────────────────
 
-export async function uploadPresentation(folderId: string, formData: FormData): Promise<FileResult> {
+/** Step-1 payload for the signed-URL upload (shape shared with the modal). */
+export type UploadTicket =
+  | { ok: true; bucket: string; path: string; token: string; fileId: string; contentType: string }
+  | { ok: false; error: string };
+
+/**
+ * Two-step upload, step 1 (D-057) — see the Document Library action for the full
+ * rationale. Admin-gated; mints a one-time signed upload URL so the browser PUTs
+ * the bytes straight to Storage, bypassing the Next.js 1 MB Server-Action body
+ * limit that made larger presentation uploads (25 MB ceiling) hang silently.
+ */
+export async function createPresentationUploadTicket(
+  folderId: string,
+  filename: string
+): Promise<UploadTicket> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  if (!UUID_RE.test(folderId)) return { ok: false, error: "That destination no longer exists." };
+  const ext = extFromFilename(filename);
+  if (!ALLOWED_EXT.has(ext)) return { ok: false, error: "That file type isn't allowed." };
+  const contentType = EXT_TO_MIME[ext];
+  if (!contentType) return { ok: false, error: "That file type isn't allowed." };
+
+  const fileId = randomUUID();
+  const path = `${fileId}/source.${ext}`;
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage.from(BUCKET).createSignedUploadUrl(path);
+  if (error || !data) return { ok: false, error: toMessage(error, "file") };
+  return { ok: true, bucket: BUCKET, path, token: data.token, fileId, contentType };
+}
+
+/**
+ * Two-step upload, step 2. Inserts the row after the browser's signed PUT; the
+ * true size is read back from Storage (which also confirms the object landed).
+ * Tag links + the image thumbnail (pulled back from Storage, since finalize has
+ * no File) run after, mirroring the old single-action behaviour. A row failure
+ * rolls the orphaned object back.
+ */
+export async function finalizePresentationUpload(
+  folderId: string,
+  meta: {
+    fileId: string;
+    ext: string;
+    title: string;
+    description?: string | null;
+    language?: string | null;
+    groupId?: string | null;
+    tagIds?: string[];
+  }
+): Promise<FileResult> {
   let id: Identity;
   try {
     id = await requireAdmin();
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
-
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Please choose a file." };
-  const ext = extFromFilename(file.name);
+  if (!UUID_RE.test(meta.fileId) || !UUID_RE.test(folderId)) {
+    return { ok: false, error: "Something went wrong. Please try again." };
+  }
+  const ext = (meta.ext ?? "").toLowerCase();
   if (!ALLOWED_EXT.has(ext)) return { ok: false, error: "That file type isn't allowed." };
-  if (file.size > MAX_BYTES) return { ok: false, error: "That file is larger than the 25 MB limit." };
   const contentType = EXT_TO_MIME[ext];
   if (!contentType) return { ok: false, error: "That file type isn't allowed." };
 
-  const title =
-    (formData.get("title") as string)?.trim() || file.name.replace(/\.[a-z0-9]+$/i, "");
-  const description = ((formData.get("description") as string) ?? "").trim() || null;
-  const language = normalizeLanguage(formData.get("language") as string | null);
-  const rawGroupId = ((formData.get("groupId") as string) ?? "").trim();
-  const groupId = rawGroupId && UUID_RE.test(rawGroupId) ? rawGroupId : null;
-  const tagIds = parseTagIds(formData.get("tags"));
-
-  const fileId = randomUUID();
-  const storagePath = `${fileId}/source.${ext}`;
-
+  const storagePath = `${meta.fileId}/source.${ext}`;
   const admin = createAdminClient();
-  const { error: upErr } = await admin.storage
-    .from(BUCKET)
-    .upload(storagePath, file, { contentType, upsert: false });
-  if (upErr) return { ok: false, error: toMessage(upErr, "file") };
+
+  // Confirm the object landed + read its real size (never trust a client size).
+  const { data: info, error: infoErr } = await admin.storage.from(BUCKET).info(storagePath);
+  if (infoErr || !info) return { ok: false, error: "Upload didn't complete. Please try again." };
+  const sizeBytes = info.size ?? 0;
+  if (sizeBytes <= 0 || sizeBytes > MAX_BYTES) {
+    await admin.storage.from(BUCKET).remove([storagePath]);
+    return { ok: false, error: "That file is larger than the 25 MB limit." };
+  }
+
+  const title = (meta.title ?? "").trim() || meta.fileId;
+  const description = (meta.description ?? "").trim() || null;
+  const language = normalizeLanguage(meta.language ?? null);
+  const groupId = meta.groupId && UUID_RE.test(meta.groupId) ? meta.groupId : null;
+  const tagIds = (meta.tagIds ?? []).filter((t) => UUID_RE.test(t));
 
   const { error: rowErr } = await admin.from("presentation_files").insert({
-    id: fileId,
+    id: meta.fileId,
     folder_id: folderId,
     title,
     description,
     storage_path: storagePath,
     file_type: ext,
     mime_type: contentType,
-    size_bytes: file.size,
+    size_bytes: sizeBytes,
     language,
     group_id: groupId,
     uploaded_by: id.userId,
   });
   if (rowErr) {
-    await admin.storage.from(BUCKET).remove([storagePath]); // roll back the orphaned object
+    await admin.storage.from(BUCKET).remove([storagePath]); // roll back the orphan
     return { ok: false, error: toMessage(rowErr, "file") };
   }
 
-  if (tagIds.length > 0) await syncFileTags(admin, fileId, tagIds);
-
+  if (tagIds.length > 0) await syncFileTags(admin, meta.fileId, tagIds);
   // V1.1: Pipeline für PDF/PPTX via Background-Jobs (Supabase Edge Functions oder externe API)
-  await maybeGenerateThumbnail(fileId, ext, file);
+  await maybeGenerateThumbnailFromStorage(meta.fileId, ext, storagePath);
 
   revalidateFiles();
-  return { ok: true, file: (await getPresentationFileById(fileId)) ?? undefined };
+  return { ok: true, file: (await getPresentationFileById(meta.fileId)) ?? undefined };
 }
 
 export async function editPresentationMetadata(

@@ -7,15 +7,20 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## Current State (updated 2026-06-22)
+## Current State (updated 2026-06-23)
 
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
-- **Database:** 22 tables + the `profiles_v` view. **55 pages**, **15 brands**,
+- **Database:** 28 tables + the `profiles_v` view (RAG foundation added 6:
+  `company_context`, `confluence_chunks`, `brand_chunks`, `ai_chat_sessions`,
+  `ai_chat_messages`, `ai_corrections`). **55 pages**, **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  Highest migration: `20260622193003`. Highest decision: **D-056**.
+  `pgvector 0.8.0` + `pg_trgm 1.6` installed. Highest migration:
+  `20260623082750_rag_retrieval_function`. Highest decision: **D-060**.
+  RAG corpus: **424 chunks** embedded (page 134 / pdf 159 / office 60 / brand 43 /
+  context 28). Edge functions: `embed-knowledge`, `rag-query` (+ 3 confluence fns).
 - **Auth/roles:** `super_admin | admin | user`; RLS via `is_admin()` /
   `is_super_admin()` / `get_profile_role()`; profile role-changes are
   super-admin-only (D-055).
@@ -25,8 +30,112 @@ it is append-only history (do not rewrite past entries — add new ones).
   all four APIX tool ports (0014–0016); signature + out-of-office generators;
   intelligence/RAG groundwork (0025–0029) + live `/api/search`; dead-code cleanup
   (`c397b29`); `/internal-branding/configurator` removed (D-056).
-- **Remaining:** full Admin CMS (Phase 5), IBE Tools Showcase port, RAG embedding
-  pipeline.
+- **Remaining:** full Admin CMS (Phase 5), IBE Tools Showcase port, RAG chat UI +
+  correction workflow (File 03), email notify + gold-set re-run (File 04).
+
+---
+
+## RAG-airtuerk V2 — pipeline + rag-query (2026-06-24)
+
+**Status:** Applied/deployed to prod. Decisions **D-059** + **D-060**. File 02 complete.
+
+Initial embedding run (Atomic 2.1): **424 chunks**, 0 errors (page 134 / pdf 159 /
+office 60 / brand 43 / context 28). Required a Voyage payment method (free tier =
+3 RPM, 429'd); 200M free tokens still apply so cost ≈ $0. The chunker took 3
+iterations — the snapshot stores body_text as one newline-free line, so the
+original paragraph-splitter made 1 giant chunk/page (max 8026 tok); rewrote to
+cascade paragraph→line→sentence + char-window hard-split + **bounded tail-overlap**
+(max ≤801 tok, proven: unit ≤700 + overlap ≤100). 12/15 brands embedded (APIX /
+IBE-parent / Presentation-Hub have 0 content blocks — legit).
+
+`rag_hybrid_search` SQL function (D-059, migration `20260623082750`): priority-1
+context always + per-source vector arms + pg_trgm keyword arm, `DISTINCT ON` dedup,
+SECURITY INVOKER + pinned search_path. Caught + fixed a plan bug — bare
+`ORDER BY/LIMIT` on non-final UNION arms is a Postgres syntax error; arms
+parenthesized.
+
+`rag-query` edge function (D-060): streaming Claude Opus 4.8, **no temperature / no
+thinking / no effort** (C1). Two bugs caught in verification: (1) **identity-crowding**
+— 20 priority-1 ctx rows @1.0 would fill the 8-chunk budget, so reserve 2
+mission/brand_voice slots + rerank the other 6 via Voyage rerank-2.5; (2) **DISTINCT
+ON order** — `rag_hybrid_search` returns `(source, source_id)` order not score, so
+the CEO answer fell past the 30-row rerank cap → sort by combined_score before
+slicing. C4 (pre-insert + finally-update), C5 (expose headers), C14 (weiss-nicht is
+a logged safety-net; refusals handled by Claude system-prompt rules — empty
+retrieval is structurally unreachable while priority-1 context exists).
+
+QA (Atomic 2.5): **9/9 in-corpus correct + cited, Q10 (Quantenmechanik) refused**;
+domain-expert fact-check passed (Pegasus PNR, Hara Filo +20%, Y360, Mavi Gök,
+check-in windows). Warm TTFB 2–3s isolated; outliers under rapid burst (Anthropic
+rate-limit) — Phase-04 watch (gold-set throttling + perf polish). **Next:** File 03
+frontend (needs its own AIChatWindow turn-based recon first).
+
+---
+
+## RAG-airtuerk V2 — foundation migration (2026-06-23)
+
+**Status:** Applied to prod. Decision **D-058**. Migration `20260623060259_rag_foundation`.
+
+Start of the airtuerk-KI build (learnable, source-citing internal RAG; plan in
+`OneDrive/terminal/`, 4 files / 35 atomic prompts). Recon (Atomic 1.1) verified live
+DB before any write — confirmed 86 confluence_raw, 116 attachments w/ text, 15 brands,
+55 published pages, 43 blocks, 84 gold-set rows; existing helpers `set_updated_at` /
+`is_admin` / `is_super_admin` / `get_profile_role` all present; pg_trgm in, vector +
+pg_net not yet. Caught plan drift: D-057 was already taken (→ RAG uses D-058+),
+migration naming is timestamped, and the frontend already renders AI answers through a
+turn-based `AIChatWindow` (not the inline shape the plan assumed) — frontend phase will
+get its own recon + diff-approval round before code.
+
+**Applied (D-058):** pgvector + the 4-layer schema (`company_context`,
+`confluence_chunks`, `brand_chunks`, `ai_corrections`) plus `ai_chat_sessions` /
+`ai_chat_messages`. HNSW on all embedding columns, pg_trgm GIN on chunk content, RLS
+FORCED on all six, reuse of `set_updated_at`. FK types verified against live schema
+(text↔text for Confluence, uuid↔uuid for brand/page/block) before apply. Post-apply
+verification green: pgvector 0.8.0, 6 tables RLS+FORCE, 3 HNSW + 1 trgm index,
+`set_updated_at` unchanged.
+
+Then deployed the `embed-knowledge` edge function (6 source handlers; Voyage key
+checked lazily so a zero-work call returns `chunks_created:0` without a key;
+`tsconfig` already excludes `supabase/functions` so no Vercel-build impact) and
+seeded `company_context` — migration `20260623070454_seed_company_context`, **28
+identity entries** (20 priority-1, 5 `needs_review`) pulled from live
+brands/team_members/`kanal` data, not plan templates. Design rule (approved): no
+unverified operational facts at priority-1 (always-injected → would poison every
+answer); PNR/cancellation/check-in are priority-2 pointers, real values come from
+Layer 2 (`confluence_chunks`). Ran `{source:'context'}` → **28/28 embedded** (Voyage
+voyage-4-large, 1024-dim). Edge Function Secrets (VOYAGE/ANTHROPIC/RESEND) +
+Vault (SERVICE_ROLE_KEY) all set. **Next:** Atomic 2.1 bulk embedding run
+(confluence + attachments + brands, ~2300 chunks) → `rag-query` pipeline.
+
+---
+
+## Upload fix — browser direct-to-Storage signed-URL upload (2026-06-22)
+
+**Status:** On feature branch → PR into `main`. Decision **D-057**. App-layer only, no migration.
+
+Reported bug: on `/documents-library/business-development/03-tour-operator-agreement`
+the upload modal showed "Uploading…" then hung — no file, no error. **Diagnosed** (not
+guessed): the file streamed THROUGH the Next.js Server Action, which caps bodies at
+1 MB by default (not raised in `next.config.ts`); files over ~1 MB were rejected at the
+framework boundary, and the client had no try/catch, so the rejected promise left the
+modal stuck. Production data corroborated — all 8 uploaded files were < 1 MB (largest
+0.955 MB) against a 15 MB ceiling.
+
+**Fix (D-057):** two-step signed-URL upload for BOTH `documents-library` and
+`presentation-hub`. (1) an admin-gated action mints `createSignedUploadUrl` (no bytes
+cross it); (2) the browser PUTs straight to Storage via `uploadToSignedUrl` (bypasses
+the Next.js + Vercel body limits; the bucket `file_size_limit` 15/25 MB + MIME allowlist
+still gate the PUT); (3) a second admin-gated `finalize…` action inserts the row, reads
+the true size back via `.info()` (also confirms the object landed) and rolls the object
+back on row failure. Both upload modals now wrap the flow in try/catch/finally so
+"Uploading…" always clears and errors surface. Presentations keep tag-sync + the image
+thumbnail (downloaded from Storage in finalize, since it no longer receives the File).
+`replaceFile`/`replacePresentation` keep the old through-action path (same root cause,
+out of scope here).
+
+**Verify:** `pnpm typecheck` + `pnpm build` green; `pnpm lint` unchanged (no new findings
+in the 4 changed files). A live >1 MB admin upload is to be verified on the PR preview
+deploy — the sandbox lacks the Supabase publishable/secret keys for an E2E run.
 
 ---
 

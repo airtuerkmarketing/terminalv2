@@ -165,7 +165,13 @@ export function PresentationFolderPage({
       ) : (
         <div className="ph-grid" data-view={view}>
           {files.map((f) => (
-            <PresentationCard key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
+            <PresentationCard
+              key={f.id}
+              file={f}
+              view={view === "grid" ? "grid" : "card"}
+              isSuperAdmin={isSuperAdmin}
+              onManage={setManageFile}
+            />
           ))}
         </div>
       )}

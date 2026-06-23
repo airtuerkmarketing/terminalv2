@@ -213,21 +213,15 @@
   gap: 16px;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
-/* Card view (roomy): wider cards + shorter landscape cover, distinct from grid. */
+/* Card view (Option A): compact ~135px tiles rendering .ph-tile (defined below). */
 .ph-grid[data-view="card"] {
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 18px;
-}
-.ph-grid[data-view="card"] .ph-cover {
-  aspect-ratio: 3 / 2;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-4);
 }
 .ph-grid[data-view="grid"] {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
   max-width: 1472px;
-}
-.ph-grid[data-view="grid"] .ph-card-foot {
-  padding: 12px;
 }
 @media (max-width: 767px) {
   .ph-grid,
@@ -244,7 +238,8 @@
     grid-template-columns: 1fr;
   }
 }
-.ph-card {
+/* ── Grid tile (compact view — unchanged appearance, renamed from .ph-card) ── */
+.ph-grid-tile {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -255,17 +250,17 @@
   overflow: hidden;
   transition: box-shadow 0.18s, border-color 0.18s;
 }
-.ph-card:hover {
+.ph-grid-tile:hover {
   box-shadow: var(--shadow-hover);
   border-color: var(--accent-border);
 }
-.ph-cover {
+.ph-grid-tile__cover {
   position: relative;
   aspect-ratio: 4 / 3;
   background: var(--surface-muted);
   overflow: hidden;
 }
-.ph-card-preview {
+.ph-grid-tile__preview {
   position: absolute;
   inset: 0;
   display: flex;
@@ -273,7 +268,7 @@
   justify-content: center;
   text-decoration: none;
 }
-.ph-thumb {
+.ph-grid-tile__thumb {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -297,13 +292,14 @@
   background: var(--accent);
 }
 
-/* Option A: roomier card foot — vertical stack (title · meta · tags · actions). */
-.ph-card-foot {
+/* Grid-tile foot (compact): vertical stack — title · meta · tags · action bar.
+   12px padding baked in (the value the grid view always used). */
+.ph-grid-tile__foot {
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  padding: 12px;
 }
-.ph-card-title {
+.ph-grid-tile__title {
   font-size: 14px;
   font-weight: 500;
   line-height: 1.4;
@@ -315,7 +311,7 @@
   white-space: normal;
   min-height: 38px;
 }
-.ph-card-meta {
+.ph-grid-tile__meta {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -324,14 +320,14 @@
   color: var(--text-2);
 }
 /* Always-visible action bar (no hover-reveal). */
-.ph-card-actions {
+.ph-grid-tile__actions {
   display: flex;
   gap: 8px;
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--hairline);
 }
-.ph-card-dl {
+.ph-grid-tile__dl {
   flex: 1;
   height: 32px;
   display: inline-flex;
@@ -347,10 +343,10 @@
   text-decoration: none;
   transition: background 0.15s, border-color 0.15s;
 }
-.ph-card-dl:hover {
+.ph-grid-tile__dl:hover {
   border-color: var(--accent-border);
 }
-.ph-card-edit {
+.ph-grid-tile__edit {
   width: 32px;
   height: 32px;
   padding: 0;
@@ -365,9 +361,145 @@
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
 }
-.ph-card-edit:hover {
+.ph-grid-tile__edit:hover {
   color: var(--text-1);
   border-color: var(--accent-border);
+}
+
+/* ── Card tile (Option A, adapted for presentations) — 16/10 cover, filetype
+   badge + featured star top-left, overlay Edit (super_admin); tight meta with an
+   overlay Download. Tags are omitted here (kept in grid/list) for a compact tile. */
+.ph-tile {
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 200ms var(--ease-smooth), background-color 200ms var(--ease-smooth);
+}
+.ph-tile:hover {
+  box-shadow: var(--shadow-hover);
+  background-color: var(--surface-strong);
+}
+.ph-tile__cover {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  position: relative;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--surface-muted);
+}
+.ph-tile__preview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.ph-tile__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ph-tile__badges {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ph-tile__badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  backdrop-filter: blur(8px);
+}
+.ph-tile__featured {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  line-height: 1;
+  color: #fff;
+  background: var(--accent);
+}
+.ph-tile__edit {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  display: grid;
+  place-items: center;
+  color: var(--text-1);
+  opacity: 1;
+  cursor: pointer;
+  transition: color 150ms var(--ease-smooth), border-color 150ms;
+}
+.ph-tile__edit:hover {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+.ph-tile__meta {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  position: relative;
+}
+.ph-tile__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 36px;
+}
+.ph-tile__sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.ph-tile__download {
+  position: absolute;
+  bottom: var(--space-3);
+  right: var(--space-3);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  display: grid;
+  place-items: center;
+  color: var(--text-1);
+  text-decoration: none;
+  opacity: 1;
+  transition: color 150ms var(--ease-smooth), border-color 150ms;
+}
+.ph-tile__download:hover {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+.ph-tile__edit svg,
+.ph-tile__download svg {
+  width: 14px;
+  height: 14px;
 }
 /* Clickable list-view column headers (sort triggers; no asc/desc toggle). */
 .ph-sort-th {
@@ -393,9 +525,9 @@
   align-items: flex-start;
 }
 .ph-tree-panel {
-  flex: 0 0 15%;
-  max-width: 15%;
+  flex: 0 0 20%;
   min-width: 0;
+  max-width: 25%;
   position: sticky;
   top: 16px;
 }
@@ -467,7 +599,6 @@
   opacity: 0;
   transition: opacity 0.15s, color 0.15s, border-color 0.15s;
 }
-.ph-card:hover .ph-card-menu,
 .ph-card-menu:focus-visible {
   opacity: 1;
 }
