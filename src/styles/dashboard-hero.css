@@ -502,60 +502,46 @@
     opacity: 0;
   }
 }
-.ai-chat-sources {
+/* Source citations as compact mini-chips (UX polish) — large cards with a
+   CONTEXT badge + "Stand" label dominated the answer (60-80px each); 4-6 of
+   them made the chat unreadable. Now: one-line gray chips, ~28px tall, title
+   only. Inline [Quelle: …] citations stay in the prose; the chip still links
+   out to the Confluence/KB source. */
+.ai-chat-sources-row {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: var(--space-4);
+  margin-top: var(--space-2);
 }
-.ai-chat-source {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 180px;
-  padding: 10px 12px;
-  border: 1px solid var(--hairline);
+.ai-chat-source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 240px;
+  padding: 4px 10px;
   border-radius: var(--radius-sm);
   background: var(--surface-muted);
-  text-decoration: none;
-  transition: border-color 150ms var(--ease-smooth);
-}
-.ai-chat-source:hover {
-  border-color: var(--accent-border);
-}
-.ai-chat-source-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.ai-chat-source-title {
-  font-size: var(--fs-sm);
-  font-weight: var(--weight-medium);
-  color: var(--text-1);
-}
-.ai-chat-source-ext {
-  width: 13px;
-  height: 13px;
-  color: var(--text-3);
-}
-.ai-chat-source-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.ai-chat-badge {
-  font-size: var(--fs-xs);
-  padding: 2px 7px;
-  border-radius: var(--radius-full);
-  background: var(--surface);
   border: 1px solid var(--hairline);
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-.ai-chat-source-stand {
-  font-size: var(--fs-xs);
+  font-size: 12px;
   color: var(--text-3);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 150ms var(--ease-smooth),
+              color 150ms var(--ease-smooth);
+}
+.ai-chat-source-chip:hover {
+  background: var(--surface-strong);
+  color: var(--text-2);
+}
+.ai-chat-source-chip-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+.ai-chat-source-chip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .ai-chat-confidence {
   display: flex;
@@ -678,7 +664,7 @@
 .ai-search-send:focus-visible,
 .ai-search-model-option:focus-visible,
 .ai-search-chip:focus-visible,
-.ai-chat-source:focus-visible,
+.ai-chat-source-chip:focus-visible,
 .ai-chat-new:focus-visible,
 .ai-chat-close:focus-visible,
 .ai-chat-send:focus-visible {
