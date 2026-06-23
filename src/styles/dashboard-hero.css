@@ -730,3 +730,44 @@
     animation: none;
   }
 }
+
+/* Web-Search button (Workstream 1 skeleton — disabled coming-soon; full impl WS4) */
+.ai-chat-websearch-container {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.ai-chat-websearch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklab, var(--quantum-blue, #0a82df) 30%, transparent);
+  background: color-mix(in oklab, var(--quantum-blue, #0a82df) 8%, transparent);
+  color: var(--quantum-blue, #0a82df);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.ai-chat-websearch-btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--quantum-blue, #0a82df) 15%, transparent);
+}
+
+.ai-chat-websearch-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-chat-websearch-icon {
+  font-size: 1.1em;
+}
+
+.ai-chat-websearch-coming-soon {
+  font-size: 0.8em;
+  opacity: 0.7;
+  font-style: italic;
+}

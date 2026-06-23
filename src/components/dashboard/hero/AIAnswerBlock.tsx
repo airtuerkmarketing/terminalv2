@@ -2,7 +2,8 @@
 
 import { Loader2, ExternalLink } from "lucide-react";
 import { useTypewriterText } from "@/components/dashboard/hero/useTypewriterText";
-import type { AiAnswer, AiKonfidenz, AiTurn } from "@/lib/search/types";
+import type { AiKonfidenz, AiTurn } from "@/lib/search/types";
+import { isOutOfScope } from "@/lib/rag/client";
 
 /* One question→answer turn inside the chat window (BAU-Auftrag §5.4).
  * Stage 1: the answer is a placeholder rendered after a fake delay; the shape
@@ -28,20 +29,24 @@ export function AIAnswerBlock({
   turn: AiTurn;
   typewriter?: boolean;
 }) {
-  const { question, answer } = turn;
+  // Spinner until the first token; once text streams it renders live.
+  const showLoading =
+    turn.answer === null || (turn.isStreaming === true && !turn.answer.text);
 
   return (
     <div className="ai-chat-turn">
-      <div className="ai-chat-q">{question}</div>
+      <div className="ai-chat-q">{turn.question}</div>
 
       <div className="ai-chat-a">
-        {answer === null ? (
+        {turn.error ? (
+          <p className="ai-chat-a-text">⚠️ {turn.error}</p>
+        ) : showLoading ? (
           <div className="ai-chat-loading">
             <Loader2 className="ai-chat-spin" aria-hidden="true" />
             <span>KI denkt nach…</span>
           </div>
         ) : (
-          <AITurnAnswer answer={answer} typewriter={typewriter} />
+          <AITurnAnswer turn={turn} typewriter={typewriter} />
         )}
       </div>
     </div>
@@ -51,21 +56,27 @@ export function AIAnswerBlock({
 /* Answered branch — split out so useTypewriterText is always called when this
  * renders (the loading branch returns before it, keeping Rules of Hooks). */
 function AITurnAnswer({
-  answer,
+  turn,
   typewriter,
 }: {
-  answer: AiAnswer;
+  turn: AiTurn;
   typewriter: boolean;
 }) {
-  const { shown, done } = useTypewriterText(typewriter ? answer.text : "");
-  const text = typewriter ? shown : answer.text;
-  const finished = typewriter ? done : true;
+  const answer = turn.answer!;
+  const streaming = turn.isStreaming === true;
+  // A RAG turn (streamed this session, or persisted from one) already animated
+  // live via the stream — don't re-typewriter it. Legacy/non-RAG turns keep it.
+  const isRagTurn = turn.isStreaming !== undefined;
+  const useTw = typewriter && !isRagTurn;
+  const { shown, done } = useTypewriterText(useTw ? answer.text : "");
+  const text = useTw ? shown : answer.text;
+  const finished = streaming ? false : useTw ? done : true;
 
   return (
     <>
       <p className="ai-chat-a-text">
         {text}
-        {typewriter && !finished && (
+        {(streaming || (useTw && !finished)) && (
           <span className="ai-chat-caret" aria-hidden="true" />
         )}
       </p>
@@ -90,6 +101,23 @@ function AITurnAnswer({
               </span>
             </a>
           ))}
+        </div>
+      )}
+
+      {/* Web-Search Button (Workstream 1 skeleton — full impl in WS4) */}
+      {finished && !turn.isWebSearch && !turn.webSearchTriggered && isOutOfScope(answer.text) && (
+        <div className="ai-chat-websearch-container">
+          <button
+            type="button"
+            className="ai-chat-websearch-btn"
+            disabled
+            title="Web-Suche kommt in Workstream 4"
+            aria-label="Web-Suche aktivieren (kommt bald)"
+          >
+            <span className="ai-chat-websearch-icon">🌐</span>
+            <span>Ja, im Web suchen</span>
+            <span className="ai-chat-websearch-coming-soon">(bald verfügbar)</span>
+          </button>
         </div>
       )}
 

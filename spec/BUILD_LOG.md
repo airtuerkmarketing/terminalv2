@@ -18,10 +18,11 @@ it is append-only history (do not rewrite past entries — add new ones).
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
   `pgvector 0.8.0` + `pg_trgm 1.6` installed. Highest migration:
-  `20260623093507_seed_company_context_knowledge_base`. Highest decision: **D-061**.
+  `20260623115541_persona_v2_context_entries`. Highest decision: **D-063**.
   RAG corpus: **438 chunks** (page 134 / pdf 159 / office 60 / brand 43 /
-  knowledge_base 14) + **34 company_context** entries. Edge functions:
-  `embed-knowledge` (7 source modes), `rag-query` (+ 3 confluence fns).
+  knowledge_base 14) + **36 company_context** entries. Edge functions:
+  `embed-knowledge` (7 source modes), `rag-query` v6 (persona v2, + 3 confluence fns).
+  RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
 - **Auth/roles:** `super_admin | admin | user`; RLS via `is_admin()` /
   `is_super_admin()` / `get_profile_role()`; profile role-changes are
   super-admin-only (D-055).
@@ -33,6 +34,35 @@ it is append-only history (do not rewrite past entries — add new ones).
   (`c397b29`); `/internal-branding/configurator` removed (D-056).
 - **Remaining:** full Admin CMS (Phase 5), IBE Tools Showcase port, RAG chat UI +
   correction workflow (File 03), email notify + gold-set re-run (File 04).
+
+---
+
+## RAG-airtuerk V2 — File 03 frontend wire + Persona v2 (2026-06-24)
+
+**Status:** Frontend wired to the live pipeline; persona v2 deployed. Decisions **D-062** + **D-063**. Workstream 1. (Demo-date moved to ~2026-07-15–22 for quality — IT-Chef stakeholder.)
+
+Replaced the dashboard hero's `FAKE_ANSWER` with real turn-based RAG streaming
+(`src/lib/rag/client.ts` + rewired `SearchAIBox`/`AIAnswerBlock`/`AiTurn`). Each
+`AiTurn` streams via functional `setTurns`; `turnsRef` avoids a per-token
+`useCallback` re-render storm; deferred atomic finalize means text + sources +
+confidence appear together. Source cards reuse the existing renderer via a
+`ragToAiSource` mapper (correction chunks badge as "Korrektur"); `inferKonfidenz`
+heuristic drives the confidence bars; `isOutOfScope` hides the always-injected
+priority-1 sources on rule-7 refusals.
+
+Persona v2 (`rag-query` v6): self-identifies as **airtuerk Intelligence** (never
+"Assistent"/"Bot"), credits **Buhara Demir** as creator, emits an exact
+out-of-scope phrase inviting web-search (frontend shows a disabled "Ja, im Web
+suchen — bald verfügbar" button; full web-search is Workstream 4), and enforces a
+strict phone-policy (business-only-if-sourced, private never, GF Ümit via email /
+Office-Managerin Ayten Koc). Migration `20260623115541` added 2 priority-1
+context entries (identity+creator, GF escalation) → context now 36 entries.
+
+E2E verified 7/7 (curl: persona/phone/escalation/regression exact; browser:
+out-of-scope renders no sources + niedrig konfidenz + disabled web-search button;
+plus earlier CEO stream + multi-turn "ihn"→Ümit). Watch-item: Anthropic burst
+rate-limit (rapid sequential calls 429) — gold-set run (File 04) needs throttling.
+**Next:** Workstream 2 (File 03 Atomic 3.5–3.7: feedback buttons, CorrectionModal).
 
 ---
 

@@ -21,11 +21,18 @@ import {
   LS_MODEL,
 } from "@/components/dashboard/hero-data";
 import type {
-  AiAnswer,
+  AiSource,
   AiTurn,
   SearchHit,
   SearchResults,
 } from "@/lib/search/types";
+import {
+  ragQueryStream,
+  fetchMessageSources,
+  ragToAiSource,
+  inferKonfidenz,
+  isOutOfScope,
+} from "@/lib/rag/client";
 
 /* Such+KI-Box (BAU-Auftrag §5) — orchestrates search mode (live dropdown over
  * /api/search) and KI-Modus (UI-only placeholder answers). Stage 1: no real RAG
@@ -39,23 +46,6 @@ const EMPTY_RESULTS: SearchResults = {
   documents: [],
   assets: [],
   brands: [],
-};
-
-// Placeholder answer — real RAG/Quellen come in stage 2 (DATA_CONTRACT §5.4).
-const FAKE_ANSWER: AiAnswer = {
-  text: "Das ist eine Beispiel-Antwort. Die echte KI-Anbindung kommt in Stufe 2.",
-  quellen: [
-    {
-      dokument_titel: "Beispiel-Quelle",
-      domain: "wiki",
-      quelle: "confluence",
-      link: "#",
-      seite: 1,
-      stand: "2026-06-19",
-    },
-  ],
-  konfidenz: "mittel",
-  weiss_nicht: false,
 };
 
 function newId(): string {
@@ -75,11 +65,14 @@ export function SearchAIBox() {
   const [turns, setTurns] = useState<AiTurn[]>([]);
   const [model, setModel] = useState(DEFAULT_MODEL_ID);
   const [chatOpen, setChatOpen] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
-  const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipPersist = useRef(true);
+  // Latest turns without re-creating submitAi on every streamed token; used
+  // read-only to build conversation_history. All mutations use functional setTurns.
+  const turnsRef = useRef(turns);
 
   const dropdownOpen =
     mode === "search" && focused && query.trim().length >= 2;
@@ -106,12 +99,18 @@ export function SearchAIBox() {
     }
   }, []);
 
-  // ── Persist history (skip the first run so the load above isn't overwritten) ──
+  // ── Keep turnsRef current (read by submitAi to build conversation history) ──
+  useEffect(() => {
+    turnsRef.current = turns;
+  }, [turns]);
+
+  // ── Persist history (skip first run; skip mid-stream to avoid token-rate writes) ──
   useEffect(() => {
     if (skipPersist.current) {
       skipPersist.current = false;
       return;
     }
+    if (turns.some((t) => t.isStreaming)) return;
     try {
       localStorage.setItem(LS_HISTORY, JSON.stringify(turns));
     } catch {
@@ -164,31 +163,104 @@ export function SearchAIBox() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [focused]);
 
-  useEffect(() => {
-    return () => {
-      if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
-    };
-  }, []);
-
   const submitAi = useCallback(
-    (text: string) => {
+    async (text: string) => {
       const qq = text.trim();
       if (!qq) return;
+
       setMode("ai");
       setFocused(false);
       setActiveId(null);
       setChatOpen(true);
-      const id = newId();
-      setTurns((prev) => [...prev, { id, question: qq, model, answer: null }]);
       setQuery("");
-      if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
-      aiTimerRef.current = setTimeout(() => {
+
+      // History from completed prior turns (rag-query keeps the last 10).
+      const conversationHistory = turnsRef.current
+        .filter((t) => t.answer?.text)
+        .flatMap((t) => [
+          { role: "user" as const, content: t.question },
+          { role: "assistant" as const, content: t.answer!.text },
+        ]);
+
+      const turnId = newId();
+      setTurns((prev) => [
+        ...prev,
+        {
+          id: turnId,
+          question: qq,
+          model,
+          answer: { text: "", quellen: [], konfidenz: "mittel", weiss_nicht: false },
+          isStreaming: true,
+        },
+      ]);
+      const patchTurn = (u: Partial<AiTurn>) =>
+        setTurns((prev) => prev.map((t) => (t.id === turnId ? { ...t, ...u } : t)));
+
+      try {
+        const result = await ragQueryStream({
+          question: qq,
+          sessionId: sessionId ?? undefined,
+          conversationHistory,
+          onEvent: (e) => {
+            if (e.type === "session" && e.sessionId) {
+              setSessionId(e.sessionId);
+            } else if (e.type === "message" && e.messageId !== undefined) {
+              patchTurn({ messageId: e.messageId });
+            } else if (e.type === "text" && e.text) {
+              // functional setState → no closure-stale accumulation
+              setTurns((prev) =>
+                prev.map((t) =>
+                  t.id === turnId
+                    ? { ...t, answer: { ...t.answer!, text: (t.answer?.text ?? "") + e.text } }
+                    : t
+                )
+              );
+            } else if (e.type === "done") {
+              // Defer isStreaming:false until sources load (atomic finalize below).
+              patchTurn({ weissNicht: e.weissNicht ?? false });
+            } else if (e.type === "error" && e.error) {
+              patchTurn({ isStreaming: false, error: e.error });
+            }
+          },
+        });
+
+        // Sources live on the message row — load before the atomic finalize so
+        // text + sources + confidence appear together (no flash-of-empty).
+        let quellen: AiSource[] = [];
+        if (result.messageId) {
+          try {
+            quellen = (await fetchMessageSources(result.messageId)).map(ragToAiSource);
+          } catch {
+            /* lazy-load failure is non-fatal — the answer still renders */
+          }
+        }
         setTurns((prev) =>
-          prev.map((t) => (t.id === id ? { ...t, answer: FAKE_ANSWER } : t))
+          prev.map((t) => {
+            if (t.id !== turnId) return t;
+            const txt = t.answer?.text ?? "";
+            const weiss = t.weissNicht ?? false;
+            const outOfScope = isOutOfScope(txt);
+            return {
+              ...t,
+              isStreaming: false,
+              weissNicht: weiss || outOfScope,
+              answer: {
+                ...t.answer!,
+                weiss_nicht: weiss || outOfScope,
+                konfidenz: inferKonfidenz(txt, weiss),
+                // Hide the always-injected priority-1 sources on out-of-scope refusals.
+                quellen: outOfScope ? [] : quellen,
+              },
+            };
+          })
         );
-      }, 1500);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          patchTurn({ isStreaming: false, error: String(err) });
+        }
+      }
     },
-    [model]
+    [model, sessionId]
   );
 
   const closeChat = useCallback(() => setChatOpen(false), []);
