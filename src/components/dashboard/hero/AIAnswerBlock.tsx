@@ -1,6 +1,8 @@
 "use client";
 
 import { Loader2, ExternalLink } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useTypewriterText } from "@/components/dashboard/hero/useTypewriterText";
 import { AnswerFeedback } from "@/components/dashboard/hero/AnswerFeedback";
 import type { AiKonfidenz, AiTurn } from "@/lib/search/types";
@@ -88,12 +90,22 @@ function AITurnAnswer({
 
   return (
     <>
-      <p className="ai-chat-a-text">
-        {text}
-        {(streaming || (useTw && !finished)) && (
+      {streaming ? (
+        // Raw text while streaming (keeps the inline blinking caret); markdown
+        // is parsed once the answer is complete — avoids reflow churn and a
+        // detached caret while tokens arrive.
+        <p className="ai-chat-a-text">
+          {text}
           <span className="ai-chat-caret" aria-hidden="true" />
-        )}
-      </p>
+        </p>
+      ) : (
+        <div className="ai-chat-answer">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+          {useTw && !finished && (
+            <span className="ai-chat-caret" aria-hidden="true" />
+          )}
+        </div>
+      )}
 
       {finished && answer.quellen.length > 0 && (
         <div className="ai-chat-sources-row">
