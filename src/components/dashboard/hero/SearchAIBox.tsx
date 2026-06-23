@@ -15,6 +15,7 @@ import { ModelSelector } from "@/components/dashboard/hero/ModelSelector";
 import { QuickChips } from "@/components/dashboard/hero/QuickChips";
 import { SearchDropdown, ASK_AI_ID } from "@/components/dashboard/hero/SearchDropdown";
 import { AIChatWindow } from "@/components/dashboard/hero/AIChatWindow";
+import { CorrectionModal } from "@/components/dashboard/hero/CorrectionModal";
 import {
   DEFAULT_MODEL_ID,
   LS_HISTORY,
@@ -66,6 +67,7 @@ export function SearchAIBox() {
   const [model, setModel] = useState(DEFAULT_MODEL_ID);
   const [chatOpen, setChatOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [correctTurn, setCorrectTurn] = useState<AiTurn | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -271,8 +273,11 @@ export function SearchAIBox() {
   );
 
   const handleCorrect = useCallback((turn: AiTurn) => {
-    // Stub — CorrectionModal launch comes in Atomic 3.6
-    console.log("[Atomic 3.5 stub] Correction requested for turn:", turn.id, turn.messageId);
+    if (!turn.messageId) {
+      console.warn("Cannot correct turn without messageId");
+      return;
+    }
+    setCorrectTurn(turn);
   }, []);
 
   const closeChat = useCallback(() => setChatOpen(false), []);
@@ -439,6 +444,20 @@ export function SearchAIBox() {
         onCorrect={handleCorrect}
         onFeedbackChange={handleFeedbackChange}
       />
+
+      {correctTurn && correctTurn.messageId && sessionId && (
+        <CorrectionModal
+          isOpen={true}
+          sessionId={sessionId}
+          messageId={correctTurn.messageId}
+          originalQuestion={correctTurn.question}
+          originalAnswer={correctTurn.answer?.text ?? ""}
+          onClose={() => setCorrectTurn(null)}
+          onSubmitted={() => {
+            setCorrectTurn(null);
+          }}
+        />
+      )}
     </div>
   );
 }
