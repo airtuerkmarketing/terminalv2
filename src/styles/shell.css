@@ -94,12 +94,13 @@ html { scrollbar-gutter: stable; }
 .nav-item .chevron svg { width: 14px; height: 14px; }
 .nav-item.expandable[data-open="true"] .chevron { transform: rotate(90deg); }
 
-/* Nested sub-items under IBE */
-.nav-sub { display: flex; flex-direction: column; gap: 2px; padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 300ms var(--ease-smooth); }
+/* Nested sub-items under a brand / IBE — text-only, muted, clearly indented. */
+.nav-sub { display: flex; flex-direction: column; gap: 4px; padding-left: 26px; max-height: 0; overflow: hidden; transition: max-height 300ms var(--ease-smooth); }
 .nav-sub.open { max-height: 400px; }
-.nav-sub .nav-item { min-height: 0; padding: 6px 10px; font-size: var(--fs-sm); }
-.nav-sub .nav-item .icon { width: 14px; height: 14px; }
-.nav-sub .nav-item .icon svg { width: 12px; height: 12px; }
+.nav-sub .nav-item { min-height: 0; padding: 6px 10px; font-size: var(--fs-sm); color: var(--text-2); }
+.nav-sub .nav-item:hover { color: var(--text-1); }
+/* Icon kept in the markup but hidden (no bullet/icon on sub-items); easy revert. */
+.nav-sub .nav-item .icon { display: none; }
 
 .user-block { flex-shrink: 0; padding: var(--space-3); border-radius: var(--radius-md); background: rgba(120, 120, 128, 0.05); display: flex; align-items: center; gap: var(--space-3); overflow: hidden; }
 .user-block .avatar { width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--avatar-bg); color: white; display: grid; place-items: center; font-weight: var(--weight-bold); font-size: var(--fs-xs); }
