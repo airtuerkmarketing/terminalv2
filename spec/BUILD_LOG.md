@@ -18,7 +18,9 @@ it is append-only history (do not rewrite past entries — add new ones).
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
   `pgvector 0.8.0` + `pg_trgm 1.6` installed. Highest migration:
-  `20260623060259_rag_foundation`. Highest decision: **D-058**.
+  `20260623082750_rag_retrieval_function`. Highest decision: **D-060**.
+  RAG corpus: **424 chunks** embedded (page 134 / pdf 159 / office 60 / brand 43 /
+  context 28). Edge functions: `embed-knowledge`, `rag-query` (+ 3 confluence fns).
 - **Auth/roles:** `super_admin | admin | user`; RLS via `is_admin()` /
   `is_super_admin()` / `get_profile_role()`; profile role-changes are
   super-admin-only (D-055).
@@ -28,9 +30,45 @@ it is append-only history (do not rewrite past entries — add new ones).
   all four APIX tool ports (0014–0016); signature + out-of-office generators;
   intelligence/RAG groundwork (0025–0029) + live `/api/search`; dead-code cleanup
   (`c397b29`); `/internal-branding/configurator` removed (D-056).
-- **Remaining:** full Admin CMS (Phase 5), IBE Tools Showcase port, RAG embedding
-  pipeline (embed-knowledge + rag-query edge fns), RAG chat UI + correction workflow,
-  email notify + gold-set re-run.
+- **Remaining:** full Admin CMS (Phase 5), IBE Tools Showcase port, RAG chat UI +
+  correction workflow (File 03), email notify + gold-set re-run (File 04).
+
+---
+
+## RAG-airtuerk V2 — pipeline + rag-query (2026-06-24)
+
+**Status:** Applied/deployed to prod. Decisions **D-059** + **D-060**. File 02 complete.
+
+Initial embedding run (Atomic 2.1): **424 chunks**, 0 errors (page 134 / pdf 159 /
+office 60 / brand 43 / context 28). Required a Voyage payment method (free tier =
+3 RPM, 429'd); 200M free tokens still apply so cost ≈ $0. The chunker took 3
+iterations — the snapshot stores body_text as one newline-free line, so the
+original paragraph-splitter made 1 giant chunk/page (max 8026 tok); rewrote to
+cascade paragraph→line→sentence + char-window hard-split + **bounded tail-overlap**
+(max ≤801 tok, proven: unit ≤700 + overlap ≤100). 12/15 brands embedded (APIX /
+IBE-parent / Presentation-Hub have 0 content blocks — legit).
+
+`rag_hybrid_search` SQL function (D-059, migration `20260623082750`): priority-1
+context always + per-source vector arms + pg_trgm keyword arm, `DISTINCT ON` dedup,
+SECURITY INVOKER + pinned search_path. Caught + fixed a plan bug — bare
+`ORDER BY/LIMIT` on non-final UNION arms is a Postgres syntax error; arms
+parenthesized.
+
+`rag-query` edge function (D-060): streaming Claude Opus 4.8, **no temperature / no
+thinking / no effort** (C1). Two bugs caught in verification: (1) **identity-crowding**
+— 20 priority-1 ctx rows @1.0 would fill the 8-chunk budget, so reserve 2
+mission/brand_voice slots + rerank the other 6 via Voyage rerank-2.5; (2) **DISTINCT
+ON order** — `rag_hybrid_search` returns `(source, source_id)` order not score, so
+the CEO answer fell past the 30-row rerank cap → sort by combined_score before
+slicing. C4 (pre-insert + finally-update), C5 (expose headers), C14 (weiss-nicht is
+a logged safety-net; refusals handled by Claude system-prompt rules — empty
+retrieval is structurally unreachable while priority-1 context exists).
+
+QA (Atomic 2.5): **9/9 in-corpus correct + cited, Q10 (Quantenmechanik) refused**;
+domain-expert fact-check passed (Pegasus PNR, Hara Filo +20%, Y360, Mavi Gök,
+check-in windows). Warm TTFB 2–3s isolated; outliers under rapid burst (Anthropic
+rate-limit) — Phase-04 watch (gold-set throttling + perf polish). **Next:** File 03
+frontend (needs its own AIChatWindow turn-based recon first).
 
 ---
 

@@ -16,7 +16,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 const VOYAGE_API_URL = 'https://api.voyageai.com/v1/embeddings'
 const VOYAGE_MODEL = 'voyage-4-large'
 const CHUNK_SIZE_TOKENS = 700
-const CHUNK_OVERLAP_TOKENS = 100 // applied via last-paragraph carry-over
+const CHUNK_OVERLAP_TOKENS = 100
 const VOYAGE_BATCH_SIZE = 128
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
@@ -79,44 +79,72 @@ Deno.serve(async (req: Request) => {
 })
 
 // ============ Core chunking ============
+// The Confluence snapshot stores body_text as a single whitespace-normalized
+// line (verified 2026-06-23: 0 of 86 pages contain newline breaks), so
+// paragraph-splitting alone leaves a whole page as one oversized chunk. We
+// segment by the best boundary that actually exists (paragraph → line →
+// sentence), hard-split any segment still over target by a char window, then
+// greedily pack segments to ~CHUNK_SIZE_TOKENS carrying one segment as overlap.
 function chunkText(
   text: string,
   metadata: Record<string, unknown>,
 ): Array<{ content: string; token_count: number; metadata: Record<string, unknown> }> {
   const approxTokens = (s: string) => Math.ceil(s.length / 4)
-  const paragraphs = text.split(/\n\n+/).filter((p) => p.trim().length > 0)
+  const TARGET_CHARS = CHUNK_SIZE_TOKENS * 4
+  const STRIDE_CHARS = (CHUNK_SIZE_TOKENS - CHUNK_OVERLAP_TOKENS) * 4
 
-  const chunks: ReturnType<typeof chunkText> = []
-  let currentChunk = ''
-  let currentChunkParagraphs: string[] = []
+  const clean = text.replace(/\r/g, '').trim()
+  if (!clean) return []
 
-  for (const para of paragraphs) {
-    const wouldBeSize = approxTokens(currentChunk + '\n\n' + para)
+  // 1) Segment by the most natural boundary present in the text.
+  let segments = clean.split(/\n\n+/).map((s) => s.trim()).filter(Boolean)
+  if (segments.length <= 1) segments = clean.split(/\n+/).map((s) => s.trim()).filter(Boolean)
+  if (segments.length <= 1) segments = clean.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean)
 
-    if (wouldBeSize > CHUNK_SIZE_TOKENS && currentChunk.length > 0) {
-      chunks.push({
-        content: currentChunk.trim(),
-        token_count: approxTokens(currentChunk),
-        metadata: { ...metadata, paragraph_count: currentChunkParagraphs.length },
-      })
-
-      // Overlap: carry the last paragraph into the next chunk.
-      const overlapText = currentChunkParagraphs[currentChunkParagraphs.length - 1] || ''
-      currentChunk = overlapText + '\n\n' + para
-      currentChunkParagraphs = [overlapText, para]
-    } else {
-      currentChunk = currentChunk ? currentChunk + '\n\n' + para : para
-      currentChunkParagraphs.push(para)
+  // 2) Hard-split any single segment still larger than target (sliding window).
+  const units: string[] = []
+  for (const seg of segments) {
+    if (approxTokens(seg) <= CHUNK_SIZE_TOKENS) {
+      units.push(seg)
+      continue
+    }
+    for (let i = 0; i < seg.length; i += STRIDE_CHARS) {
+      const slice = seg.slice(i, i + TARGET_CHARS).trim()
+      if (slice) units.push(slice)
     }
   }
 
-  if (currentChunk.trim().length > 0) {
+  // 3) Greedily pack units to ~CHUNK_SIZE_TOKENS. Overlap = a bounded tail of
+  // the just-flushed chunk (~CHUNK_OVERLAP_TOKENS), NOT the whole previous unit
+  // — carrying a full unit could nearly double a chunk before the next size
+  // check fires (observed max 1401 tok). Tail-overlap caps chunks at ~target +
+  // overlap (~800 tok).
+  const OVERLAP_CHARS = CHUNK_OVERLAP_TOKENS * 4
+  const chunks: ReturnType<typeof chunkText> = []
+  let current = ''
+  let unitCount = 0
+  const flush = () => {
+    if (current.trim().length === 0) return
     chunks.push({
-      content: currentChunk.trim(),
-      token_count: approxTokens(currentChunk),
-      metadata: { ...metadata, paragraph_count: currentChunkParagraphs.length },
+      content: current.trim(),
+      token_count: approxTokens(current),
+      metadata: { ...metadata, segment_count: unitCount },
     })
   }
+
+  for (const u of units) {
+    const candidate = current ? current + '\n\n' + u : u
+    if (approxTokens(candidate) > CHUNK_SIZE_TOKENS && current) {
+      flush()
+      const overlap = current.slice(-OVERLAP_CHARS).trim()
+      current = overlap ? overlap + '\n\n' + u : u
+      unitCount = 1
+    } else {
+      current = candidate
+      unitCount++
+    }
+  }
+  flush()
 
   return chunks
 }
