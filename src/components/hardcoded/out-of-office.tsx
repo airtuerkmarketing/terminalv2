@@ -3,6 +3,7 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import "@/styles/out-of-office.css";
 import { copyRichText, escapeHtml } from "@/lib/email-tools";
+import { useToast } from "@/components/ui/toast";
 
 /**
  * Out-of-Office message generator (Task 5c). Ported from the Webflow embed
@@ -214,6 +215,7 @@ export function OutOfOffice() {
   const [vphone, setVphone] = useState("");
   const [copied, setCopied] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const { toast } = useToast();
 
   const reset = () => setCopied(false);
 
@@ -259,6 +261,7 @@ export function OutOfOffice() {
     if (!ok) return;
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2000);
+    toast({ title: "Copied to clipboard", variant: "success" });
   }
 
   function handleOutlook() {

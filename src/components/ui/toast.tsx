@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
+import { Check, AlertCircle, Info, X } from "lucide-react";
 import "./toast.css";
 
 /**
@@ -69,7 +69,7 @@ const DEFAULT_DURATION = 5000;
 const DEDUP_WINDOW_MS = 2000;
 const EXIT_MS = 200;
 
-const ICONS = { success: CheckCircle2, error: AlertCircle, info: Info } as const;
+const ICONS = { success: Check, error: AlertCircle, info: Info } as const;
 
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
@@ -199,7 +199,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               aria-live={assertive ? "assertive" : "polite"}
             >
               <span className="toast-icon">
-                <Icon size={18} aria-hidden="true" />
+                <Icon size={15} aria-hidden="true" />
               </span>
               <div className="toast-body">
                 <div className="toast-title">

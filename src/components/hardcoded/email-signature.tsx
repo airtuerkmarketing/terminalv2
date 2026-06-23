@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import "@/styles/email-signature.css";
 import { copyRichText, escapeHtml, imageUrl } from "@/lib/email-tools";
 import { OutOfOffice } from "@/components/hardcoded/out-of-office";
+import { useToast } from "@/components/ui/toast";
 
 /**
  * Your Signature generator (hardcoded route, component_key='email-signature').
@@ -265,6 +266,7 @@ export function EmailSignature(_props: { title: string; embedded?: boolean }) {
   const [copied, setCopied] = useState<{ main: boolean; reply: boolean }>({ ...NONE });
   const [flash, setFlash] = useState<{ main: boolean; reply: boolean }>({ ...NONE });
   const [infoOpen, setInfoOpen] = useState(false);
+  const { toast } = useToast();
 
   const fields: SigFields = useMemo(
     () => ({ name, position, email, phone, phone2, swyxExt, banner, label1, label2 }),
@@ -293,6 +295,10 @@ export function EmailSignature(_props: { title: string; embedded?: boolean }) {
     setCopied((c) => ({ ...c, [tab]: true }));
     setFlash((c) => ({ ...c, [tab]: true }));
     window.setTimeout(() => setFlash((c) => ({ ...c, [tab]: false })), 1800);
+    toast({
+      title: tab === "main" ? "Main signature copied" : "Reply signature copied",
+      variant: "success",
+    });
   }
 
   // Tel/Mobil badges are mutually exclusive across the two phones.
