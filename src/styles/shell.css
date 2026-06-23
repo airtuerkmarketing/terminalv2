@@ -105,7 +105,14 @@ html { scrollbar-gutter: stable; }
 /* Icon kept in the markup but hidden (no bullet/icon on sub-items); easy revert. */
 .nav-sub .nav-item .icon { display: none; }
 
-.user-block { flex-shrink: 0; padding: var(--space-3); border-radius: var(--radius-md); background: rgba(120, 120, 128, 0.05); display: flex; align-items: center; gap: var(--space-3); overflow: hidden; }
+/* Full-bleed profile strip (Claude/Linear style): breaks out of the sidebar-inner
+   padding to the panel edges, no resting background, hairline divider on top.
+   sidebar-inner's overflow:hidden + right radius clip the hover at the corner. */
+.sidebar-inner .user-block { flex-shrink: 0; margin: 0 calc(-1 * var(--space-3)) calc(-1 * var(--space-4)); padding: var(--space-3); border-top: 1px solid var(--hairline); background: transparent; display: flex; align-items: center; gap: var(--space-3); overflow: hidden; }
+/* Edge-to-edge hover (neutral grey, matches nav-items). Scoped to beat the
+   button.user-block:hover rule in user-menu.css; dark gets a lighter tint. */
+.sidebar-inner .user-block:hover { background: rgba(120, 120, 128, 0.08); }
+:root[data-theme="ios18-dark"] .sidebar-inner .user-block:hover { background: rgba(235, 235, 245, 0.06); }
 .user-block .avatar { width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--avatar-bg); color: white; display: grid; place-items: center; font-weight: var(--weight-bold); font-size: var(--fs-xs); }
 .user-block .meta { flex: 1; min-width: 0; }
 .user-block .name { font-size: var(--fs-sm); font-weight: var(--weight-regular); color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -182,7 +189,9 @@ html { scrollbar-gutter: stable; }
   :root[data-sidebar="collapsed"] .nav-sub { display: none; }
   /* Collapsed footer: center just the avatar on the rail centerline; keep the
      vertical padding (space-3) equal to expanded so the block doesn't jump. */
-  :root[data-sidebar="collapsed"] .user-block { justify-content: center; gap: 0; padding: var(--space-3) 0; }
+  /* Collapsed rail: keep the bottom full-bleed but drop the side break-out
+     (rail padding is only space-2) so the avatar stays centered, not over-pulled. */
+  :root[data-sidebar="collapsed"] .user-block { justify-content: center; gap: 0; padding: var(--space-3) 0; margin-left: 0; margin-right: 0; }
   :root[data-sidebar="collapsed"] .user-block .meta { display: none; }
 }
 
