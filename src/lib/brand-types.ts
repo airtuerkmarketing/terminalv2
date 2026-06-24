@@ -1,6 +1,6 @@
 /**
  * The 4 single-page brands that render through the TSX section pipeline
- * (D-059, feature: brand-sections TSX refactor) instead of the DB-block
+ * (D-064, feature: brand-sections TSX refactor) instead of the DB-block
  * aggregator. Deliberately narrow:
  *   • airtuerk-apix stays on the DB-block path (its children are hardcoded
  *     APIX tools rendered via getBrandSectionsAll — see page-view.tsx).
