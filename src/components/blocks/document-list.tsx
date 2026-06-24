@@ -96,9 +96,14 @@ function PreviewCards({ docs }: { docs: DocumentItem[] }) {
           return (
             <div key={i} className="doc-card doc-card--tilted">
               <div className="doc-card__meta">
-                <span className={`doc-badge ${ftKind(d)}`}>{FT_LABEL[ftKind(d)]}</span>
-                <div className="doc-card__title">{d.title}</div>
-                <div className="doc-card__sub">Click to download latest</div>
+                <div className="doc-card__icon">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- static pdf icon */}
+                  <img src="/icons/pdf-icon.svg" alt="" aria-hidden="true" />
+                </div>
+                <div className="doc-card__text">
+                  <div className="doc-card__title">{d.title}</div>
+                  <div className="doc-card__sub">Click to download latest</div>
+                </div>
               </div>
               <div className="doc-card__shot">
                 {/* eslint-disable-next-line @next/next/no-img-element -- static convention-based cover */}
