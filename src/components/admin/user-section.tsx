@@ -1,5 +1,6 @@
 import { useMemo, type CSSProperties } from "react";
 import type { LoginStatus, TeamMemberListItem } from "@/lib/users";
+import type { ColumnVisibility } from "@/lib/admin-users-preferences";
 import { UserRow } from "./user-row";
 import { UserSectionHeader } from "./user-section-header";
 
@@ -18,6 +19,7 @@ export function UserSection({
   users,
   collapsed,
   colSpan,
+  visibility,
   onToggle,
   onOpenUser,
 }: {
@@ -26,6 +28,7 @@ export function UserSection({
   users: TeamMemberListItem[];
   collapsed: boolean;
   colSpan: number;
+  visibility: ColumnVisibility;
   onToggle: () => void;
   onOpenUser: (teamMemberId: string) => void;
 }) {
@@ -47,7 +50,12 @@ export function UserSection({
       />
       {!collapsed &&
         users.map((u) => (
-          <UserRow key={u.teamMemberId} user={u} onClick={() => onOpenUser(u.teamMemberId)} />
+          <UserRow
+            key={u.teamMemberId}
+            user={u}
+            visibility={visibility}
+            onClick={() => onOpenUser(u.teamMemberId)}
+          />
         ))}
     </tbody>
   );

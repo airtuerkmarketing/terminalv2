@@ -1,5 +1,6 @@
 import { RelativeTime } from "@/components/documents/relative-time";
 import type { TeamMemberListItem } from "@/lib/users";
+import type { ColumnVisibility } from "@/lib/admin-users-preferences";
 
 /**
  * One row of the User-Management table. Rendered inside the client
@@ -41,7 +42,15 @@ const STATUS_LABEL: Record<TeamMemberListItem["loginStatus"], string> = {
   not_invited: "Nicht eingeladen",
 };
 
-export function UserRow({ user, onClick }: { user: TeamMemberListItem; onClick: () => void }) {
+export function UserRow({
+  user,
+  visibility,
+  onClick,
+}: {
+  user: TeamMemberListItem;
+  visibility: ColumnVisibility;
+  onClick: () => void;
+}) {
   const name = `${user.firstName} ${user.lastName}`.trim();
   return (
     <tr
@@ -56,45 +65,73 @@ export function UserRow({ user, onClick }: { user: TeamMemberListItem; onClick: 
         }
       }}
     >
-      <td className="uap-cell-avatar">
-        <span
-          className="uap-avatar"
-          style={user.avatarUrl ? undefined : { background: avatarColor(user.teamMemberId) }}
-        >
-          {user.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- public avatars-bucket URL; next/image adds no value here and the repo renders Storage URLs with raw <img>
-            <img src={user.avatarUrl} alt="" loading="lazy" decoding="async" />
+      {visibility.avatar && (
+        <td className="uap-cell-avatar">
+          <span
+            className="uap-avatar"
+            style={user.avatarUrl ? undefined : { background: avatarColor(user.teamMemberId) }}
+          >
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- public avatars-bucket URL; next/image adds no value here and the repo renders Storage URLs with raw <img>
+              <img src={user.avatarUrl} alt="" loading="lazy" decoding="async" />
+            ) : (
+              <span>{user.initials}</span>
+            )}
+          </span>
+        </td>
+      )}
+      {visibility.name && (
+        <td className="uap-cell-name">
+          <span className="uap-name">{name}</span>
+        </td>
+      )}
+      {visibility.position && (
+        <td className="uap-cell-pos">
+          <span className="uap-muted">{user.position ?? "—"}</span>
+        </td>
+      )}
+      {visibility.email && (
+        <td className="uap-cell-email">
+          <span className="uap-muted">{user.email ?? "—"}</span>
+        </td>
+      )}
+      {visibility.department && <td>{user.department ?? "—"}</td>}
+      {visibility.role && (
+        <td>
+          {user.role ? (
+            <span className={`uap-pill ${ROLE_CLASS[user.role]}`}>{ROLE_LABEL[user.role]}</span>
           ) : (
-            <span>{user.initials}</span>
+            <span className="uap-pill uap-pill--none">—</span>
           )}
-        </span>
-      </td>
-      <td className="uap-cell-name">
-        <span className="uap-name">{name}</span>
-      </td>
-      <td className="uap-cell-pos">
-        <span className="uap-muted">{user.position ?? "—"}</span>
-      </td>
-      <td className="uap-cell-email">
-        <span className="uap-muted">{user.email ?? "—"}</span>
-      </td>
-      <td>{user.department ?? "—"}</td>
-      <td>
-        {user.role ? (
-          <span className={`uap-pill ${ROLE_CLASS[user.role]}`}>{ROLE_LABEL[user.role]}</span>
-        ) : (
-          <span className="uap-pill uap-pill--none">—</span>
-        )}
-      </td>
-      <td>
-        <span className={`uap-status uap-status--${user.loginStatus}`}>
-          <span className="uap-dot" aria-hidden="true" />
-          {STATUS_LABEL[user.loginStatus]}
-        </span>
-      </td>
-      <td className="uap-muted">
-        {user.lastSignInAt ? <RelativeTime iso={user.lastSignInAt} /> : "—"}
-      </td>
+        </td>
+      )}
+      {visibility.status && (
+        <td>
+          <span className={`uap-status uap-status--${user.loginStatus}`}>
+            <span className="uap-dot" aria-hidden="true" />
+            {STATUS_LABEL[user.loginStatus]}
+          </span>
+        </td>
+      )}
+      {visibility.lastSignIn && (
+        <td className="uap-muted">
+          {user.lastSignInAt ? <RelativeTime iso={user.lastSignInAt} /> : "—"}
+        </td>
+      )}
+      {visibility.tools && (
+        <td className="uap-cell-tools">
+          {user.tools.length ? (
+            <span className="uap-muted">{user.tools.join(", ")}</span>
+          ) : (
+            <span className="uap-muted">—</span>
+          )}
+        </td>
+      )}
+      {visibility.created && (
+        <td className="uap-muted">
+          <RelativeTime iso={user.createdAt} />
+        </td>
+      )}
     </tr>
   );
 }

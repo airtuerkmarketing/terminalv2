@@ -1121,6 +1121,9 @@ export interface TeamMemberListItem {
   /** Tenure year (e.g. 2018), or null. */
   joinedYear: number | null;
   isLead: boolean;
+  /** team_members.created_at — when the directory record was created (NOT NULL).
+   *  Backs the optional "Erstellt" column (AP 3 Phase 4). */
+  createdAt: string;
 }
 
 /** Filters for the team-member directory. All optional; combined with AND. */
@@ -1149,6 +1152,7 @@ type TeamMemberAdminRow = {
   tools: string[] | null;
   tasks: string | null;
   last_invited_at: string | null;
+  created_at: string;
   avatar_asset_id: string | null;
   // Avatar + profile use explicit FK hints so PostgREST resolves the embeds
   // deterministically (avatar matches pages.ts; profile FK from migration 0034).
@@ -1158,7 +1162,7 @@ type TeamMemberAdminRow = {
 
 const TEAM_MEMBER_ADMIN_SELECT =
   "id, first_name, last_name, position, department, initials, email, phone, " +
-  "joined_year, is_lead, tools, tasks, last_invited_at, avatar_asset_id, " +
+  "joined_year, is_lead, tools, tasks, last_invited_at, created_at, avatar_asset_id, " +
   "avatar:assets!team_members_avatar_asset_id_fkey(public_url), " +
   "profile:profiles!profiles_team_member_id_fkey(id, role)";
 
@@ -1188,6 +1192,7 @@ function mapTeamMember(r0: unknown, signInMap: Map<string, string | null>): Team
     tasks: r.tasks,
     joinedYear: r.joined_year,
     isLead: r.is_lead,
+    createdAt: r.created_at,
   };
 }
 

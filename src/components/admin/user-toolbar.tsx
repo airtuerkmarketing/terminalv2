@@ -1,8 +1,10 @@
 "use client";
 
 import { SearchIcon } from "@/components/shell/icons";
+import type { ColumnVisibility } from "@/lib/admin-users-preferences";
 import { FilterDropdown } from "./filter-dropdown";
 import { FilterPill } from "./filter-pill";
+import { ColumnVisibilityDropdown } from "./column-visibility-dropdown";
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Aktiv" },
@@ -29,6 +31,8 @@ export function UserToolbar({
   onNoPhoto,
   hasActiveFilters,
   onReset,
+  columnVisibility,
+  onColumnVisibility,
 }: {
   q: string;
   onQ: (v: string) => void;
@@ -43,6 +47,8 @@ export function UserToolbar({
   onNoPhoto: (v: boolean) => void;
   hasActiveFilters: boolean;
   onReset: () => void;
+  columnVisibility: ColumnVisibility;
+  onColumnVisibility: (next: ColumnVisibility) => void;
 }) {
   return (
     <div className="uap-toolbar">
@@ -78,6 +84,10 @@ export function UserToolbar({
           Zurücksetzen
         </button>
       )}
+
+      <div className="uap-toolbar-end">
+        <ColumnVisibilityDropdown visibility={columnVisibility} onChange={onColumnVisibility} />
+      </div>
     </div>
   );
 }

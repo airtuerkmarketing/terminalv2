@@ -4,6 +4,7 @@ import { getIdentity } from "@/lib/auth";
 import { getAllTeamMembers } from "@/lib/users";
 import { createClient } from "@/lib/supabase/server";
 import { UserAdminPanel } from "@/components/admin/user-admin-panel";
+import { parseSort } from "@/lib/admin-users-preferences";
 
 export const metadata: Metadata = { title: "User-Management" };
 
@@ -17,6 +18,8 @@ type PageProps = {
     status?: string;
     privateOnly?: string;
     noPhoto?: string;
+    sort?: string;
+    dir?: string;
   }>;
 };
 
@@ -59,6 +62,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
           privateOnly: sp.privateOnly === "1",
           noPhoto: sp.noPhoto === "1",
         }}
+        initialSort={parseSort(sp.sort, sp.dir)}
         currentUserId={identity.userId}
       />
     </div>

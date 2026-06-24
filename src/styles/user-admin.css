@@ -191,6 +191,20 @@
   color: var(--text-3);
 }
 
+/* ── Column-visibility dropdown (Phase 4) ─────────────────────────────────── */
+/* Reuses the .uap-fdrop-btn / .uap-fdrop-menu look. Pushed to the far right of
+   the toolbar; the menu anchors to the right edge so it never overflows. */
+.uap-toolbar-end {
+  margin-left: auto;
+}
+.uap-colvis {
+  position: relative;
+}
+.uap-colvis-menu {
+  right: 0;
+  left: auto;
+}
+
 /* Reset link inside the empty state */
 .uap-empty-reset {
   display: inline-block;
@@ -228,6 +242,39 @@
   border-bottom: 1px solid var(--separator);
   white-space: nowrap;
 }
+
+/* Sortable header button (Phase 4). Sits inside the <th>, inherits its uppercase
+   label styling; the dual-chevron icon highlights the active sort direction. */
+.uap-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.uap-sort:hover,
+.uap-sort.is-active {
+  color: var(--text-1);
+}
+.uap-sort-icon {
+  flex-shrink: 0;
+}
+.uap-sort-up,
+.uap-sort-down {
+  opacity: 0.25;
+  transition: opacity 0.12s var(--ease-smooth);
+}
+.uap-sort.is-asc .uap-sort-up,
+.uap-sort.is-desc .uap-sort-down {
+  opacity: 1;
+}
+
 .uap-row {
   border-bottom: 1px solid var(--separator);
   cursor: pointer;
@@ -247,7 +294,8 @@
 }
 .uap-cell-name,
 .uap-cell-pos,
-.uap-cell-email {
+.uap-cell-email,
+.uap-cell-tools {
   max-width: 220px;
 }
 .uap-name,
@@ -326,7 +374,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .uap-section-chevron {
+  .uap-section-chevron,
+  .uap-sort-up,
+  .uap-sort-down {
     transition: none;
   }
 }
