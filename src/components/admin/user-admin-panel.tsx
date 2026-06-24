@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { SearchIcon } from "@/components/shell/icons";
-import type { TeamMemberListItem } from "@/lib/users";
-import { UserRow } from "./user-row";
+import type { LoginStatus, TeamMemberListItem } from "@/lib/users";
+import { UserSection } from "./user-section";
 import { UserDetailModal } from "./user-detail-modal";
 import "@/styles/user-admin.css";
 
@@ -16,13 +16,37 @@ export interface UserAdminPanelFilters {
   q?: string;
 }
 
+// Role sections in display order. `key` doubles as the grouping + sessionStorage
+// key ("null" = no linked profile yet). super_admin uses --torch — it matches the
+// existing super_admin role pill in this panel, so the highest tier stands apart
+// from the Quantum-Blue admin accent; user / null stay muted (--text-3).
+const ROLE_SECTIONS: { key: string; label: string; color: string }[] = [
+  { key: "super_admin", label: "Super-Admin", color: "var(--torch)" },
+  { key: "admin", label: "Admin", color: "var(--accent)" },
+  { key: "user", label: "User", color: "var(--text-3)" },
+  { key: "null", label: "Ohne Rolle", color: "var(--text-3)" },
+];
+
+// Default collapse state: the two privileged groups open, the rest collapsed.
+const DEFAULT_COLLAPSED: Record<string, boolean> = {
+  super_admin: false,
+  admin: false,
+  user: true,
+  null: true,
+};
+
+// Sort within a section: active → invited → not_invited, then by last name.
+const STATUS_ORDER: Record<LoginStatus, number> = { active: 0, invited: 1, not_invited: 2 };
+
+const SECTION_STORAGE_KEY = "admin-users-section-collapse";
+const COLUMN_COUNT = 8;
+
 /**
- * User-Management table (Stage 7A): read-only list of the whole team-member
- * directory with department / role / login-status / free-text filters applied
- * client-side. The full set (~63 rows) is passed in from the server page, so
- * filtering in memory is instant and reversible (no debounce needed at this
- * scale). Editing, the detail modal and server-side filter URL sync are Stage
- * 7B/7C; clicking a row is a no-op for now.
+ * User-Management table (Stage 7A + AP 3 Phase 1): the team-member directory
+ * grouped into collapsible role sections (Super-Admin / Admin / User / Ohne
+ * Rolle). Department / role / status / free-text filters still apply client-side
+ * over the full (~63-row) set passed from the server page; only non-empty
+ * sections render. Clicking a row opens the read-only detail modal.
  */
 export function UserAdminPanel({
   teamMembers,
@@ -48,6 +72,33 @@ export function UserAdminPanel({
     ? teamMembers.find((u) => u.teamMemberId === openUserId) ?? null
     : null;
 
+  // Collapse state. Starts from the defaults (matches the server HTML), then a
+  // stored override is applied one tick later on mount — so the first client
+  // render still matches SSR (no hydration mismatch).
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(DEFAULT_COLLAPSED);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(SECTION_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, boolean>;
+        setCollapsed((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch {
+      // sessionStorage unavailable — keep the defaults.
+    }
+  }, []);
+  const toggleSection = useCallback((key: string) => {
+    setCollapsed((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        sessionStorage.setItem(SECTION_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore persistence failures — the toggle still applies for this view.
+      }
+      return next;
+    });
+  }, []);
+
   const hasActiveFilters = q !== "" || department !== "" || role !== "" || status !== "";
 
   const filtered = useMemo(() => {
@@ -67,6 +118,32 @@ export function UserAdminPanel({
       return true;
     });
   }, [teamMembers, q, department, role, status]);
+
+  // Group the filtered set by role and sort within each group.
+  const grouped = useMemo(() => {
+    const map: Record<string, TeamMemberListItem[]> = {
+      super_admin: [],
+      admin: [],
+      user: [],
+      null: [],
+    };
+    for (const u of filtered) map[u.role ?? "null"].push(u);
+    for (const bucket of Object.values(map)) {
+      bucket.sort(
+        (a, b) =>
+          STATUS_ORDER[a.loginStatus] - STATUS_ORDER[b.loginStatus] ||
+          a.lastName.localeCompare(b.lastName) ||
+          a.firstName.localeCompare(b.firstName)
+      );
+    }
+    return map;
+  }, [filtered]);
+
+  // Only non-empty sections render (an empty Admin/User group is hidden, not
+  // shown as "Admin (0)"; the same applies when a filter empties a group).
+  const visibleSections = ROLE_SECTIONS.map((s) => ({ ...s, users: grouped[s.key] })).filter(
+    (s) => s.users.length > 0
+  );
 
   function resetFilters() {
     setQ("");
@@ -158,23 +235,28 @@ export function UserAdminPanel({
               <th>Letzter Login</th>
             </tr>
           </thead>
-          <tbody>
-            {filtered.length === 0 ? (
+          {filtered.length === 0 ? (
+            <tbody>
               <tr>
-                <td className="uap-empty" colSpan={8}>
+                <td className="uap-empty" colSpan={COLUMN_COUNT}>
                   Keine Personen gefunden
                 </td>
               </tr>
-            ) : (
-              filtered.map((u) => (
-                <UserRow
-                  key={u.teamMemberId}
-                  user={u}
-                  onClick={() => setOpenUserId(u.teamMemberId)}
-                />
-              ))
-            )}
-          </tbody>
+            </tbody>
+          ) : (
+            visibleSections.map((s) => (
+              <UserSection
+                key={s.key}
+                label={s.label}
+                color={s.color}
+                users={s.users}
+                collapsed={collapsed[s.key] ?? false}
+                colSpan={COLUMN_COUNT}
+                onToggle={() => toggleSection(s.key)}
+                onOpenUser={setOpenUserId}
+              />
+            ))
+          )}
         </table>
       </div>
 
