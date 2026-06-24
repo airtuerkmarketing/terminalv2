@@ -330,6 +330,26 @@
 }
 .doc-card .card-dl svg { width: 16px; height: 16px; }
 .doc-card:hover .card-dl { opacity: 1; }
+
+/* Master-deck tilted preview variant. Two columns inside a card: meta left,
+   rotated cover image right that overflows the card boundary on the right. On
+   hover the image tilts a touch further for a subtle motion cue. The .doc-card
+   default clips with overflow:hidden — this variant flips it to visible (higher
+   specificity .doc-card.doc-card--tilted) so the image can poke out; the base
+   doc-cards stay clipped. */
+.doc-card.doc-card--tilted { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); padding: var(--space-5); min-height: 180px; overflow: visible; }
+.doc-card--tilted .doc-card__meta { display: flex; flex-direction: column; gap: var(--space-3); align-self: flex-start; z-index: 1; }
+.doc-card--tilted .doc-card__meta .doc-badge { align-self: flex-start; }
+.doc-card--tilted .doc-card__title { font-size: var(--fs-md); font-weight: var(--weight-semibold); color: var(--text-1); line-height: var(--lh-tight); }
+.doc-card--tilted .doc-card__sub { font-size: var(--fs-xs); color: var(--text-3); line-height: var(--lh-normal); }
+.doc-card--tilted .doc-card__shot { position: relative; margin-right: calc(-1 * var(--space-8)); display: flex; align-items: center; justify-content: flex-end; }
+.doc-card--tilted .doc-card__shot img { width: 100%; max-width: none; height: auto; display: block; border-radius: var(--radius-md); box-shadow: 0 6px 24px -8px rgba(0, 0, 0, 0.18), 0 2px 6px -2px rgba(0, 0, 0, 0.08); transform: rotate(6deg); transition: transform 240ms var(--ease-smooth); will-change: transform; }
+.doc-card.doc-card--tilted:hover .doc-card__shot img { transform: rotate(8deg) translateY(-2px); }
+@media (prefers-reduced-motion: reduce) {
+  .doc-card--tilted .doc-card__shot img,
+  .doc-card.doc-card--tilted:hover .doc-card__shot img { transition: none; transform: rotate(6deg); }
+}
+
 .doc-badge { width: 48px; height: 60px; border-radius: var(--radius-sm); display: grid; place-items: center; color: white; font-size: var(--fs-xs); font-weight: var(--weight-bold); background: var(--accent); }
 .doc-badge.pdf { background: var(--torch); }
 .doc-badge.zip, .doc-badge.file { background: var(--surface-muted); color: var(--text-2); }
