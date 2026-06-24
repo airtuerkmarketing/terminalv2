@@ -39,9 +39,7 @@
    gap to the border-bottom rule, as in the reference. */
 .page-hero { min-height: 320px; background: var(--surface-muted); border-bottom: 1px solid var(--hairline); margin-bottom: var(--space-8); display: flex; flex-direction: column; justify-content: flex-end; padding: var(--space-8) 0; }
 .page-hero-inner { width: 100%; max-width: 1400px; margin-inline: auto; padding: 0 var(--space-4); }
-/* 42px is the reference size (no token matches — --fs-display is 56px, --fs-2xl
-   40px), so the literal is intentional. */
-.page-hero h1 { font-size: 42px; font-weight: var(--weight-semibold); line-height: 1.04; letter-spacing: -0.022em; color: var(--text-1); margin: 0; text-align: left; }
+.page-hero h1 { font-size: var(--fs-hero); font-weight: var(--weight-semibold); line-height: 1.04 /* optical tune for fs-hero — kept literal */; letter-spacing: -0.022em; color: var(--text-1); margin: 0; text-align: left; }
 /* Mobile: 320px + 42px are too heavy on a phone viewport — scale the hero down.
    Placed AFTER the base rules so these win on small viewports (media queries
    add no specificity, so source order decides). */
@@ -84,13 +82,27 @@
    .block holds its rich-text as its first div, so :first-of-type would match
    every description, not just the first. `:first-child` on the block wrapper is
    the correct "first block only" anchor. */
+/* .lead-statement — reusable lead/intro utility. The :first-child rule below
+   styles the brand-page lead identically; the two are deliberately parallel
+   (same token values) because we drive the brand lead purely off the existing
+   markup position rather than adding a class to the rich-text <div>. */
+.lead-statement {
+  font-size: var(--fs-lead);
+  font-weight: var(--weight-medium);
+  line-height: var(--lh-lead);
+  color: var(--text-1);
+  padding: var(--section-gap) 0;
+  border-bottom: 1px solid var(--hairline);
+  margin: 0;
+  max-width: none;
+}
 .main-inner > article > .page-blocks > :first-child .rich-text {
-  font-size: 20px;
-  font-weight: 500;
-  line-height: 24px;
+  font-size: var(--fs-lead);
+  font-weight: var(--weight-medium);
+  line-height: var(--lh-lead);
   color: var(--text-1);
   max-width: none;
-  padding: 64px 0;
+  padding: var(--section-gap) 0;
   margin: 0;
   border-bottom: 1px solid var(--hairline);
 }
