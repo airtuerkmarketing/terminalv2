@@ -206,12 +206,17 @@
 .logo-pkg .sub { font-size: var(--fs-sm); color: var(--text-3); }
 
 /* ── logo_grid ── */
-.logo-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, 1fr); }
-@media (min-width: 768px) { .logo-grid { grid-template-columns: repeat(4, 1fr); } }
-.logo-tile { position: relative; background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-lg); aspect-ratio: 1 / 1; display: grid; place-items: center; color: var(--text-1); font-weight: var(--weight-semibold); padding: var(--card-padding); }
-.logo-grid.is-circles .logo-tile { border-radius: 50%; aspect-ratio: 1; }
-/* Adaptive (Buhara): square container, logo in natural ratio, contained + capped. */
-.logo-tile img { object-fit: contain; max-width: 70%; max-height: 70%; }
+/* Reference layout: two landscape tiles per row (the prior ≥768px → 4-column
+   rule is dropped so desktop matches the reference; mobile already used 2). */
+.logo-grid { display: grid; gap: var(--space-6); grid-template-columns: repeat(2, 1fr); }
+.logo-tile { position: relative; background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-xl); height: 240px; display: grid; place-items: center; color: var(--text-1); font-weight: var(--weight-semibold); padding: var(--card-padding); overflow: hidden; transition: background 150ms var(--ease-smooth); }
+/* is-circles keeps round/square tiles — restore aspect-ratio + drop the fixed height. */
+.logo-grid.is-circles .logo-tile { border-radius: 50%; aspect-ratio: 1; height: auto; }
+/* Adaptive (Buhara): square container, logo in natural ratio, contained + capped.
+   Hover desaturates the logo (reference look); the download pill fades in. */
+.logo-tile img { object-fit: contain; max-width: 70%; max-height: 70%; transition: filter 200ms var(--ease-smooth); }
+.logo-tile:hover img { filter: grayscale(0.7) opacity(0.7); }
+.logo-tile:hover { background: rgba(0, 0, 0, 0.02); }
 
 /* ── per-asset download button (top-right of a showcase card) ── */
 /* Glassy, always visible at low opacity; full accent on hover/focus. The hit
@@ -228,13 +233,46 @@
 .card-dl:hover, .card-dl:focus-visible { opacity: 1; color: var(--accent); border-color: var(--accent-border); }
 .card-dl svg { width: 16px; height: 16px; }
 .logo-tile:hover .card-dl, .doc-card:hover .card-dl { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { .card-dl { transition: none; } }
+/* Logo tiles render the download as a labeled pill that fades in on hover (the
+   reference look). Scoped to .logo-tile so the shared .card-dl on document
+   cards/rows (document-list, file-row) keeps its icon-button style untouched. */
+.logo-tile .card-dl {
+  top: 12px; right: 12px;
+  width: auto; height: auto; padding: 7px 12px; gap: 6px;
+  color: var(--text-1); font-size: var(--fs-sm); font-weight: var(--weight-medium);
+  opacity: 0;
+}
+.logo-tile .card-dl::before { content: "Download"; }
+.logo-tile .card-dl svg { width: 14px; height: 14px; }
+/* Stay neutral on hover/focus (override the base accent colour change). */
+.logo-tile .card-dl:hover, .logo-tile .card-dl:focus-visible { color: var(--text-1); border-color: var(--hairline); }
+.logo-tile .card-dl:focus-visible { opacity: 1; outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .card-dl, .logo-tile img { transition: none; } }
 
 /* ── asset_block ── */
-.asset-block { display: grid; gap: var(--space-4); }
-.asset-block .preview { background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-xl); min-height: 240px; display: grid; place-items: center; overflow: hidden; }
+/* Compact white card (reference "Logo Package"): title top-left, download pill
+   top-right (same grid row), optional preview + caption span full width below.
+   Explicit grid-row placement (not grid-template-areas) so a hidden/empty
+   preview leaves no phantom empty row + double gap; .downloads is DOM-last but
+   pinned to row 1 col 2. */
+.asset-block {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5) var(--space-5) var(--space-6);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-4);
+  align-items: center;
+}
+.asset-block .block-label { grid-column: 1; grid-row: 1; }
+.asset-block .block-label h2 { font-size: var(--fs-md); font-weight: var(--weight-medium); margin: 0; color: var(--text-1); }
+.asset-block .downloads { grid-column: 2; grid-row: 1; justify-self: end; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.asset-block .preview { grid-column: 1 / -1; background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-xl); min-height: 240px; display: grid; place-items: center; overflow: hidden; }
+/* Hide the preview wrapper when it has no image (compact card with no assetUrl). */
+.asset-block .preview:not(:has(img)) { display: none; }
 .asset-block .preview img { max-width: 100%; }
-.asset-block .downloads { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.asset-block .rich-text { grid-column: 1 / -1; font-size: var(--fs-base); color: var(--text-2); margin: 0; max-width: none; }
 
 /* shared download pill / link */
 .dl-pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--button-radius); border: 1px solid var(--hairline); background: var(--surface); font-size: var(--fs-sm); color: var(--text-1); text-decoration: none; transition: all 150ms var(--ease-smooth); }
@@ -319,22 +357,25 @@
 /* ── In-page anchor sections (single-page brands + IBE). scroll-margin-top keeps
    the target clear of the topbar when jumped to via the sidebar #slug anchors
    (more robust than relying on :target alone). ── */
-.anchor-section { padding-top: var(--space-6); scroll-margin-top: var(--space-20); }
+.anchor-section { padding-top: var(--section-gap); padding-bottom: var(--section-gap); scroll-margin-top: var(--space-20); }
 /* Full-width solid divider between sections (sits on the full-width section box,
    so two-col and full-width sections get the same continuous line). --hairline
    reads clearly on the white content background. */
-.anchor-section + .anchor-section { margin-top: var(--section-gap); border-top: 1px solid var(--hairline); }
-/* No padding-top here: .anchor-section already owns the space-6 top padding
+/* Each section owns symmetric section-gap padding (top + bottom), so the gap
+   between two sections is 2× section-gap and the divider sits on the boundary.
+   margin-top is zeroed to avoid stacking with the padding. */
+.anchor-section + .anchor-section { margin-top: 0; border-top: 1px solid var(--hairline); }
+/* No padding-top here: .anchor-section already owns the section-gap top padding
    (and scroll-margin-top for the anchor jump offset). Adding it to the h2 too
-   doubled the gap above the heading (space-6 + space-6). */
-.anchor-section > h2 { font-size: var(--fs-lg); font-weight: var(--weight-semibold); letter-spacing: -0.012em; color: var(--text-1); margin-bottom: var(--space-4); }
+   would double the gap above the heading. */
+.anchor-section > h2 { font-size: var(--fs-lead); font-weight: var(--weight-medium); line-height: var(--lh-lead); letter-spacing: 0; color: var(--text-1); margin-bottom: var(--space-4); }
 
 /* Two-column brand section (Webflow original): section title left ~25%, content
    right ~75%. Stacks below 1024px, matching .block--two-column and the shell
    drawer boundary. Applied only on the 5 brand routes (see page-view.tsx). */
 .anchor-section--two-col { display: grid; grid-template-columns: 1fr; gap: var(--space-5); }
 @media (min-width: 1024px) {
-  .anchor-section--two-col { grid-template-columns: 25% 1fr; gap: var(--space-8); align-items: start; }
+  .anchor-section--two-col { grid-template-columns: 25% 1fr; gap: var(--space-12); align-items: start; }
 }
 .anchor-section--two-col > h2 { margin-bottom: 0; }    /* title owns the left column */
 .anchor-section--two-col > :not(h2) { min-width: 0; }  /* prevent grid blowout of content */
