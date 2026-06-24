@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Check, AlertCircle, Info, X } from "lucide-react";
+import { Check, AlertCircle, AlertTriangle, Info, X } from "lucide-react";
 import "./toast.css";
 
 /**
@@ -17,8 +17,9 @@ import "./toast.css";
  * context — mounted once in the root layout so every route (incl. /login,
  * /admin) can surface feedback. See the API contract below.
  *
- *   const { toast, dismiss } = useToast();
+ *   const { toast, update, dismiss } = useToast();
  *   const id = toast({ title, description?, variant?, duration?, action? });
+ *   update(id, { title });  // patch a live toast (e.g. a progress counter)
  *   dismiss(id);  // optional — for sticky (duration: 0) toasts
  *
  * Behaviour (locked decisions F1–F10): bottom-centered, max 3 at once (oldest
@@ -28,7 +29,7 @@ import "./toast.css";
  * info/success and assertive for error.
  */
 
-export type ToastVariant = "success" | "error" | "info";
+export type ToastVariant = "success" | "error" | "info" | "warning";
 
 export interface ToastAction {
   label: string;
@@ -59,6 +60,9 @@ interface ToastItem {
 
 interface ToastContextValue {
   toast: (opts: ToastOptions) => string;
+  /** Patch a live toast's display fields in place (e.g. a progress counter).
+   *  No-op if the id is gone; does not re-arm the auto-dismiss timer. */
+  update: (id: string, patch: { title?: string; description?: string; variant?: ToastVariant }) => void;
   dismiss: (id: string) => void;
 }
 
@@ -69,7 +73,7 @@ const DEFAULT_DURATION = 5000;
 const DEDUP_WINDOW_MS = 2000;
 const EXIT_MS = 200;
 
-const ICONS = { success: Check, error: AlertCircle, info: Info } as const;
+const ICONS = { success: Check, error: AlertCircle, info: Info, warning: AlertTriangle } as const;
 
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
@@ -171,6 +175,27 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [scheduleAutoDismiss, clearTimer]
   );
 
+  // Patch an existing toast's display fields (e.g. a "3/12" progress counter)
+  // without stacking a new one. Intentionally leaves scheduling alone — a sticky
+  // toast (duration 0) stays sticky. No-op if the id was already dismissed/evicted.
+  const update = useCallback(
+    (id: string, patch: { title?: string; description?: string; variant?: ToastVariant }) => {
+      setToasts((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                title: patch.title ?? t.title,
+                description: patch.description ?? t.description,
+                variant: patch.variant ?? t.variant,
+              }
+            : t
+        )
+      );
+    },
+    []
+  );
+
   useEffect(() => {
     const map = timers.current;
     return () => {
@@ -185,7 +210,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ToastContext.Provider value={{ toast, dismiss }}>
+    <ToastContext.Provider value={{ toast, update, dismiss }}>
       {children}
       <div className="toast-viewport">
         {toasts.map((t) => {

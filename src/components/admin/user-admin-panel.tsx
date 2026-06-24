@@ -19,7 +19,13 @@ import { UserToolbar } from "./user-toolbar";
 import { SortableHeader } from "./sortable-header";
 import { UserDetailModal } from "./user-detail-modal";
 import { CreatePersonModal } from "./create-person-modal";
+import { useBulkInvite } from "./use-bulk-invite";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import "@/styles/user-admin.css";
+
+// How many names to preview in the bulk-invite confirm dialog before collapsing
+// the rest into a "…und X weitere" line.
+const BULK_PREVIEW_LIMIT = 5;
 
 export interface UserAdminPanelFilters {
   q?: string;
@@ -96,6 +102,16 @@ export function UserAdminPanel({
   const openUser = openUserId
     ? teamMembers.find((u) => u.teamMemberId === openUserId) ?? null
     : null;
+
+  // Per-section bulk invite (Phase 6). The hook owns the confirm + sequential
+  // invite run; the panel renders the single shared ConfirmDialog below and
+  // passes `request` / `inProgress` down to every section header.
+  const bulk = useBulkInvite();
+  const bulkTarget = bulk.confirmTarget;
+  const bulkCount = bulkTarget?.members.length ?? 0;
+  const bulkPreview = bulkTarget?.members.slice(0, BULK_PREVIEW_LIMIT).map((m) => `${m.firstName} ${m.lastName}`.trim()) ?? [];
+  const bulkExtra = bulkCount - bulkPreview.length;
+  const bulkItems = bulkExtra > 0 ? [...bulkPreview, `…und ${bulkExtra} weitere`] : bulkPreview;
 
   // Collapse state. Starts from the defaults (matches the server HTML), then a
   // stored override is applied one tick later on mount — no hydration mismatch.
@@ -305,8 +321,10 @@ export function UserAdminPanel({
                 collapsed={collapsed[s.key] ?? false}
                 colSpan={colSpan}
                 visibility={visibility}
+                bulkInProgress={bulk.inProgress}
                 onToggle={() => toggleSection(s.key)}
                 onOpenUser={setOpenUserId}
+                onBulkInvite={bulk.request}
               />
             ))
           )}
@@ -328,6 +346,18 @@ export function UserAdminPanel({
         open={createOpen}
         onClose={closeCreate}
         departments={departments}
+      />
+
+      {/* Per-section bulk invite confirm (Phase 6). One shared dialog; the open
+          target carries the section label + the invitable members. */}
+      <ConfirmDialog
+        open={!!bulkTarget}
+        onClose={bulk.cancel}
+        onConfirm={bulk.confirm}
+        title={`${bulkCount} ${bulkCount === 1 ? "Person" : "Personen"} aus „${bulkTarget?.label ?? ""}“ einladen?`}
+        description="Es werden Einladungs-E-Mails an folgende Firmen-Adressen gesendet:"
+        items={bulkItems}
+        confirmLabel={`${bulkCount} einladen`}
       />
     </div>
   );

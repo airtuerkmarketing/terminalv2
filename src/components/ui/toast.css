@@ -44,6 +44,10 @@
   --toast-accent: var(--accent);
   --toast-soft: var(--accent-soft);
 }
+.toast.warning {
+  --toast-accent: var(--warning);
+  --toast-soft: var(--warning-soft);
+}
 .toast.error {
   --toast-accent: #dc2626;
   --toast-soft: #fee2e2;
