@@ -32,8 +32,13 @@
      rendered inline by the BlockRenderer INSIDE .main-inner. Keeps the original
      flat, no-background hero look — a full-bleed grey band cannot work from
      inside the narrow centered column, so the block stays a plain inline hero. */
-.page-hero { background: var(--surface-muted); padding: var(--space-12) 0 var(--space-10) 0; margin-bottom: var(--space-8); border-bottom: 1px solid var(--hairline); }
+/* 128px top / 72px bottom: deliberate hero proportions (lots of air above the
+   title, less below) — no spacing token matches these values (--space-16 is
+   64px), so the literals are intentional, not a missed tokenisation. */
+.page-hero { background: var(--surface-muted); padding: 128px 0 72px 0; margin-bottom: var(--space-8); border-bottom: 1px solid var(--hairline); }
 .page-hero-inner { width: 100%; max-width: 1400px; margin-inline: auto; padding: 0 var(--space-4); }
+/* Mobile: 128px is too tall on a phone viewport — scale the hero down. */
+@media (max-width: 767px) { .page-hero { padding: 72px 0 48px 0; } }
 .page-hero h1 { font-size: var(--fs-display); font-weight: var(--weight-semibold); letter-spacing: -0.022em; line-height: var(--lh-tight); color: var(--text-1); margin: 0; }
 
 .page-hero-block { padding-top: var(--space-4); margin-bottom: var(--space-12); }
