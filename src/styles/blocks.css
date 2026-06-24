@@ -336,7 +336,7 @@
    (~420×200) and clips its content (overflow:hidden inherited from base
    .doc-card) — the preview image is intentionally wider than its column and
    gets clipped on the right card edge for a "peeking" effect. */
-.doc-card.doc-card--tilted { position: relative; display: grid; grid-template-columns: 55fr 45fr; align-items: stretch; gap: var(--space-4); padding: var(--space-6); min-height: 200px; text-decoration: none; color: inherit; }
+.doc-card.doc-card--tilted { position: relative; display: grid; grid-template-columns: 55fr 45fr; align-items: stretch; gap: var(--space-4); padding: var(--space-6); min-height: 200px; border-radius: var(--radius-22); /* overrides base .doc-card --radius-xl */ text-decoration: none; color: inherit; }
 /* Meta column (left): pdf icon pinned to the top, title + sub to the bottom. */
 .doc-card--tilted .doc-card__meta { display: flex; flex-direction: column; justify-content: space-between; align-self: stretch; z-index: 1; min-width: 0; }
 .doc-card--tilted .doc-card__icon { width: 48px; height: 48px; border-radius: var(--radius-xl); background: var(--surface); border: 1px solid var(--hairline); box-shadow: var(--shadow-floating); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
