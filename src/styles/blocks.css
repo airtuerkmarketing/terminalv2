@@ -32,14 +32,20 @@
      rendered inline by the BlockRenderer INSIDE .main-inner. Keeps the original
      flat, no-background hero look — a full-bleed grey band cannot work from
      inside the narrow centered column, so the block stays a plain inline hero. */
-/* 128px top / 72px bottom: deliberate hero proportions (lots of air above the
-   title, less below) — no spacing token matches these values (--space-16 is
-   64px), so the literals are intentional, not a missed tokenisation. */
-.page-hero { background: var(--surface-muted); padding: 128px 0 72px 0; margin-bottom: var(--space-8); border-bottom: 1px solid var(--hairline); }
+/* Fixed-height hero (matches terminal.airtuerk.de/airtuerk-service): a ~320px
+   grey band with the title pinned to the BOTTOM (flex-end) — the air above the
+   title comes from min-height, NOT padding. The small 32px top padding is only
+   a safety floor for multi-line (long) brand names; 32px bottom is the compact
+   gap to the border-bottom rule, as in the reference. */
+.page-hero { min-height: 320px; background: var(--surface-muted); border-bottom: 1px solid var(--hairline); margin-bottom: var(--space-8); display: flex; flex-direction: column; justify-content: flex-end; padding: var(--space-8) 0; }
 .page-hero-inner { width: 100%; max-width: 1400px; margin-inline: auto; padding: 0 var(--space-4); }
-/* Mobile: 128px is too tall on a phone viewport — scale the hero down. */
-@media (max-width: 767px) { .page-hero { padding: 72px 0 48px 0; } }
-.page-hero h1 { font-size: var(--fs-display); font-weight: var(--weight-semibold); letter-spacing: -0.022em; line-height: var(--lh-tight); color: var(--text-1); margin: 0; }
+/* 42px is the reference size (no token matches — --fs-display is 56px, --fs-2xl
+   40px), so the literal is intentional. */
+.page-hero h1 { font-size: 42px; font-weight: var(--weight-semibold); line-height: 1.04; letter-spacing: -0.022em; color: var(--text-1); margin: 0; text-align: left; }
+/* Mobile: 320px + 42px are too heavy on a phone viewport — scale the hero down.
+   Placed AFTER the base rules so these win on small viewports (media queries
+   add no specificity, so source order decides). */
+@media (max-width: 767px) { .page-hero { min-height: 200px; padding: var(--space-6) 0; } .page-hero h1 { font-size: 28px; } }
 
 .page-hero-block { padding-top: var(--space-4); margin-bottom: var(--space-12); }
 .page-hero-block h1 { font-size: var(--fs-2xl); font-weight: var(--weight-semibold); letter-spacing: -0.022em; line-height: var(--lh-tight); color: var(--text-1); margin-bottom: var(--space-4); }
