@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { RelativeTime } from "@/components/documents/relative-time";
+import { useToast } from "@/components/ui/toast";
 import type { ActivityLogPage, Role, TeamMemberListItem } from "@/lib/users";
 import { loadUserActivity, updateUserRoleAction } from "@/app/(public)/admin/users/actions";
 import { avatarColor } from "./user-row";
+import { InviteFooter } from "./invite-footer";
 
 const ROLE_LABEL: Record<string, string> = {
   super_admin: "Super-Admin",
@@ -46,6 +48,7 @@ export function UserDetailModal({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const isTabbed = user.loginStatus !== "not_invited";
   const [tab, setTab] = useState<"profile" | "activity">("profile");
   const [activity, setActivity] = useState<ActivityLogPage | null>(null);
@@ -58,7 +61,6 @@ export function UserDetailModal({
   const [editingRole, setEditingRole] = useState(false);
   const [pendingRole, setPendingRole] = useState<Role>(user.role ?? "user");
   const [savingRole, setSavingRole] = useState(false);
-  const [roleError, setRoleError] = useState<string | null>(null);
   const isSelf = user.profileId != null && user.profileId === currentUserId;
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -71,15 +73,15 @@ export function UserDetailModal({
       return;
     }
     setSavingRole(true);
-    setRoleError(null);
     const res = await updateUserRoleAction(user.profileId, pendingRole);
     setSavingRole(false);
     if (res.ok) {
       setRole(pendingRole);
       setEditingRole(false);
+      toast({ variant: "success", title: "Rolle aktualisiert" });
       router.refresh(); // refresh the list behind the modal with the new role
     } else {
-      setRoleError(res.error);
+      toast({ variant: "error", title: res.error });
     }
   }
 
@@ -177,10 +179,7 @@ export function UserDetailModal({
                 <button
                   type="button"
                   className="uap-role-cancel"
-                  onClick={() => {
-                    setEditingRole(false);
-                    setRoleError(null);
-                  }}
+                  onClick={() => setEditingRole(false)}
                   disabled={savingRole}
                 >
                   Abbrechen
@@ -198,7 +197,6 @@ export function UserDetailModal({
                   className="uap-role-edit-btn"
                   onClick={() => {
                     setPendingRole(role ?? "user");
-                    setRoleError(null);
                     setEditingRole(true);
                   }}
                   disabled={isSelf}
@@ -212,7 +210,6 @@ export function UserDetailModal({
                 </button>
               </span>
             )}
-            {roleError && <span className="uap-role-error">{roleError}</span>}
           </dd>
         </div>
       )}
@@ -337,22 +334,7 @@ export function UserDetailModal({
         <div className="uap-modal-body">{!isTabbed || tab === "profile" ? profileFields : activityPanel}</div>
 
         <div className="uap-modal-footer">
-          {user.loginStatus === "not_invited" ? (
-            <p className="uap-modal-hint">
-              Diese Person hat noch keinen Login. Eine Einladung wird in der nächsten Version möglich
-              sein.
-            </p>
-          ) : (
-            <p className="uap-modal-hint">
-              {user.lastSignInAt ? (
-                <>
-                  Letzter Login: <RelativeTime iso={user.lastSignInAt} />
-                </>
-              ) : (
-                "Eingeladen — noch nie eingeloggt"
-              )}
-            </p>
-          )}
+          <InviteFooter user={user} />
           <button type="button" className="uap-modal-btn" onClick={onClose}>
             Schließen
           </button>

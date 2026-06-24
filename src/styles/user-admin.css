@@ -644,9 +644,51 @@
 .uap-role-cancel:hover:not(:disabled) {
   background: var(--surface-muted);
 }
-.uap-role-error {
-  display: block;
-  margin-top: var(--space-2);
+/* ── Invite footer (Phase 2) ──────────────────────────────────────────────── */
+.uap-invite {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.uap-invite-btn {
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+.uap-invite-btn:hover:not(:disabled) {
+  background: var(--surface-muted);
+}
+.uap-invite-btn--primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.uap-invite-btn--primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.uap-invite-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.uap-invite-blocked {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--surface-muted);
+  border: 1px dashed var(--hairline);
+  color: var(--text-2);
   font-size: var(--fs-xs, 12px);
-  color: var(--torch);
+  font-weight: var(--weight-medium);
+  cursor: help;
 }
