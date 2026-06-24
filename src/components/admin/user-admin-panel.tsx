@@ -18,6 +18,7 @@ import { UserSection } from "./user-section";
 import { UserToolbar } from "./user-toolbar";
 import { SortableHeader } from "./sortable-header";
 import { UserDetailModal } from "./user-detail-modal";
+import { CreatePersonModal } from "./create-person-modal";
 import "@/styles/user-admin.css";
 
 export interface UserAdminPanelFilters {
@@ -89,7 +90,9 @@ export function UserAdminPanel({
   const [sort, setSort] = useState<SortState>(initialSort);
 
   const [openUserId, setOpenUserId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const closeModal = useCallback(() => setOpenUserId(null), []);
+  const closeCreate = useCallback(() => setCreateOpen(false), []);
   const openUser = openUserId
     ? teamMembers.find((u) => u.teamMemberId === openUserId) ?? null
     : null;
@@ -248,6 +251,7 @@ export function UserAdminPanel({
         onReset={resetFilters}
         columnVisibility={visibility}
         onColumnVisibility={updateVisibility}
+        onCreatePersonClick={() => setCreateOpen(true)}
       />
 
       <div className="uap-table-wrap">
@@ -317,6 +321,14 @@ export function UserAdminPanel({
           onClose={closeModal}
         />
       )}
+
+      {/* Mounted permanently (open is a prop, not a mount guard) so the post-create
+          invite ConfirmDialog survives the form modal closing. */}
+      <CreatePersonModal
+        open={createOpen}
+        onClose={closeCreate}
+        departments={departments}
+      />
     </div>
   );
 }

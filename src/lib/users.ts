@@ -1107,6 +1107,11 @@ export interface TeamMemberListItem {
   profileId: string | null;
   /** Role from the linked profile, or null if not invited yet. */
   role: Role | null;
+  /** Planned role from user_role_defaults (email-keyed lookup), or null if no
+   *  default row exists. The detail modal surfaces it only for not-yet-invited
+   *  people with a non-"user" default ("Geplante Rolle … aktiv nach Einladung"),
+   *  because the role only materializes on the profile once the person is invited. */
+  intendedRole: Role | null;
   lastSignInAt: string | null;
   /** team_members.last_invited_at — last time an invite was sent, or null. Drives
    *  the "zuletzt eingeladen vor X" hint + the resend rate-limit display. */
@@ -1166,13 +1171,19 @@ const TEAM_MEMBER_ADMIN_SELECT =
   "avatar:assets!team_members_avatar_asset_id_fkey(public_url), " +
   "profile:profiles!profiles_team_member_id_fkey(id, role)";
 
-function mapTeamMember(r0: unknown, signInMap: Map<string, string | null>): TeamMemberListItem {
+function mapTeamMember(
+  r0: unknown,
+  signInMap: Map<string, string | null>,
+  roleDefaults: Map<string, Role>
+): TeamMemberListItem {
   const r = r0 as TeamMemberAdminRow;
   const profile = one(r.profile);
   const profileId = profile?.id ?? null;
   const role = (profile?.role as Role | undefined) ?? null;
   const lastSignInAt = profileId ? signInMap.get(profileId) ?? null : null;
   const loginStatus: LoginStatus = !profileId ? "not_invited" : lastSignInAt ? "active" : "invited";
+  const emailKey = r.email?.trim().toLowerCase() ?? null;
+  const intendedRole = emailKey ? roleDefaults.get(emailKey) ?? null : null;
   return {
     teamMemberId: r.id,
     firstName: r.first_name,
@@ -1185,6 +1196,7 @@ function mapTeamMember(r0: unknown, signInMap: Map<string, string | null>): Team
     avatarUrl: one(r.avatar)?.public_url ?? null,
     profileId,
     role,
+    intendedRole,
     lastSignInAt,
     lastInvitedAt: r.last_invited_at,
     loginStatus,
@@ -1226,7 +1238,17 @@ export async function getAllTeamMembers(
   const hasAnyProfile = rows.some((r) => one((r as TeamMemberAdminRow).profile)?.id);
   const signInMap = hasAnyProfile ? await fetchLastSignInMap() : new Map<string, string | null>();
 
-  let items = rows.map((r) => mapTeamMember(r, signInMap));
+  // Planned-role hint (AP 3 Phase 7): email-keyed lookup into user_role_defaults.
+  // RLS-scoped — its policy is USING is_super_admin() (migration 0030), which is
+  // exactly who reaches this panel; any other caller gets an empty map (and thus
+  // intendedRole = null everywhere), so this never leaks the assignment table.
+  const { data: rdData } = await supabase.from("user_role_defaults").select("email, role");
+  const roleDefaults = new Map<string, Role>();
+  for (const rd of (rdData ?? []) as { email: string; role: string }[]) {
+    if (rd.email) roleDefaults.set(rd.email.trim().toLowerCase(), rd.role as Role);
+  }
+
+  let items = rows.map((r) => mapTeamMember(r, signInMap, roleDefaults));
 
   if (filters?.department) items = items.filter((u) => u.department === filters.department);
   if (filters?.role !== undefined) {

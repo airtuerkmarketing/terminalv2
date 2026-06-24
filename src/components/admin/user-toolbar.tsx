@@ -1,5 +1,6 @@
 "use client";
 
+import { UserPlus } from "lucide-react";
 import { SearchIcon } from "@/components/shell/icons";
 import type { ColumnVisibility } from "@/lib/admin-users-preferences";
 import { FilterDropdown } from "./filter-dropdown";
@@ -33,6 +34,7 @@ export function UserToolbar({
   onReset,
   columnVisibility,
   onColumnVisibility,
+  onCreatePersonClick,
 }: {
   q: string;
   onQ: (v: string) => void;
@@ -49,6 +51,8 @@ export function UserToolbar({
   onReset: () => void;
   columnVisibility: ColumnVisibility;
   onColumnVisibility: (next: ColumnVisibility) => void;
+  /** Opens the create-person modal (AP 3 Phase 7). */
+  onCreatePersonClick: () => void;
 }) {
   return (
     <div className="uap-toolbar">
@@ -86,6 +90,10 @@ export function UserToolbar({
       )}
 
       <div className="uap-toolbar-end">
+        <button type="button" className="uap-create-btn" onClick={onCreatePersonClick}>
+          <UserPlus size={16} aria-hidden="true" />
+          <span>Neue Person</span>
+        </button>
         <ColumnVisibilityDropdown visibility={columnVisibility} onChange={onColumnVisibility} />
       </div>
     </div>

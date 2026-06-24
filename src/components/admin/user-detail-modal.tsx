@@ -156,6 +156,17 @@ export function UserDetailModal({
         <dt>Im Team</dt>
         <dd>{user.joinedYear ? `seit ${user.joinedYear}` : "—"}</dd>
       </div>
+      {!isTabbed && user.intendedRole && user.intendedRole !== "user" && (
+        <div>
+          <dt>Rolle</dt>
+          <dd>
+            <span className="uap-pill uap-pill--none">—</span>
+            <span className="uap-role-planned">
+              Geplante Rolle: {ROLE_LABEL[user.intendedRole]} (aktiv nach Einladung)
+            </span>
+          </dd>
+        </div>
+      )}
       {isTabbed && (
         <div>
           <dt>Rolle</dt>

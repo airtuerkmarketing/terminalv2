@@ -196,6 +196,32 @@
    the toolbar; the menu anchors to the right edge so it never overflows. */
 .uap-toolbar-end {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* "+ Neue Person" primary action (Phase 7). Matches the 40px toolbar control height. */
+.uap-create-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.uap-create-btn:hover {
+  filter: brightness(1.05);
+}
+.uap-create-btn svg {
+  flex-shrink: 0;
 }
 .uap-colvis {
   position: relative;
@@ -743,7 +769,8 @@
 }
 
 @media (max-width: 520px) {
-  .uap-fields {
+  .uap-fields,
+  .uap-create-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -851,4 +878,99 @@
   font-size: var(--fs-xs, 12px);
   font-weight: var(--weight-medium);
   cursor: help;
+}
+
+/* Planned-role hint under the empty role pill (Phase 7, not_invited only). */
+.uap-role-planned {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+/* ── Create-Person modal (Phase 7) ────────────────────────────────────────── */
+/* Reuses .uap-modal-backdrop / .uap-modal / .uap-modal-* shells; only the form
+   grid + field controls are new. */
+.uap-create-header {
+  padding-bottom: var(--space-2);
+}
+.uap-create-form {
+  margin: 0;
+}
+.uap-create-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+.uap-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.uap-field--full {
+  grid-column: 1 / -1;
+}
+.uap-field label {
+  font-size: var(--fs-xs, 12px);
+  font-weight: var(--weight-medium);
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.uap-field input,
+.uap-field select {
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--fs-base);
+}
+.uap-field select {
+  cursor: pointer;
+}
+.uap-field input:focus,
+.uap-field select:focus {
+  outline: none;
+  border-color: var(--accent-border);
+}
+.uap-field--error input {
+  border-color: var(--torch);
+}
+.uap-create-error {
+  font-size: var(--fs-xs, 12px);
+  color: var(--torch);
+}
+/* Footer overrides the shared space-between so both buttons cluster right. */
+.uap-create-actions {
+  justify-content: flex-end;
+}
+.uap-create-submit {
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+.uap-create-submit:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.uap-create-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Respect reduced-motion for the modal entrance animations (detail + create). */
+@media (prefers-reduced-motion: reduce) {
+  .uap-modal-backdrop,
+  .uap-modal {
+    animation: none;
+  }
 }
