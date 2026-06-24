@@ -17,6 +17,9 @@ const inter = Inter({
 // composes "<title> · terminalv2" — so no title.template here (it would
 // double-suffix those pages).
 export const metadata: Metadata = {
+  // Resolves relative og:image/twitter:image URLs to absolute for shared
+  // links (without it the build falls back to localhost). Prod canonical.
+  metadataBase: new URL("https://www.airtuerk.dev"),
   title: "terminal · airtuerk Brand Hub",
   description:
     "Internal brand and resource hub for airtuerk and the AERTiCKET Group — brand guidelines, assets, documents and tools.",
