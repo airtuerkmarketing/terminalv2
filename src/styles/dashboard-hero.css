@@ -718,7 +718,9 @@
   color: var(--text-1);
   padding: 10px 12px;
   min-height: 42px;
-  max-height: 140px;
+  /* ~8 rows; JS auto-grow sets height to scrollHeight, this caps it and
+     overflow-y:auto scrolls beyond. */
+  max-height: 190px;
   overflow-y: auto;
   transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }

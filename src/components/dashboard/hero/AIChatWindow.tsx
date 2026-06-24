@@ -57,6 +57,18 @@ export function AIChatWindow({
     if (open) inputRef.current?.focus();
   }, [open]);
 
+  // Auto-grow the follow-up input as the draft changes (reset to 1 row after
+  // send, when draft → ""). Height tracks content; CSS max-height caps it at
+  // ~8 rows and overflow-y:auto scrolls beyond. Hand-rolled (no dependency) —
+  // react-textarea-autosize would pull a transitive dep blocked by the repo's
+  // minimumReleaseAge supply-chain policy.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [draft]);
+
   // Reset the "Neuer Chat" arm whenever the panel closes.
   useEffect(() => {
     if (!open) setConfirming(false);
