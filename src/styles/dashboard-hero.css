@@ -493,7 +493,6 @@
 }
 .ai-chat-a {
   background: var(--surface-flat);
-  border: 1px solid var(--hairline);
   border-radius: var(--card-radius);
   box-shadow: var(--shadow-rest);
   padding: var(--card-padding);
