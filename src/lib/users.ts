@@ -45,6 +45,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getIdentity, requireAdmin, requireSuperAdmin, type Role } from "@/lib/auth";
+import { isCorpEmail } from "@/lib/corp-email";
 
 export type { Role } from "@/lib/auth";
 
@@ -676,7 +677,9 @@ export async function inviteUser(input: InviteUserInput): Promise<{ userId: stri
   if (!tmRow.email) throw new Error("NO_EMAIL");
 
   const email = tmRow.email.trim().toLowerCase();
-  if (!/@airtuerk(holidays)?\.de$/.test(email)) throw new Error("PRIVATE_EMAIL_BLOCKED");
+  // Variante A: only corporate addresses are invitable (single source of truth in
+  // @/lib/corp-email so the client pills enforce the same rule without a round-trip).
+  if (!isCorpEmail(email)) throw new Error("PRIVATE_EMAIL_BLOCKED");
 
   if (tmRow.last_invited_at) {
     const secondsAgo = (Date.now() - new Date(tmRow.last_invited_at).getTime()) / 1000;

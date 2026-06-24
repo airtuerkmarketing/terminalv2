@@ -1,0 +1,123 @@
+/* ConfirmDialog — co-located with the component. Tokens only (theme.css). The
+   danger confirm uses --torch (the same brand-red the role pills use for the
+   highest tier); it is the documented destructive-action accent. */
+
+.ui-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1040; /* above the detail modal (1000), below the toast viewport (1050) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background: rgba(0, 0, 0, 0.45);
+  animation: ui-confirm-fade 0.18s var(--ease-smooth);
+}
+
+.ui-confirm {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-5);
+  background: var(--surface-strong);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-hover);
+  animation: ui-confirm-pop 0.18s var(--ease-smooth);
+}
+
+.ui-confirm-title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-1);
+}
+.ui-confirm-desc {
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: var(--lh-normal);
+}
+
+.ui-confirm-list {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  max-height: 180px;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--surface-muted);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  color: var(--text-1);
+}
+.ui-confirm-list li {
+  padding: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+.ui-confirm-btn {
+  height: 36px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+.ui-confirm-btn--cancel {
+  background: var(--surface);
+  color: var(--text-1);
+}
+.ui-confirm-btn--cancel:hover {
+  background: var(--surface-muted);
+}
+.ui-confirm-btn--confirm {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.ui-confirm-btn--confirm:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.ui-confirm-btn--confirm.is-danger {
+  background: var(--torch);
+}
+.ui-confirm-btn--confirm:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@keyframes ui-confirm-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ui-confirm-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-confirm-backdrop,
+  .ui-confirm {
+    animation: none;
+  }
+}

@@ -1,0 +1,48 @@
+/* TooltipShell — co-located with the component. Tokens only (theme.css).
+   Pure-CSS reveal on :hover / :focus-within of the wrapper. */
+
+.ui-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.ui-tooltip-card {
+  position: absolute;
+  left: 50%;
+  z-index: 1060; /* above toasts/modals so it is never clipped by a dialog */
+  width: max-content;
+  max-width: 240px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-strong);
+  color: var(--text-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-hover);
+  font-size: var(--fs-xs);
+  font-weight: var(--weight-regular);
+  line-height: var(--lh-snug);
+  white-space: normal;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(2px);
+  transition: opacity 0.12s var(--ease-smooth), transform 0.12s var(--ease-smooth);
+}
+.ui-tooltip-card--top {
+  bottom: calc(100% + 6px);
+}
+.ui-tooltip-card--bottom {
+  top: calc(100% + 6px);
+}
+
+.ui-tooltip:hover .ui-tooltip-card,
+.ui-tooltip:focus-within .ui-tooltip-card {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-tooltip-card {
+    transition: none;
+  }
+}

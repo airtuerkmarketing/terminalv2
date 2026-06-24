@@ -1,0 +1,93 @@
+/* Checkbox — co-located with the component. Tokens only (theme.css). The check
+   glyph and the indeterminate dash are white on the --accent fill in both themes. */
+
+.ui-checkbox {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+.ui-checkbox.is-disabled {
+  cursor: not-allowed;
+}
+
+/* Native input: visually hidden but kept in the layout so it stays focusable and
+   overlays the box for direct clicks in the unlabeled case. */
+.ui-checkbox-input {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+  z-index: 1;
+}
+
+.ui-checkbox-box {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  transition: background 0.15s var(--ease-smooth), border-color 0.15s var(--ease-smooth);
+}
+
+.ui-checkbox-input:focus-visible + .ui-checkbox-box {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.ui-checkbox-input:checked + .ui-checkbox-box,
+.ui-checkbox-input:indeterminate + .ui-checkbox-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Checkmark */
+.ui-checkbox-input:checked + .ui-checkbox-box::after {
+  content: "";
+  width: 5px;
+  height: 9px;
+  margin-top: -1px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+/* Indeterminate dash (takes precedence over the checkmark when both could apply —
+   the component only sets indeterminate while NOT checked). */
+.ui-checkbox-input:indeterminate + .ui-checkbox-box::after {
+  content: "";
+  width: 9px;
+  height: 2px;
+  border: 0;
+  border-radius: 1px;
+  background: #fff;
+  transform: none;
+}
+
+.ui-checkbox-input:disabled + .ui-checkbox-box {
+  opacity: 0.4;
+}
+
+.ui-checkbox-label {
+  font-size: var(--fs-sm);
+  color: var(--text-1);
+  user-select: none;
+}
+.ui-checkbox.is-disabled .ui-checkbox-label {
+  color: var(--text-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-checkbox-box {
+    transition: none;
+  }
+}
