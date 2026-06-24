@@ -116,15 +116,22 @@ export function AIChatWindow({
   }
 
   return (
-    <aside
-      ref={panelRef}
-      className={`ai-chat-window${open ? " is-open" : ""}`}
-      role="dialog"
-      aria-label="KI-Chat"
-      // `inert` while closed removes the off-screen panel from the tab order and
-      // a11y tree (it still animates) — prevents tabbing into hidden controls.
-      inert={!open}
-    >
+    <>
+      <div
+        className={`ai-chat-overlay${open ? " is-visible" : ""}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside
+        ref={panelRef}
+        className={`ai-chat-window${open ? " is-open" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ai-chat-title"
+        // `inert` while closed removes the off-screen panel from the tab order and
+        // a11y tree (it still animates) — prevents tabbing into hidden controls.
+        inert={!open}
+      >
       <header className="ai-chat-header">
         <span className="ai-chat-title">KI-Chat</span>
         <div className="ai-chat-header-actions">
@@ -181,6 +188,7 @@ export function AIChatWindow({
           <ArrowUp className="ai-chat-send-icon" aria-hidden="true" />
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

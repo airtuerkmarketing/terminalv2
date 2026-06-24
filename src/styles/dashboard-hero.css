@@ -333,16 +333,40 @@
   font-weight: var(--weight-semibold);
 }
 
-/* ── AI chat window (right-side sliding side panel; non-modal) ──
+/* ── AI chat overlay (dark blurred backdrop) ──
+   Dims + blurs the page behind the chat so the conversation owns the focus.
+   Always mounted (fades via opacity); pointer-events gate stops it eating
+   clicks while hidden. Click anywhere on it closes the chat. Sits just under
+   the panel (990) but above the shell sidebar (z 50/60); the correction modal
+   stays on top at z 1000. */
+.ai-chat-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 990;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms var(--ease-smooth);
+}
+.ai-chat-overlay.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── AI chat window (right-side sliding panel) ──
    Slides in from the right edge on submit; reuses the house drawer pattern
-   (translateX + --ease-smooth). Layers above the shell sidebar (z 50/60). */
+   (translateX + --ease-smooth). Sits above its backdrop (995); the correction
+   modal launched from inside stays above at z 1000. */
 .ai-chat-window {
   position: fixed;
   top: 0;
   right: 0;
   height: 100dvh;
-  width: min(660px, 100vw);
-  z-index: 80;
+  width: 80vw;
+  max-width: 1600px;
+  z-index: 995;
   display: flex;
   flex-direction: column;
   background: var(--surface-flat);
@@ -357,6 +381,11 @@
 }
 .ai-chat-window.is-open {
   transform: translateX(0);
+}
+@media (max-width: 1024px) {
+  .ai-chat-window {
+    width: 90vw;
+  }
 }
 
 .ai-chat-header {
