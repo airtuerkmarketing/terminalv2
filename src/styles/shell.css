@@ -61,8 +61,13 @@ html { scrollbar-gutter: stable; }
 :root[data-theme="ios18-dark"] .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(235, 235, 245, 0.35); }
 
 .brand-mark { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--radius-md); }
-/* Plain "terminal" wordmark — no logo square, no v2 suffix. */
-.brand-mark .name { flex: 1; font-size: 16px; font-weight: var(--weight-medium); letter-spacing: -0.8px; color: var(--text-1); white-space: nowrap; overflow: hidden; }
+/* terminal SVG logo: wordmark when expanded, icon badge when collapsed. */
+.brand-logo-link { flex: 1; display: flex; align-items: center; min-width: 0; text-decoration: none; }
+.brand-logo-wordmark { height: 22px; width: auto; display: block; max-width: 100%; }
+.brand-logo-icon { height: 28px; width: 28px; display: none; }
+/* Dark theme: the wordmark is a near-black transparent mark, so invert it to
+   read on the dark rail; the icon badge has its own black plate, leave it. */
+:root[data-theme="ios18-dark"] .brand-logo-wordmark { filter: invert(1); }
 
 .collapse-btn { width: 28px; height: 28px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-3); cursor: pointer; display: grid; place-items: center; transition: all 150ms; margin-left: auto; }
 .collapse-btn:hover { background: rgba(120, 120, 128, 0.10); color: var(--text-1); }
@@ -173,8 +178,12 @@ html { scrollbar-gutter: stable; }
      space-2 v / user-block space-3 v all match the expanded values.) */
   :root[data-sidebar="collapsed"] .sidebar { padding: 0; }
   :root[data-sidebar="collapsed"] .sidebar-inner { padding: var(--space-4) var(--space-2); }
-  :root[data-sidebar="collapsed"] .brand-mark { justify-content: center; gap: 0; padding: var(--space-2); }
-  :root[data-sidebar="collapsed"] .brand-mark .name { display: none; }
+  /* Collapsed rail (48px content): stack the icon badge over the collapse
+     toggle so neither gets cramped side-by-side. */
+  :root[data-sidebar="collapsed"] .brand-mark { flex-direction: column; justify-content: center; gap: var(--space-2); padding: var(--space-2); }
+  :root[data-sidebar="collapsed"] .brand-logo-link { flex: 0; justify-content: center; }
+  :root[data-sidebar="collapsed"] .brand-logo-wordmark { display: none; }
+  :root[data-sidebar="collapsed"] .brand-logo-icon { display: block; }
   :root[data-sidebar="collapsed"] .collapse-btn { margin-left: 0; }
   :root[data-sidebar="collapsed"] .collapse-btn svg { transform: rotate(180deg); }
   /* Squared 40×40 hover/active centered on the rail. min-height:40 (base) keeps
