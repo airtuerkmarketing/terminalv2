@@ -1,7 +1,14 @@
 /**
  * Company email domains that may receive an invite (Variante A, USER_MGMT_RECON
- * §8): only @airtuerk.de and @airtuerkholidays.de. Staff on a private address are
- * invite-locked until a corporate address exists.
+ * §8). Staff on a non-company address are invite-locked until a company address
+ * exists.
+ *
+ * Allowed domains:
+ *  - @airtuerk.de, @airtuerkholidays.de — the production company domains.
+ *  - @airtuerk.online — a company-owned domain (airtuerk Service GmbH, IONOS-
+ *    managed) currently used as the AP-3 test mailbox. TEMPORARY: scheduled for
+ *    removal in the AP-3 cleanup once invite/login testing is complete (see the
+ *    plan's "Cleanup nach AP 3"). Do not rely on it as a permanent corp domain.
  *
  * Single source of truth for the corp/private distinction:
  *  - Server: inviteUser() guards on it and throws PRIVATE_EMAIL_BLOCKED.
@@ -11,9 +18,9 @@
  * Pure + dependency-free (no "server-only", no DOM) → importable from both the
  * server-only data layer (users.ts) and Client Components.
  */
-export const CORP_EMAIL_PATTERN = /@airtuerk(holidays)?\.de$/;
+export const CORP_EMAIL_PATTERN = /@(airtuerk\.de|airtuerkholidays\.de|airtuerk\.online)$/i;
 
-/** True if `email` is a company address (@airtuerk.de / @airtuerkholidays.de). */
+/** True if `email` is a company address (see CORP_EMAIL_PATTERN for the domains). */
 export function isCorpEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   return CORP_EMAIL_PATTERN.test(email.trim().toLowerCase());

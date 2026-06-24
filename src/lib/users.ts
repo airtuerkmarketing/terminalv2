@@ -30,7 +30,7 @@
  *
  * AP 2 (user-management V1) adds these domain tokens:
  *   inviteUser:       "NO_EMAIL" (team_member has no email),
- *                     "PRIVATE_EMAIL_BLOCKED" (email not @airtuerk(holidays).de),
+ *                     "PRIVATE_EMAIL_BLOCKED" (email not a corp domain — see isCorpEmail),
  *                     "RATE_LIMIT:<seconds>" (last invite < 60s ago — the suffix
  *                     is the remaining wait so the UI can show it).
  *   createTeamMember: "INVALID_EMAIL", "DUPLICATE_EMAIL", "INSERT_FAILED".
