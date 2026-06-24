@@ -145,7 +145,7 @@ export function AIChatWindow({
         inert={!open}
       >
       <header className="ai-chat-header">
-        <span className="ai-chat-title">KI-Chat</span>
+        <h2 id="ai-chat-title" className="ai-chat-title">airtuerk Intelligence</h2>
         <div className="ai-chat-header-actions">
           <button
             type="button"
