@@ -63,6 +63,7 @@ function previewPathFor(d: DocumentItem): string | null {
 // to be replaced by a previewImageUrl schema field in a future step.
 const KNOWN_PREVIEWS = new Set<string>([
   "/previews/master-deck/airtuerk-service/airtuerk_Master_DE.preview.png",
+  "/previews/master-deck/airtuerk-service/airtuerk_Master_EN.preview.png",
 ]);
 
 function getPreview(d: DocumentItem): string | null {
@@ -94,7 +95,13 @@ function PreviewCards({ docs }: { docs: DocumentItem[] }) {
         // Tilted variant: meta left, rotated cover image overflowing right.
         if (previewSrc) {
           return (
-            <div key={i} className="doc-card doc-card--tilted">
+            <a
+              key={i}
+              href={d.href ?? "#"}
+              download={d.href ? "" : undefined}
+              aria-label={`Download ${d.title}`}
+              className="doc-card doc-card--tilted"
+            >
               <div className="doc-card__meta">
                 <div className="doc-card__icon">
                   {/* eslint-disable-next-line @next/next/no-img-element -- static pdf icon */}
@@ -109,12 +116,7 @@ function PreviewCards({ docs }: { docs: DocumentItem[] }) {
                 {/* eslint-disable-next-line @next/next/no-img-element -- static convention-based cover */}
                 <img src={previewSrc} alt={d.title} />
               </div>
-              {d.href ? (
-                <a className="card-dl" href={d.href} download aria-label={`Download ${d.title}`} title={`Download ${d.title}`}>
-                  <Download aria-hidden />
-                </a>
-              ) : null}
-            </div>
+            </a>
           );
         }
         // Fallback: existing preview-card style (EN/TR, document library, …).

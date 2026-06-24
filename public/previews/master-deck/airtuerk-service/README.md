@@ -13,8 +13,11 @@ A cover only renders as a tilted card if its path is also listed in the
 `KNOWN_PREVIEWS` allowlist in `document-list.tsx` (temporary until a
 `previewImageUrl` schema field exists).
 
-## Pending asset
+## Pending assets
 
-`airtuerk_Master_DE.preview.png` — the DE master-deck cover. The path is already
-enabled in `KNOWN_PREVIEWS`; drop the PNG here (≤300 KB preferred) and commit it.
-Until then the DE card shows a broken image (accepted as a transition).
+Both paths are already enabled in `KNOWN_PREVIEWS`; drop the PNGs here (≤300 KB
+preferred) and commit them. Until then the cards show a broken image (accepted
+as a transition):
+
+- `airtuerk_Master_DE.preview.png` — DE master-deck cover.
+- `airtuerk_Master_EN.preview.png` — EN master-deck cover.

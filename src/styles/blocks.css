@@ -336,18 +336,18 @@
    (~420×200) and clips its content (overflow:hidden inherited from base
    .doc-card) — the preview image is intentionally wider than its column and
    gets clipped on the right card edge for a "peeking" effect. */
-.doc-card.doc-card--tilted { position: relative; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: var(--space-4); padding: var(--space-5); min-height: 200px; }
-/* Meta column (left): pdf icon on top, title + sub below. */
-.doc-card--tilted .doc-card__meta { display: flex; flex-direction: column; gap: var(--space-3); align-self: center; z-index: 1; min-width: 0; }
+.doc-card.doc-card--tilted { position: relative; display: grid; grid-template-columns: 55fr 45fr; align-items: stretch; gap: var(--space-4); padding: var(--space-6); min-height: 200px; text-decoration: none; color: inherit; }
+/* Meta column (left): pdf icon pinned to the top, title + sub to the bottom. */
+.doc-card--tilted .doc-card__meta { display: flex; flex-direction: column; justify-content: space-between; align-self: stretch; z-index: 1; min-width: 0; }
 .doc-card--tilted .doc-card__icon { width: 48px; height: 48px; border-radius: var(--radius-xl); background: var(--surface); border: 1px solid var(--hairline); box-shadow: var(--shadow-floating); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .doc-card--tilted .doc-card__icon img { width: 28px; height: 28px; display: block; }
 .doc-card--tilted .doc-card__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.doc-card--tilted .doc-card__title { font-size: var(--fs-md); font-weight: var(--weight-semibold); color: var(--text-1); line-height: var(--lh-tight); }
+.doc-card--tilted .doc-card__title { font-size: var(--fs-md); font-weight: var(--weight-semibold); color: var(--text-1); line-height: var(--lh-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .doc-card--tilted .doc-card__sub { font-size: var(--fs-xs); color: var(--text-3); line-height: var(--lh-normal); }
 /* Preview column (right): tilted image, wider than its column, clipped at the
    right card boundary by the inherited overflow:hidden. */
 .doc-card--tilted .doc-card__shot { position: relative; align-self: stretch; display: flex; align-items: center; justify-content: flex-start; margin-right: calc(-1 * var(--space-6)); }
-.doc-card--tilted .doc-card__shot img { width: 140%; max-width: none; height: auto; display: block; border-radius: var(--radius-md); box-shadow: 0 6px 24px -8px rgba(0, 0, 0, 0.18), 0 2px 6px -2px rgba(0, 0, 0, 0.08); transform: rotate(6deg); transition: transform 240ms var(--ease-smooth); will-change: transform; }
+.doc-card--tilted .doc-card__shot img { width: 130%; max-width: none; height: auto; display: block; border-radius: var(--radius-md); box-shadow: 0 6px 24px -8px rgba(0, 0, 0, 0.18), 0 2px 6px -2px rgba(0, 0, 0, 0.08); transform: rotate(6deg); transition: transform 240ms var(--ease-smooth); will-change: transform; }
 .doc-card.doc-card--tilted:hover .doc-card__shot img { transform: rotate(8deg) translateY(-2px); }
 @media (prefers-reduced-motion: reduce) {
   .doc-card--tilted .doc-card__shot img,
