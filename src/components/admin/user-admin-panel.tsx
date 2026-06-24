@@ -1,25 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { SearchIcon } from "@/components/shell/icons";
 import type { LoginStatus, TeamMemberListItem } from "@/lib/users";
+import { isCorpEmail } from "@/lib/corp-email";
+import { useDebouncedCallback } from "@/lib/use-debounced-callback";
 import { UserSection } from "./user-section";
+import { UserToolbar } from "./user-toolbar";
 import { UserDetailModal } from "./user-detail-modal";
 import "@/styles/user-admin.css";
 
 export interface UserAdminPanelFilters {
-  department?: string;
-  /** "" all · role value · "null" = no profile */
-  role?: string;
-  /** "" all · "active" | "invited" | "not_invited" */
-  status?: string;
   q?: string;
+  departments?: string[];
+  statuses?: string[];
+  /** Only members with a non-corporate (invite-blocked) email. */
+  privateOnly?: boolean;
+  /** Only members without an avatar photo. */
+  noPhoto?: boolean;
 }
 
 // Role sections in display order. `key` doubles as the grouping + sessionStorage
 // key ("null" = no linked profile yet). super_admin uses --torch — it matches the
 // existing super_admin role pill in this panel, so the highest tier stands apart
-// from the Quantum-Blue admin accent; user / null stay muted (--text-3).
+// from the Quantum-Blue admin accent; user/null stay muted (--text-3).
 const ROLE_SECTIONS: { key: string; label: string; color: string }[] = [
   { key: "super_admin", label: "Super-Admin", color: "var(--torch)" },
   { key: "admin", label: "Admin", color: "var(--accent)" },
@@ -42,10 +45,11 @@ const SECTION_STORAGE_KEY = "admin-users-section-collapse";
 const COLUMN_COUNT = 8;
 
 /**
- * User-Management table (Stage 7A + AP 3 Phase 1): the team-member directory
- * grouped into collapsible role sections (Super-Admin / Admin / User / Ohne
- * Rolle). Department / role / status / free-text filters still apply client-side
- * over the full (~63-row) set passed from the server page; only non-empty
+ * User-Management table (Stage 7A + AP 3 Phase 1+3): the team-member directory
+ * grouped into collapsible role sections, with a search + filter toolbar applied
+ * client-side over the full (~63-row) set passed from the server. Filter state is
+ * mirrored into the URL via history.replaceState (bookmarkable, no server
+ * refetch) and seeded back from the server-parsed searchParams. Only non-empty
  * sections render. Clicking a row opens the read-only detail modal.
  */
 export function UserAdminPanel({
@@ -57,15 +61,20 @@ export function UserAdminPanel({
 }: {
   teamMembers: TeamMemberListItem[];
   totalCount: number;
+  /** All distinct department values (the dropdown options). */
   departments: string[];
   initialFilters: UserAdminPanelFilters;
   /** Forwarded to the detail modal; reserved for the Stage 7C self-lock. */
   currentUserId: string;
 }) {
   const [q, setQ] = useState(initialFilters.q ?? "");
-  const [department, setDepartment] = useState(initialFilters.department ?? "");
-  const [role, setRole] = useState(initialFilters.role ?? "");
-  const [status, setStatus] = useState(initialFilters.status ?? "");
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>(
+    initialFilters.departments ?? []
+  );
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(initialFilters.statuses ?? []);
+  const [privateOnly, setPrivateOnly] = useState(initialFilters.privateOnly ?? false);
+  const [noPhoto, setNoPhoto] = useState(initialFilters.noPhoto ?? false);
+
   const [openUserId, setOpenUserId] = useState<string | null>(null);
   const closeModal = useCallback(() => setOpenUserId(null), []);
   const openUser = openUserId
@@ -73,8 +82,7 @@ export function UserAdminPanel({
     : null;
 
   // Collapse state. Starts from the defaults (matches the server HTML), then a
-  // stored override is applied one tick later on mount — so the first client
-  // render still matches SSR (no hydration mismatch).
+  // stored override is applied one tick later on mount — no hydration mismatch.
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(DEFAULT_COLLAPSED);
   useEffect(() => {
     try {
@@ -99,25 +107,49 @@ export function UserAdminPanel({
     });
   }, []);
 
-  const hasActiveFilters = q !== "" || department !== "" || role !== "" || status !== "";
+  // Mirror the filters into the URL (debounced so typing doesn't spam history).
+  // history.replaceState keeps it bookmarkable WITHOUT a server refetch (the page
+  // is a Server Component; router.replace would re-run getAllTeamMembers).
+  const syncUrl = useDebouncedCallback(() => {
+    const params = new URLSearchParams();
+    const qt = q.trim();
+    if (qt) params.set("q", qt);
+    if (selectedDepartments.length) params.set("dept", selectedDepartments.join(","));
+    if (selectedStatuses.length) params.set("status", selectedStatuses.join(","));
+    if (privateOnly) params.set("privateOnly", "1");
+    if (noPhoto) params.set("noPhoto", "1");
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, 300);
+  useEffect(() => {
+    syncUrl();
+  }, [q, selectedDepartments, selectedStatuses, privateOnly, noPhoto, syncUrl]);
+
+  const hasActiveFilters =
+    q !== "" ||
+    selectedDepartments.length > 0 ||
+    selectedStatuses.length > 0 ||
+    privateOnly ||
+    noPhoto;
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return teamMembers.filter((u) => {
-      if (department && u.department !== department) return false;
-      if (role) {
-        if (role === "null") {
-          if (u.role !== null) return false;
-        } else if (u.role !== role) {
-          return false;
-        }
-      }
-      if (status && u.loginStatus !== status) return false;
-      if (needle && !`${u.firstName} ${u.lastName} ${u.email ?? ""}`.toLowerCase().includes(needle))
+      if (selectedDepartments.length && (!u.department || !selectedDepartments.includes(u.department)))
+        return false;
+      if (selectedStatuses.length && !selectedStatuses.includes(u.loginStatus)) return false;
+      if (privateOnly && !(u.email && !isCorpEmail(u.email))) return false;
+      if (noPhoto && u.avatarUrl) return false;
+      if (
+        needle &&
+        !`${u.firstName} ${u.lastName} ${u.email ?? ""} ${u.position ?? ""}`
+          .toLowerCase()
+          .includes(needle)
+      )
         return false;
       return true;
     });
-  }, [teamMembers, q, department, role, status]);
+  }, [teamMembers, q, selectedDepartments, selectedStatuses, privateOnly, noPhoto]);
 
   // Group the filtered set by role and sort within each group.
   const grouped = useMemo(() => {
@@ -139,17 +171,21 @@ export function UserAdminPanel({
     return map;
   }, [filtered]);
 
-  // Only non-empty sections render (an empty Admin/User group is hidden, not
-  // shown as "Admin (0)"; the same applies when a filter empties a group).
   const visibleSections = ROLE_SECTIONS.map((s) => ({ ...s, users: grouped[s.key] })).filter(
     (s) => s.users.length > 0
   );
 
+  const departmentOptions = useMemo(
+    () => departments.map((d) => ({ value: d, label: d })),
+    [departments]
+  );
+
   function resetFilters() {
     setQ("");
-    setDepartment("");
-    setRole("");
-    setStatus("");
+    setSelectedDepartments([]);
+    setSelectedStatuses([]);
+    setPrivateOnly(false);
+    setNoPhoto(false);
   }
 
   return (
@@ -161,63 +197,21 @@ export function UserAdminPanel({
         </p>
       </header>
 
-      <div className="uap-filters">
-        <div className="uap-search">
-          <SearchIcon />
-          <input
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Suchen: Name, E-Mail…"
-            aria-label="Personen suchen"
-          />
-        </div>
-
-        <select
-          className="uap-select"
-          value={department}
-          onChange={(e) => setDepartment(e.target.value)}
-          aria-label="Nach Department filtern"
-        >
-          <option value="">Alle Departments</option>
-          {departments.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="uap-select"
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          aria-label="Nach Rolle filtern"
-        >
-          <option value="">Alle Rollen</option>
-          <option value="super_admin">Super-Admin</option>
-          <option value="admin">Admin</option>
-          <option value="user">User</option>
-          <option value="null">Kein Profil</option>
-        </select>
-
-        <select
-          className="uap-select"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          aria-label="Nach Login-Status filtern"
-        >
-          <option value="">Alle Status</option>
-          <option value="active">Aktiv</option>
-          <option value="invited">Eingeladen</option>
-          <option value="not_invited">Nicht eingeladen</option>
-        </select>
-
-        {hasActiveFilters && (
-          <button type="button" className="uap-reset" onClick={resetFilters}>
-            Zurücksetzen
-          </button>
-        )}
-      </div>
+      <UserToolbar
+        q={q}
+        onQ={setQ}
+        departmentOptions={departmentOptions}
+        selectedDepartments={selectedDepartments}
+        onDepartments={setSelectedDepartments}
+        selectedStatuses={selectedStatuses}
+        onStatuses={setSelectedStatuses}
+        privateOnly={privateOnly}
+        onPrivateOnly={setPrivateOnly}
+        noPhoto={noPhoto}
+        onNoPhoto={setNoPhoto}
+        hasActiveFilters={hasActiveFilters}
+        onReset={resetFilters}
+      />
 
       <div className="uap-table-wrap">
         <table className="uap-table">
@@ -239,7 +233,12 @@ export function UserAdminPanel({
             <tbody>
               <tr>
                 <td className="uap-empty" colSpan={COLUMN_COUNT}>
-                  Keine Personen gefunden
+                  Keine Personen gefunden{q.trim() ? ` für „${q.trim()}“` : ""}.
+                  {hasActiveFilters && (
+                    <button type="button" className="uap-empty-reset" onClick={resetFilters}>
+                      Filter zurücksetzen
+                    </button>
+                  )}
                 </td>
               </tr>
             </tbody>

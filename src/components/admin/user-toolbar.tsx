@@ -1,0 +1,83 @@
+"use client";
+
+import { SearchIcon } from "@/components/shell/icons";
+import { FilterDropdown } from "./filter-dropdown";
+import { FilterPill } from "./filter-pill";
+
+const STATUS_OPTIONS = [
+  { value: "active", label: "Aktiv" },
+  { value: "invited", label: "Eingeladen" },
+  { value: "not_invited", label: "Ausstehend" },
+];
+
+/**
+ * Search + filter toolbar for the User-Management panel (AP 3 Phase 3). Fully
+ * controlled — the panel owns every value and applies the filters client-side
+ * across all role sections. Search matches name / email / position.
+ */
+export function UserToolbar({
+  q,
+  onQ,
+  departmentOptions,
+  selectedDepartments,
+  onDepartments,
+  selectedStatuses,
+  onStatuses,
+  privateOnly,
+  onPrivateOnly,
+  noPhoto,
+  onNoPhoto,
+  hasActiveFilters,
+  onReset,
+}: {
+  q: string;
+  onQ: (v: string) => void;
+  departmentOptions: { value: string; label: string }[];
+  selectedDepartments: string[];
+  onDepartments: (next: string[]) => void;
+  selectedStatuses: string[];
+  onStatuses: (next: string[]) => void;
+  privateOnly: boolean;
+  onPrivateOnly: (v: boolean) => void;
+  noPhoto: boolean;
+  onNoPhoto: (v: boolean) => void;
+  hasActiveFilters: boolean;
+  onReset: () => void;
+}) {
+  return (
+    <div className="uap-toolbar">
+      <div className="uap-search">
+        <SearchIcon />
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => onQ(e.target.value)}
+          placeholder="Suchen: Name, E-Mail, Position…"
+          aria-label="Personen suchen"
+        />
+      </div>
+
+      <FilterDropdown
+        label="Department"
+        options={departmentOptions}
+        selected={selectedDepartments}
+        onChange={onDepartments}
+      />
+      <FilterDropdown
+        label="Status"
+        options={STATUS_OPTIONS}
+        selected={selectedStatuses}
+        onChange={onStatuses}
+      />
+
+      <FilterPill label="Nur Privat-E-Mail" active={privateOnly} onClick={() => onPrivateOnly(!privateOnly)} />
+      <FilterPill label="Ohne Foto" active={noPhoto} onClick={() => onNoPhoto(!noPhoto)} />
+
+      {hasActiveFilters && (
+        <button type="button" className="uap-reset" onClick={onReset}>
+          Zurücksetzen
+        </button>
+      )}
+    </div>
+  );
+}

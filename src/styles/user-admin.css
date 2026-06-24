@@ -34,8 +34,8 @@
   margin: 0;
 }
 
-/* ── Filter bar ───────────────────────────────────────────────────────────── */
-.uap-filters {
+/* ── Toolbar: search + filters (Phase 3) ──────────────────────────────────── */
+.uap-toolbar {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -93,6 +93,116 @@
 .uap-reset:hover {
   color: var(--text-1);
   background: var(--surface-muted);
+}
+
+/* Filter pills (boolean toggles) */
+.uap-fpill {
+  height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.uap-fpill:hover {
+  background: var(--surface-muted);
+  color: var(--text-1);
+}
+.uap-fpill.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+/* Multi-select filter dropdown */
+.uap-fdrop {
+  position: relative;
+}
+.uap-fdrop-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.uap-fdrop-btn:hover {
+  background: var(--surface-muted);
+}
+.uap-fdrop-btn.is-active {
+  border-color: var(--accent-border);
+}
+.uap-fdrop-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--fs-xs, 12px);
+  font-weight: var(--weight-medium);
+}
+.uap-fdrop-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 200px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: var(--space-2);
+  background: var(--surface-strong);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-hover);
+}
+.uap-fdrop-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.uap-fdrop-item:hover {
+  background: var(--surface-muted);
+}
+.uap-fdrop-item-label {
+  font-size: var(--fs-sm);
+  color: var(--text-1);
+}
+.uap-fdrop-empty {
+  margin: 0;
+  padding: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+/* Reset link inside the empty state */
+.uap-empty-reset {
+  display: inline-block;
+  margin-left: var(--space-2);
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 /* ── Table ────────────────────────────────────────────────────────────────── */

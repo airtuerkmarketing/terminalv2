@@ -11,7 +11,13 @@ export const metadata: Metadata = { title: "User-Management" };
 // (sidebar + topbar), NOT the bare top-level /admin dashboard. Access is gated
 // here at the page (the public layout itself does not gate).
 type PageProps = {
-  searchParams: Promise<{ department?: string; role?: string; status?: string; q?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    dept?: string;
+    status?: string;
+    privateOnly?: string;
+    noPhoto?: string;
+  }>;
 };
 
 /** Distinct, sorted department values for the filter dropdown (RLS-scoped read). */
@@ -46,10 +52,11 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
       totalCount={totalCount}
       departments={departments}
       initialFilters={{
-        department: sp.department,
-        role: sp.role,
-        status: sp.status,
         q: sp.q,
+        departments: sp.dept ? sp.dept.split(",").filter(Boolean) : [],
+        statuses: sp.status ? sp.status.split(",").filter(Boolean) : [],
+        privateOnly: sp.privateOnly === "1",
+        noPhoto: sp.noPhoto === "1",
       }}
       currentUserId={identity.userId}
     />
