@@ -5,10 +5,12 @@ import { requireAdmin, requireSuperAdmin } from "@/lib/auth";
 import {
   bulkInvite,
   createTeamMember,
+  getTeamMemberBrands,
   getUserActivityLog,
   inviteUser,
   updateUserRole,
   type ActivityLogPage,
+  type BrandRef,
   type BulkInviteResult,
   type Role,
 } from "@/lib/users";
@@ -157,6 +159,25 @@ export type CreateResult = { ok: true; teamMemberId: string } | { ok: false; err
  * re-checks); everything else needs an admin. The auth account is minted later
  * via inviteUserAction.
  */
+// ── Brand assignments (per-user permissions tab) ─────────────────────────────
+
+export type BrandsResult = { ok: true; brands: BrandRef[] } | { ok: false; error: string };
+
+/**
+ * Load a team member's brand assignments for the detail-modal "Berechtigungen"
+ * tab. requireAdmin gates entry (doppel-guard: getTeamMemberBrands re-checks).
+ * team_member-keyed, so it works for not-yet-invited people too.
+ */
+export async function getTeamMemberBrandsAction(teamMemberId: string): Promise<BrandsResult> {
+  try {
+    await requireAdmin();
+    const brands = await getTeamMemberBrands(teamMemberId);
+    return { ok: true, brands };
+  } catch (err) {
+    return { ok: false, error: toGermanMessage(err) };
+  }
+}
+
 export async function createTeamMemberAction(input: {
   firstName: string;
   lastName: string;

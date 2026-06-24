@@ -102,6 +102,8 @@ export interface BrandRef {
   slug: string;
   name: string;
   shortName: string;
+  /** Resolved public URL of the brand logo (via brands.logo_asset_id → assets), or null. */
+  logoUrl: string | null;
   isPrimary: boolean;
 }
 
@@ -222,7 +224,13 @@ export interface UpdateOwnProfilePatch {
 // and embedded to-one relations arrive as object-or-array → normalized via one().
 
 type AssetUrlRow = { public_url: string | null };
-type BrandRow = { id: string; slug: string; name: string; short_name: string };
+type BrandRow = {
+  id: string;
+  slug: string;
+  name: string;
+  short_name: string;
+  logo: AssetUrlRow | AssetUrlRow[] | null;
+};
 type TmBrandRow = { is_primary: boolean; brands: BrandRow | BrandRow[] | null };
 
 type TeamMemberListRel = {
@@ -272,7 +280,7 @@ type ActivityRow = {
 const TM_LIST_EMBED =
   "first_name, last_name, department, avatar_asset_id, avatar:assets!team_members_avatar_asset_id_fkey(public_url)";
 const TM_DETAIL_EMBED =
-  "first_name, last_name, position, department, phone, date_of_birth, show_birthday, avatar_asset_id, avatar:assets!team_members_avatar_asset_id_fkey(public_url), team_member_brands(is_primary, brands(id, slug, name, short_name))";
+  "first_name, last_name, position, department, phone, date_of_birth, show_birthday, avatar_asset_id, avatar:assets!team_members_avatar_asset_id_fkey(public_url), team_member_brands(is_primary, brands(id, slug, name, short_name, logo:assets!brands_logo_asset_id_fkey(public_url)))";
 const PROFILE_DETAIL_SELECT = `id, email, full_name, role, team_member_id, created_at, updated_at, team_members(${TM_DETAIL_EMBED})`;
 const ACTIVITY_COLS = "id, action, resource_type, resource_id, metadata, created_at";
 
@@ -306,16 +314,35 @@ function mapListItem(r0: unknown, lastSignInAt: string | null): UserListItem {
   };
 }
 
-function mapDetail(r0: unknown, lastSignInAt: string | null): UserDetail {
-  const r = r0 as ProfileDetailRow;
-  const tm = one(r.team_members);
-  const brands: BrandRef[] = (tm?.team_member_brands ?? [])
+/**
+ * Map team_member_brands link rows → BrandRef[], primary first then alphabetical.
+ * Shared by mapDetail (profiles-based) and getTeamMemberBrands (team_member-based)
+ * so the brand DTO shape + ordering have a single source of truth. The logo is
+ * resolved from the brands.logo_asset_id → assets embed (null when unset).
+ */
+function mapBrandRefs(links: TmBrandRow[] | null | undefined): BrandRef[] {
+  return (links ?? [])
     .map((link) => {
       const b = one(link.brands);
-      return b ? { id: b.id, slug: b.slug, name: b.name, shortName: b.short_name, isPrimary: link.is_primary } : null;
+      return b
+        ? {
+            id: b.id,
+            slug: b.slug,
+            name: b.name,
+            shortName: b.short_name,
+            logoUrl: one(b.logo)?.public_url ?? null,
+            isPrimary: link.is_primary,
+          }
+        : null;
     })
     .filter((b): b is BrandRef => b !== null)
     .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.name.localeCompare(b.name));
+}
+
+function mapDetail(r0: unknown, lastSignInAt: string | null): UserDetail {
+  const r = r0 as ProfileDetailRow;
+  const tm = one(r.team_members);
+  const brands = mapBrandRefs(tm?.team_member_brands);
   return {
     userId: r.id,
     fullName: composeFullName(r.full_name, tm),
@@ -1081,6 +1108,9 @@ export interface TeamMemberListItem {
   /** Role from the linked profile, or null if not invited yet. */
   role: Role | null;
   lastSignInAt: string | null;
+  /** team_members.last_invited_at — last time an invite was sent, or null. Drives
+   *  the "zuletzt eingeladen vor X" hint + the resend rate-limit display. */
+  lastInvitedAt: string | null;
   loginStatus: LoginStatus;
   // Directory detail (Stage 7B modal) — carried in the list payload (≤63 rows,
   // negligible size) so opening the modal needs no extra round-trip.
@@ -1118,6 +1148,7 @@ type TeamMemberAdminRow = {
   is_lead: boolean;
   tools: string[] | null;
   tasks: string | null;
+  last_invited_at: string | null;
   avatar_asset_id: string | null;
   // Avatar + profile use explicit FK hints so PostgREST resolves the embeds
   // deterministically (avatar matches pages.ts; profile FK from migration 0034).
@@ -1127,7 +1158,7 @@ type TeamMemberAdminRow = {
 
 const TEAM_MEMBER_ADMIN_SELECT =
   "id, first_name, last_name, position, department, initials, email, phone, " +
-  "joined_year, is_lead, tools, tasks, avatar_asset_id, " +
+  "joined_year, is_lead, tools, tasks, last_invited_at, avatar_asset_id, " +
   "avatar:assets!team_members_avatar_asset_id_fkey(public_url), " +
   "profile:profiles!profiles_team_member_id_fkey(id, role)";
 
@@ -1151,6 +1182,7 @@ function mapTeamMember(r0: unknown, signInMap: Map<string, string | null>): Team
     profileId,
     role,
     lastSignInAt,
+    lastInvitedAt: r.last_invited_at,
     loginStatus,
     tools: r.tools ?? [],
     tasks: r.tasks,
@@ -1207,4 +1239,29 @@ export async function getAllTeamMembers(
   }
 
   return { teamMembers: items, totalCount: items.length };
+}
+
+// ── 9. Brand assignments for one team member (RLS read) ──────────────────────
+
+/**
+ * Brand assignments for a single team_member, primary first then alphabetical.
+ *
+ * Keyed on the team_member id, so it works for EVERY team_member — including the
+ * ~61 with no auth account yet — unlike getUserById(), which is profiles-based and
+ * returns null for not-yet-invited people. RLS: team_member_brands + brands are
+ * authenticated-readable; the requireAdmin gate keeps "view someone else's brand
+ * assignments" an admin-only capability (used by the per-user permissions tab).
+ *
+ * Errors: "NOT_AUTHENTICATED" / "NOT_AUTHORIZED" (requireAdmin).
+ */
+export async function getTeamMemberBrands(teamMemberId: string): Promise<BrandRef[]> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("team_member_brands")
+    .select(
+      "is_primary, brands(id, slug, name, short_name, logo:assets!brands_logo_asset_id_fkey(public_url))"
+    )
+    .eq("team_member_id", teamMemberId);
+  return mapBrandRefs((data ?? []) as unknown as TmBrandRow[]);
 }
