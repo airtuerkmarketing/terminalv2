@@ -100,7 +100,9 @@
   padding: 10px 14px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
-  background: var(--surface);
+  /* Buhara: neutral grey resting fill (was --surface = pure white, read as a
+     blue-tinted/indistinct field next to the white card). */
+  background: var(--surface-muted);
   font-size: 14px;
   color: var(--text-1);
   transition: border-color 150ms var(--ease-smooth), background 150ms var(--ease-smooth);
@@ -117,6 +119,16 @@
 .login-input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Browser autofill paints its own blue/yellow overlay — pin it to the neutral
+   grey resting fill so the field stays neutral when prefilled. */
+.login-input:-webkit-autofill,
+.login-input:-webkit-autofill:hover,
+.login-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-1);
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-muted) inset;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .login-hint {
@@ -159,7 +171,9 @@
   padding: 12px 16px;
   border: none;
   border-radius: var(--radius-md);
-  background: var(--accent);
+  /* Buhara explicit: black login CTA, not Quantum Blue. Controlled exception to
+     the D-036 accent rule for the branded login submit. */
+  background: var(--jet);
   color: #fff;
   font-size: 14px;
   font-weight: var(--weight-semibold);
@@ -169,13 +183,20 @@
 }
 
 .login-submit:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 90%, black);
+  background: color-mix(in srgb, var(--jet) 85%, white);
   transform: translateY(-1px);
 }
 
 .login-submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Dark: --jet (#222) is nearly invisible on the dark card — invert to a white
+   CTA so the submit stays legible. Light mode (Buhara's screenshot) is unchanged. */
+:root[data-theme="ios18-dark"] .login-submit { background: #fff; color: var(--bg); }
+:root[data-theme="ios18-dark"] .login-submit:hover:not(:disabled) {
+  background: color-mix(in srgb, #fff 88%, black);
 }
 
 /* Links / footer */
