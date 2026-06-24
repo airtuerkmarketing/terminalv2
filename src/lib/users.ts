@@ -28,6 +28,16 @@
  * "INVALID_FILE_TYPE", "FILE_TOO_LARGE", "NOT_FOUND" so the Stage-7 admin UI can
  * map them to friendly messages.
  *
+ * AP 2 (user-management V1) adds these domain tokens:
+ *   inviteUser:       "NO_EMAIL" (team_member has no email),
+ *                     "PRIVATE_EMAIL_BLOCKED" (email not @airtuerk(holidays).de),
+ *                     "RATE_LIMIT:<seconds>" (last invite < 60s ago — the suffix
+ *                     is the remaining wait so the UI can show it).
+ *   createTeamMember: "INVALID_EMAIL", "DUPLICATE_EMAIL", "INSERT_FAILED".
+ *   updateOwnProfile: "NOT_LINKED" (no profiles.team_member_id),
+ *                     "INVALID_DATE", "PHONE_TOO_LONG", "UPDATE_FAILED".
+ *   bulkInvite aggregates per-item failures and never throws them (see below).
+ *
  * Do not import this module from a Client Component (pass plain DTOs instead).
  */
 import "server-only";
@@ -167,9 +177,42 @@ export interface UpdateUserProfilePatch {
 }
 
 export interface InviteUserInput {
+  /**
+   * REQUIRED — the team member to invite. The email to send to AND the
+   * rate-limit timestamp are read from this row (the caller never supplies a
+   * raw email anymore; an invite always targets an existing team_member).
+   */
+  teamMemberId: string;
+  /**
+   * Optional explicit role for the new profile. If omitted, the signup trigger
+   * (handle_new_user, migration 0030) assigns the role from user_role_defaults.
+   * Granting "admin"/"super_admin" still requires the actor to be a super_admin.
+   */
+  role?: Role;
+}
+
+export interface BulkInviteResult {
+  /** team_member ids whose invite was sent successfully. */
+  sent: string[];
+  /** Per-item failures with the raw token reason (e.g. "PRIVATE_EMAIL_BLOCKED"). */
+  failed: Array<{ teamMemberId: string; reason: string }>;
+}
+
+export interface CreateTeamMemberInput {
+  firstName: string;
+  lastName: string;
   email: string;
-  role: Role;
-  teamMemberId?: string;
+  department?: string | null;
+  position?: string | null;
+  /** Default role the signup trigger should later assign; "user" if omitted. */
+  intendedRole?: Role;
+}
+
+export interface UpdateOwnProfilePatch {
+  phone?: string | null;
+  /** ISO date "YYYY-MM-DD", or null to clear. */
+  dateOfBirth?: string | null;
+  showBirthday?: boolean;
 }
 
 // ── PostgREST row shapes (snake_case) + select strings ──────────────────────
@@ -590,23 +633,55 @@ export async function updateUserRole(userId: string, newRole: Role): Promise<voi
 // ── 7. Invite user (service-role) ────────────────────────────────────────────
 
 /**
- * Invite a new user by email. requireAdmin, PLUS a tier guard: granting an admin
- * or super_admin role requires the actor to be a super_admin — this mirrors the
- * 0032 escalation guard for the create-path (the guard only protects RLS UPDATEs
- * on existing rows, but invite mints a fresh profile via the service role, which
- * would otherwise let a plain admin self-escalate by proxy).
+ * Invite an existing team_member by email. requireAdmin, PLUS a tier guard:
+ * granting an admin or super_admin role requires the actor to be a super_admin —
+ * this mirrors the 0032 escalation guard for the create-path (the guard only
+ * protects RLS UPDATEs on existing rows, but invite mints a fresh profile via the
+ * service role, which would otherwise let a plain admin self-escalate by proxy).
+ *
+ * AP 2 hardening (user-management V1):
+ *  - The invite ALWAYS targets a team_member (teamMemberId is required). The
+ *    address to send to is read from team_members.email, never supplied raw — so
+ *    one place owns "who is invitable".
+ *  - Variante A (USER_MGMT_RECON §8): only company addresses
+ *    (@airtuerk.de / @airtuerkholidays.de) may be invited. Staff on a private
+ *    email are invite-locked (PRIVATE_EMAIL_BLOCKED) until a corp address exists.
+ *  - 60s rate-limit via team_members.last_invited_at (AP 1, migration
+ *    20260624111148): a re-invite inside the window throws "RATE_LIMIT:<seconds>".
  *
  * Flow: auth.admin.inviteUserByEmail mints the auth user; the handle_new_user
  * trigger (migration 0030) synchronously inserts the profile with the email's
- * default role, so we then UPDATE that row to the chosen role (+ optional
- * team_member link, bidirectional per migrations 0034/0035). Returns the new id.
+ * default role (from user_role_defaults), so we then UPDATE that row to the
+ * bidirectional team_member link (migrations 0034/0035) and, only if an explicit
+ * role was passed, override the role. Finally we stamp last_invited_at (so the
+ * rate-limit + UI "letzte Invitation" display work). Returns the new auth id.
  */
 export async function inviteUser(input: InviteUserInput): Promise<{ userId: string }> {
   const identity = await requireAdmin();
-  if (input.role !== "user" && !identity.isSuperAdmin) throw new Error("NOT_AUTHORIZED");
+  if (input.role && input.role !== "user" && !identity.isSuperAdmin) {
+    throw new Error("NOT_AUTHORIZED");
+  }
 
-  const email = input.email.trim().toLowerCase();
+  const teamMemberId = input.teamMemberId;
   const admin = createAdminClient();
+
+  // Resolve the target: the address to invite + the rate-limit timestamp in one read.
+  const { data: tm } = await admin
+    .from("team_members")
+    .select("id, email, last_invited_at")
+    .eq("id", teamMemberId)
+    .maybeSingle();
+  const tmRow = tm as { id: string; email: string | null; last_invited_at: string | null } | null;
+  if (!tmRow) throw new Error("NO_TEAM_MEMBER");
+  if (!tmRow.email) throw new Error("NO_EMAIL");
+
+  const email = tmRow.email.trim().toLowerCase();
+  if (!/@airtuerk(holidays)?\.de$/.test(email)) throw new Error("PRIVATE_EMAIL_BLOCKED");
+
+  if (tmRow.last_invited_at) {
+    const secondsAgo = (Date.now() - new Date(tmRow.last_invited_at).getTime()) / 1000;
+    if (secondsAgo < 60) throw new Error(`RATE_LIMIT:${Math.ceil(60 - secondsAgo)}`);
+  }
 
   const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email);
   if (inviteErr) throw inviteErr;
@@ -614,30 +689,224 @@ export async function inviteUser(input: InviteUserInput): Promise<{ userId: stri
   if (!newUserId) throw new Error("INVITE_FAILED");
 
   const profilePatch: Record<string, unknown> = {
-    role: input.role,
+    team_member_id: teamMemberId,
     updated_at: new Date().toISOString(),
   };
-  if (input.teamMemberId) profilePatch.team_member_id = input.teamMemberId;
+  if (input.role) profilePatch.role = input.role;
   const { error: profErr } = await admin.from("profiles").update(profilePatch).eq("id", newUserId);
   if (profErr) throw profErr;
 
-  if (input.teamMemberId) {
-    // Bidirectional link: team_members.auth_user_id ↔ profiles.team_member_id.
-    const { error: linkErr } = await admin
-      .from("team_members")
-      .update({ auth_user_id: newUserId })
-      .eq("id", input.teamMemberId);
-    if (linkErr) throw linkErr;
-  }
+  // Bidirectional link: team_members.auth_user_id ↔ profiles.team_member_id.
+  const { error: linkErr } = await admin
+    .from("team_members")
+    .update({ auth_user_id: newUserId })
+    .eq("id", teamMemberId);
+  if (linkErr) throw linkErr;
+
+  // Stamp the rate-limit timestamp (best-effort: the invite already went out, so
+  // a stamp failure must not surface as an error — it only weakens the next
+  // re-invite's rate-limit, which the GoTrue-side limit still backstops).
+  await admin
+    .from("team_members")
+    .update({ last_invited_at: new Date().toISOString() })
+    .eq("id", teamMemberId);
 
   await logActivity({
     userId: identity.userId,
     action: "invite_user",
     resourceType: "profile",
     resourceId: newUserId,
-    metadata: { email, role: input.role, teamMemberId: input.teamMemberId ?? null },
+    metadata: { email, role: input.role ?? null, teamMemberId },
   });
   return { userId: newUserId };
+}
+
+// ── 7b. Bulk invite (sequential, single aggregate log) ───────────────────────
+
+/**
+ * Invite many team_members in one call. requireAdmin (inviteUser's own per-item
+ * tier guard still applies, so a plain admin cannot mint admin/super_admin even
+ * via bulk). Calls inviteUser sequentially with a 500ms gap between calls as
+ * GoTrue rate-limit safety, and wraps each in try/catch so one failure never
+ * aborts the batch — failures are collected into `failed` with their token reason.
+ *
+ * Logging: a SINGLE aggregate user_activity_log entry (counts + the failure
+ * list), NOT one row per user — N per-user rows would swamp the log on a bulk run
+ * and make it unreadable (Buhara decision, AP 2).
+ */
+export async function bulkInvite(teamMemberIds: string[]): Promise<BulkInviteResult> {
+  const identity = await requireAdmin();
+
+  const sent: string[] = [];
+  const failed: Array<{ teamMemberId: string; reason: string }> = [];
+
+  for (const id of teamMemberIds) {
+    try {
+      await inviteUser({ teamMemberId: id });
+      sent.push(id);
+    } catch (err) {
+      failed.push({ teamMemberId: id, reason: err instanceof Error ? err.message : String(err) });
+    }
+    // GoTrue rate-limit safety between calls.
+    await new Promise((r) => setTimeout(r, 500));
+  }
+
+  await logActivity({
+    userId: identity.userId,
+    action: "bulk_invite",
+    resourceType: null,
+    resourceId: null,
+    metadata: { requested: teamMemberIds.length, sent: sent.length, failed: failed.length, failures: failed },
+  });
+
+  return { sent, failed };
+}
+
+// ── 7c. Create team_member (pre-seed; optional role default) ──────────────────
+
+/**
+ * Create a new team_members row (no auth account yet — that comes later via
+ * inviteUser). This is the "pre-seed" step: an admin enters a new colleague's
+ * name + email + department + position in the admin panel; "Invite now" is a
+ * separate inviteUser call.
+ *
+ * Guard: requireAdmin for a "user"/"admin" intendedRole, requireSuperAdmin for a
+ * "super_admin" intendedRole — auto-granting super_admin is structurally blocked,
+ * mirroring inviteUser's tier guard.
+ *
+ * If intendedRole is not "user", this also UPSERTs into user_role_defaults so the
+ * handle_new_user trigger (D-048 data-driven assignment) picks up the right role
+ * when the auth account is later minted. That upsert is best-effort: the
+ * team_member is the primary artifact — a defaults failure only means the role
+ * must be set explicitly at invite time, so it is logged, not thrown.
+ *
+ * Validation is inline (same style as updateUserProfile): names trimmed + non-empty,
+ * email trimmed/lowercased with a basic shape check, duplicate email pre-checked
+ * for a friendlier error than the raw 23505.
+ */
+export async function createTeamMember(
+  input: CreateTeamMemberInput
+): Promise<{ teamMemberId: string }> {
+  const identity =
+    input.intendedRole === "super_admin" ? await requireSuperAdmin() : await requireAdmin();
+
+  const firstName = input.firstName.trim();
+  const lastName = input.lastName.trim();
+  if (!firstName || !lastName) throw new Error("INVALID_NAME");
+
+  const email = input.email.trim().toLowerCase();
+  if (!email || !email.includes("@")) throw new Error("INVALID_EMAIL");
+
+  const initials = (firstName[0] + lastName[0]).toUpperCase();
+  const admin = createAdminClient();
+
+  // Pre-check duplicate for a friendly error (beats relying on the raw 23505).
+  const { data: existing } = await admin
+    .from("team_members")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+  if (existing) throw new Error("DUPLICATE_EMAIL");
+
+  const { data: created, error: insErr } = await admin
+    .from("team_members")
+    .insert({
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      department: input.department?.trim() || null,
+      position: input.position?.trim() || null,
+      initials,
+    })
+    .select("id")
+    .single();
+  if (insErr || !created) throw new Error("INSERT_FAILED");
+  const teamMemberId = created.id as string;
+
+  if (input.intendedRole && input.intendedRole !== "user") {
+    const { error: rdErr } = await admin
+      .from("user_role_defaults")
+      .upsert({ email, role: input.intendedRole }, { onConflict: "email" });
+    if (rdErr) {
+      // Best-effort: the team_member exists; the role just has to be set at invite.
+      console.error("[createTeamMember] user_role_defaults upsert failed:", rdErr.message);
+    }
+  }
+
+  await logActivity({
+    userId: identity.userId,
+    action: "create_team_member",
+    resourceType: "team_member",
+    resourceId: teamMemberId,
+    metadata: { email, intendedRole: input.intendedRole ?? "user" },
+  });
+
+  return { teamMemberId };
+}
+
+// ── 7d. Self-service profile update (RLS write — the ONLY self-write) ─────────
+
+/**
+ * A signed-in user updates their OWN team_members row — the only self-write in
+ * this module. Two independent gates:
+ *  - ROW access: the RLS client (createClient(), NOT service-role) relies on the
+ *    `team_self_update` policy from AP-1 migration 20260624111148, which only
+ *    lets a user touch the row linked via profiles.team_member_id = auth.uid().
+ *  - COLUMN access: enforced HERE, because that policy gates the row, not the
+ *    columns. Whitelist = phone, date_of_birth, show_birthday. Everything else
+ *    (first_name, last_name, position, department, email, sort_order, is_lead,
+ *    joined_year, tools, tasks, auth_user_id, last_invited_at, initials,
+ *    avatar_asset_id — avatars go through uploadUserAvatar) is admin-only and
+ *    simply never written here.
+ *
+ * Throws NOT_AUTHENTICATED (anon), NOT_LINKED (no team_member link),
+ * INVALID_DATE, PHONE_TOO_LONG, or UPDATE_FAILED (the RLS write was rejected).
+ */
+export async function updateOwnProfile(patch: UpdateOwnProfilePatch): Promise<void> {
+  const identity = await getIdentity();
+  if (!identity) throw new Error("NOT_AUTHENTICATED");
+  if (!identity.teamMemberId) throw new Error("NOT_LINKED");
+
+  const update: Record<string, unknown> = {};
+
+  if (patch.phone !== undefined) {
+    const v = patch.phone?.trim() || null;
+    if (v && v.length > 50) throw new Error("PHONE_TOO_LONG");
+    update.phone = v;
+  }
+
+  if (patch.dateOfBirth !== undefined) {
+    if (patch.dateOfBirth === null || patch.dateOfBirth.trim() === "") {
+      update.date_of_birth = null;
+    } else {
+      const trimmed = patch.dateOfBirth.trim();
+      const d = new Date(trimmed);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed) || isNaN(d.getTime())) {
+        throw new Error("INVALID_DATE");
+      }
+      update.date_of_birth = trimmed;
+    }
+  }
+
+  if (patch.showBirthday !== undefined) update.show_birthday = !!patch.showBirthday;
+
+  if (Object.keys(update).length === 0) return; // nothing to do
+
+  // RLS client → the team_self_update policy is the row gate (NOT service-role).
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("team_members")
+    .update(update)
+    .eq("id", identity.teamMemberId);
+  if (error) throw new Error("UPDATE_FAILED");
+
+  await logActivity({
+    userId: identity.userId,
+    action: "update_own_profile",
+    resourceType: "team_member",
+    resourceId: identity.teamMemberId,
+    metadata: { fields: Object.keys(update) },
+  });
 }
 
 // ── 8. Upload avatar (service-role storage + asset upsert) ───────────────────
