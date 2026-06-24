@@ -313,9 +313,23 @@
 .doc-cards { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
 @media (min-width: 768px) { .doc-cards { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1024px) { .doc-cards { grid-template-columns: repeat(3, 1fr); } }
-.doc-card { background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-xl); overflow: hidden; transition: box-shadow 200ms var(--ease-smooth); }
+.doc-card { background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-xl); overflow: hidden; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04); transition: box-shadow 200ms var(--ease-smooth); }
 .doc-card:hover { box-shadow: var(--shadow-hover); }
 .doc-card .preview { background: var(--surface-muted); min-height: 200px; display: grid; place-items: center; position: relative; }
+/* Master-deck download button: same family as the logo-tile pill (44×44 icon
+   square, 12px radius, subtle shadow, fades in on hover). Scoped to .doc-card
+   so the base .card-dl (file-row, etc.) is untouched. */
+.doc-card .card-dl {
+  position: absolute; top: 12px; right: 12px;
+  width: 44px; height: 44px; padding: 0;
+  border-radius: var(--radius-xl);
+  background: var(--surface); border: 1px solid var(--hairline);
+  color: var(--text-1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  opacity: 0;
+}
+.doc-card .card-dl svg { width: 16px; height: 16px; }
+.doc-card:hover .card-dl { opacity: 1; }
 .doc-badge { width: 48px; height: 60px; border-radius: var(--radius-sm); display: grid; place-items: center; color: white; font-size: var(--fs-xs); font-weight: var(--weight-bold); background: var(--accent); }
 .doc-badge.pdf { background: var(--torch); }
 .doc-badge.zip, .doc-badge.file { background: var(--surface-muted); color: var(--text-2); }
