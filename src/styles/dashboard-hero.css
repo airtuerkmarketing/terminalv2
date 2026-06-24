@@ -589,6 +589,43 @@
   padding: 0;
   background: none;
 }
+/* Tables (remark-gfm) + headings — system prompt v7 asks Claude to structure
+   comparisons / multi-person data as tables and status overviews with icons. */
+.ai-chat-answer table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-3) 0;
+  font-size: 13px;
+}
+.ai-chat-answer th {
+  background: var(--surface-muted);
+  font-weight: var(--weight-semibold);
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--hairline);
+  color: var(--text-1);
+}
+.ai-chat-answer td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--text-2);
+}
+.ai-chat-answer tr:last-child td {
+  border-bottom: none;
+}
+.ai-chat-answer h2,
+.ai-chat-answer h3 {
+  font-weight: var(--weight-semibold);
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-2);
+  color: var(--text-1);
+}
+.ai-chat-answer h2 {
+  font-size: 16px;
+}
+.ai-chat-answer h3 {
+  font-size: 14px;
+}
 /* Source citations as compact mini-chips (UX polish) — large cards with a
    CONTEXT badge + "Stand" label dominated the answer (60-80px each); 4-6 of
    them made the chat unreadable. Now: one-line gray chips, ~28px tall, title
