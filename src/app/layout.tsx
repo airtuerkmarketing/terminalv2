@@ -28,6 +28,19 @@ export const metadata: Metadata = {
       { url: "/apple-touch-icon.svg", type: "image/svg+xml" },
     ],
   },
+  openGraph: {
+    title: "terminal",
+    description: "Internal brand and resource hub for airtuerk Service GmbH",
+    images: [
+      { url: "/logos/terminal/icon-250.svg", width: 250, height: 250, alt: "terminal" },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "terminal",
+    description: "Internal brand and resource hub for airtuerk Service GmbH",
+    images: ["/logos/terminal/icon-250.svg"],
+  },
   robots: {
     index: false,
     follow: false,
