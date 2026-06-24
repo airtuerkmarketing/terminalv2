@@ -18,7 +18,7 @@
   gap: var(--space-6);
   padding: var(--space-6);
   background: var(--surface-muted);
-  border-radius: var(--radius-16);
+  border-radius: var(--radius-22);
   position: relative;
   max-width: 100%;
   align-items: start;
@@ -40,9 +40,9 @@
 }
 .oo-toggle-group { display: flex; align-items: center; gap: var(--space-2); }
 .oo-toggle-label { font-size: var(--fs-xs); font-weight: var(--weight-medium); color: var(--text-2); white-space: nowrap; }
-.oo-toggle { display: flex; background: var(--surface-muted); border-radius: 8px; padding: 3px; gap: 2px; }
+.oo-toggle { display: flex; background: var(--surface-muted); border-radius: var(--radius-full); padding: 3px; gap: 2px; }
 .oo-toggle-btn {
-  background: transparent; border: none; border-radius: 6px; padding: 5px 12px;
+  background: transparent; border: none; border-radius: var(--radius-full); padding: 5px 12px;
   font-family: inherit; font-size: var(--fs-xs); font-weight: var(--weight-medium); color: var(--text-2); cursor: pointer;
   transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
 }
@@ -94,7 +94,7 @@
 /* ── Preview ── */
 .oo-preview-wrap { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 .oo-card {
-  background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-md);
+  background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-18);
   overflow: hidden; box-shadow: var(--shadow-rest);
 }
 .oo-card-head {
@@ -108,7 +108,7 @@
 /* Copy button: solid black (out-of-office + signature only — not global). */
 .oo-copy-btn {
   height: 32px; padding: 0 12px; background: #000; color: #fff; border: none;
-  border-radius: var(--radius-sm); font-family: inherit; font-size: var(--fs-sm); font-weight: var(--weight-semibold);
+  border-radius: var(--radius-full); font-family: inherit; font-size: var(--fs-sm); font-weight: var(--weight-semibold);
   cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
   transition: background-color 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
 }
@@ -119,7 +119,7 @@
 .oo-copy-btn.oo-just-copied:hover { filter: none; }
 .oo-outlook-btn {
   height: 32px; padding: 0 12px; background: transparent; color: var(--text-2);
-  border: 1px solid var(--hairline); border-radius: var(--radius-sm); font-family: inherit;
+  border: 1px solid var(--hairline); border-radius: var(--radius-full); font-family: inherit;
   font-size: var(--fs-sm); font-weight: var(--weight-medium); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
   white-space: nowrap; transition: border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth);
 }
@@ -138,7 +138,7 @@
 .oo-text-preview strong { font-weight: var(--weight-bold); }
 
 /* ── "How to set up in Outlook" accordion ── */
-.oo-info-card { background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-md); overflow: hidden; }
+.oo-info-card { background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-16); overflow: hidden; }
 .oo-info-toggle {
   width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
   padding: 14px 18px; background: transparent; border: none; cursor: pointer; font-family: inherit; text-align: left;

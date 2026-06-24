@@ -21,10 +21,33 @@
 .block-label h2 { font-size: var(--fs-lg); font-weight: var(--weight-semibold); letter-spacing: -0.012em; color: var(--text-1); margin-bottom: var(--space-3); }
 .block-body { min-width: 0; }
 
-/* ── page_hero ── (the index-number eyebrow was removed; see page-hero.tsx) */
-.page-hero { padding-top: var(--space-4); margin-bottom: var(--space-12); }
-.page-hero h1 { font-size: var(--fs-2xl); font-weight: var(--weight-semibold); letter-spacing: -0.022em; line-height: var(--lh-tight); color: var(--text-1); margin-bottom: var(--space-4); }
-.page-hero .lead { font-size: var(--fs-md); line-height: var(--lh-normal); color: var(--text-2); max-width: 620px; }
+/* ── page_hero ── (the index-number eyebrow was removed; see page-hero.tsx)
+   Two distinct uses, intentionally decoupled:
+   • .page-hero       — the page HEADER (PageHeader in page-view.tsx). A grey,
+     full-bleed band that spans the whole .main content column: it sits OUTSIDE
+     .main-inner, as a direct child of .main, so its background reaches edge-to-
+     edge up to the sidebar. Its content is re-centered to 1400px by the inner
+     wrapper .page-hero-inner (which shares its gutter with .main-inner).
+   • .page-hero-block — the page_hero BLOCK (components/blocks/page-hero.tsx),
+     rendered inline by the BlockRenderer INSIDE .main-inner. Keeps the original
+     flat, no-background hero look — a full-bleed grey band cannot work from
+     inside the narrow centered column, so the block stays a plain inline hero. */
+/* Fixed-height hero (matches terminal.airtuerk.de/airtuerk-service): a ~320px
+   grey band with the title pinned to the BOTTOM (flex-end) — the air above the
+   title comes from min-height, NOT padding. The small 32px top padding is only
+   a safety floor for multi-line (long) brand names; 32px bottom is the compact
+   gap to the border-bottom rule, as in the reference. */
+.page-hero { min-height: 320px; background: var(--surface-muted); border-bottom: 1px solid var(--hairline); margin-bottom: var(--space-8); display: flex; flex-direction: column; justify-content: flex-end; padding: var(--space-8) 0; }
+.page-hero-inner { width: 100%; max-width: 1400px; margin-inline: auto; padding: 0 var(--space-4); }
+.page-hero h1 { font-size: var(--fs-hero); font-weight: var(--weight-semibold); line-height: 1.04 /* optical tune for fs-hero — kept literal */; letter-spacing: -0.022em; color: var(--text-1); margin: 0; text-align: left; }
+/* Mobile: 320px + 42px are too heavy on a phone viewport — scale the hero down.
+   Placed AFTER the base rules so these win on small viewports (media queries
+   add no specificity, so source order decides). */
+@media (max-width: 767px) { .page-hero { min-height: 200px; padding: var(--space-6) 0; } .page-hero h1 { font-size: 28px; } }
+
+.page-hero-block { padding-top: var(--space-4); margin-bottom: var(--space-12); }
+.page-hero-block h1 { font-size: var(--fs-2xl); font-weight: var(--weight-semibold); letter-spacing: -0.022em; line-height: var(--lh-tight); color: var(--text-1); margin-bottom: var(--space-4); }
+.page-hero-block .lead { font-size: var(--fs-md); line-height: var(--lh-normal); color: var(--text-2); max-width: 620px; }
 
 /* ── Shared heading for the embedded generator tools (signature, out-of-office).
    Sits OUTSIDE the grey tool box; one class so both stay identical. ── */
@@ -48,6 +71,45 @@
 .rich-text ul, .rich-text ol { margin: 0 0 var(--space-4) var(--space-5); }
 .rich-text li { margin-bottom: var(--space-2); }
 
+/* Lead description: the FIRST block of a brand/page body (the parent page's own
+   blocks) is rendered as a lead-statement section — à la the reference site.
+   The selector targets only the parent page's BlockRenderer (`article >
+   .page-blocks`, a direct child); per-section BlockRenderers live under
+   `article > section.anchor-section > .page-blocks`, so the `>` chain excludes
+   them and later/in-section description blocks keep the default body style.
+   NOTE: :first-of-type / `article > .rich-text` (as first proposed) do NOT work
+   here — .rich-text is a <div> nested inside .page-blocks > .block, and every
+   .block holds its rich-text as its first div, so :first-of-type would match
+   every description, not just the first. `:first-child` on the block wrapper is
+   the correct "first block only" anchor. */
+/* .lead-statement — reusable lead/intro utility. The :first-child rule below
+   styles the brand-page lead identically; the two are deliberately parallel
+   (same token values) because we drive the brand lead purely off the existing
+   markup position rather than adding a class to the rich-text <div>. */
+.lead-statement {
+  font-size: var(--fs-lead);
+  font-weight: var(--weight-medium);
+  line-height: var(--lh-lead);
+  color: var(--text-1);
+  padding: var(--section-gap) 0;
+  border-bottom: 1px solid var(--hairline);
+  margin: 0;
+  max-width: none;
+}
+.main-inner > article > .page-blocks > :first-child .rich-text {
+  font-size: var(--fs-lead);
+  font-weight: var(--weight-medium);
+  line-height: var(--lh-lead);
+  color: var(--text-1);
+  max-width: none;
+  padding: var(--section-gap) 0;
+  margin: 0;
+  border-bottom: 1px solid var(--hairline);
+}
+/* Neutralise the trailing paragraph margin so the bottom gap is exactly the
+   64px padding (the base .rich-text p adds margin-bottom otherwise). */
+.main-inner > article > .page-blocks > :first-child .rich-text > :last-child { margin-bottom: 0; }
+
 /* ── page_nav ── */
 .page-nav { display: flex; justify-content: space-between; gap: var(--space-4); padding-top: var(--space-8); border-top: 1px solid var(--separator); margin-top: var(--space-12); }
 .page-nav a { display: flex; flex-direction: column; gap: 4px; text-decoration: none; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); transition: background 150ms var(--ease-smooth); }
@@ -68,7 +130,7 @@
 /* ── Tall variant (:not strips): the three swatches read as ONE box — shared
    outer hairline + radius, panels clipped (overflow:hidden), 2px gaps between.
    Everything here is scoped so the .palette--strips variant stays untouched. ── */
-.palette:not(.palette--strips) { gap: 2px; height: 520px; border: 1px solid var(--hairline); border-radius: var(--radius-lg); overflow: hidden; }
+.palette:not(.palette--strips) { gap: 2px; height: 420px; border: 1px solid var(--hairline); border-radius: var(--radius-22); overflow: hidden; }
 .palette:not(.palette--strips) .color-panel { border-radius: 0; padding: var(--space-8); justify-content: flex-start; }
 /* Meta row: number + role side by side, plain text (no badge frame). */
 .palette:not(.palette--strips) .color-panel-meta { display: flex; align-items: baseline; gap: var(--space-2); }
@@ -102,7 +164,7 @@
 .palette:not(.palette--strips) .color-copy {
   position: absolute; top: var(--space-5); right: var(--space-5);
   width: 44px; height: 44px; margin: 0; opacity: 1;
-  border-radius: 50%;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, currentColor 12%, transparent);
   border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
   transition: background-color 150ms var(--ease-smooth), transform 150ms var(--ease-smooth);
@@ -144,12 +206,17 @@
 .logo-pkg .sub { font-size: var(--fs-sm); color: var(--text-3); }
 
 /* ── logo_grid ── */
-.logo-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, 1fr); }
-@media (min-width: 768px) { .logo-grid { grid-template-columns: repeat(4, 1fr); } }
-.logo-tile { position: relative; background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-lg); aspect-ratio: 1 / 1; display: grid; place-items: center; color: var(--text-1); font-weight: var(--weight-semibold); padding: var(--card-padding); }
-.logo-grid.is-circles .logo-tile { border-radius: 50%; aspect-ratio: 1; }
-/* Adaptive (Buhara): square container, logo in natural ratio, contained + capped. */
-.logo-tile img { object-fit: contain; max-width: 70%; max-height: 70%; }
+/* Reference layout: two landscape tiles per row (the prior ≥768px → 4-column
+   rule is dropped so desktop matches the reference; mobile already used 2). */
+.logo-grid { display: grid; gap: var(--space-6); grid-template-columns: repeat(2, 1fr); }
+.logo-tile { position: relative; background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-22); height: 240px; display: grid; place-items: center; color: var(--text-1); font-weight: var(--weight-semibold); padding: var(--card-padding); overflow: hidden; transition: background 150ms var(--ease-smooth); }
+/* is-circles keeps round/square tiles — restore aspect-ratio + drop the fixed height. */
+.logo-grid.is-circles .logo-tile { border-radius: 50%; aspect-ratio: 1; height: auto; }
+/* Adaptive (Buhara): square container, logo in natural ratio, contained + capped.
+   Hover desaturates the logo (reference look); the download pill fades in. */
+.logo-tile img { object-fit: contain; max-width: 70%; max-height: 70%; transition: filter 200ms var(--ease-smooth); }
+.logo-tile:hover img { filter: grayscale(0.7) opacity(0.7); }
+.logo-tile:hover { background: rgba(0, 0, 0, 0.02); }
 
 /* ── per-asset download button (top-right of a showcase card) ── */
 /* Glassy, always visible at low opacity; full accent on hover/focus. The hit
@@ -166,13 +233,50 @@
 .card-dl:hover, .card-dl:focus-visible { opacity: 1; color: var(--accent); border-color: var(--accent-border); }
 .card-dl svg { width: 16px; height: 16px; }
 .logo-tile:hover .card-dl, .doc-card:hover .card-dl { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { .card-dl { transition: none; } }
+/* Logo tiles render the download as a labeled pill that fades in on hover (the
+   reference look). Scoped to .logo-tile so the shared .card-dl on document
+   cards/rows (document-list, file-row) keeps its icon-button style untouched. */
+.logo-tile .card-dl {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; padding: 0;          /* matches .color-copy size */
+  border-radius: var(--radius-xl);                /* 12px, same as color-copy */
+  background: var(--surface); border: 1px solid var(--hairline);
+  color: var(--text-1);
+  box-shadow: var(--shadow-floating);
+  opacity: 0; cursor: pointer;
+  transition: opacity 150ms var(--ease-smooth);
+}
+.logo-tile .card-dl svg { width: 16px; height: 16px; }
+/* Stay neutral on hover/focus (override the base accent colour change). */
+.logo-tile .card-dl:hover, .logo-tile .card-dl:focus-visible { color: var(--text-1); border-color: var(--hairline); }
+.logo-tile .card-dl:focus-visible { opacity: 1; outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .card-dl, .logo-tile img { transition: none; } }
 
 /* ── asset_block ── */
-.asset-block { display: grid; gap: var(--space-4); }
-.asset-block .preview { background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-xl); min-height: 240px; display: grid; place-items: center; overflow: hidden; }
+/* Compact white card (reference "Logo Package"): title top-left, download pill
+   top-right (same grid row), optional preview + caption span full width below.
+   Explicit grid-row placement (not grid-template-areas) so a hidden/empty
+   preview leaves no phantom empty row + double gap; .downloads is DOM-last but
+   pinned to row 1 col 2. */
+.asset-block {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-22);
+  padding: var(--space-5) var(--space-5) var(--space-6);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-4);
+  align-items: center;
+}
+.asset-block .block-label { grid-column: 1; grid-row: 1; }
+.asset-block .block-label h2 { font-size: var(--fs-md); font-weight: var(--weight-medium); margin: 0; color: var(--text-1); }
+.asset-block .downloads { grid-column: 2; grid-row: 1; justify-self: end; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.asset-block .preview { grid-column: 1 / -1; background: var(--surface-muted); border: 1px solid var(--hairline); border-radius: var(--radius-22); min-height: 240px; display: grid; place-items: center; overflow: hidden; }
+/* Hide the preview wrapper when it has no image (compact card with no assetUrl). */
+.asset-block .preview:not(:has(img)) { display: none; }
 .asset-block .preview img { max-width: 100%; }
-.asset-block .downloads { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.asset-block .rich-text { grid-column: 1 / -1; font-size: var(--fs-base); color: var(--text-2); margin: 0; max-width: none; }
 
 /* shared download pill / link */
 .dl-pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--button-radius); border: 1px solid var(--hairline); background: var(--surface); font-size: var(--fs-sm); color: var(--text-1); text-decoration: none; transition: all 150ms var(--ease-smooth); }
@@ -207,11 +311,49 @@
 
 /* style: preview_cards (default) */
 .doc-cards { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
-@media (min-width: 768px) { .doc-cards { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 1024px) { .doc-cards { grid-template-columns: repeat(3, 1fr); } }
-.doc-card { background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-xl); overflow: hidden; transition: box-shadow 200ms var(--ease-smooth); }
-.doc-card:hover { box-shadow: var(--shadow-hover); }
+/* Auto-fill: as many ~420px cards per row as fit; min(100%, 420px) keeps them
+   from getting too narrow at tablet width. */
+@media (min-width: 768px) { .doc-cards { grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); } }
+.doc-card { background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-card); transition: box-shadow 200ms var(--ease-smooth); }
+.doc-card:hover { box-shadow: var(--shadow-card-hover); }
 .doc-card .preview { background: var(--surface-muted); min-height: 200px; display: grid; place-items: center; position: relative; }
+/* Master-deck download button: same family as the logo-tile pill (44×44 icon
+   square, 12px radius, subtle shadow, fades in on hover). Scoped to .doc-card
+   so the base .card-dl (file-row, etc.) is untouched. */
+.doc-card .card-dl {
+  position: absolute; top: 12px; right: 12px;
+  width: 44px; height: 44px; padding: 0;
+  border-radius: var(--radius-xl);
+  background: var(--surface); border: 1px solid var(--hairline);
+  color: var(--text-1);
+  box-shadow: var(--shadow-floating);
+  opacity: 0;
+}
+.doc-card .card-dl svg { width: 16px; height: 16px; }
+.doc-card:hover .card-dl { opacity: 1; }
+
+/* Master-deck tilted preview variant. The card has fixed-ish proportions
+   (~420×200) and clips its content (overflow:hidden inherited from base
+   .doc-card) — the preview image is intentionally wider than its column and
+   gets clipped on the right card edge for a "peeking" effect. */
+.doc-card.doc-card--tilted { position: relative; display: grid; grid-template-columns: 55fr 45fr; align-items: stretch; gap: var(--space-4); padding: var(--space-6); min-height: 200px; border-radius: var(--radius-22); /* overrides base .doc-card --radius-xl */ text-decoration: none; color: inherit; }
+/* Meta column (left): pdf icon pinned to the top, title + sub to the bottom. */
+.doc-card--tilted .doc-card__meta { display: flex; flex-direction: column; justify-content: space-between; align-self: stretch; z-index: 1; min-width: 0; }
+.doc-card--tilted .doc-card__icon { width: 48px; height: 48px; border-radius: var(--radius-xl); background: var(--surface); border: 1px solid var(--hairline); box-shadow: var(--shadow-floating); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.doc-card--tilted .doc-card__icon img { width: 28px; height: 28px; display: block; }
+.doc-card--tilted .doc-card__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.doc-card--tilted .doc-card__title { font-size: var(--fs-md); font-weight: var(--weight-semibold); color: var(--text-1); line-height: var(--lh-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-card--tilted .doc-card__sub { font-size: var(--fs-xs); color: var(--text-3); line-height: var(--lh-normal); }
+/* Preview column (right): tilted image, wider than its column, clipped at the
+   right card boundary by the inherited overflow:hidden. */
+.doc-card--tilted .doc-card__shot { position: relative; align-self: stretch; display: flex; align-items: center; justify-content: flex-start; margin-right: calc(-1 * var(--space-6)); }
+.doc-card--tilted .doc-card__shot img { width: 130%; max-width: none; height: auto; display: block; border-radius: var(--radius-md); box-shadow: 0 6px 24px -8px rgba(0, 0, 0, 0.18), 0 2px 6px -2px rgba(0, 0, 0, 0.08); transform: rotate(6deg); transition: transform 240ms var(--ease-smooth); will-change: transform; }
+.doc-card.doc-card--tilted:hover .doc-card__shot img { transform: rotate(8deg) translateY(-2px); }
+@media (prefers-reduced-motion: reduce) {
+  .doc-card--tilted .doc-card__shot img,
+  .doc-card.doc-card--tilted:hover .doc-card__shot img { transition: none; transform: rotate(6deg); }
+}
+
 .doc-badge { width: 48px; height: 60px; border-radius: var(--radius-sm); display: grid; place-items: center; color: white; font-size: var(--fs-xs); font-weight: var(--weight-bold); background: var(--accent); }
 .doc-badge.pdf { background: var(--torch); }
 .doc-badge.zip, .doc-badge.file { background: var(--surface-muted); color: var(--text-2); }
@@ -257,22 +399,25 @@
 /* ── In-page anchor sections (single-page brands + IBE). scroll-margin-top keeps
    the target clear of the topbar when jumped to via the sidebar #slug anchors
    (more robust than relying on :target alone). ── */
-.anchor-section { padding-top: var(--space-6); scroll-margin-top: var(--space-20); }
+.anchor-section { padding-top: var(--section-gap); padding-bottom: var(--section-gap); scroll-margin-top: var(--space-20); }
 /* Full-width solid divider between sections (sits on the full-width section box,
    so two-col and full-width sections get the same continuous line). --hairline
    reads clearly on the white content background. */
-.anchor-section + .anchor-section { margin-top: var(--section-gap); border-top: 1px solid var(--hairline); }
-/* No padding-top here: .anchor-section already owns the space-6 top padding
+/* Each section owns symmetric section-gap padding (top + bottom), so the gap
+   between two sections is 2× section-gap and the divider sits on the boundary.
+   margin-top is zeroed to avoid stacking with the padding. */
+.anchor-section + .anchor-section { margin-top: 0; border-top: 1px solid var(--hairline); }
+/* No padding-top here: .anchor-section already owns the section-gap top padding
    (and scroll-margin-top for the anchor jump offset). Adding it to the h2 too
-   doubled the gap above the heading (space-6 + space-6). */
-.anchor-section > h2 { font-size: var(--fs-lg); font-weight: var(--weight-semibold); letter-spacing: -0.012em; color: var(--text-1); margin-bottom: var(--space-4); }
+   would double the gap above the heading. */
+.anchor-section > h2 { font-size: var(--fs-lead); font-weight: var(--weight-medium); line-height: var(--lh-lead); letter-spacing: 0; color: var(--text-1); margin-bottom: var(--space-4); }
 
 /* Two-column brand section (Webflow original): section title left ~25%, content
    right ~75%. Stacks below 1024px, matching .block--two-column and the shell
    drawer boundary. Applied only on the 5 brand routes (see page-view.tsx). */
 .anchor-section--two-col { display: grid; grid-template-columns: 1fr; gap: var(--space-5); }
 @media (min-width: 1024px) {
-  .anchor-section--two-col { grid-template-columns: 25% 1fr; gap: var(--space-8); align-items: start; }
+  .anchor-section--two-col { grid-template-columns: 25% 1fr; gap: var(--space-12); align-items: start; }
 }
 .anchor-section--two-col > h2 { margin-bottom: 0; }    /* title owns the left column */
 .anchor-section--two-col > :not(h2) { min-width: 0; }  /* prevent grid blowout of content */

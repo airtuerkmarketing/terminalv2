@@ -47,18 +47,20 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   ]);
 
   return (
-    <UserAdminPanel
-      teamMembers={teamMembers}
-      totalCount={totalCount}
-      departments={departments}
-      initialFilters={{
-        q: sp.q,
-        departments: sp.dept ? sp.dept.split(",").filter(Boolean) : [],
-        statuses: sp.status ? sp.status.split(",").filter(Boolean) : [],
-        privateOnly: sp.privateOnly === "1",
-        noPhoto: sp.noPhoto === "1",
-      }}
-      currentUserId={identity.userId}
-    />
+    <div className="main-inner">
+      <UserAdminPanel
+        teamMembers={teamMembers}
+        totalCount={totalCount}
+        departments={departments}
+        initialFilters={{
+          q: sp.q,
+          departments: sp.dept ? sp.dept.split(",").filter(Boolean) : [],
+          statuses: sp.status ? sp.status.split(",").filter(Boolean) : [],
+          privateOnly: sp.privateOnly === "1",
+          noPhoto: sp.noPhoto === "1",
+        }}
+        currentUserId={identity.userId}
+      />
+    </div>
   );
 }

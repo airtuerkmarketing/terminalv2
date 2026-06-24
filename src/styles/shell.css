@@ -123,10 +123,18 @@ html { scrollbar-gutter: stable; }
 .user-block .name { font-size: var(--fs-sm); font-weight: var(--weight-regular); color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── Topbar + main (shared) ── */
-/* Content lives in a centered container: it fills the area to the right of the
-   sidebar with comfortable padding, and once that area exceeds the 1680px cap
-   the auto margins center it with equal gutters (never flush to an edge). */
-.main { width: 100%; min-width: 0; max-width: 1200px; margin-inline: auto; padding: var(--space-5) var(--space-4); }
+/* .main spans the FULL content column (no max-width) so a page can render a
+   full-bleed band (e.g. the grey .page-hero header) edge-to-edge up to the
+   sidebar. .main carries NO padding of its own: the grey .page-hero must sit
+   flush against the top of the content column, so the top breathing room lives
+   on .main-inner instead (and is zeroed right after a .page-hero, which brings
+   its own internal top padding). Horizontal gutters live on .main-inner /
+   .page-hero-inner. */
+.main { width: 100%; min-width: 0; }
+.main-inner { width: 100%; max-width: 1400px; margin-inline: auto; padding: var(--space-5) var(--space-4); }
+/* Brand/hero pages: the grey .page-hero is flush to the top and already has its
+   own bottom margin, so the following content wrapper needs no extra top gap. */
+.page-hero + .main-inner { padding-top: 0; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-8); }
 /* The topbar's placeholder search field and action buttons were both removed:
    the dashboard hero provides the real Such+KI-Box, and the orbs/theme/settings
@@ -163,7 +171,7 @@ html { scrollbar-gutter: stable; }
      entirely to recover the vertical gap; the Topbar component stays for mobile. */
   .topbar { display: none; }
 
-  .main { padding: var(--space-6) var(--space-5); }
+  .main-inner, .page-hero-inner { padding-inline: var(--space-5); }
 
   /* Collapsed rail (64px) — collapse exists only at this tier.
      Labels collapse to zero width + fade out (NOT display:none) so the expand
