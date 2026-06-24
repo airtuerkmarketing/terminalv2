@@ -84,49 +84,10 @@ export async function renderPage(fullPath: string) {
   }
 
   // Hardcoded routes → the real component by component_key; others still stub.
+  // Each renders inside .main-inner so it keeps the 1400px readable-measure cap
+  // now that .main spans the full content column (see shell.css / .main-inner).
   if (page.rendering_mode === "hardcoded") {
-    if (page.component_key === "asset-library") {
-      const assets = await getImageAssets();
-      return <AssetLibrary title={page.title} assets={assets} />;
-    }
-    if (page.component_key === "email-signature") {
-      return <EmailSignature title={page.title} />;
-    }
-    // document-library: superseded by the File System v2 route
-    // /documents-library/[[...folder]] (D-053), which shadows this catch-all for
-    // that subtree. The legacy getDocumentLibrary()/<DocumentLibrary> path is
-    // deprecated and no longer reached.
-    if (page.component_key === "apix-workflow") {
-      return <ApixWorkflow title={page.title} />;
-    }
-    if (page.component_key === "apix-network") {
-      return <ApixNetwork title={page.title} />;
-    }
-    if (page.component_key === "apix-presentation") {
-      return <ApixPresentation title={page.title} />;
-    }
-    if (page.component_key === "apix-group") {
-      return <ApixGroup title={page.title} />;
-    }
-    if (page.component_key === "team-directory") {
-      const members = await getTeamMembers();
-      return <TeamDirectory title={page.title} members={members} />;
-    }
-    if (page.component_key === "ai-test-1") {
-      return <ReviewQuiz title={page.title} questions={AI_TEST_1} testSet="ai_test_1" />;
-    }
-    if (page.component_key === "ai-test-2") {
-      return <ReviewQuiz title={page.title} questions={AI_TEST_2} testSet="ai_test_2" />;
-    }
-    if (page.component_key === "ai-test-3") {
-      return <ReviewQuiz title={page.title} questions={AI_TEST_3} testSet="ai_test_3" />;
-    }
-    // /gold-set parent index: links to the three relocated AI TEST pages
-    // (/gold-set/ai-test-{1,2,3}). hidden_in_sidebar=true; noindex via NOINDEX_PATHS.
-    if (page.component_key === "gold-set") {
-      return <GoldSetIndex title={page.title} />;
-    }
-    return <HardcodedStub title={page.title} componentKey={page.component_key} />;
+    return <div className="main-inner">{await renderHardcoded(page)}</div>;
   }
 
   const blocks = await getBlocks(page.id);
@@ -136,16 +97,20 @@ export async function renderPage(fullPath: string) {
   if (fullPath === IBE_PATH) {
     const products = await getIbeProducts();
     return (
-      <article>
+      <>
         <PageHeader page={page} />
-        {blocks.length > 0 ? <BlockRenderer blocks={blocks} /> : null}
-        {products.map((p) => (
-          <section key={p.slug} id={p.slug} className="anchor-section anchor-section--two-col">
-            <h2>{p.name}</h2>
-            <BlockEmptyState />
-          </section>
-        ))}
-      </article>
+        <div className="main-inner">
+          <article>
+            {blocks.length > 0 ? <BlockRenderer blocks={blocks} /> : null}
+            {products.map((p) => (
+              <section key={p.slug} id={p.slug} className="anchor-section anchor-section--two-col">
+                <h2>{p.name}</h2>
+                <BlockEmptyState />
+              </section>
+            ))}
+          </article>
+        </div>
+      </>
     );
   }
 
@@ -157,47 +122,108 @@ export async function renderPage(fullPath: string) {
     const sections = await getBrandSectionsAll(page.id);
     const twoCol = TWO_COL_BRAND_SLUGS.has(segments[0]);
     return (
-      <article>
+      <>
         <PageHeader page={page} />
-        {blocks.length > 0 ? <BlockRenderer blocks={blocks} /> : null}
-        {sections.map((s) => {
-          // Two-column applies only to block-mode sections; hardcoded tool
-          // sections (e.g. email-signature) render no <h2> and stay full-width.
-          const sectionClass =
-            twoCol && s.rendering_mode === "blocks"
-              ? "anchor-section anchor-section--two-col"
-              : "anchor-section";
-          return (
-            <section key={s.slug} id={s.slug} className={sectionClass}>
-              {s.rendering_mode === "hardcoded" ? (
-                renderHardcodedEmbedded(s.component_key, s.title)
-              ) : (
-                <>
-                  <h2>{s.title}</h2>
-                  {s.blocks.length > 0 ? <BlockRenderer blocks={s.blocks} /> : <BlockEmptyState />}
-                </>
-              )}
-            </section>
-          );
-        })}
-      </article>
+        <div className="main-inner">
+          <article>
+            {blocks.length > 0 ? <BlockRenderer blocks={blocks} /> : null}
+            {sections.map((s) => {
+              // Two-column applies only to block-mode sections; hardcoded tool
+              // sections (e.g. email-signature) render no <h2> and stay full-width.
+              const sectionClass =
+                twoCol && s.rendering_mode === "blocks"
+                  ? "anchor-section anchor-section--two-col"
+                  : "anchor-section";
+              return (
+                <section key={s.slug} id={s.slug} className={sectionClass}>
+                  {s.rendering_mode === "hardcoded" ? (
+                    renderHardcodedEmbedded(s.component_key, s.title)
+                  ) : (
+                    <>
+                      <h2>{s.title}</h2>
+                      {s.blocks.length > 0 ? <BlockRenderer blocks={s.blocks} /> : <BlockEmptyState />}
+                    </>
+                  )}
+                </section>
+              );
+            })}
+          </article>
+        </div>
+      </>
     );
   }
 
-  // Block-driven page. If blocks exist, render them (they carry their own hero);
-  // otherwise show a title header + a clean empty state.
+  // Block-driven page. If blocks exist, render them inside .main-inner (they
+  // carry their own inline hero, the flat .page-hero-block). Otherwise show the
+  // full-bleed PageHeader (outside .main-inner) + a clean empty state.
+  if (blocks.length > 0) {
+    return (
+      <div className="main-inner">
+        <article>
+          <BlockRenderer blocks={blocks} />
+        </article>
+      </div>
+    );
+  }
   return (
-    <article>
-      {blocks.length > 0 ? (
-        <BlockRenderer blocks={blocks} />
-      ) : (
-        <>
-          <PageHeader page={page} />
+    <>
+      <PageHeader page={page} />
+      <div className="main-inner">
+        <article>
           <BlockEmptyState />
-        </>
-      )}
-    </article>
+        </article>
+      </div>
+    </>
   );
+}
+
+/** Dispatch a top-level hardcoded route to its component by component_key.
+ *  Async because a few components need server data (assets, team members). The
+ *  caller wraps the result in .main-inner so every hardcoded page keeps the
+ *  1400px content cap. */
+async function renderHardcoded(page: PageRow) {
+  if (page.component_key === "asset-library") {
+    const assets = await getImageAssets();
+    return <AssetLibrary title={page.title} assets={assets} />;
+  }
+  if (page.component_key === "email-signature") {
+    return <EmailSignature title={page.title} />;
+  }
+  // document-library: superseded by the File System v2 route
+  // /documents-library/[[...folder]] (D-053), which shadows this catch-all for
+  // that subtree. The legacy getDocumentLibrary()/<DocumentLibrary> path is
+  // deprecated and no longer reached.
+  if (page.component_key === "apix-workflow") {
+    return <ApixWorkflow title={page.title} />;
+  }
+  if (page.component_key === "apix-network") {
+    return <ApixNetwork title={page.title} />;
+  }
+  if (page.component_key === "apix-presentation") {
+    return <ApixPresentation title={page.title} />;
+  }
+  if (page.component_key === "apix-group") {
+    return <ApixGroup title={page.title} />;
+  }
+  if (page.component_key === "team-directory") {
+    const members = await getTeamMembers();
+    return <TeamDirectory title={page.title} members={members} />;
+  }
+  if (page.component_key === "ai-test-1") {
+    return <ReviewQuiz title={page.title} questions={AI_TEST_1} testSet="ai_test_1" />;
+  }
+  if (page.component_key === "ai-test-2") {
+    return <ReviewQuiz title={page.title} questions={AI_TEST_2} testSet="ai_test_2" />;
+  }
+  if (page.component_key === "ai-test-3") {
+    return <ReviewQuiz title={page.title} questions={AI_TEST_3} testSet="ai_test_3" />;
+  }
+  // /gold-set parent index: links to the three relocated AI TEST pages
+  // (/gold-set/ai-test-{1,2,3}). hidden_in_sidebar=true; noindex via NOINDEX_PATHS.
+  if (page.component_key === "gold-set") {
+    return <GoldSetIndex title={page.title} />;
+  }
+  return <HardcodedStub title={page.title} componentKey={page.component_key} />;
 }
 
 function renderHardcodedEmbedded(componentKey: string, title: string) {
@@ -213,8 +239,12 @@ function PageHeader({ page }: { page: PageRow }) {
   return (
     <header className="page-hero">
       {/* Index number (page.number) intentionally not shown — data kept, display
-          removed. Title only. */}
-      <h1>{page.title}</h1>
+          removed. Title only. .page-hero-inner re-centers the title to the same
+          1400px measure as .main-inner so the band is full-bleed but the text
+          stays aligned with the page body below. */}
+      <div className="page-hero-inner">
+        <h1>{page.title}</h1>
+      </div>
     </header>
   );
 }

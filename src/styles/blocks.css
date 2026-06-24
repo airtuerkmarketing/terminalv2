@@ -21,10 +21,24 @@
 .block-label h2 { font-size: var(--fs-lg); font-weight: var(--weight-semibold); letter-spacing: -0.012em; color: var(--text-1); margin-bottom: var(--space-3); }
 .block-body { min-width: 0; }
 
-/* ── page_hero ── (the index-number eyebrow was removed; see page-hero.tsx) */
-.page-hero { padding-top: var(--space-4); margin-bottom: var(--space-12); }
-.page-hero h1 { font-size: var(--fs-2xl); font-weight: var(--weight-semibold); letter-spacing: -0.022em; line-height: var(--lh-tight); color: var(--text-1); margin-bottom: var(--space-4); }
-.page-hero .lead { font-size: var(--fs-md); line-height: var(--lh-normal); color: var(--text-2); max-width: 620px; }
+/* ── page_hero ── (the index-number eyebrow was removed; see page-hero.tsx)
+   Two distinct uses, intentionally decoupled:
+   • .page-hero       — the page HEADER (PageHeader in page-view.tsx). A grey,
+     full-bleed band that spans the whole .main content column: it sits OUTSIDE
+     .main-inner, as a direct child of .main, so its background reaches edge-to-
+     edge up to the sidebar. Its content is re-centered to 1400px by the inner
+     wrapper .page-hero-inner (which shares its gutter with .main-inner).
+   • .page-hero-block — the page_hero BLOCK (components/blocks/page-hero.tsx),
+     rendered inline by the BlockRenderer INSIDE .main-inner. Keeps the original
+     flat, no-background hero look — a full-bleed grey band cannot work from
+     inside the narrow centered column, so the block stays a plain inline hero. */
+.page-hero { background: var(--surface-muted); padding: var(--space-12) 0 var(--space-10) 0; margin-bottom: var(--space-8); border-bottom: 1px solid var(--hairline); }
+.page-hero-inner { width: 100%; max-width: 1400px; margin-inline: auto; padding: 0 var(--space-4); }
+.page-hero h1 { font-size: var(--fs-display); font-weight: var(--weight-semibold); letter-spacing: -0.022em; line-height: var(--lh-tight); color: var(--text-1); margin: 0; }
+
+.page-hero-block { padding-top: var(--space-4); margin-bottom: var(--space-12); }
+.page-hero-block h1 { font-size: var(--fs-2xl); font-weight: var(--weight-semibold); letter-spacing: -0.022em; line-height: var(--lh-tight); color: var(--text-1); margin-bottom: var(--space-4); }
+.page-hero-block .lead { font-size: var(--fs-md); line-height: var(--lh-normal); color: var(--text-2); max-width: 620px; }
 
 /* ── Shared heading for the embedded generator tools (signature, out-of-office).
    Sits OUTSIDE the grey tool box; one class so both stay identical. ── */

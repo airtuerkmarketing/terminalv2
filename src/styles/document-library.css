@@ -19,8 +19,9 @@
   --dl-badge-private: var(--torch);
 }
 
-/* No own max-width/margin/padding — the page renders inside .main (1680px cap,
-   auto-centered, responsive padding). A second container would fight it. */
+/* No own max-width/margin/padding — the route wraps the page in .main-inner
+   (1400px cap, auto-centered, responsive padding). A second container would
+   fight it. */
 .document-library {
   width: 100%;
 }

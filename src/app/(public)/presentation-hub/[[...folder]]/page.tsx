@@ -41,7 +41,11 @@ export default async function PresentationHubPage({ params }: Params) {
 
   if (segs.length === 0) {
     const folders = await getRootPresentationFoldersWithPreview();
-    return <PresentationHubRoot folders={folders} isSuperAdmin={isSuperAdmin} />;
+    return (
+      <div className="main-inner">
+        <PresentationHubRoot folders={folders} isSuperAdmin={isSuperAdmin} />
+      </div>
+    );
   }
 
   const current = await getPresentationFolderByPath(segs.join("/"));
@@ -54,14 +58,16 @@ export default async function PresentationHubPage({ params }: Params) {
   ]);
 
   return (
-    <PresentationFolderPage
-      key={current.id}
-      folder={current}
-      trail={trail}
-      childFolders={childFolders}
-      initialFiles={page.files}
-      initialHasMore={page.hasMore}
-      isSuperAdmin={isSuperAdmin}
-    />
+    <div className="main-inner">
+      <PresentationFolderPage
+        key={current.id}
+        folder={current}
+        trail={trail}
+        childFolders={childFolders}
+        initialFiles={page.files}
+        initialHasMore={page.hasMore}
+        isSuperAdmin={isSuperAdmin}
+      />
+    </div>
   );
 }

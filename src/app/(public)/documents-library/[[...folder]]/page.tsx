@@ -36,7 +36,11 @@ export default async function DocumentLibraryPage({ params }: Params) {
 
   if (segs.length === 0) {
     const folders = await getRootFoldersWithPreview();
-    return <DocumentLibraryRoot folders={folders} isSuperAdmin={isSuperAdmin} />;
+    return (
+      <div className="main-inner">
+        <DocumentLibraryRoot folders={folders} isSuperAdmin={isSuperAdmin} />
+      </div>
+    );
   }
 
   const current = await getFolderByPath(segs.join("/"));
@@ -49,14 +53,16 @@ export default async function DocumentLibraryPage({ params }: Params) {
   ]);
 
   return (
-    <FolderPage
-      key={current.id}
-      folder={current}
-      trail={trail}
-      childFolders={childFolders}
-      initialFiles={page.files}
-      initialHasMore={page.hasMore}
-      isSuperAdmin={isSuperAdmin}
-    />
+    <div className="main-inner">
+      <FolderPage
+        key={current.id}
+        folder={current}
+        trail={trail}
+        childFolders={childFolders}
+        initialFiles={page.files}
+        initialHasMore={page.hasMore}
+        isSuperAdmin={isSuperAdmin}
+      />
+    </div>
   );
 }

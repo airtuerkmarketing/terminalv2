@@ -13,10 +13,12 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function Home() {
   return (
-    <div className="dh-page">
-      <CloudOrbitHero />
-      <SearchAIBox />
-      {/* PLATZHALTER: hier kommen später Bento-Cards (Stufe 3+) */}
+    <div className="main-inner">
+      <div className="dh-page">
+        <CloudOrbitHero />
+        <SearchAIBox />
+        {/* PLATZHALTER: hier kommen später Bento-Cards (Stufe 3+) */}
+      </div>
     </div>
   );
 }

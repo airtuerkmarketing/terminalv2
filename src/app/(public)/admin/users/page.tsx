@@ -41,17 +41,19 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   ]);
 
   return (
-    <UserAdminPanel
-      teamMembers={teamMembers}
-      totalCount={totalCount}
-      departments={departments}
-      initialFilters={{
-        department: sp.department,
-        role: sp.role,
-        status: sp.status,
-        q: sp.q,
-      }}
-      currentUserId={identity.userId}
-    />
+    <div className="main-inner">
+      <UserAdminPanel
+        teamMembers={teamMembers}
+        totalCount={totalCount}
+        departments={departments}
+        initialFilters={{
+          department: sp.department,
+          role: sp.role,
+          status: sp.status,
+          q: sp.q,
+        }}
+        currentUserId={identity.userId}
+      />
+    </div>
   );
 }
