@@ -23,12 +23,17 @@ import { TeamDirectory } from "@/components/hardcoded/team";
 import { ReviewQuiz } from "@/components/hardcoded/review-quiz";
 import { GoldSetIndex } from "@/components/hardcoded/gold-set";
 import { AI_TEST_1, AI_TEST_2, AI_TEST_3 } from "@/components/hardcoded/ai-test-data";
+import { BrandPage } from "@/components/brand-sections";
+import { isBrandTsxSlug } from "@/lib/brand-types";
 
 const IBE_PATH = "/ibe-product-suite";
 
 /** Brand routes that use the Webflow two-column section layout (section title
- *  left ~25%, content right ~75%). IBE gets the same treatment via its own
- *  render path below. Other brands stay single-column. */
+ *  left ~25%, content right ~75%). These 4 now render via the TSX <BrandPage>
+ *  (D-064), which hardcodes the two-col layout; this set governs only the legacy
+ *  DB-block aggregator fallback below — today serving airtuerk-apix +
+ *  internal-branding (both single-column). Kept intact so the fallback stays
+ *  behaviour-identical. */
 const TWO_COL_BRAND_SLUGS = new Set([
   "airtuerk-service",
   "airtuerk-holidays",
@@ -119,6 +124,26 @@ export async function renderPage(fullPath: string) {
   // hardcoded children (APIX tools, email-signature, …) get their component
   // with embedded=true so the component suppresses its own standalone header.
   if (segments.length === 1 && singlePageSlugs.has(segments[0])) {
+    const brandSlug = segments[0];
+    // Brands ported to typed TSX sections (D-064): render hardcoded section
+    // components instead of the DB-block aggregator — no getBrandSectionsAll /
+    // per-section getBlocks reads. PageHeader + the parent page's own hero blocks
+    // stay identical, so the surrounding DOM and the anchor ids are unchanged.
+    if (isBrandTsxSlug(brandSlug)) {
+      return (
+        <>
+          <PageHeader page={page} />
+          <div className="main-inner">
+            <article>
+              {blocks.length > 0 ? <BlockRenderer blocks={blocks} /> : null}
+              <BrandPage brand={brandSlug} />
+            </article>
+          </div>
+        </>
+      );
+    }
+    // Fallback: DB-block-driven single-page brands (airtuerk-apix — its children
+    // are hardcoded APIX tools embedded as anchor sections). Kept intact.
     const sections = await getBrandSectionsAll(page.id);
     const twoCol = TWO_COL_BRAND_SLUGS.has(segments[0]);
     return (

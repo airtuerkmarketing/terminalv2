@@ -7,7 +7,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## Current State (updated 2026-06-23)
+## Current State (updated 2026-06-24)
 
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
@@ -18,7 +18,7 @@ it is append-only history (do not rewrite past entries — add new ones).
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
   `pgvector 0.8.0` + `pg_trgm 1.6` installed. Highest migration:
-  `20260623115541_persona_v2_context_entries`. Highest decision: **D-063**.
+  `20260623115541_persona_v2_context_entries`. Highest decision: **D-064**.
   RAG corpus: **438 chunks** (page 134 / pdf 159 / office 60 / brand 43 /
   knowledge_base 14) + **36 company_context** entries. Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v6 (persona v2, + 3 confluence fns).
@@ -31,9 +31,36 @@ it is append-only history (do not rewrite past entries — add new ones).
   profiles↔team_members link, `user_activity_log`); Presentation Hub rebuild (0033);
   all four APIX tool ports (0014–0016); signature + out-of-office generators;
   intelligence/RAG groundwork (0025–0029) + live `/api/search`; dead-code cleanup
-  (`c397b29`); `/internal-branding/configurator` removed (D-056).
+  (`c397b29`); `/internal-branding/configurator` removed (D-056); 4 brand pages
+  ported to typed TSX section components (D-064).
 - **Remaining:** full Admin CMS (Phase 5), IBE Tools Showcase port, RAG chat UI +
   correction workflow (File 03), email notify + gold-set re-run (File 04).
+
+---
+
+## Brand pages → TSX section components (2026-06-24)
+
+**Status:** Done on branch `brand-pages-new`. Decision **D-064**. No DB changes.
+
+The 4 single-page brands (`/airtuerk-service`, `/airtuerk-holidays`, `/atbeds`,
+`/service-center-antalya`) now render through typed TSX section components
+(`src/components/brand-sections/` + `<BrandPage>`) instead of the DB-block
+aggregator. A guarded pre-branch in `page-view.tsx` dispatches only these 4
+slugs; `airtuerk-apix` + `internal-branding` still use `getBrandSectionsAll`.
+
+Sections reuse the existing presentational block components (logo_showcase,
+logo_grid, color_palette, document_list, asset_block, description) + the
+EmailSignature tool, with asset URLs / decks / letterheads hardcoded from the
+verified live `blocks.content` (env-driven storage helpers in `src/lib/storage.ts`).
+DOM, anchor ids, CSS and client behaviour are byte-identical; ~6 per-section DB
+reads dropped per brand page. The 2 universal palettes are now constants
+(`src/lib/brand-palette.ts`).
+
+DB untouched — blocks + brand-section child pages kept as backup (a later cleanup
+migration can retire them). Verified: typecheck + build green; all 4 pages SSR
+200 with section-id order matching the DB child slugs (incl. Antalya's singular
+`logo`); two-col `<h2>` direct-child layout + sidebar anchors intact; the
+`airtuerk-apix` + `internal-branding` fallback render unchanged.
 
 ---
 
