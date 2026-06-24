@@ -53,11 +53,11 @@
   --radius-xl: 12px; --radius-full: 9999px;
   /* Larger named radii (numeric, consistent with the 6/8/10/12 scale) for
      generous containers like the signature tool box. */
-  --radius-14: 14px; --radius-16: 16px; --radius-20: 20px;
+  --radius-14: 14px; --radius-16: 16px; --radius-20: 20px; --radius-22: 22px;
   /* Card-System (UX-Sweep 2026-06-18) — alias existing scale tokens so values
      stay identical (no visual drift); gives card/button/section one named knob. */
-  --button-radius: var(--radius-sm);   /* 8px — Buhara: downloads "eckig" */
-  --card-radius: var(--radius-lg);     /* 16px — library card radius */
+  --button-radius: var(--radius-sm);   /* 6px — Buhara: downloads "eckig" */
+  --card-radius: var(--radius-lg);     /* 10px — library card radius */
   --card-padding: var(--space-5);      /* 20px */
   --card-padding-sm: var(--space-3);   /* 12px */
   --card-gap: var(--space-4);          /* 16px */

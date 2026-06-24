@@ -17,7 +17,7 @@
   margin-top: var(--space-6);
   padding: var(--space-6);
   background: var(--surface-muted);
-  border-radius: var(--radius-16);
+  border-radius: var(--radius-22);
   position: relative;
   max-width: 100%;
   overflow: hidden;
@@ -115,7 +115,7 @@
 /* ── Preview column ── */
 .sig-preview-wrap { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 .sig-card {
-  background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: var(--radius-md);
+  background: var(--surface-flat); border: 1px solid var(--hairline); border-radius: 18px; /* literal — between --radius-16 and --radius-20 */
   overflow: hidden; opacity: 0.62; cursor: pointer; min-width: 0;
   transition: box-shadow 250ms var(--ease-smooth), transform 250ms var(--ease-smooth), border-color 250ms var(--ease-smooth), opacity 250ms var(--ease-smooth);
 }
@@ -137,7 +137,7 @@
 /* Copy button: solid black (signature tool only — not global), white label. */
 .sig-copy-btn {
   flex-shrink: 0; height: 32px; padding: 0 14px; background: #000; color: #fff;
-  border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: var(--fs-sm); font-weight: var(--weight-semibold);
+  border: none; border-radius: var(--radius-full); font-family: inherit; font-size: var(--fs-sm); font-weight: var(--weight-semibold);
   cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
   transition: background-color 150ms var(--ease-smooth), transform 100ms var(--ease-smooth);
 }
