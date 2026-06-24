@@ -73,6 +73,31 @@
 .rich-text ul, .rich-text ol { margin: 0 0 var(--space-4) var(--space-5); }
 .rich-text li { margin-bottom: var(--space-2); }
 
+/* Lead description: the FIRST block of a brand/page body (the parent page's own
+   blocks) is rendered as a lead-statement section — à la the reference site.
+   The selector targets only the parent page's BlockRenderer (`article >
+   .page-blocks`, a direct child); per-section BlockRenderers live under
+   `article > section.anchor-section > .page-blocks`, so the `>` chain excludes
+   them and later/in-section description blocks keep the default body style.
+   NOTE: :first-of-type / `article > .rich-text` (as first proposed) do NOT work
+   here — .rich-text is a <div> nested inside .page-blocks > .block, and every
+   .block holds its rich-text as its first div, so :first-of-type would match
+   every description, not just the first. `:first-child` on the block wrapper is
+   the correct "first block only" anchor. */
+.main-inner > article > .page-blocks > :first-child .rich-text {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--text-1);
+  max-width: none;
+  padding: 64px 0;
+  margin: 0;
+  border-bottom: 1px solid var(--hairline);
+}
+/* Neutralise the trailing paragraph margin so the bottom gap is exactly the
+   64px padding (the base .rich-text p adds margin-bottom otherwise). */
+.main-inner > article > .page-blocks > :first-child .rich-text > :last-child { margin-bottom: 0; }
+
 /* ── page_nav ── */
 .page-nav { display: flex; justify-content: space-between; gap: var(--space-4); padding-top: var(--space-8); border-top: 1px solid var(--separator); margin-top: var(--space-12); }
 .page-nav a { display: flex; flex-direction: column; gap: 4px; text-decoration: none; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); transition: background 150ms var(--ease-smooth); }
