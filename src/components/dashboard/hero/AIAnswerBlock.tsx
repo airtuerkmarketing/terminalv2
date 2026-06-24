@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, ExternalLink } from "lucide-react";
+import { Loader2, BookOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTypewriterText } from "@/components/dashboard/hero/useTypewriterText";
@@ -108,21 +108,26 @@ function AITurnAnswer({
       )}
 
       {finished && answer.quellen.length > 0 && (
-        <div className="ai-chat-sources-row">
-          {answer.quellen.map((s, i) => (
-            <a
-              key={`${s.dokument_titel}-${i}`}
-              className="ai-chat-source-chip"
-              href={s.link}
-              target={s.link.startsWith("http") ? "_blank" : undefined}
-              rel={s.link.startsWith("http") ? "noreferrer" : undefined}
-              title={s.dokument_titel}
-            >
-              <ExternalLink className="ai-chat-source-chip-icon" aria-hidden="true" />
-              <span className="ai-chat-source-chip-title">{s.dokument_titel}</span>
-            </a>
-          ))}
-        </div>
+        <details className="ai-chat-sources-toggle">
+          <summary aria-label={`${answer.quellen.length} Quellen anzeigen`}>
+            <BookOpen size={14} aria-hidden="true" />
+            <span className="ai-chat-sources-count">{answer.quellen.length}</span>
+          </summary>
+          <div className="ai-chat-sources-popover">
+            {answer.quellen.map((s, i) => (
+              <a
+                key={`${s.dokument_titel}-${i}`}
+                className="ai-chat-source-chip"
+                href={s.link}
+                target={s.link.startsWith("http") ? "_blank" : undefined}
+                rel={s.link.startsWith("http") ? "noreferrer" : undefined}
+                title={s.dokument_titel}
+              >
+                {s.dokument_titel}
+              </a>
+            ))}
+          </div>
+        </details>
       )}
 
       {/* Web-Search Button (Workstream 1 skeleton — full impl in WS4) */}

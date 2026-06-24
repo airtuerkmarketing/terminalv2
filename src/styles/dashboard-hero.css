@@ -492,6 +492,7 @@
   font-size: var(--fs-base);
 }
 .ai-chat-a {
+  position: relative;
   background: var(--surface-flat);
   border-radius: var(--card-radius);
   box-shadow: var(--shadow-rest);
@@ -626,46 +627,76 @@
 .ai-chat-answer h3 {
   font-size: 14px;
 }
-/* Source citations as compact mini-chips (UX polish) — large cards with a
-   CONTEXT badge + "Stand" label dominated the answer (60-80px each); 4-6 of
-   them made the chat unreadable. Now: one-line gray chips, ~28px tall, title
-   only. Inline [Quelle: …] citations stay in the prose; the chip still links
-   out to the Confluence/KB source. */
-.ai-chat-sources-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
+/* Source citations collapsed behind a BookOpen icon (top-right of the answer
+   card); click reveals the source links in a popover. 4-6 inline chips per
+   answer cluttered the chat — now one unobtrusive icon with a count badge.
+   Native <details>/<summary> for accessibility + mobile-friendly click toggle.
+   Inline [Quelle: …] citations stay in the prose. */
+.ai-chat-sources-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
 }
-.ai-chat-source-chip {
+.ai-chat-sources-toggle summary {
+  list-style: none;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  max-width: 240px;
-  padding: 4px 10px;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   background: var(--surface-muted);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  transition: background 150ms var(--ease-smooth),
+              color 150ms var(--ease-smooth);
+}
+.ai-chat-sources-toggle summary::-webkit-details-marker {
+  display: none;
+}
+.ai-chat-sources-toggle summary:hover,
+.ai-chat-sources-toggle[open] summary {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ai-chat-sources-count {
+  font-variant-numeric: tabular-nums;
+}
+.ai-chat-sources-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 280px;
+  max-width: 360px;
+  padding: var(--space-3);
+  background: var(--surface-strong);
   border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-hover);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 100;
+}
+.ai-chat-source-chip {
+  display: block;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  color: var(--text-2);
   font-size: 12px;
-  color: var(--text-3);
   text-decoration: none;
-  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   transition: background 150ms var(--ease-smooth),
               color 150ms var(--ease-smooth);
 }
 .ai-chat-source-chip:hover {
-  background: var(--surface-strong);
-  color: var(--text-2);
-}
-.ai-chat-source-chip-icon {
-  width: 12px;
-  height: 12px;
-  flex-shrink: 0;
-}
-.ai-chat-source-chip-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .ai-chat-confidence {
   display: flex;
@@ -828,6 +859,10 @@
     left: 0;
     width: auto;
     border-left: 0;
+  }
+  .ai-chat-sources-popover {
+    min-width: 240px;
+    max-width: calc(100vw - 32px);
   }
 }
 
