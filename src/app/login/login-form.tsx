@@ -22,13 +22,11 @@ export default function LoginForm({
   }
 
   return (
-    <form action={onSubmit} className="space-y-4">
+    <form action={onSubmit} className="login-form">
       <input type="hidden" name="next" value={next || "/"} />
 
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-          Email
-        </label>
+      <div className="login-field">
+        <label htmlFor="email" className="login-label">Email</label>
         <input
           id="email"
           name="email"
@@ -36,14 +34,13 @@ export default function LoginForm({
           autoComplete="email"
           required
           disabled={isPending}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-100"
+          className="login-input"
+          placeholder="name@airtuerk.de"
         />
       </div>
 
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-          Password
-        </label>
+      <div className="login-field">
+        <label htmlFor="password" className="login-label">Passwort</label>
         <input
           id="password"
           name="password"
@@ -51,32 +48,24 @@ export default function LoginForm({
           autoComplete="current-password"
           required
           disabled={isPending}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-100"
+          className="login-input"
+          placeholder="••••••••"
         />
       </div>
 
       {error && (
-        <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="login-error" role="alert">
           {error}
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:opacity-60"
-      >
-        {isPending ? "Signing in..." : "Sign in"}
+      <button type="submit" disabled={isPending} className="login-submit">
+        {isPending ? "Wird angemeldet..." : "Anmelden"}
       </button>
 
-      <div className="text-center">
-        <a
-          href="/login/forgot-password"
-          className="text-xs text-gray-500 underline underline-offset-4 hover:text-gray-700"
-        >
-          Passwort vergessen?
-        </a>
-      </div>
+      <a href="/login/forgot-password" className="login-link">
+        Passwort vergessen?
+      </a>
     </form>
   );
 }

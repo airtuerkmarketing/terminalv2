@@ -197,7 +197,12 @@ export function Sidebar({
           {/* Fixed top zone: logo + Dashboard (does not scroll). */}
           <div className="sidebar-top">
             <div className="brand-mark">
-              <div className="name">terminal</div>
+              <Link href="/" className="brand-logo-link" aria-label="terminal home" onClick={closeDrawer}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logos/terminal/wordmark.svg" alt="terminal" className="brand-logo-wordmark" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logos/terminal/icon-32.svg" alt="terminal" className="brand-logo-icon" />
+              </Link>
               <button
                 type="button"
                 className="collapse-btn"

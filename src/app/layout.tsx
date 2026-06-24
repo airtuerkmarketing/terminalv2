@@ -17,6 +17,9 @@ const inter = Inter({
 // composes "<title> · terminalv2" — so no title.template here (it would
 // double-suffix those pages).
 export const metadata: Metadata = {
+  // Resolves relative og:image/twitter:image URLs to absolute for shared
+  // links (without it the build falls back to localhost). Prod canonical.
+  metadataBase: new URL("https://www.airtuerk.dev"),
   title: "terminal · airtuerk Brand Hub",
   description:
     "Internal brand and resource hub for airtuerk and the AERTiCKET Group — brand guidelines, assets, documents and tools.",
@@ -27,6 +30,19 @@ export const metadata: Metadata = {
     apple: [
       { url: "/apple-touch-icon.svg", type: "image/svg+xml" },
     ],
+  },
+  openGraph: {
+    title: "terminal",
+    description: "Internal brand and resource hub for airtuerk Service GmbH",
+    images: [
+      { url: "/logos/terminal/icon-250.svg", width: 250, height: 250, alt: "terminal" },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "terminal",
+    description: "Internal brand and resource hub for airtuerk Service GmbH",
+    images: ["/logos/terminal/icon-250.svg"],
   },
   robots: {
     index: false,
