@@ -333,16 +333,40 @@
   font-weight: var(--weight-semibold);
 }
 
-/* ── AI chat window (right-side sliding side panel; non-modal) ──
+/* ── AI chat overlay (dark blurred backdrop) ──
+   Dims + blurs the page behind the chat so the conversation owns the focus.
+   Always mounted (fades via opacity); pointer-events gate stops it eating
+   clicks while hidden. Click anywhere on it closes the chat. Sits just under
+   the panel (990) but above the shell sidebar (z 50/60); the correction modal
+   stays on top at z 1000. */
+.ai-chat-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 990;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms var(--ease-smooth);
+}
+.ai-chat-overlay.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── AI chat window (right-side sliding panel) ──
    Slides in from the right edge on submit; reuses the house drawer pattern
-   (translateX + --ease-smooth). Layers above the shell sidebar (z 50/60). */
+   (translateX + --ease-smooth). Sits above its backdrop (995); the correction
+   modal launched from inside stays above at z 1000. */
 .ai-chat-window {
   position: fixed;
   top: 0;
   right: 0;
   height: 100dvh;
-  width: min(660px, 100vw);
-  z-index: 80;
+  width: 80vw;
+  max-width: 1600px;
+  z-index: 995;
   display: flex;
   flex-direction: column;
   background: var(--surface-flat);
@@ -358,6 +382,11 @@
 .ai-chat-window.is-open {
   transform: translateX(0);
 }
+@media (max-width: 1024px) {
+  .ai-chat-window {
+    width: 90vw;
+  }
+}
 
 .ai-chat-header {
   flex-shrink: 0;
@@ -369,8 +398,10 @@
   border-bottom: 1px solid var(--separator);
 }
 .ai-chat-title {
+  margin: 0;
   font-size: var(--fs-md);
   font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
   color: var(--text-1);
 }
 .ai-chat-header-actions {
@@ -463,8 +494,8 @@
   font-size: var(--fs-base);
 }
 .ai-chat-a {
+  position: relative;
   background: var(--surface-flat);
-  border: 1px solid var(--hairline);
   border-radius: var(--card-radius);
   box-shadow: var(--shadow-rest);
   padding: var(--card-padding);
@@ -561,46 +592,113 @@
   padding: 0;
   background: none;
 }
-/* Source citations as compact mini-chips (UX polish) — large cards with a
-   CONTEXT badge + "Stand" label dominated the answer (60-80px each); 4-6 of
-   them made the chat unreadable. Now: one-line gray chips, ~28px tall, title
-   only. Inline [Quelle: …] citations stay in the prose; the chip still links
-   out to the Confluence/KB source. */
-.ai-chat-sources-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
+/* Tables (remark-gfm) + headings — system prompt v7 asks Claude to structure
+   comparisons / multi-person data as tables and status overviews with icons. */
+.ai-chat-answer table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-3) 0;
+  font-size: 13px;
 }
-.ai-chat-source-chip {
+.ai-chat-answer th {
+  background: var(--surface-muted);
+  font-weight: var(--weight-semibold);
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--hairline);
+  color: var(--text-1);
+}
+.ai-chat-answer td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--text-2);
+}
+.ai-chat-answer tr:last-child td {
+  border-bottom: none;
+}
+.ai-chat-answer h2,
+.ai-chat-answer h3 {
+  font-weight: var(--weight-semibold);
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-2);
+  color: var(--text-1);
+}
+.ai-chat-answer h2 {
+  font-size: 16px;
+}
+.ai-chat-answer h3 {
+  font-size: 14px;
+}
+/* Source citations collapsed behind a BookOpen icon (top-right of the answer
+   card); click reveals the source links in a popover. 4-6 inline chips per
+   answer cluttered the chat — now one unobtrusive icon with a count badge.
+   Native <details>/<summary> for accessibility + mobile-friendly click toggle.
+   Inline [Quelle: …] citations stay in the prose. */
+.ai-chat-sources-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+}
+.ai-chat-sources-toggle summary {
+  list-style: none;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  max-width: 240px;
-  padding: 4px 10px;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   background: var(--surface-muted);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  transition: background 150ms var(--ease-smooth),
+              color 150ms var(--ease-smooth);
+}
+.ai-chat-sources-toggle summary::-webkit-details-marker {
+  display: none;
+}
+.ai-chat-sources-toggle summary:hover,
+.ai-chat-sources-toggle[open] summary {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ai-chat-sources-count {
+  font-variant-numeric: tabular-nums;
+}
+.ai-chat-sources-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 280px;
+  max-width: 360px;
+  padding: var(--space-3);
+  background: var(--surface-strong);
   border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-hover);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 100;
+}
+.ai-chat-source-chip {
+  display: block;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  color: var(--text-2);
   font-size: 12px;
-  color: var(--text-3);
   text-decoration: none;
-  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   transition: background 150ms var(--ease-smooth),
               color 150ms var(--ease-smooth);
 }
 .ai-chat-source-chip:hover {
-  background: var(--surface-strong);
-  color: var(--text-2);
-}
-.ai-chat-source-chip-icon {
-  width: 12px;
-  height: 12px;
-  flex-shrink: 0;
-}
-.ai-chat-source-chip-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .ai-chat-confidence {
   display: flex;
@@ -653,7 +751,9 @@
   color: var(--text-1);
   padding: 10px 12px;
   min-height: 42px;
-  max-height: 140px;
+  /* ~8 rows; JS auto-grow sets height to scrollHeight, this caps it and
+     overflow-y:auto scrolls beyond. */
+  max-height: 190px;
   overflow-y: auto;
   transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }
@@ -761,6 +861,10 @@
     left: 0;
     width: auto;
     border-left: 0;
+  }
+  .ai-chat-sources-popover {
+    min-width: 240px;
+    max-width: calc(100vw - 32px);
   }
 }
 

@@ -16,6 +16,7 @@ import { QuickChips } from "@/components/dashboard/hero/QuickChips";
 import { SearchDropdown, ASK_AI_ID } from "@/components/dashboard/hero/SearchDropdown";
 import { AIChatWindow } from "@/components/dashboard/hero/AIChatWindow";
 import { CorrectionModal } from "@/components/dashboard/hero/CorrectionModal";
+import { createClient } from "@/lib/supabase/client";
 import {
   DEFAULT_MODEL_ID,
   LS_HISTORY,
@@ -69,6 +70,10 @@ export function SearchAIBox() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [correctTurn, setCorrectTurn] = useState<AiTurn | null>(null);
 
+  // One browser client for the component's lifetime — used to subscribe to auth
+  // state changes (clears the chat on login/logout, see effect below).
+  const supabase = useMemo(() => createClient(), []);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const skipPersist = useRef(true);
@@ -100,6 +105,46 @@ export function SearchAIBox() {
       /* ignore corrupt/unavailable storage */
     }
   }, []);
+
+  // ── Clear chat on auth state change (security: no PII leak across sessions
+  //    on a shared device) ──
+  // Wipe terminal_chat_history + reset turns/sessionId on logout, and on a
+  // login by a *different* identity. terminal_ki_model is a harmless UI
+  // preference and is kept. The lastUserId guard ignores the spurious SIGNED_IN
+  // refires (token refresh, tab refocus, initial session restore) so a returning
+  // user's own restored history isn't wiped on every page load.
+  useEffect(() => {
+    const clearChat = () => {
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.removeItem(LS_HISTORY);
+        } catch {
+          /* ignore unavailable storage */
+        }
+      }
+      skipPersist.current = true; // don't immediately re-persist the cleared state
+      setTurns([]);
+      setSessionId(null);
+    };
+
+    let lastUserId: string | null | undefined;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      const uid = session?.user?.id ?? null;
+      if (event === "INITIAL_SESSION") {
+        lastUserId = uid; // seed; never clears the restored history
+      } else if (event === "SIGNED_OUT") {
+        clearChat();
+        lastUserId = null;
+      } else if (event === "SIGNED_IN") {
+        if (lastUserId !== undefined && uid !== lastUserId) clearChat();
+        lastUserId = uid;
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
   // ── Keep turnsRef current (read by submitAi to build conversation history) ──
   useEffect(() => {

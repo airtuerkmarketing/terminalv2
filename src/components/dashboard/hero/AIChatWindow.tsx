@@ -57,6 +57,18 @@ export function AIChatWindow({
     if (open) inputRef.current?.focus();
   }, [open]);
 
+  // Auto-grow the follow-up input as the draft changes (reset to 1 row after
+  // send, when draft → ""). Height tracks content; CSS max-height caps it at
+  // ~8 rows and overflow-y:auto scrolls beyond. Hand-rolled (no dependency) —
+  // react-textarea-autosize would pull a transitive dep blocked by the repo's
+  // minimumReleaseAge supply-chain policy.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [draft]);
+
   // Reset the "Neuer Chat" arm whenever the panel closes.
   useEffect(() => {
     if (!open) setConfirming(false);
@@ -116,17 +128,24 @@ export function AIChatWindow({
   }
 
   return (
-    <aside
-      ref={panelRef}
-      className={`ai-chat-window${open ? " is-open" : ""}`}
-      role="dialog"
-      aria-label="KI-Chat"
-      // `inert` while closed removes the off-screen panel from the tab order and
-      // a11y tree (it still animates) — prevents tabbing into hidden controls.
-      inert={!open}
-    >
+    <>
+      <div
+        className={`ai-chat-overlay${open ? " is-visible" : ""}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside
+        ref={panelRef}
+        className={`ai-chat-window${open ? " is-open" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ai-chat-title"
+        // `inert` while closed removes the off-screen panel from the tab order and
+        // a11y tree (it still animates) — prevents tabbing into hidden controls.
+        inert={!open}
+      >
       <header className="ai-chat-header">
-        <span className="ai-chat-title">KI-Chat</span>
+        <h2 id="ai-chat-title" className="ai-chat-title">airtuerk Intelligence</h2>
         <div className="ai-chat-header-actions">
           <button
             type="button"
@@ -181,6 +200,7 @@ export function AIChatWindow({
           <ArrowUp className="ai-chat-send-icon" aria-hidden="true" />
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
