@@ -1040,6 +1040,31 @@ export async function deactivateUser(userId: string): Promise<void> {
   });
 }
 
+// ── 9b. Export audit (super-admin, log-only) ─────────────────────────────────
+
+/**
+ * Record a "users exported to CSV" action in the activity log. The CSV is built +
+ * downloaded entirely client-side (admin-users-csv.ts); this server function is
+ * the audit trail only. requireSuperAdmin (the export lives in the super-admin
+ * panel). A bulk export has no single subject, so resource_type/resource_id stay
+ * null and the selection size + scope go in metadata. Reuses logActivity (the
+ * canonical, service-role, never-throws logger) so a log failure never surfaces
+ * as an export failure — the file is already in the user's hands.
+ */
+export async function exportUsersLog(params: {
+  count: number;
+  scope: "selection" | "filtered";
+}): Promise<void> {
+  const identity = await requireSuperAdmin();
+  await logActivity({
+    userId: identity.userId,
+    action: "export_users",
+    resourceType: null,
+    resourceId: null,
+    metadata: { count: params.count, scope: params.scope },
+  });
+}
+
 // ── 10. Activity logger (service-role insert) ────────────────────────────────
 
 /**

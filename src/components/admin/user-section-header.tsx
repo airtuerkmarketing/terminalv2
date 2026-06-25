@@ -1,4 +1,5 @@
 import type { LoginStatus } from "@/lib/users";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Status breakdown shown in the section header, in a fixed order. "ausstehend"
 // is the human label for not_invited (no invite sent yet).
@@ -21,6 +22,10 @@ export function UserSectionHeader({
   colSpan,
   invitableCount,
   bulkDisabled,
+  selectAllChecked,
+  selectAllIndeterminate,
+  selectDisabled,
+  onToggleSelectAll,
   onToggle,
   onBulkInvite,
 }: {
@@ -35,6 +40,13 @@ export function UserSectionHeader({
   /** True while any bulk-invite run is in flight — disables this button to
    *  prevent overlapping runs across sections. */
   bulkDisabled: boolean;
+  /** Section select-all checkbox: all section rows are selected. */
+  selectAllChecked: boolean;
+  /** Some-but-not-all section rows selected → indeterminate. */
+  selectAllIndeterminate: boolean;
+  /** Disabled while the section is collapsed (its rows aren't selectable). */
+  selectDisabled: boolean;
+  onToggleSelectAll: () => void;
   onToggle: () => void;
   onBulkInvite: () => void;
 }) {
@@ -44,6 +56,15 @@ export function UserSectionHeader({
 
   return (
     <tr className="uap-section-header-row">
+      <td className="uap-col-select">
+        <Checkbox
+          checked={selectAllChecked}
+          indeterminate={selectAllIndeterminate}
+          disabled={selectDisabled}
+          onChange={() => onToggleSelectAll()}
+          aria-label={`Alle in „${label}“ auswählen`}
+        />
+      </td>
       <td colSpan={colSpan}>
         <div className="uap-section-header-inner">
           <button

@@ -5,6 +5,7 @@ import { requireAdmin, requireSuperAdmin } from "@/lib/auth";
 import {
   bulkInvite,
   createTeamMember,
+  exportUsersLog,
   getTeamMemberBrands,
   getUserActivityLog,
   inviteUser,
@@ -195,6 +196,29 @@ export async function createTeamMemberAction(input: {
     const { teamMemberId } = await createTeamMember(input);
     revalidatePath("/admin/users");
     return { ok: true, teamMemberId };
+  } catch (err) {
+    return { ok: false, error: toGermanMessage(err) };
+  }
+}
+
+// ── Export users CSV (audit log) ─────────────────────────────────────────────
+
+export type ExportResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Audit hook for the bulk CSV export (Phase 5). The file itself is built +
+ * downloaded client-side; this only records the action in user_activity_log.
+ * requireSuperAdmin gates entry (doppel-guard: exportUsersLog re-checks). No
+ * revalidatePath — an export mutates no on-page data.
+ */
+export async function exportUsersAction(params: {
+  count: number;
+  scope: "selection" | "filtered";
+}): Promise<ExportResult> {
+  try {
+    await requireSuperAdmin();
+    await exportUsersLog(params);
+    return { ok: true };
   } catch (err) {
     return { ok: false, error: toGermanMessage(err) };
   }
