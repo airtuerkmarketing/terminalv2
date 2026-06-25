@@ -122,6 +122,8 @@
      faint inset highlight so the marks read as physical discs. */
   --shadow-coin: inset 0 1px 2px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.10);
   --shadow-coin-center: inset 0 1px 2px rgba(0,0,0,0.03), 0 6px 18px rgba(0,0,0,0.12);
+  /* Dashboard Such+KI-Box — stronger lift than the card shadows (Figma). */
+  --shadow-searchbox: 0px 4px 15px rgba(0,0,0,0.15);
 }
 
 :root[data-theme="ios18-dark"] {
@@ -161,4 +163,6 @@
   /* Coin shadows — opacity scaled up for dark mode visibility (see light block). */
   --shadow-coin: inset 0 1px 2px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.40);
   --shadow-coin-center: inset 0 1px 2px rgba(0,0,0,0.10), 0 6px 18px rgba(0,0,0,0.45);
+  /* Search box lift — opacity scaled up for dark mode (see light block). */
+  --shadow-searchbox: 0px 4px 20px rgba(0,0,0,0.5);
 }

@@ -7,8 +7,10 @@ import { NavIcon } from "@/components/shell/icons";
  * core = airtuerk "at" glyph; satellites = Holidays, atBeds, Service, Center
  * (Service + Center share the "at" glyph — that's the real brand mark). */
 
-// Placeholder until a profile lookup lands — no auth read in this stage.
-const GREETING_NAME = "Emirkan";
+// Static fallback greeting for now. TODO: later swap for the logged-in user's
+// name (profile lookup — an auth/DB step, not part of this stage). Kept as a
+// single const so that future change is a one-liner.
+const GREETING_NAME = "Kollege";
 
 export function GreetingOrbit() {
   return (
