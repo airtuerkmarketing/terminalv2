@@ -31,6 +31,42 @@ const KNOWLEDGE_BASE_VERSION = '1.2'
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
 
+/**
+ * SECRET_PAGE_DENYLIST: Pages excluded from RAG embedding.
+ *
+ * TWO GROUPS — different removal criteria:
+ *
+ * PERMANENT (inherently sensitive, never embed):
+ *   444009709  Operativ FAQ        — passwords + cards + IBANs
+ *   768213063  Konti 2026 CC       — credit cards page
+ *
+ * TEMPORARY (legit ops pages with embedded card; remove from
+ * denylist AFTER Confluence source cleanup + manual re-embed):
+ *   444007659  Involatus Genius    — IATA table + card in one chunk
+ *   444007669  Involatus Konti     — Storno rules + card in one chunk
+ *
+ * Removal procedure for TEMPORARY group:
+ *   1. Confirm Confluence source is card-free (via Confluence UI)
+ *   2. Remove page_id from this set
+ *   3. Trigger embed-knowledge confluence handler manually
+ *   4. Verify new chunks contain no card data
+ *
+ * Authority: Buhara Demir (CMO), consulted with Ahmet Özbek (CFO).
+ * See spec/AUDIT-KORPUS-2026-06-26.md AUDIT-001
+ * See spec/d1-pre-snapshot-2026-06-26.md
+ */
+const PERMANENT_SENSITIVE_PAGES = new Set<string>([
+  '444009709', // Operativ FAQ        — passwords + cards + IBANs
+  '768213063', // Konti 2026 CC       — credit cards page
+])
+const TEMPORARY_SENSITIVE_PAGES = new Set<string>([
+  '444007659', // Involatus Genius    — IATA table + card in one chunk
+  '444007669', // Involatus Konti     — Storno rules + card in one chunk
+])
+function isSensitivePage(pageId: string): boolean {
+  return PERMANENT_SENSITIVE_PAGES.has(pageId) || TEMPORARY_SENSITIVE_PAGES.has(pageId)
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
@@ -223,6 +259,14 @@ async function embedConfluence(
   const errors: Array<{ source_id: string; error: string }> = []
 
   for (const page of pages || []) {
+    // AUDIT-001: never embed pages carrying sensitive payment/access data.
+    // See SECRET_PAGE_DENYLIST above (PERMANENT + TEMPORARY groups).
+    if (isSensitivePage(String(page.page_id))) {
+      console.log(
+        `[embed-knowledge] skipping denylisted page ${page.page_id} (${page.title}) — AUDIT-001`,
+      )
+      continue
+    }
     try {
       const chunks = chunkText(page.body_text, {
         page_id: page.page_id,
