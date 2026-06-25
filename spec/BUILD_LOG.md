@@ -7,22 +7,30 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## Current State (updated 2026-06-24)
+## Current State (updated 2026-06-25)
 
+- **HEAD:** `14c0b86` (`main`, == origin/main). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
 - **Database:** 28 tables + the `profiles_v` view (RAG foundation added 6:
   `company_context`, `confluence_chunks`, `brand_chunks`, `ai_chat_sessions`,
-  `ai_chat_messages`, `ai_corrections`). **55 pages**, **15 brands**,
+  `ai_chat_messages`, `ai_corrections`). **55 pages** (all published), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` installed. Highest migration:
-  `20260623115541_persona_v2_context_entries`. Highest decision: **D-064**.
-  RAG corpus: **438 chunks** (page 134 / pdf 159 / office 60 / brand 43 /
-  knowledge_base 14) + **36 company_context** entries. Edge functions:
+  `pgvector 0.8.0` + `pg_trgm 1.6` installed. **59 migrations**, highest:
+  `20260625080714_rename_brand_section_titles`. Highest decision: **D-064**.
+  RAG corpus: **410 chunks** (confluence 367 [page 134 / pdf 159 / office 60 /
+  knowledge_base 14] + brand 43) + **36 company_context** entries. Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v6 (persona v2, + 3 confluence fns).
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
+- **Data counts (2026-06-25):** team_members **63**, profiles **3 (all super_admin,
+  0 admin/user)**, active auth users **3**, assets **718**, blocks **43**,
+  gold_set_answers **84** (92.9% accuracy baseline), ai_chat_sessions **53** /
+  messages **144**, ai_corrections **0**.
+- **⚠️ V1 blocker:** prod `profiles` has only **3 rows (all super_admin)** — the
+  Stage-8 nine-key-user seed (`684d67f`) never reached prod; must be re-run before
+  the 2026-08-01 demo (details in the 2026-06-25 finding below).
 - **Auth/roles:** `super_admin | admin | user`; RLS via `is_admin()` /
   `is_super_admin()` / `get_profile_role()`; profile role-changes are
   super-admin-only (D-055).
@@ -32,9 +40,82 @@ it is append-only history (do not rewrite past entries — add new ones).
   all four APIX tool ports (0014–0016); signature + out-of-office generators;
   intelligence/RAG groundwork (0025–0029) + live `/api/search`; dead-code cleanup
   (`c397b29`); `/internal-branding/configurator` removed (D-056); 4 brand pages
-  ported to typed TSX section components (D-064).
-- **Remaining:** full Admin CMS (Phase 5), IBE Tools Showcase port, RAG chat UI +
-  correction workflow (File 03), email notify + gold-set re-run (File 04).
+  ported to typed TSX section components (D-064); 3 cleanup wellen on 2026-06-25
+  (lint+avatars, test-person+domain removal, brand sub-title rename).
+- **Remaining:** AP3 Phase 5 (Multi-Select + Bulk-Actions + CSV export) — NEXT;
+  AP3 Phases 7–12 (per-section bulk-invite, quick-actions, density toggle,
+  permissions matrix, per-user permissions, activity-log integration); RAG WS2
+  (feedback+CorrectionModal finish) + WS3/WS4 (web-search) + S5 company-context UI
+  + S8 email-notify resend + S9 gold-set re-run + S10 demo polish; Audit fixes
+  P0a (cookie-free public-read) + P0c (proxy.ts) + P1 (APIX dynamic + RAG
+  robustness, 4 open decisions); Out-of-Office as its own brand section (Block 5b);
+  2 non-blocking bulk-invite fixes (`use-bulk-invite.ts`).
+
+---
+
+## Cleanup-Welle 3 — Brand-page sub-title rename (2026-06-25, `14c0b86`)
+
+**Status:** Shipped + live. Atomic DB+TSX commit (migration `20260625080714` + 3 TSX
+files: `brand-data.ts`, `brand-page.tsx`, `linkedin-banner-section.tsx`). Builds on D-064.
+
+Shortened the brand sub-section titles for sidebar/heading consistency. The sidebar
+anchor labels read DB `pages.title`; the in-page `<h2>` on the 4 TSX brands is
+hardcoded in TSX — so both surfaces were renamed together to stay in sync. **18 rows**
+renamed: Logo & Fav Icon→Logos, Colors Logo→Print Colors, Colors UX/UI→UX Colors,
+Presentation Master Deck→Master Deck, Email Signature→Signature, LinkedIn Banner→
+LinkedIn. Antalya angeglichen (Logo→Logos, Colors→Print Colors); anchor slugs unchanged
+(URL-stable). The `email-signature.tsx` generator heading "Your Signature" was
+deliberately left untouched (its `title` prop is dead/unused). Out-of-Office as its own
+section is a follow-up welle (it exists today embedded in `email-signature.tsx:705`).
+Vercel `dpl_ABXRfWLLmcv7K4MrQtWd4vdUsw4Z` READY ~21s.
+
+---
+
+## Cleanup-Welle 2 — Test person + airtuerk.online domain removed (2026-06-25, `66676a8`)
+
+**Status:** Shipped + live. Atomic migration `20260625074531` + `corp-email.ts`.
+
+Removed the test person `287d1b87` (`terminal@airtuerk.online`, "Test Terminal",
+role=user) — its linked auth user + profile + activity, in FK-respecting order — and
+dropped `airtuerk.online` from `CORP_EMAIL_PATTERN` (incl. the TEMPORARY scaffolding
+marker). The two were coupled (the test person was the only `@airtuerk.online` user).
+**team_members 64→63, profiles 4→3.** Verified read-only first (0 owned content, 0
+`team_member_brands`, role=user not admin). Vercel `dpl_3wvA2x15oMagm94GWVLKnVKN7GY7`
+READY ~20s.
+
+---
+
+## Cleanup-Welle 1 — Lint + stale avatars (2026-06-25, `bc51762`)
+
+**Status:** Shipped + live.
+
+Fixed the lone `no-html-link-for-pages` lint error in `login-form.tsx:66` (`<a>` →
+`next/link` `<Link>` for client-side nav). Deleted 6 orphaned avatar files in
+`images/team/*.png` via the Storage REST API (0 DB refs in `assets`, 0 code refs;
+superseded by the `avatars/<uuid>/avatar.<ext>` bucket). Lint baseline 20→19 problems.
+Vercel `dpl_E9pUuRmpCLLu3WUCxDjqr3J1M23D` READY ~22s.
+
+---
+
+## Production finding + deferred items (2026-06-25 project-history sweep)
+
+**⚠️ Critical V1 blocker — prod `profiles` = 3 (all super_admin).** A read-only sweep
+confirmed prod has only 3 profiles, all super_admin, **0 admins / 0 users**. The Stage-8
+nine-key-user pre-seed (`684d67f`) never reached prod — it only ran in a non-prod env.
+**Stage-8 pre-seeding must be re-run on prod before the 2026-08-01 demo** for the
+User-Management panel to show real data.
+
+**Deferred (non-blocking):**
+- `dev@airtuerk.de` row in `user_role_defaults` → remove after **2026-08-02** (post-demo;
+  dev@ is load-bearing as the preview test account until then).
+- ~30 legacy `00NN`-named migration files → rename to timestamped post-demo (cosmetic;
+  md5-identical to the ledger versions; local==DB==**59** count parity holds).
+- Lint drift (18 errors + 1 warning) → own task later (Next 16 `build` skips ESLint).
+- Dead prop `title="Email Signature"` in `email-signature-section.tsx:12` → cosmetic.
+- 2 stale code comments in `brand-palette.ts` + `logos-section.tsx` → cosmetic.
+
+**Stale branch:** `feature/ui-redesign` is 0-ahead / fully merged into `main` →
+deletion candidate.
 
 ---
 
