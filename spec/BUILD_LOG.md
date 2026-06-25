@@ -57,6 +57,45 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
+## 2026-06-26 — Welle C1 — Confluence-Stragglers Audit (read-only)
+
+**Status:** Read-only audit — no DB / edge-function / migration changes. Closes
+SWEEP-002 (with revision).
+
+Verified SWEEP-002 (3 reported `confluence_chunks` stragglers) against the actual
+Confluence-sync architecture (`confluence-extend` → `confluence_raw` →
+`embed-knowledge`).
+
+**AERCONSO part — false positive against the curated design.** `embed-knowledge`
+([index.ts:214](supabase/functions/embed-knowledge/index.ts)) has **no `bereich`
+filter** — it embeds every `confluence_raw` row with `is_deleted=false` + non-null
+`body_text`; AERCONSO is curated at *ingestion*: `confluence-extend` pulls **exactly
+one** AERCONSO page on purpose.
+- Chunk **230** (page `16165417` "Airline Kontakte", bereich=aerconso): the single
+  curated AERCONSO page; its `wiki_info@aer.de` content is the **only** corpus source
+  for gold-set **Q26** ("Airline Kontakte → wiki_info@aer.de"). Deleting it would
+  degrade the gold set → **kept**.
+- Chunk **231** (page `446989123` "[EMBED] Cockpit / GDS Kanal"): a deliberate
+  25-token pointer ("real content under 16165417"), harmless → **kept** (code-change
+  cost > value).
+- Correction: there are **2** AERCONSO-bereich chunks, not the 1 SWEEP-002's
+  literal-text search found (230 carries no literal "aerconso" string).
+
+**sthoss part — real, deferred post-demo.** 2 chunks (`276`, `277`, page `444008121`
+"Vtours Genius") hold `sthoss@airtuerk.de` URL-encoded inside an Outlook **SafeLinks**
+`&data=` tracking blob. `confluence_raw.body_text` still contains it, so a DB scrub
+without a Confluence **source** edit returns on the next re-sync. Risk very low
+(SafeLinks telemetry is never retrieved as a "who is Selin" answer). **Deferred
+post-demo** as a known issue — the source-page fix on the 101k-char Vtours-Genius page
+is its own AP (later: Selin/Murat as service mentors).
+
+**Cross-check:** `@gmx.de`=0, `airtuerk.online`=0, `thoß`(ß)=0 in `confluence_chunks`
+(367 total) — corpus otherwise clean. Prior OK to delete 230/231 + add a
+`bereich=aerconso` exclusion was **withdrawn** after this recon (would have degraded
+Q26 / contradicted the design).
+
+---
+
 ## 2026-06-26 — Welle B (Pre-Demo Hygiene)
 
 Three isolated pre-demo hygiene items from the 2026-06-26 comprehensive sweep.
