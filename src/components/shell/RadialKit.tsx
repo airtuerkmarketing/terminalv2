@@ -24,18 +24,21 @@ type Action = {
   href: string; // "#" where the target is not wired yet (search / KI fragen
   // would later become real routes/actions)
   Icon: typeof Plus;
-  tx: number; // arc offset px (cos θ · 96)
-  ty: number; // arc offset px (sin θ · 96, negative = up)
+  side: "l" | "r"; // pill grows outward from the FAB (left half extends left)
+  tx: number; // arc offset px (cos θ · 250)
+  ty: number; // arc offset px (sin θ · 250, negative = up)
 };
 
-// θ from 198° → 342° in 5 steps, R = 96 → a clean upper semicircle.
+// θ from 198° → 342° in 5 steps, R = 250 → a wide upper semicircle. The big
+// radius + outward-anchored pills (see CSS) keep the larger items from
+// overlapping (min same-side vertical gap ≈ 60px > pill height ≈ 56px).
 const ACTIONS: Action[] = [
-  { id: "logo",   label: "Logo holen",     href: "#", Icon: Package,      tx: -91, ty: -30 },
-  { id: "color",  label: "Farbe kopieren", href: "#", Icon: Palette,      tx: -66, ty: -70 },
-  { id: "deck",   label: "Master Deck",    href: "#", Icon: Presentation, tx: -24, ty: -93 },
-  { id: "sig",    label: "Signatur",       href: "#", Icon: PenLine,      tx: 24,  ty: -93 },
-  { id: "search", label: "Suche",          href: "#", Icon: Search,       tx: 66,  ty: -70 },
-  { id: "ki",     label: "KI fragen",      href: "#", Icon: Sparkles,     tx: 91,  ty: -30 },
+  { id: "logo",   label: "Logo holen",     href: "#", Icon: Package,      side: "l", tx: -238, ty: -77 },
+  { id: "color",  label: "Farbe kopieren", href: "#", Icon: Palette,      side: "l", tx: -171, ty: -182 },
+  { id: "deck",   label: "Master Deck",    href: "#", Icon: Presentation, side: "l", tx: -62,  ty: -242 },
+  { id: "sig",    label: "Signatur",       href: "#", Icon: PenLine,      side: "r", tx: 62,   ty: -242 },
+  { id: "search", label: "Suche",          href: "#", Icon: Search,       side: "r", tx: 171,  ty: -182 },
+  { id: "ki",     label: "KI fragen",      href: "#", Icon: Sparkles,     side: "r", tx: 238,  ty: -77 },
 ];
 
 const GRACE_MS = 220;
@@ -79,7 +82,7 @@ export function RadialKit() {
     >
       <ul className="rk-menu">
         {ACTIONS.map((a, i) => (
-          <li key={a.id} className="rk-item" style={{ "--tx": `${a.tx}px`, "--ty": `${a.ty}px`, transitionDelay: `${i * 35}ms` } as React.CSSProperties}>
+          <li key={a.id} className={`rk-item rk-item--${a.side}`} style={{ "--tx": `${a.tx}px`, "--ty": `${a.ty}px`, transitionDelay: `${i * 35}ms` } as React.CSSProperties}>
             <a className="rk-action" href={a.href} tabIndex={open ? 0 : -1}>
               <span className="rk-coin"><a.Icon aria-hidden /></span>
               <span className="rk-label">{a.label}</span>
