@@ -1,20 +1,20 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useId, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { fileKind, fileKindLabel } from "@/lib/documents-constants";
+import { fileKind, type FileKind } from "@/lib/documents-constants";
 
 /**
- * 3D animated folder card (adapted from 21st.dev jatin-yadav05/3d-folder — D-055+).
- * Ported structure + overshoot animation; remapped to project tokens (neutral /
- * Quantum-tinted folder, NOT orange — chrome stays Quantum-only per D-036). The
- * fan-out peeks at the folder's real top files (image thumbs via the signed-URL
- * route, type badges otherwise). The whole card is a link into the folder; the
- * original ImageLightbox gallery is intentionally dropped (wrong pattern for
- * mixed documents + avoids set-state-in-effect churn). The overshoot hover is a
- * documented exception to the calm-hover rule, scoped to THIS component only,
- * and is frozen under prefers-reduced-motion.
+ * Split-layer 3D folder card (Figma redesign). The folder is two SVG layers —
+ * a back wall and a front wall (with a tab/lasche) — rendered as separate DOM
+ * layers so the folder's real top files peek BETWEEN them: their top edges show
+ * above the front wall even at rest, and on hover the docs rise + fan while the
+ * back wall lifts slightly. Format-badge coins (self-drawn, NOT brand/app logos)
+ * sit on the front wall, one per distinct file type (max 3). Neutral grey folder
+ * (D-036). The overshoot hover (EASE) is a documented exception to the calm-hover
+ * rule, scoped here and frozen under prefers-reduced-motion. No card box — the
+ * folder stands free; only the SVG layers carry shadow.
  */
 
 export interface FolderPreviewFile {
@@ -34,6 +34,23 @@ export interface FolderCard3DProps {
 }
 
 const EASE = "cubic-bezier(0.34, 1.56, 0.64, 1)";
+
+// Self-drawn format badges (kürzel + colour) — never the Adobe/MS logos.
+const BADGE: Record<FileKind, { label: string; color: string }> = {
+  pdf:   { label: "PDF", color: "#D8352A" },
+  word:  { label: "DOC", color: "#185FA5" },
+  excel: { label: "XLS", color: "#3B6D11" },
+  ppt:   { label: "PPT", color: "#BA7517" },
+  image: { label: "IMG", color: "#7C3AED" },
+  txt:   { label: "TXT", color: "#6B7280" },
+  zip:   { label: "ZIP", color: "#6B7280" },
+  file:  { label: "FILE", color: "#6B7280" },
+};
+
+// Coin centres in the front-wall viewBox (rect 35×35 @ x=39/69/98, y=161).
+const COIN_CX = [56.5, 86.5, 116.5];
+const COIN_CY = 178.5;
+const COIN_R = 17.5;
 
 // prefers-reduced-motion mirror (useSyncExternalStore — no setState-in-effect).
 function subscribeRM(cb: () => void) {
@@ -61,10 +78,24 @@ export function FolderCard3D({
 }: FolderCard3DProps) {
   const [hovered, setHovered] = useState(false);
   const reduced = useReducedMotion();
+  const uid = useId().replace(/:/g, ""); // namespace SVG gradient ids per card
+
   const tiles = previewFiles.slice(0, 3);
-  // Degrade: 0 files → folder stays closed (no fan-out); reduced-motion → static.
+  // Distinct file types → coins (max 3).
+  const kinds: FileKind[] = [];
+  for (const f of previewFiles) {
+    const k = fileKind(f.extension);
+    if (!kinds.includes(k)) kinds.push(k);
+    if (kinds.length === 3) break;
+  }
+  // Degrade: 0 files → folder stays closed; reduced-motion → static.
   const open = hovered && tiles.length > 0 && !reduced;
   const tr = (s: string) => (reduced ? "none" : s);
+
+  // Rest vs. open fan-out for the peeking docs.
+  const ROT = open ? [-15, 0, 15] : [-9, 0, 9];
+  const FAN = open ? [-36, 0, 36] : [-12, 0, 12];
+  const LIFT = open ? -34 : 0;
 
   return (
     <Link
@@ -72,31 +103,18 @@ export function FolderCard3D({
       aria-label={`${name}, ${fileCount} ${fileCount === 1 ? "file" : "files"}`}
       className={cn(
         "dl-folder-card group relative flex flex-col items-center justify-start no-underline",
-        "p-6 rounded-[var(--radius-xl)] cursor-pointer",
-        "bg-surface border border-hairline text-text-1",
-        "shadow-[var(--shadow-rest)] hover:shadow-[var(--shadow-hover)] hover:border-accent-border",
+        "p-4 cursor-pointer text-text-1",
         className
       )}
-      style={{ perspective: "1000px", minHeight: "300px" }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setHovered(true)}
       onBlur={() => setHovered(false)}
     >
-      {/* Quantum hover glow */}
-      <div
-        className="absolute inset-0 rounded-[var(--radius-xl)] pointer-events-none"
-        style={{
-          background: "radial-gradient(circle at 50% 70%, var(--accent) 0%, transparent 70%)",
-          opacity: open ? 0.08 : 0,
-          transition: tr("opacity 500ms ease"),
-        }}
-      />
-
       {/* Private cue — Torch lock, top-right (admins only ever see private folders) */}
       {!isPublic && (
         <span
-          className="absolute top-3 right-3 z-40 inline-grid place-items-center"
+          className="absolute top-2 right-2 z-40 inline-grid place-items-center"
           style={{ color: "var(--torch)" }}
           aria-label="Private"
           title="Private"
@@ -108,132 +126,122 @@ export function FolderCard3D({
         </span>
       )}
 
-      {/* 3D folder stage */}
-      <div className="relative flex items-center justify-center my-2" style={{ height: "160px", width: "200px" }}>
-        {/* back panel */}
-        <div
-          className="absolute w-32 h-24 rounded-lg bg-surface-strong border border-hairline"
+      {/* Folder stage — fixed aspect so the coins/docs scale with the SVG. */}
+      <div className="relative" style={{ width: "210px", aspectRatio: "299 / 235" }}>
+        {/* Back wall (behind the docs) */}
+        <svg
+          viewBox="0 0 299 235"
+          className="absolute inset-0 w-full h-full"
           style={{
-            transformOrigin: "bottom center",
-            transform: open ? "rotateX(-15deg)" : "rotateX(0deg)",
+            zIndex: 1,
+            overflow: "visible",
+            filter: "drop-shadow(0 4px 7.5px rgba(0,0,0,0.15))",
+            transform: open ? "translateY(-10px)" : "translateY(0)",
             transition: tr(`transform 500ms ${EASE}`),
-            zIndex: 10,
-            boxShadow: "var(--shadow-rest)",
           }}
-        />
-        {/* tab */}
-        <div
-          className="absolute w-12 h-4 rounded-t-md bg-surface-strong border border-b-0 border-hairline"
-          style={{
-            top: "calc(50% - 48px - 12px)",
-            left: "calc(50% - 64px + 16px)",
-            transformOrigin: "bottom center",
-            transform: open ? "rotateX(-25deg) translateY(-2px)" : "rotateX(0deg)",
-            transition: tr(`transform 500ms ${EASE}`),
-            zIndex: 10,
-          }}
-        />
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id={`bw-${uid}`} x1="274.301" y1="93" x2="18.3008" y2="93" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#4C4C4C" />
+              <stop offset="1" stopColor="#676767" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M251.301 175H41.3008C28.5982 175 18.3008 164.703 18.3008 152V34C18.3008 21.2975 28.5982 11 41.3008 11H251.301C264.003 11 274.301 21.2974 274.301 34V152C274.301 164.703 264.003 175 251.301 175Z"
+            fill={`url(#bw-${uid})`}
+          />
+        </svg>
 
-        {/* file peek tiles */}
-        <div className="absolute" style={{ top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 20 }}>
+        {/* Peeking docs (between the walls) */}
+        <div className="absolute inset-0" style={{ zIndex: 2 }} aria-hidden="true">
           {tiles.map((f, i) => (
-            <PeekTile key={f.id} file={f} index={i} open={open} reduced={reduced} />
+            <div
+              key={f.id}
+              className="absolute overflow-hidden rounded-md border border-hairline bg-surface-strong"
+              style={{
+                left: "50%",
+                bottom: "30%",
+                width: "33%",
+                height: "60%",
+                transformOrigin: "bottom center",
+                transform: `translate(calc(-50% + ${FAN[i]}px), ${LIFT}px) rotate(${ROT[i]}deg)`,
+                transition: tr(`transform 600ms ${EASE} ${i * 70}ms`),
+                zIndex: i === 1 ? 2 : 1,
+                boxShadow: "var(--shadow-card)",
+              }}
+            >
+              {f.isImage ? (
+                /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
+                <img src={`/api/library/file/${f.id}`} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-surface px-2">
+                  <span
+                    className="inline-grid place-items-center rounded text-[8px] font-bold text-white"
+                    style={{ width: 22, height: 14, background: BADGE[fileKind(f.extension)].color }}
+                  >
+                    {BADGE[fileKind(f.extension)].label}
+                  </span>
+                  <span className="w-full h-1 rounded bg-hairline" />
+                  <span className="w-3/4 h-1 rounded bg-hairline" />
+                </div>
+              )}
+            </div>
           ))}
         </div>
 
-        {/* front flap (Quantum-soft tint) */}
-        <div
-          className="absolute w-32 h-24 rounded-lg border border-hairline"
+        {/* Front wall (+ format coins) */}
+        <svg
+          viewBox="0 0 299 235"
+          className="absolute inset-0 w-full h-full"
           style={{
-            top: "calc(50% - 48px + 4px)",
-            background: "var(--accent-soft)",
-            transformOrigin: "bottom center",
-            transform: open ? "rotateX(25deg) translateY(8px)" : "rotateX(0deg)",
-            transition: tr(`transform 500ms ${EASE}`),
-            zIndex: 30,
-            boxShadow: "var(--shadow-hover)",
+            zIndex: 3,
+            overflow: "visible",
+            filter: "drop-shadow(0 -5px 8.9px rgba(0,0,0,0.11))",
           }}
-        />
-        {/* shine */}
-        <div
-          className="absolute w-32 h-24 rounded-lg overflow-hidden pointer-events-none"
-          style={{
-            top: "calc(50% - 48px + 4px)",
-            background: "linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 50%)",
-            transformOrigin: "bottom center",
-            transform: open ? "rotateX(25deg) translateY(8px)" : "rotateX(0deg)",
-            transition: tr(`transform 500ms ${EASE}`),
-            zIndex: 31,
-          }}
-        />
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id={`fw-${uid}`} x1="149.301" y1="29" x2="149.301" y2="215" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#616161" />
+              <stop offset="1" stopColor="#666666" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M18.3008 192V48C18.3008 37.5066 26.8074 29 37.3008 29H117.713C126.299 29 134.746 31.1679 142.272 35.3026L164.83 47.6974C172.355 51.8321 180.803 54 189.389 54H257.301C270.003 54 280.301 64.2975 280.301 77V192C280.301 204.703 270.003 215 257.301 215H41.3008C28.5982 215 18.3008 204.703 18.3008 192Z"
+            fill={`url(#fw-${uid})`}
+            stroke="#B0B0B0"
+            strokeWidth="1"
+          />
+          {kinds.map((k, i) => (
+            <g key={k}>
+              <circle cx={COIN_CX[i]} cy={COIN_CY} r={COIN_R} fill="#fff" />
+              <text
+                x={COIN_CX[i]}
+                y={COIN_CY}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize="9"
+                fontWeight="700"
+                fontFamily="inherit"
+                fill={BADGE[k].color}
+              >
+                {BADGE[k].label}
+              </text>
+            </g>
+          ))}
+        </svg>
       </div>
 
       <h3
-        className="text-base font-semibold text-text-1 mt-2"
-        style={{ transform: open ? "translateY(4px)" : "translateY(0)", transition: tr("transform 300ms ease") }}
+        className="text-base font-semibold text-text-1 mt-3 text-center"
+        style={{ transform: open ? "translateY(2px)" : "translateY(0)", transition: tr("transform 300ms ease") }}
       >
         {name}
       </h3>
-      <p
-        className="text-sm text-text-3"
-        style={{ opacity: open ? 0.7 : 1, transition: tr("opacity 300ms ease") }}
-      >
+      <p className="text-sm text-text-3 text-center">
         {fileCount} {fileCount === 1 ? "file" : "files"}
       </p>
     </Link>
-  );
-}
-
-function PeekTile({
-  file,
-  index,
-  open,
-  reduced,
-}: {
-  file: FolderPreviewFile;
-  index: number;
-  open: boolean;
-  reduced: boolean;
-}) {
-  const rotations = [-12, 0, 12];
-  const translations = [-55, 0, 55];
-  const kind = fileKind(file.extension);
-
-  return (
-    <div
-      className="absolute w-20 h-28 rounded-lg overflow-hidden bg-surface-strong border border-hairline pointer-events-none"
-      style={{
-        left: "-40px",
-        top: "-56px",
-        zIndex: 10 - index,
-        transform: open
-          ? `translateY(-90px) translateX(${translations[index]}px) rotate(${rotations[index]}deg) scale(1)`
-          : "translateY(0px) translateX(0px) rotate(0deg) scale(0.5)",
-        opacity: open ? 1 : 0,
-        transition: reduced ? "none" : `all 600ms ${EASE} ${index * 80}ms`,
-        boxShadow: "var(--shadow-hover)",
-      }}
-    >
-      {file.isImage ? (
-        /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
-        <img src={`/api/library/file/${file.id}`} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center bg-surface-muted">
-          <span className={cn("dl-ft sm", `ft-${kind}`)} aria-hidden="true">
-            {fileKindLabel(file.extension)}
-          </span>
-        </div>
-      )}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent)" }}
-      />
-      <p
-        className="absolute bottom-1 left-1.5 right-1.5 truncate"
-        style={{ fontSize: "10px", fontWeight: 600, color: "#fff" }}
-      >
-        {file.title}
-      </p>
-    </div>
   );
 }

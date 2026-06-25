@@ -228,10 +228,11 @@
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
 }
-/* The 3D folder card (FolderCard3D) self-styles via bridged Tailwind utilities +
-   JS-driven inline transforms (the overshoot hover is scoped here, not global).
-   Only the glass blur is added — NO layout/color props, since unlayered CSS would
-   otherwise override the component's Tailwind utilities. */
+/* The split-layer 3D folder card (FolderCard3D) stands free — no box (bg/border/
+   shadow); only the SVG layers carry shadow. It self-styles via bridged Tailwind
+   utilities + JS-driven inline transforms (the overshoot hover is scoped in the
+   component, not global). No layout/colour props here, since unlayered CSS would
+   override the component's utilities. */
 .dl-folder-card {
 }
 
