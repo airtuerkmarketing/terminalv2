@@ -12,6 +12,7 @@ import {
   type SidebarNav,
 } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
+import { RadialKit } from "@/components/shell/RadialKit";
 
 const IBE_SLUG = "ibe-product-suite";
 
@@ -190,6 +191,8 @@ export default async function PublicLayout({ children }: { children: ReactNode }
           {children}
         </main>
       </div>
+      {/* Portal-wide Quick-Actions radial menu (additive, fixed; desktop only). */}
+      <RadialKit />
     </>
   );
 }

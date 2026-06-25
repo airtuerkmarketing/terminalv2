@@ -1,0 +1,100 @@
+/* Quick-Actions radial menu (RadialKit.tsx). Fixed FAB bottom-centre; items fan
+   up a semicircle. z-index 90 — see the component header for the stacking
+   rationale. Desktop only (hidden < 768px). */
+
+.rk {
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  z-index: 90;
+}
+
+/* ── FAB ── */
+.rk-fab {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-floating);
+  color: var(--text-1);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 300ms var(--ease-smooth), background-color 150ms var(--ease-smooth);
+}
+.rk-fab:hover { background: var(--surface-strong); }
+.rk-fab svg { width: 24px; height: 24px; }
+/* Open → the plus rotates into a × . */
+.rk.is-open .rk-fab { transform: rotate(135deg); }
+.rk-fab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Menu / items ── */
+.rk-menu { list-style: none; margin: 0; padding: 0; }
+.rk-item {
+  position: absolute;
+  left: 50%;
+  bottom: 28px; /* FAB centre */
+  /* Closed: collapsed onto the FAB centre, shrunk + rotated. */
+  transform: translate(-50%, 50%) scale(0.3) rotate(-90deg);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 300ms var(--ease-smooth), opacity 200ms var(--ease-smooth);
+}
+.rk.is-open .rk-item {
+  /* Open: translated out along the arc (--tx/--ty), full size, upright. */
+  transform: translate(calc(-50% + var(--tx)), calc(50% + var(--ty))) scale(1) rotate(0deg);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.rk-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-flat);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-card);
+  color: var(--text-1);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 150ms var(--ease-smooth);
+}
+.rk-action:hover { border-color: var(--accent); }
+.rk-coin {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--surface-muted);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.rk-coin svg { width: 14px; height: 14px; }
+.rk-action:hover .rk-coin { background: var(--accent); color: #fff; }
+.rk-label { font-size: var(--fs-sm); font-weight: var(--weight-medium); }
+.rk-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Desktop-only (parity with the greeting seal). */
+@media (max-width: 767px) {
+  .rk { display: none; }
+}
+
+/* Reduced motion: items fade in at their final arc position — no scale/rotate,
+   no stagger; FAB does not rotate. */
+@media (prefers-reduced-motion: reduce) {
+  .rk-item,
+  .rk.is-open .rk-item {
+    transform: translate(calc(-50% + var(--tx)), calc(50% + var(--ty)));
+    transition: opacity 150ms var(--ease-smooth);
+    transition-delay: 0ms !important;
+  }
+  .rk.is-open .rk-fab { transform: none; }
+}
