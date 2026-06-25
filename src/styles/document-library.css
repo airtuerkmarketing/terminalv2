@@ -451,121 +451,99 @@
 
 /* ── Card tile (Option A) — 16/10 cover, badge + overlay Edit, tight meta with
    an overlay Download. Edit shows for super_admin only; Download for everyone. ── */
+/* Card view (Variant D): a format monogram head + a data row; Edit/Download
+   appear on hover top-right; the whole card opens the file via a stretched link. */
 .dl-tile {
-  background: var(--surface-flat);
+  position: relative;
+  background: var(--surface);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 200ms var(--ease-smooth), background-color 200ms var(--ease-smooth);
+  transition: box-shadow 200ms var(--ease-smooth), transform 200ms var(--ease-smooth);
 }
 .dl-tile:hover {
-  box-shadow: var(--shadow-hover);
-  background-color: var(--surface-strong);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.10);
+  transform: translateY(-2px);
 }
-.dl-tile__cover {
-  aspect-ratio: 16 / 10;
-  overflow: hidden;
-  position: relative;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  background: var(--surface-muted);
-}
-.dl-tile__preview {
-  position: absolute;
-  inset: 0;
+/* Stretched open-link overlay — covers the card; action buttons sit above it. */
+.dl-tile__open { position: absolute; inset: 0; z-index: 1; }
+/* Head: only the format monogram (or, for images, the real thumbnail). */
+.dl-tile__head {
+  height: 88px;
   display: flex;
   align-items: center;
   justify-content: center;
-  text-decoration: none;
+  background: var(--surface-muted);
+  overflow: hidden;
 }
-.dl-tile__preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.dl-tile__badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  background: rgba(0, 0, 0, 0.55);
+.dl-tile__thumb { width: 100%; height: 100%; object-fit: cover; }
+.dl-mono {
+  width: 46px;
+  height: 46px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
   color: #fff;
-  backdrop-filter: blur(8px);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
-.dl-tile__edit {
+/* Hover actions (top-right): hidden at rest, revealed on card hover/focus. */
+.dl-tile__actions {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 28px;
-  height: 28px;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 150ms var(--ease-smooth);
+}
+.dl-tile:hover .dl-tile__actions,
+.dl-tile:focus-within .dl-tile__actions { opacity: 1; }
+.dl-tile__act {
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-sm);
-  background: var(--surface-flat);
+  background: var(--surface);
   border: 1px solid var(--hairline);
   display: grid;
   place-items: center;
-  color: var(--text-1);
-  opacity: 1;
+  color: var(--text-2);
   cursor: pointer;
-  transition: color 150ms var(--ease-smooth), border-color 150ms;
+  text-decoration: none;
+  transition: color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth);
 }
-.dl-tile__edit:hover {
-  color: var(--accent);
-  border-color: var(--accent-border);
-}
+.dl-tile__act:hover { color: var(--text-1); border-color: var(--hairline-strong); }
+.dl-tile__act svg { width: 14px; height: 14px; }
+/* Data row. */
 .dl-tile__meta {
   padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
   gap: 4px;
-  flex: 1;
-  position: relative;
+  border-top: 1px solid var(--separator);
 }
 .dl-tile__title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding-right: 36px;
 }
 .dl-tile__sub {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-3);
 }
-.dl-tile__download {
-  position: absolute;
-  bottom: var(--space-3);
-  right: var(--space-3);
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-flat);
-  border: 1px solid var(--hairline);
-  display: grid;
-  place-items: center;
-  color: var(--text-1);
-  text-decoration: none;
-  opacity: 1;
-  transition: color 150ms var(--ease-smooth), border-color 150ms;
-}
-.dl-tile__download:hover {
-  color: var(--accent);
-  border-color: var(--accent-border);
-}
-.dl-tile__edit svg,
-.dl-tile__download svg {
-  width: 14px;
-  height: 14px;
+@media (prefers-reduced-motion: reduce) {
+  .dl-tile { transition: box-shadow 200ms var(--ease-smooth); }
+  .dl-tile:hover { transform: none; }
 }
 /* Clickable list-view column headers (sort triggers; no asc/desc toggle). */
 .dl-sort-th {

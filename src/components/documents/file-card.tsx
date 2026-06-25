@@ -1,10 +1,23 @@
 "use client";
 
-import { fileKind, fileKindLabel, formatBytes } from "@/lib/documents-constants";
+import { fileKind, formatBytes, type FileKind } from "@/lib/documents-constants";
 import type { FileDTO } from "@/lib/documents";
 import { FlagIcon } from "@/components/ui/flag-icon";
 import { RelativeTime } from "./relative-time";
 import { FileTypeGraphic } from "./file-type-graphic";
+
+// Format monogram: shown ONCE per card (replaces the old badge + doc-icon + pill
+// trio). Self-drawn label + colour — no app logos.
+const MONO: Record<FileKind, { label: string; color: string }> = {
+  pdf:   { label: "PDF", color: "#D8352A" },
+  word:  { label: "DOC", color: "#185FA5" },
+  excel: { label: "XLS", color: "#3B6D11" },
+  ppt:   { label: "PPT", color: "#BA7517" },
+  image: { label: "IMG", color: "#7C3AED" },
+  txt:   { label: "TXT", color: "#6B7280" },
+  zip:   { label: "ZIP", color: "#6B7280" },
+  file:  { label: "FILE", color: "#6B7280" },
+};
 
 function fileHref(id: string, download = false) {
   return `/api/library/file/${id}${download ? "?download=1" : ""}`;
@@ -46,42 +59,56 @@ export function FileCard({
   isSuperAdmin: boolean;
   onManage: (file: FileDTO) => void;
 }) {
-  const isImage = fileKind(file.extension) === "image";
+  const kind = fileKind(file.extension);
+  const isImage = kind === "image";
   const href = fileHref(file.id);
   const downloadHref = fileHref(file.id, true);
 
-  const preview = isImage ? (
-    /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
-    <img src={href} alt="" loading="lazy" decoding="async" />
-  ) : (
-    <FileTypeGraphic extension={file.extension} />
-  );
-
-  // ── Card view (Option A) ──────────────────────────────────────────────────
+  // ── Card view (Variant D: single format monogram, no format word / doc-icon /
+  //    duplicate badge) ───────────────────────────────────────────────────────
   if (view === "card") {
+    const mono = MONO[kind];
+    // word/file show the real extension (DOC/DOCX/…); others use the kind label.
+    const monoLabel = (kind === "word" || kind === "file") && file.extension ? file.extension.toUpperCase() : mono.label;
     return (
       <div className="dl-tile">
-        <div className="dl-tile__cover">
-          <a
-            className="dl-tile__preview"
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Open ${file.title}`}
-          >
-            {preview}
-          </a>
-          <span className="dl-tile__badge">{fileKindLabel(file.extension)}</span>
+        {/* Stretched open-link: the whole card opens the file. The action buttons
+            sit above it (higher z-index), so clicking them never triggers open. */}
+        <a
+          className="dl-tile__open"
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Open ${file.title}`}
+        />
+        <div className="dl-tile__head">
+          {isImage ? (
+            /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
+            <img className="dl-tile__thumb" src={href} alt="" loading="lazy" decoding="async" />
+          ) : (
+            <span className="dl-mono" style={{ background: mono.color }}>{monoLabel}</span>
+          )}
+        </div>
+
+        <div className="dl-tile__actions">
           {isSuperAdmin && (
             <button
               type="button"
-              className="dl-tile__edit"
-              onClick={() => onManage(file)}
+              className="dl-tile__act"
+              onClick={(e) => { e.stopPropagation(); onManage(file); }}
               aria-label={`Edit ${file.title}`}
             >
               <EditIcon />
             </button>
           )}
+          <a
+            className="dl-tile__act"
+            href={downloadHref}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Download ${file.title}`}
+          >
+            <DownloadIcon />
+          </a>
         </div>
 
         <div className="dl-tile__meta">
@@ -92,13 +119,6 @@ export function FileCard({
             <FlagIcon code={file.language} />
             <span>{formatBytes(file.sizeBytes)}</span>
           </div>
-          <a
-            className="dl-tile__download"
-            href={downloadHref}
-            aria-label={`Download ${file.title}`}
-          >
-            <DownloadIcon />
-          </a>
         </div>
       </div>
     );
