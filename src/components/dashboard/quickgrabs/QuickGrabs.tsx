@@ -8,6 +8,14 @@ import { QUICK_GRABS, BRAND_TABS, type QuickGrabCard } from "./quickgrabs-data";
 
 const AUTO_MS = 5000;
 
+// Fixed tab set + order. Only "all" has content for now (the brand list).
+const QG_TABS = [
+  { id: "all", label: "Alle Marken" },
+  { id: "featured", label: "Vorgestellt" },
+  { id: "tools", label: "Tools" },
+  { id: "templates", label: "Vorlagen" },
+];
+
 function prefersReducedMotion(): boolean {
   return (
     typeof window !== "undefined" &&
@@ -38,8 +46,10 @@ export function QuickGrabs() {
     return () => window.clearInterval(id);
   }, [count]);
 
-  const [tab, setTab] = useState<"all" | string>("all");
-  const rows = tab === "all" ? BRAND_TABS : BRAND_TABS.filter((b) => b.slug === tab);
+  const [tab, setTab] = useState("all");
+  // Tab-Inhalte für Vorgestellt/Tools/Vorlagen folgen später — vorerst zeigt nur
+  // "Alle Marken" die Markenliste, die anderen Tabs eine leere Platzhalter-Liste.
+  const rows = tab === "all" ? BRAND_TABS : [];
 
   return (
     <section className="qg-section" aria-label="Quick Grabs">
@@ -105,27 +115,18 @@ export function QuickGrabs() {
         </button>
       </div>
 
-      {/* ── Brand tab list ── */}
+      {/* ── Tabs (content for Vorgestellt/Tools/Vorlagen follows later) ── */}
       <div className="qg-tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "all"}
-          className={`qg-tab${tab === "all" ? " is-active" : ""}`}
-          onClick={() => setTab("all")}
-        >
-          Alle Marken
-        </button>
-        {BRAND_TABS.map((b) => (
+        {QG_TABS.map((t) => (
           <button
-            key={b.slug}
+            key={t.id}
             type="button"
             role="tab"
-            aria-selected={tab === b.slug}
-            className={`qg-tab${tab === b.slug ? " is-active" : ""}`}
-            onClick={() => setTab(b.slug)}
+            aria-selected={tab === t.id}
+            className={`qg-tab${tab === t.id ? " is-active" : ""}`}
+            onClick={() => setTab(t.id)}
           >
-            {b.label}
+            {t.label}
           </button>
         ))}
       </div>
@@ -143,6 +144,9 @@ export function QuickGrabs() {
             </a>
           </li>
         ))}
+        {rows.length === 0 ? (
+          <li className="qg-brand-empty">Inhalte folgen in Kürze.</li>
+        ) : null}
       </ul>
     </section>
   );

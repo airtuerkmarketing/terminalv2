@@ -8,7 +8,7 @@
 
 .qg-section {
   width: 100%;
-  max-width: 920px;
+  max-width: 720px;   /* match .ai-search-wrap so the section is flush with the box */
   margin-inline: auto;
   display: flex;
   flex-direction: column;
@@ -90,18 +90,19 @@
 }
 .qg-dot.is-active { background: #fff; }
 
-/* Prev / next arrows. */
+/* Prev / next arrows — paired bottom-right (out of the left text column, which
+   the old vertically-centred prev arrow overlapped). */
 .qg-arrow {
-  position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
-  width: 36px; height: 36px; border-radius: 50%; border: 0; cursor: pointer;
+  position: absolute; bottom: 16px; z-index: 3;
+  width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer;
   background: rgba(0, 0, 0, 0.12); backdrop-filter: blur(8px);
   color: #fff; display: grid; place-items: center;
   transition: background-color 150ms var(--ease-smooth);
 }
 .qg-arrow:hover { background: rgba(0, 0, 0, 0.22); }
 .qg-arrow svg { width: 18px; height: 18px; }
-.qg-arrow-prev { left: 16px; }
 .qg-arrow-next { right: 16px; }
+.qg-arrow-prev { right: 56px; } /* 32px arrow + 8px gap, sits left of next */
 
 /* ── Brand tabs ── */
 .qg-tabs { display: flex; flex-wrap: wrap; gap: var(--space-2); border-bottom: 1px solid var(--separator); padding-bottom: var(--space-3); }
@@ -132,6 +133,7 @@
 .qg-brand-name { font-size: var(--fs-base); font-weight: var(--weight-medium); color: var(--text-1); }
 .qg-brand-desc { font-size: var(--fs-base); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qg-brand-chevron { width: 18px; height: 18px; color: var(--text-2); margin-left: auto; flex-shrink: 0; }
+.qg-brand-empty { padding: var(--space-5) var(--space-3); font-size: var(--fs-base); color: var(--text-3); }
 
 /* Reduced motion: no slide transition (hard switch); auto-advance is already
    disabled in JS. */
