@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Folder, FolderOpen, PanelLeft, PanelLeftClose, Plus, Search } from "lucide-react";
+import { Folder, FolderOpen, PanelLeft, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fileKind, type FileKind } from "@/lib/documents-constants";
 import { CreateFolderModal } from "./create-folder-modal";
@@ -104,12 +104,13 @@ export function DocumentsSidebar({
         <span className="dl-sidebar-title">{title}</span>
         <div className="dl-sidebar-head-actions">
           {isSuperAdmin && (
-            <button type="button" className="dl-sq-btn" aria-label="Ordner hinzufügen" title="Hinzufügen" onClick={() => setCreateOpen(true)}>
+            <button type="button" className="dl-ico-btn" aria-label="Ordner hinzufügen" title="Hinzufügen" onClick={() => setCreateOpen(true)}>
               <Plus aria-hidden />
             </button>
           )}
-          <button type="button" className="dl-sq-btn" aria-label="Sidebar einklappen" title="Einklappen" onClick={() => setCollapsed(true)}>
-            <PanelLeftClose aria-hidden />
+          {/* Same icon (PanelLeft) + behaviour as the global sidebar's collapse-btn. */}
+          <button type="button" className="dl-ico-btn dl-collapse-btn" aria-label="Sidebar einklappen" title="Einklappen" onClick={() => setCollapsed(true)}>
+            <PanelLeft aria-hidden />
           </button>
         </div>
       </div>

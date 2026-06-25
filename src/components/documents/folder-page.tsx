@@ -12,18 +12,21 @@ import { FileRow } from "./file-row";
 import { FileEditModal } from "./file-edit-modal";
 import { UploadModal } from "./upload-modal";
 import { FolderActionsMenu } from "./folder-actions-menu";
+import { FolderCard3D } from "./folder-card-3d";
 
 const PAGE_SIZE = 60;
 
 export function FolderPage({
   folder,
   trail,
+  childFolders,
   initialFiles,
   initialHasMore,
   isSuperAdmin,
 }: {
   folder: FolderDTO;
   trail: FolderDTO[];
+  childFolders: FolderDTO[];
   initialFiles: FileDTO[];
   initialHasMore: boolean;
   isSuperAdmin: boolean;
@@ -134,15 +137,38 @@ export function FolderPage({
     </button>
   );
 
-  // Right-hand (or full-width) area: files list/grid + load-more.
+  const hasFolders = childFolders.length > 0;
+
+  // Subfolders render as 3D folder cards in their OWN grid (FolderCard3D has a
+  // fixed ~242px stage, so it can't share the narrower file-card grid track);
+  // they sit directly above the files — folders first, then files. childFolders
+  // is a plain FolderDTO with no fileCount/previewFiles, so the cards show 0
+  // files / no peek for now (reported).
+  const folderGrid = hasFolders ? (
+    <div className="dl-folder-grid" style={{ marginBottom: "var(--space-5)" }}>
+      {childFolders.map((f) => (
+        <FolderCard3D
+          key={f.id}
+          name={f.name}
+          href={`/documents-library/${f.path}`}
+          isPublic={f.isPublic}
+          fileCount={0}
+          previewFiles={[]}
+        />
+      ))}
+    </div>
+  ) : null;
+
+  // Right-hand (or full-width) area: folders (3D cards) + files list/grid + load-more.
   const filesArea = (
     <>
+      {folderGrid}
       {noFiles ? (
         debouncedSearch ? (
           <div className="dl-empty">
             <span>No files match “{search}”.</span>
           </div>
-        ) : (
+        ) : hasFolders ? null : (
           <div className="dl-empty">
             <strong>This folder is empty.</strong>
             {isSuperAdmin ? (

@@ -81,6 +81,7 @@ export default async function DocumentLibraryPage({ params }: Params) {
             key={current.id}
             folder={current}
             trail={trail}
+            childFolders={childFolders}
             initialFiles={page.files}
             initialHasMore={page.hasMore}
             isSuperAdmin={isSuperAdmin}

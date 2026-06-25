@@ -1039,20 +1039,27 @@
    independent of the global app sidebar. Collapse state is component-local.
    ============================================================================ */
 
-/* Two-column shell: sidebar + the existing content (.document-library). */
-.dl-shell { display: flex; align-items: flex-start; gap: var(--space-6); }
+/* Two-column shell: sidebar + the existing content (.document-library). The
+   sidebar stretches to the content height so its right border reads as a full
+   divider. */
+.dl-shell { display: flex; align-items: stretch; gap: var(--space-6); }
 .dl-shell-main { flex: 1; min-width: 0; }
 
-.dl-sidebar { width: 280px; flex-shrink: 0; }
-.dl-sidebar.is-collapsed { width: 52px; }
+/* Clear divider + panel tone consistent with the global sidebar (--sidebar-bg,
+   --hairline edge). */
+.dl-sidebar { width: 280px; flex-shrink: 0; background: var(--sidebar-bg); border-right: 1px solid var(--hairline); padding-right: var(--space-4); }
+.dl-sidebar.is-collapsed { width: 52px; padding-right: 0; }
 
-/* Head: title + square action buttons. */
+/* Head: title + transparent icon buttons (no stroke; fill only on hover — like
+   the rail buttons / the global collapse-btn). */
 .dl-sidebar-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: 0 var(--space-1) var(--space-3); }
 .dl-sidebar-title { font-size: var(--fs-base); font-weight: var(--weight-semibold); color: var(--text-1); }
 .dl-sidebar-head-actions { display: flex; gap: 4px; }
-.dl-sq-btn { width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid var(--hairline); background: var(--surface); color: var(--text-2); display: grid; place-items: center; cursor: pointer; transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth); }
-.dl-sq-btn:hover { background: var(--surface-strong); color: var(--text-1); }
-.dl-sq-btn svg { width: 16px; height: 16px; }
+.dl-ico-btn { width: 30px; height: 30px; border-radius: var(--radius-sm); border: 0; background: transparent; color: var(--text-2); display: grid; place-items: center; cursor: pointer; transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth); }
+.dl-ico-btn:hover { background: rgba(120, 120, 128, 0.10); color: var(--text-1); }
+.dl-ico-btn svg { width: 16px; height: 16px; }
+/* Collapse button mirrors the global .collapse-btn icon size. */
+.dl-collapse-btn svg { width: 18px; height: 18px; }
 
 /* Full-width search: NO border-radius — only a hairline top + bottom rule. */
 .dl-sidebar-search { display: flex; align-items: center; gap: 8px; padding: var(--space-3) var(--space-1); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); color: var(--text-3); }
@@ -1102,3 +1109,19 @@
 .dl-tree-subfolder .dl-tree-icon { width: 16px; height: 16px; }
 .dl-tree-subfolder .dl-tree-icon svg { width: 15px; height: 15px; }
 .dl-tree-subfolder .dl-file-name { color: var(--text-1); font-weight: var(--weight-medium); }
+
+/* ── Documents toolbar (Variant A: one row) ─────────────────────────────────
+   [Search (flex:1, shrinks)] [Sort] [ViewToggle] [Upload]. Right controls never
+   wrap; only the search shrinks. Overrides are scoped to .dl-toolbar so the
+   global .view-toggle (shared with the Asset library) is untouched. */
+.dl-toolbar { flex-wrap: nowrap; }
+.dl-toolbar .dl-search { border-radius: var(--radius-full); flex: 1 1 auto; min-width: 0; }
+.dl-toolbar-right { flex-shrink: 0; flex-wrap: nowrap; }
+.dl-toolbar .dl-sort { border-radius: var(--radius-full); }
+.dl-toolbar-right .dl-btn { border-radius: var(--radius-full); }
+
+/* ViewToggle: grey track, no border, full radius; active = white pill + shadow. */
+.dl-toolbar .view-toggle { background: rgba(120, 120, 128, 0.12); border: 0; border-radius: var(--radius-full); }
+.dl-toolbar .view-toggle-btn { color: var(--text-2); border-radius: var(--radius-full); }
+.dl-toolbar .view-toggle-btn:hover:not(.active) { background: rgba(120, 120, 128, 0.10); color: var(--text-1); }
+.dl-toolbar .view-toggle-btn.active { background: var(--surface); color: var(--text-1); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06); }
