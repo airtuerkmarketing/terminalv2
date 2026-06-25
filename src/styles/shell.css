@@ -130,7 +130,7 @@ html { scrollbar-gutter: stable; }
    on .main-inner instead (and is zeroed right after a .page-hero, which brings
    its own internal top padding). Horizontal gutters live on .main-inner /
    .page-hero-inner. */
-.main { width: 100%; min-width: 0; }
+.main { width: 100%; min-width: 0; padding-bottom: 96px; /* clearance for the fixed Quick-Actions FAB (bottom 32 + 56px) so it never overlaps page content */ }
 .main-inner { width: 100%; max-width: 1400px; margin-inline: auto; padding: var(--space-5) var(--space-4); }
 /* Brand/hero pages: the grey .page-hero is flush to the top and already has its
    own bottom margin, so the following content wrapper needs no extra top gap. */

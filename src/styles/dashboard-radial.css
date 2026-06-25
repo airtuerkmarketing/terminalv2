@@ -16,16 +16,16 @@
   width: 56px;
   height: 56px;
   border-radius: var(--radius-full);
-  background: var(--surface-flat);
-  border: 1px solid var(--hairline);
+  background: var(--accent);
+  border: 1px solid var(--accent-border);
   box-shadow: var(--shadow-floating);
-  color: var(--text-1);
+  color: #fff;
   display: grid;
   place-items: center;
   cursor: pointer;
   transition: transform 300ms var(--ease-smooth), background-color 150ms var(--ease-smooth);
 }
-.rk-fab:hover { background: var(--surface-strong); }
+.rk-fab:hover { transform: translateY(-1px); }
 .rk-fab svg { width: 24px; height: 24px; }
 /* Open → the plus rotates into a × . */
 .rk.is-open .rk-fab { transform: rotate(135deg); }
@@ -65,7 +65,7 @@
   white-space: nowrap;
   transition: border-color 150ms var(--ease-smooth);
 }
-.rk-action:hover { border-color: var(--accent); }
+.rk-action:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 .rk-coin {
   width: 24px;
   height: 24px;
@@ -78,7 +78,7 @@
   transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
 }
 .rk-coin svg { width: 14px; height: 14px; }
-.rk-action:hover .rk-coin { background: var(--accent); color: #fff; }
+.rk-action:hover .rk-coin { background: rgba(255, 255, 255, 0.2); color: #fff; }
 .rk-label { font-size: var(--fs-sm); font-weight: var(--weight-medium); }
 .rk-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
