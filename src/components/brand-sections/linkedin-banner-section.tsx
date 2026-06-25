@@ -5,7 +5,7 @@ import type { AssetBlockContent } from "@/lib/blocks/types";
 export function LinkedinBannerSection({ content }: { content: AssetBlockContent }) {
   return (
     <section id="linkedin-banner" className="anchor-section anchor-section--two-col">
-      <h2>LinkedIn Banner</h2>
+      <h2>LinkedIn</h2>
       <div className="page-blocks">
         <div className="block">
           <AssetBlock content={content} />

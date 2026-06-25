@@ -27,9 +27,9 @@ export function BrandPage({ brand }: { brand: BrandSlug }) {
       return (
         <>
           <LogosSection {...LOGOS[brand]} />
-          <ColorsSection palette="logo" heading="Colors Logo" />
-          <ColorsSection palette="ux" heading="Colors UX/UI" />
-          <MasterDeckSection heading="Presentation Master Deck" content={MASTER_DECK[brand]} />
+          <ColorsSection palette="logo" heading="Print Colors" />
+          <ColorsSection palette="ux" heading="UX Colors" />
+          <MasterDeckSection heading="Master Deck" content={MASTER_DECK[brand]} />
           <LinkedinBannerSection content={LINKEDIN_BANNER[brand]} />
           <LetterheadSection content={LETTERHEAD[brand]} />
           <EmailSignatureSection />
@@ -39,8 +39,8 @@ export function BrandPage({ brand }: { brand: BrandSlug }) {
       return (
         <>
           <LogosSection {...LOGOS[brand]} />
-          <ColorsSection palette="logo" heading="Colors Logo" />
-          <MasterDeckSection heading="Presentation Master Deck" content={MASTER_DECK[brand]} />
+          <ColorsSection palette="logo" heading="Print Colors" />
+          <MasterDeckSection heading="Master Deck" content={MASTER_DECK[brand]} />
           <EmailSignatureSection />
           <LetterheadSection content={LETTERHEAD[brand]} />
         </>
@@ -49,9 +49,9 @@ export function BrandPage({ brand }: { brand: BrandSlug }) {
       return (
         <>
           <LogosSection {...LOGOS[brand]} />
-          <ColorsSection palette="logo" heading="Colors Logo" />
-          <ColorsSection palette="ux" heading="Colors UX/UI" />
-          <MasterDeckSection heading="Presentation Master Deck" content={MASTER_DECK[brand]} />
+          <ColorsSection palette="logo" heading="Print Colors" />
+          <ColorsSection palette="ux" heading="UX Colors" />
+          <MasterDeckSection heading="Master Deck" content={MASTER_DECK[brand]} />
           <EmailSignatureSection />
           <LetterheadSection content={LETTERHEAD[brand]} />
         </>
@@ -60,7 +60,7 @@ export function BrandPage({ brand }: { brand: BrandSlug }) {
       return (
         <>
           <LogosSection {...LOGOS[brand]} />
-          <ColorsSection palette="logo" heading="Colors" />
+          <ColorsSection palette="logo" heading="Print Colors" />
           <MasterDeckSection heading="Master Deck" content={MASTER_DECK[brand]} />
           <LetterheadSection content={LETTERHEAD[brand]} />
           <EmailSignatureSection />

@@ -29,7 +29,7 @@ export interface LogosContent {
 
 export const LOGOS: Record<BrandSlug, LogosContent> = {
   "airtuerk-service": {
-    heading: "Logo & Fav Icon",
+    heading: "Logos",
     showcase: {
       mark: "airtuerk",
       assetUrl: imageUrl("brand-logos/airtuerk-service/airtuerk-Logo.svg"),
@@ -46,7 +46,7 @@ export const LOGOS: Record<BrandSlug, LogosContent> = {
     },
   },
   "airtuerk-holidays": {
-    heading: "Logo & Fav Icon",
+    heading: "Logos",
     showcase: {
       mark: "airtuerk Holidays",
       assetUrl: imageUrl("brand-logos/airtuerk-holidays/airtuerkholidays_Logo.svg"),
@@ -60,7 +60,7 @@ export const LOGOS: Record<BrandSlug, LogosContent> = {
     },
   },
   atbeds: {
-    heading: "Logo & Fav Icon",
+    heading: "Logos",
     showcase: {
       mark: "atBeds",
       assetUrl: imageUrl("brand-logos/atbeds/atBeds_Logo.svg"),
@@ -77,7 +77,7 @@ export const LOGOS: Record<BrandSlug, LogosContent> = {
     },
   },
   "service-center-antalya": {
-    heading: "Logo",
+    heading: "Logos",
     sectionId: "logo", // DB child slug is singular
     showcase: {
       mark: "airtuerk Service Center",
