@@ -1020,13 +1020,15 @@
 /* Two-column shell: sidebar + the existing content (.document-library). The
    sidebar stretches to the content height so its right border reads as a full
    divider. */
-.dl-shell { display: flex; align-items: stretch; gap: var(--space-6); }
-.dl-shell-main { flex: 1; min-width: 0; }
+.dl-shell { display: flex; align-items: stretch; gap: 0; }
+/* Main content keeps its own top + side padding (the wrapper has none). */
+.dl-shell-main { flex: 1; min-width: 0; padding: var(--space-5) var(--space-6) 0; }
 
 /* Clear divider + panel tone consistent with the global sidebar (--sidebar-bg,
-   --hairline edge). */
-.dl-sidebar { width: 280px; flex-shrink: 0; background: var(--sidebar-bg); border-right: 1px solid var(--hairline); padding-right: var(--space-4); }
-.dl-sidebar.is-collapsed { width: 52px; padding-right: 0; }
+   --hairline edge). Internal padding (not on the wrapper) so the bg + border
+   reach the top + left edge — no white frame. */
+.dl-sidebar { width: 280px; flex-shrink: 0; background: var(--sidebar-bg); border-right: 1px solid var(--hairline); padding: var(--space-5) var(--space-4) 0; }
+.dl-sidebar.is-collapsed { width: 52px; padding: var(--space-5) 6px 0; }
 
 /* Head: title + transparent icon buttons (no stroke; fill only on hover — like
    the rail buttons / the global collapse-btn). */
@@ -1079,7 +1081,12 @@
 /* Full-bleed page wrapper for the Documents Library (used INSTEAD of .main-inner
    on this route) so the secondary sidebar sits flush left next to the global
    rail rather than inside the centred 1400px box. Other routes keep .main-inner. */
-.dl-page { width: 100%; padding: var(--space-5) var(--space-6) 0; }
+/* Full-bleed wrapper for the Documents route (used INSTEAD of .main-inner — which
+   is unchanged for all other pages). No max-width / centring / outer padding, so
+   the sidebar sits flush at the left edge of .main (next to the global rail) and
+   reaches the top edge. Breathing room lives INSIDE the columns (see .dl-sidebar
+   / .dl-shell-main padding), so there's no white frame above/left of the panel. */
+.dl-fullbleed { width: 100%; }
 
 /* Subfolder entry nested under the open folder (navigates deeper). */
 .dl-tree-subfolder { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 8px; border-radius: var(--radius-sm); text-decoration: none; color: var(--text-1); transition: background-color 150ms var(--ease-smooth); }

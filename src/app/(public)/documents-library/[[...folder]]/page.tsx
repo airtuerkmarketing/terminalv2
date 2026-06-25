@@ -39,7 +39,7 @@ export default async function DocumentLibraryPage({ params }: Params) {
     const folders = await getRootFoldersWithPreview();
     const sidebarFolders = folders.map((f) => ({ id: f.id, name: f.name, path: f.path, fileCount: f.fileCount, isPublic: f.isPublic }));
     return (
-      <div className="dl-page">
+      <div className="dl-fullbleed">
         <div className="dl-shell">
           <DocumentsSidebar folders={sidebarFolders} activePath={null} isSuperAdmin={isSuperAdmin} />
           <div className="dl-shell-main">
