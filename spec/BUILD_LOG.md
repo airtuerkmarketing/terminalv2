@@ -9,7 +9,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-26)
 
-- **HEAD:** `4cfd33b` (`main`, == origin/main). **Demo:** 2026-08-01.
+- **HEAD:** `dbd67fd` (`main`, == origin/main). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
@@ -18,16 +18,16 @@ it is append-only history (do not rewrite past entries — add new ones).
   `ai_chat_messages`, `ai_corrections`). **55 pages** (all published), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` installed. **60 migrations**, highest:
-  `20260625140402_selin_stammdaten_db_cleanup`. Highest decision: **D-064**.
-  RAG corpus: **410 chunks** (confluence 367 [page 134 / pdf 159 / office 60 /
-  knowledge_base 14] + brand 43) + **36 company_context** entries. Edge functions:
+  `pgvector 0.8.0` + `pg_trgm 1.6` installed. **62 migrations**, highest:
+  `20260625182736_company_context_selin_disambiguation`. Highest decision: **D-064**.
+  RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
+  knowledge_base 14] + brand 43) + **37 company_context** entries. Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v6 (persona v2, + 3 confluence fns).
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
 - **Data counts (2026-06-26):** team_members **63**, profiles **4 (all super_admin,
   0 admin/user)**, active auth users **4**, assets **718**, blocks **43**,
-  gold_set_answers **84** (92.9% accuracy baseline), ai_chat_sessions **58** /
-  messages **186**, ai_corrections **1**.
+  gold_set_answers **84** (92.9% accuracy baseline), ai_chat_sessions **62** /
+  messages **230**, ai_corrections **1**.
 - **⚠️ V1 blocker:** prod `profiles` has only **4 rows (all super_admin, 0 admin/0
   user)** — the Stage-8 nine-key-user seed (`684d67f`) never reached prod; must be
   re-run before the 2026-08-01 demo (details in the 2026-06-25 finding below).
@@ -46,14 +46,88 @@ it is append-only history (do not rewrite past entries — add new ones).
   FAB — `c2b12a1`); AP3 Phase 5 (admin/users multi-select + bulk-actions + CSV
   export — `6419849`); Selin Stammdaten cleanup (Thoß→Köroglu / initials SK /
   gold-set fixture — `77d14a6`); Welle B pre-demo hygiene (migration-ledger rename
-  + error/404/loading boundaries + this doc-sync).
+  + error/404/loading boundaries + this doc-sync); Welle C korpus-hygiene (C1
+  Confluence-stragglers audit, C2 full RAG-corpus audit → `AUDIT-KORPUS-2026-06-26.md`);
+  Welle D audit-fixes (D1 RAG secret-purge + `SECRET_PAGE_DENYLIST` guard `e58aeea`;
+  D2 Selin disambiguation `dbd67fd`); Voyage ZDR-Opt-Out activated 2026-06-26.
 - **Remaining:** AP3 Phases 7–12 (per-section bulk-invite, quick-actions, density toggle,
   permissions matrix, per-user permissions, activity-log integration); RAG WS2
   (feedback+CorrectionModal finish) + WS3/WS4 (web-search) + S5 company-context UI
   + S8 email-notify resend + S9 gold-set re-run + S10 demo polish; Audit fixes
   P0a (cookie-free public-read) + P0c (proxy.ts) + P1 (APIX dynamic + RAG
   robustness, 4 open decisions); Out-of-Office as its own brand section (Block 5b);
-  2 non-blocking bulk-invite fixes (`use-bulk-invite.ts`).
+  2 non-blocking bulk-invite fixes (`use-bulk-invite.ts`); Welle A (greeting
+  first-name + empty-`/admin` redirect — still recon-only); open C2 audit findings
+  AUDIT-002 (learning-loop never run) / AUDIT-003 (Hara-Filo source contradiction) /
+  AUDIT-004 (Pegasus check-in gen-error) / AUDIT-006 (frozen 2026-06-23 corpus);
+  D2 Phase-2 embed of the Selin row (ZDR-gated consistency follow-up).
+
+---
+
+## 2026-06-26 — Welle D — Audit-Findings angehen
+
+**D1 — AUDIT-001 RAG secret-purge** (`e58aeea`, Closes AUDIT-001)
+- Removed 4 `confluence_chunks` carrying live payment/access data (cards + CVC, account
+  passwords, IBANs): page `444009709` "Operativ FAQ" (chunk 228) + page `768213063`
+  "Konti 2026 CC" (317) removed whole (by page_id — inherently sensitive); page
+  `444007659` "Involatus Genius" (261) + `444007669` "Involatus Konti" (336) only the
+  card-bearing chunk (their clean ops chunks 262/263/264 + 335 kept). `confluence_chunks`
+  367 → 363; post-scans card/cvc/pw/iban = 0; `confluence_raw` 86/86 untouched.
+- Pipeline guard `SECRET_PAGE_DENYLIST` in `embed-knowledge` (deployed v12): PERMANENT
+  {FAQ, Konti CC} + TEMPORARY {Involatus×2 — remove after Confluence source-clean +
+  re-embed} so the chunks can't return on a future embed run. Migration
+  `20260625180604_secret_cleanup_audit_001` + redacted pre-snapshot
+  `spec/d1-pre-snapshot-2026-06-26.md`.
+- Authority: Buhara Demir (CMO) + Ahmet Özbek (CFO). No card rotation (company shared
+  cards). Confluence SOURCE cleanup is a separate track (Buhara/Murat/Selin).
+- Deploy `dpl_6mhc2goaUBfLjn88HF6guZSaGUt1` READY.
+
+**D2 — AUDIT-008 Selin disambiguation** (`dbd67fd`, Closes AUDIT-008 functionally)
+- D1 live-test surfaced: RAG answered "Selin Ülker" to "Wer ist Selin?" — Selin Köroglu
+  was nowhere in the corpus (its only mention was the deleted FAQ chunk 228), while
+  `company_context` priority-1 named only Ülker.
+- Strategy A: priority-1 `company_context` INSERT disambiguating Selin Köroglu (Service
+  Agent, skoeroglu@) vs Selin Ülker (Operative Manager, suelker@), plus Selin vs Ufuk
+  Köroglu. Content deliberately WITHOUT "geb. Thoß" or marital/private data.
+  `company_context` 36 → 37. Migration `20260625182736_company_context_selin_disambiguation`.
+- The apply hit a cosmetic 502 but committed exactly once — verified read-only (count
+  36→37, single row, single ledger entry). `rag_hybrid_search` injects priority-1 context
+  by the priority filter (embedding-independent — arm 1), so the fix is live on insert;
+  the row's embedding is a ZDR-gated Phase-2 consistency follow-up (not yet run).
+- **Live-Test (Buhara, Incognito-Browser, 2026-06-26): 7/7 ✅** — KI nennt beide Selins
+  mit Kontext-Rückfrage, Köroglu-Disambiguierung proaktiv mitgegeben, Ufuk korrekt
+  zugeordnet, Ümit als CEO korrekt.
+
+**Voyage ZDR-Opt-Out aktiviert 2026-06-26** (laut Buhara, irreversibel per
+Voyage-Dashboard-Confirm-Dialog). Zukünftige Embeddings sind trainings-frei. Die
+initialen Embeds vom 2026-06-23 (Größenordnung confluence_chunks + brand_chunks +
+company_context zum Zeitpunkt T0) bleiben laut Buharas Lesart der Voyage ToS Section 3
+trainings-subject — nicht reversibel.
+
+---
+
+## 2026-06-26 — Welle C2 — Full RAG-Korpus Audit (read-only)
+
+**Status:** Read-only audit; deliverable `spec/AUDIT-KORPUS-2026-06-26.md`. No DB/code
+changes. Inventory + verification of the RAG corpus for demo-readiness — 7 findings:
+- 🔴 **AUDIT-001** (Critical) — live payment/access secrets (cards/CVC/passwords/IBANs)
+  in 4 RAG chunks, retrievable by the KI → actioned in **D1**.
+- 🟠 **AUDIT-002** (High) — the "learning loop" was never exercised: 6 gold-set
+  corrections + 1 `ai_corrections` row, **0** applied to the corpus
+  (`source_type='correction'` = 0). `gold_set_answers.korrektur` has no path into the
+  corpus; the lone `ai_corrections` is a pending test.
+- 🟠 **AUDIT-003** (High) — Hara-Filo Confluence source **contradicts** the gold-set
+  correction (source says "same price", correct = +20% Servicegebühr) → needs a source
+  edit, not just re-embed.
+- 🟡 **AUDIT-004** (Med) — Pegasus check-in generation error: corpus has the correct
+  "72 Std", RAG had hallucinated "7 Std" (no corpus gap).
+- 🟡 **AUDIT-005** (Med) — sthoss stragglers (carried from C1, deferred post-demo).
+- 🟢 **AUDIT-006** (Low) — corpus is a frozen single embed run from 2026-06-23 (no
+  re-embed/cron → drift risk for later Confluence edits).
+- 🟢 **AUDIT-007** (Info) — coverage healthy: 86/86 confluence pages embedded; 12/15
+  brands have chunks (apix / ibe-product-suite / presentation-hub = 0, by design).
+- Follow-on actions: AUDIT-001 → D1; AUDIT-008 (Selin, surfaced in D1's live-test) → D2.
+  AUDIT-002/003/004/006 remain open (Current State Remaining).
 
 ---
 
