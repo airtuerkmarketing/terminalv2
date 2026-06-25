@@ -74,6 +74,7 @@
   font-weight: var(--weight-regular);
   line-height: 22.4px;              /* Figma */
   color: var(--text-1);
+  padding: 5px 0 0 6px;             /* Figma: top 5, left 6 */
   min-height: 72px;
   max-height: 220px;
   overflow-y: auto;

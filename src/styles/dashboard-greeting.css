@@ -16,6 +16,7 @@
   font-size: var(--fs-2xl);          /* 40px */
   font-weight: var(--weight-medium); /* 500 */
   line-height: 60px;
+  letter-spacing: -1.5px;
   color: var(--text-1);
   margin: 0;
 }
