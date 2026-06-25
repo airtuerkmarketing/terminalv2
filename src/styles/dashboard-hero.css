@@ -54,13 +54,18 @@
   background: var(--surface-flat);
   border: 1px solid var(--hairline);             /* Figma 1px #EBEBEB = --hairline */
   border-radius: var(--radius-25);               /* Figma 25px */
-  box-shadow: var(--shadow-searchbox);           /* Figma 0 4 15 .15 */
+  box-shadow: var(--shadow-searchbox);           /* soft default lift */
   padding: 15px;                                 /* Figma */
   transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }
+.ai-search-box:hover {
+  border-color: var(--hairline-strong);
+}
+/* Dashboard-Box: bewusst grauer Fokus statt Accent-Ring (Hero-Sonderfall). The
+   system-wide D-036 blue focus ring still applies to all other inputs. */
 .ai-search-box.is-focused {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--hairline-strong);
+  box-shadow: var(--shadow-searchbox-focus);
 }
 .ai-search-textarea {
   width: 100%;

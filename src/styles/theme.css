@@ -93,6 +93,7 @@
   /* Sidebar is a hair off the white content so its right hairline edge reads. */
   --sidebar-bg: #FCFCFC;
   --hairline: rgba(0, 0, 0, 0.08);
+  --hairline-strong: rgba(0, 0, 0, 0.16);
   --separator: rgba(0, 0, 0, 0.06);
   --text-1: rgba(0, 0, 0, 0.92);
   --text-2: rgba(60, 60, 67, 0.62);
@@ -122,8 +123,10 @@
      faint inset highlight so the marks read as physical discs. */
   --shadow-coin: inset 0 1px 2px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.10);
   --shadow-coin-center: inset 0 1px 2px rgba(0,0,0,0.03), 0 6px 18px rgba(0,0,0,0.12);
-  /* Dashboard Such+KI-Box — stronger lift than the card shadows (Figma). */
-  --shadow-searchbox: 0px 4px 15px rgba(0,0,0,0.15);
+  /* Dashboard Such+KI-Box — grey state model: soft default shadow, one step
+     deeper on focus (no accent ring). */
+  --shadow-searchbox: 0px 2px 10px rgba(0,0,0,0.08);
+  --shadow-searchbox-focus: 0px 4px 15px rgba(0,0,0,0.12);
 }
 
 :root[data-theme="ios18-dark"] {
@@ -135,6 +138,7 @@
   /* Sidebar keeps the dark surface value (unchanged from the flat dark theme). */
   --sidebar-bg: #18181B;
   --hairline: rgba(255, 255, 255, 0.08);
+  --hairline-strong: rgba(255, 255, 255, 0.16);
   --separator: rgba(255, 255, 255, 0.06);
   --text-1: rgba(255, 255, 255, 0.95);
   --text-2: rgba(235, 235, 245, 0.62);
@@ -163,6 +167,7 @@
   /* Coin shadows — opacity scaled up for dark mode visibility (see light block). */
   --shadow-coin: inset 0 1px 2px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.40);
   --shadow-coin-center: inset 0 1px 2px rgba(0,0,0,0.10), 0 6px 18px rgba(0,0,0,0.45);
-  /* Search box lift — opacity scaled up for dark mode (see light block). */
-  --shadow-searchbox: 0px 4px 20px rgba(0,0,0,0.5);
+  /* Search box grey state model — opacity scaled up for dark mode (see light). */
+  --shadow-searchbox: 0px 2px 12px rgba(0,0,0,0.40);
+  --shadow-searchbox-focus: 0px 4px 18px rgba(0,0,0,0.50);
 }
