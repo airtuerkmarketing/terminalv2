@@ -218,7 +218,8 @@ export async function listChunks(
     tags: ChunkTags | null;
     created_at: string;
   }>) {
-    const { text, truncated } = truncate(r.content);
+    // company_context is the editable layer (only 37 rows) — send full content so
+    // the edit modal has it without a second fetch.
     all.push({
       uid: `company:${r.id}`,
       layer: "company",
@@ -226,8 +227,8 @@ export async function listChunks(
       id: r.id,
       sourceType: r.category,
       title: r.topic,
-      content: text,
-      truncated,
+      content: r.content,
+      truncated: false,
       tags: r.tags ?? {},
       tokenCount: null,
       hasEmbedding: r.embedding != null,

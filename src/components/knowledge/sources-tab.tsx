@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Database, AlertCircle } from "lucide-react";
+import { Database, AlertCircle, Pencil } from "lucide-react";
 import { inferContentShape } from "@/lib/knowledge/shape";
+import { EditChunkModal } from "./edit-chunk-modal";
 import type { ChunkLayer, KnowledgeChunk, KnowledgeStats } from "@/lib/knowledge/types";
 
 const PAGE_SIZE = 25;
@@ -83,6 +84,7 @@ export function SourcesTab({
   const [layers, setLayers] = useState<Set<ChunkLayer>>(new Set(initial.layers));
   const [sort, setSort] = useState(initial.sort || "newest");
   const [page, setPage] = useState(0);
+  const [editing, setEditing] = useState<KnowledgeChunk | null>(null);
 
   // Reflect filter state to the URL (shareable) without re-fetching.
   useEffect(() => {
@@ -164,6 +166,11 @@ export function SourcesTab({
                   {c.tags.topics?.map((t) => <span key={t} className="kb-tag">{t}</span>)}
                   {c.tags.airlines?.map((t) => <span key={t} className="kb-tag">{t}</span>)}
                 </div>
+                {c.editable && (
+                  <button className="kb-chip" onClick={() => setEditing(c)}>
+                    <Pencil size={13} /> Bearbeiten
+                  </button>
+                )}
               </div>
               <div className="kb-card-title">{c.title}</div>
               <ChunkBody chunk={c} />
@@ -199,6 +206,8 @@ export function SourcesTab({
           </button>
         </div>
       )}
+
+      {editing && <EditChunkModal chunk={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 }
