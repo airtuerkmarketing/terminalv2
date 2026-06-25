@@ -1,0 +1,145 @@
+/* Error / 404 / loading recovery states (B2, SWEEP-006).
+ *
+ * Self-contained, token-only — deliberately depends on NO shell.css classes
+ * (.main-inner / .card / .btn-* don't exist globally), so it renders correctly
+ * both at root scope (src/app/error.tsx + not-found.tsx, no shell.css) and inside
+ * the (public) shell (src/app/(public)/error.tsx + loading.tsx). Imported directly
+ * by each of the four files.
+ *
+ * Built from the global theme tokens (theme.css) so it themes in both
+ * ios18-light/dark with no hardcoded colours. Flat per the current system: no
+ * backdrop-filter/blur, no DM Mono, eckige Buttons (--button-radius, not pills).
+ * Mirrors the per-area BEM convention (login.css, .sig-*, .uap-*).
+ */
+
+/* ── Centred stage (error + 404) ───────────────────────────────────────────── */
+.err-root,
+.nf-root {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) var(--space-4);
+}
+
+/* ── Recovery card (shared surface look) ───────────────────────────────────── */
+.err-card,
+.nf-card {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+}
+.err-card { max-width: 480px; }
+.nf-card { max-width: 420px; }
+
+/* ── Error texts ───────────────────────────────────────────────────────────── */
+.err-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+  margin: 0 0 var(--space-3);
+}
+.err-subhead {
+  font-size: var(--fs-base);
+  color: var(--text-2);
+  line-height: var(--lh-normal);
+  margin: 0 0 var(--space-4);
+}
+.err-digest {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  margin: 0 0 var(--space-5);
+}
+
+/* ── 404 texts ─────────────────────────────────────────────────────────────── */
+.nf-code {
+  font-size: var(--fs-display);
+  font-weight: var(--weight-bold);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.02em;
+  color: var(--text-3);
+  margin: 0 0 var(--space-3);
+}
+.nf-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+  margin: 0 0 var(--space-3);
+}
+.nf-subhead {
+  font-size: var(--fs-base);
+  color: var(--text-2);
+  line-height: var(--lh-normal);
+  margin: 0 0 var(--space-6);
+}
+
+/* ── Buttons: eckig (--button-radius), primary = accent, secondary = surface ── */
+.err-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.err-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--button-radius);
+  font-family: var(--font);
+  font-size: var(--fs-base);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth);
+}
+.err-btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.err-btn--primary:hover {
+  background: color-mix(in srgb, var(--accent) 90%, #000);
+  border-color: color-mix(in srgb, var(--accent) 90%, #000);
+}
+.err-btn--secondary {
+  background: var(--surface);
+  border-color: var(--hairline);
+  color: var(--text-1);
+}
+.err-btn--secondary:hover {
+  background: var(--surface-muted);
+}
+
+/* ── Loading skeleton (subtle pulse — no spinner, no text) ─────────────────── */
+.skel-root {
+  max-width: 1400px;
+  margin-inline: auto;
+  padding: var(--space-8) var(--space-4);
+}
+.skel-block {
+  background: var(--surface-muted);
+  border-radius: var(--radius-md);
+  animation: skel-pulse 1.6s var(--ease-smooth) infinite;
+}
+.skel-headline { height: 32px; width: 60%; margin-bottom: var(--space-5); }
+.skel-line { height: 14px; width: 100%; margin-bottom: var(--space-3); }
+.skel-line--short { width: 40%; }
+
+@keyframes skel-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel-block { animation: none; }
+  .err-btn { transition: none; }
+}
