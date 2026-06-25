@@ -10,6 +10,7 @@ import {
 } from "@/lib/documents";
 import { DocumentLibraryRoot } from "@/components/documents/document-library-root";
 import { FolderPage } from "@/components/documents/folder-page";
+import { DocumentsSidebar } from "@/components/documents/documents-sidebar";
 
 /**
  * Document Library (File System v2). Optional catch-all under /documents-library/
@@ -36,9 +37,15 @@ export default async function DocumentLibraryPage({ params }: Params) {
 
   if (segs.length === 0) {
     const folders = await getRootFoldersWithPreview();
+    const sidebarFolders = folders.map((f) => ({ id: f.id, name: f.name, path: f.path, fileCount: f.fileCount, isPublic: f.isPublic }));
     return (
       <div className="main-inner">
-        <DocumentLibraryRoot folders={folders} isSuperAdmin={isSuperAdmin} />
+        <div className="dl-shell">
+          <DocumentsSidebar folders={sidebarFolders} activePath={null} isSuperAdmin={isSuperAdmin} />
+          <div className="dl-shell-main">
+            <DocumentLibraryRoot folders={folders} isSuperAdmin={isSuperAdmin} />
+          </div>
+        </div>
       </div>
     );
   }
@@ -46,23 +53,39 @@ export default async function DocumentLibraryPage({ params }: Params) {
   const current = await getFolderByPath(segs.join("/"));
   if (!current) notFound();
 
-  const [trail, childFolders, page] = await Promise.all([
+  // The secondary sidebar needs the top-level folder list in folder views too.
+  // getRootFoldersWithPreview is an existing fn (a handful of folders) — one
+  // extra read here so the sidebar can show counts + the open folder's files.
+  const [trail, childFolders, page, rootFolders] = await Promise.all([
     getBreadcrumb(current.path),
     getChildFolders(current.id),
     getFilesInFolder(current.id, { limit: 60, sort: "name" }),
+    getRootFoldersWithPreview(),
   ]);
+  const sidebarFolders = rootFolders.map((f) => ({ id: f.id, name: f.name, path: f.path, fileCount: f.fileCount, isPublic: f.isPublic }));
+  const openFolderFiles = page.files.map((f) => ({ id: f.id, title: f.title, extension: f.extension }));
 
   return (
     <div className="main-inner">
-      <FolderPage
-        key={current.id}
-        folder={current}
-        trail={trail}
-        childFolders={childFolders}
-        initialFiles={page.files}
-        initialHasMore={page.hasMore}
-        isSuperAdmin={isSuperAdmin}
-      />
+      <div className="dl-shell">
+        <DocumentsSidebar
+          folders={sidebarFolders}
+          activePath={current.path}
+          openFolderFiles={openFolderFiles}
+          isSuperAdmin={isSuperAdmin}
+        />
+        <div className="dl-shell-main">
+          <FolderPage
+            key={current.id}
+            folder={current}
+            trail={trail}
+            childFolders={childFolders}
+            initialFiles={page.files}
+            initialHasMore={page.hasMore}
+            isSuperAdmin={isSuperAdmin}
+          />
+        </div>
+      </div>
     </div>
   );
 }

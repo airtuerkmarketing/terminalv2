@@ -1033,3 +1033,60 @@
     max-width: none;
   }
 }
+
+/* ============================================================================
+   Documents-Library secondary sidebar (DocumentsSidebar) — LOCAL to this area,
+   independent of the global app sidebar. Collapse state is component-local.
+   ============================================================================ */
+
+/* Two-column shell: sidebar + the existing content (.document-library). */
+.dl-shell { display: flex; align-items: flex-start; gap: var(--space-6); }
+.dl-shell-main { flex: 1; min-width: 0; }
+
+.dl-sidebar { width: 280px; flex-shrink: 0; }
+.dl-sidebar.is-collapsed { width: 52px; }
+
+/* Head: title + square action buttons. */
+.dl-sidebar-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: 0 var(--space-1) var(--space-3); }
+.dl-sidebar-title { font-size: var(--fs-base); font-weight: var(--weight-semibold); color: var(--text-1); }
+.dl-sidebar-head-actions { display: flex; gap: 4px; }
+.dl-sq-btn { width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid var(--hairline); background: var(--surface); color: var(--text-2); display: grid; place-items: center; cursor: pointer; transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth); }
+.dl-sq-btn:hover { background: var(--surface-strong); color: var(--text-1); }
+.dl-sq-btn svg { width: 16px; height: 16px; }
+
+/* Full-width search: NO border-radius — only a hairline top + bottom rule. */
+.dl-sidebar-search { display: flex; align-items: center; gap: 8px; padding: var(--space-3) var(--space-1); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); color: var(--text-3); }
+.dl-sidebar-search-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.dl-sidebar-search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-family: inherit; font-size: var(--fs-sm); color: var(--text-1); }
+.dl-sidebar-search input::placeholder { color: var(--text-3); }
+
+/* Folder tree. */
+.dl-sidebar-tree { display: flex; flex-direction: column; gap: 2px; padding-top: var(--space-3); }
+.dl-tree-item { display: flex; align-items: center; gap: var(--space-2); min-height: 36px; padding: 6px 8px; border-radius: var(--radius-md); color: var(--text-1); text-decoration: none; transition: background-color 150ms var(--ease-smooth); }
+.dl-tree-item:hover { background: rgba(120, 120, 128, 0.08); }
+.dl-tree-item.is-active { background: rgba(120, 120, 128, 0.12); }
+.dl-tree-icon { display: grid; place-items: center; flex-shrink: 0; color: var(--text-2); }
+.dl-tree-icon svg { width: 18px; height: 18px; }
+.dl-tree-item.is-active .dl-tree-icon { color: var(--accent); }
+.dl-tree-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); font-weight: var(--weight-medium); }
+.dl-tree-count { flex-shrink: 0; font-size: var(--fs-xs); color: var(--text-3); background: var(--surface-muted); border-radius: var(--radius-full); padding: 1px 7px; }
+
+/* Files under the open folder (indented). */
+.dl-tree-files { list-style: none; margin: 2px 0 var(--space-2); padding: 0 0 0 26px; display: flex; flex-direction: column; gap: 1px; }
+.dl-tree-file { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 8px; border-radius: var(--radius-sm); text-decoration: none; transition: background-color 150ms var(--ease-smooth); }
+.dl-tree-file:hover { background: rgba(120, 120, 128, 0.08); }
+.dl-file-badge { flex-shrink: 0; display: inline-grid; place-items: center; min-width: 30px; height: 16px; padding: 0 4px; border-radius: 3px; font-size: 9px; font-weight: var(--weight-bold); color: #fff; letter-spacing: 0.02em; }
+.dl-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); color: var(--text-2); }
+
+/* Collapsed rail: square icon buttons, transparent at rest, fill on hover. */
+.dl-rail { display: flex; flex-direction: column; gap: 4px; }
+.dl-rail-btn { width: 40px; height: 40px; border-radius: var(--radius-md); border: 0; background: transparent; color: var(--text-2); display: grid; place-items: center; cursor: pointer; transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth); }
+.dl-rail-btn:hover { background: rgba(120, 120, 128, 0.08); color: var(--text-1); }
+.dl-rail-btn svg { width: 18px; height: 18px; }
+
+/* Desktop-only: hide the secondary sidebar below the drawer boundary (the main
+   content stays full-width). No new mobile features. */
+@media (max-width: 767px) {
+  .dl-shell { display: block; }
+  .dl-sidebar { display: none; }
+}
