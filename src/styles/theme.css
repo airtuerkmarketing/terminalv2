@@ -53,7 +53,7 @@
   --radius-xl: 12px; --radius-full: 9999px;
   /* Larger named radii (numeric, consistent with the 6/8/10/12 scale) for
      generous containers like the signature tool box. */
-  --radius-14: 14px; --radius-16: 16px; --radius-18: 18px; --radius-20: 20px; --radius-22: 22px;
+  --radius-14: 14px; --radius-16: 16px; --radius-18: 18px; --radius-20: 20px; --radius-22: 22px; --radius-25: 25px; --radius-32: 32px;
   /* Card-System (UX-Sweep 2026-06-18) — alias existing scale tokens so values
      stay identical (no visual drift); gives card/button/section one named knob. */
   --button-radius: var(--radius-sm);   /* 6px — Buhara: downloads "eckig" */
@@ -118,6 +118,10 @@
   --shadow-card: 0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04);
   --shadow-card-hover: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
   --shadow-floating: 0 1px 2px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+  /* Floating "coin" shadows for the dashboard greeting orbit seal — soft drop +
+     faint inset highlight so the marks read as physical discs. */
+  --shadow-coin: inset 0 1px 2px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.10);
+  --shadow-coin-center: inset 0 1px 2px rgba(0,0,0,0.03), 0 6px 18px rgba(0,0,0,0.12);
 }
 
 :root[data-theme="ios18-dark"] {
@@ -154,4 +158,7 @@
   --shadow-card: 0 1px 2px rgba(0,0,0,0.30), 0 2px 8px rgba(0,0,0,0.30);
   --shadow-card-hover: 0 1px 3px rgba(0,0,0,0.45), 0 4px 16px rgba(0,0,0,0.45);
   --shadow-floating: 0 1px 2px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.30);
+  /* Coin shadows — opacity scaled up for dark mode visibility (see light block). */
+  --shadow-coin: inset 0 1px 2px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.40);
+  --shadow-coin-center: inset 0 1px 2px rgba(0,0,0,0.10), 0 6px 18px rgba(0,0,0,0.45);
 }
