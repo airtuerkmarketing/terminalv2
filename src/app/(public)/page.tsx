@@ -5,6 +5,7 @@ import { pageMetadata } from "@/components/page-view";
 // rules are kept in the tree (not deleted) in case we want the orbit back.
 import { GreetingOrbit } from "@/components/dashboard/hero/GreetingOrbit";
 import { SearchAIBox } from "@/components/dashboard/hero/SearchAIBox";
+import { QuickGrabs } from "@/components/dashboard/quickgrabs/QuickGrabs";
 
 // "/" is the dashboard landing (Stage 1): Cloud Orbit hero + Such+KI-Box +
 // Quick-Chips. It replaces the generic block-rendered "/" page; Bento-Cards
@@ -20,7 +21,7 @@ export default function Home() {
       <div className="dh-page">
         <GreetingOrbit />
         <SearchAIBox />
-        {/* PLATZHALTER: hier kommen später Bento-Cards (Stufe 3+) */}
+        <QuickGrabs />
       </div>
     </div>
   );
