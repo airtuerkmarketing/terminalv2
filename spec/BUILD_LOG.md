@@ -7,9 +7,9 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## Current State (updated 2026-06-25)
+## Current State (updated 2026-06-26)
 
-- **HEAD:** `14c0b86` (`main`, == origin/main). **Demo:** 2026-08-01.
+- **HEAD:** `4cfd33b` (`main`, == origin/main). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
@@ -18,19 +18,19 @@ it is append-only history (do not rewrite past entries — add new ones).
   `ai_chat_messages`, `ai_corrections`). **55 pages** (all published), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` installed. **59 migrations**, highest:
-  `20260625080714_rename_brand_section_titles`. Highest decision: **D-064**.
+  `pgvector 0.8.0` + `pg_trgm 1.6` installed. **60 migrations**, highest:
+  `20260625140402_selin_stammdaten_db_cleanup`. Highest decision: **D-064**.
   RAG corpus: **410 chunks** (confluence 367 [page 134 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **36 company_context** entries. Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v6 (persona v2, + 3 confluence fns).
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
-- **Data counts (2026-06-25):** team_members **63**, profiles **3 (all super_admin,
-  0 admin/user)**, active auth users **3**, assets **718**, blocks **43**,
-  gold_set_answers **84** (92.9% accuracy baseline), ai_chat_sessions **53** /
-  messages **144**, ai_corrections **0**.
-- **⚠️ V1 blocker:** prod `profiles` has only **3 rows (all super_admin)** — the
-  Stage-8 nine-key-user seed (`684d67f`) never reached prod; must be re-run before
-  the 2026-08-01 demo (details in the 2026-06-25 finding below).
+- **Data counts (2026-06-26):** team_members **63**, profiles **4 (all super_admin,
+  0 admin/user)**, active auth users **4**, assets **718**, blocks **43**,
+  gold_set_answers **84** (92.9% accuracy baseline), ai_chat_sessions **58** /
+  messages **186**, ai_corrections **1**.
+- **⚠️ V1 blocker:** prod `profiles` has only **4 rows (all super_admin, 0 admin/0
+  user)** — the Stage-8 nine-key-user seed (`684d67f`) never reached prod; must be
+  re-run before the 2026-08-01 demo (details in the 2026-06-25 finding below).
 - **Auth/roles:** `super_admin | admin | user`; RLS via `is_admin()` /
   `is_super_admin()` / `get_profile_role()`; profile role-changes are
   super-admin-only (D-055).
@@ -41,15 +41,71 @@ it is append-only history (do not rewrite past entries — add new ones).
   intelligence/RAG groundwork (0025–0029) + live `/api/search`; dead-code cleanup
   (`c397b29`); `/internal-branding/configurator` removed (D-056); 4 brand pages
   ported to typed TSX section components (D-064); 3 cleanup wellen on 2026-06-25
-  (lint+avatars, test-person+domain removal, brand sub-title rename).
-- **Remaining:** AP3 Phase 5 (Multi-Select + Bulk-Actions + CSV export) — NEXT;
-  AP3 Phases 7–12 (per-section bulk-invite, quick-actions, density toggle,
+  (lint+avatars, test-person+domain removal, brand sub-title rename); dashboard
+  UI-redesign merge (greeting orbit seal, Quick-Grabs carousel, portal-wide radial
+  FAB — `c2b12a1`); AP3 Phase 5 (admin/users multi-select + bulk-actions + CSV
+  export — `6419849`); Selin Stammdaten cleanup (Thoß→Köroglu / initials SK /
+  gold-set fixture — `77d14a6`); Welle B pre-demo hygiene (migration-ledger rename
+  + error/404/loading boundaries + this doc-sync).
+- **Remaining:** AP3 Phases 7–12 (per-section bulk-invite, quick-actions, density toggle,
   permissions matrix, per-user permissions, activity-log integration); RAG WS2
   (feedback+CorrectionModal finish) + WS3/WS4 (web-search) + S5 company-context UI
   + S8 email-notify resend + S9 gold-set re-run + S10 demo polish; Audit fixes
   P0a (cookie-free public-read) + P0c (proxy.ts) + P1 (APIX dynamic + RAG
   robustness, 4 open decisions); Out-of-Office as its own brand section (Block 5b);
   2 non-blocking bulk-invite fixes (`use-bulk-invite.ts`).
+
+---
+
+## 2026-06-26 — Welle B (Pre-Demo Hygiene)
+
+Three isolated pre-demo hygiene items from the 2026-06-26 comprehensive sweep.
+Welle A (greeting first-name + empty-`/admin` redirect) was recon-only this
+session — no commits; prod-HEAD stayed `77d14a6` going in.
+
+**B1 — Migration-ledger-drift repair** (`6098201`, Closes SWEEP-005)
+- Renamed local `20260625135558_selin_stammdaten_db_cleanup.sql` → the ledger
+  timestamp `20260625140402_…` (`git mv`, R100, 0 content change).
+- Read-only verified first: the two `UPDATE`s are byte-identical to the ledger (only
+  the ledger's comment header is condensed) and every effect is already applied +
+  idempotent (Selin Köroglu / `SK` / gold-set) → **no DB touch**. Variante α
+  (rename); β (ledger `UPDATE`) rejected as needlessly risky. Migrations 59→**60**,
+  ledger untouched.
+- Surfaced, left by decision: **30 legacy `00NN` version-string drifts** remain →
+  `supabase db push` stays non-clean; harmless under the MCP `apply_migration`
+  workflow (CLI not installed). Tracked as a separate post-demo AP.
+- Deploy `dpl_EMJnUGdkLyHANGStbWy7RU6D239N` READY ~20s.
+
+**B2 — Error boundaries + 404 + loading skeleton** (`4cfd33b`, Closes SWEEP-006)
+- 4 new files (`src/app/error.tsx`, `not-found.tsx`, `(public)/loading.tsx`,
+  `(public)/error.tsx`) + `src/styles/error-states.css` with self-contained
+  `.err-*/.nf-*/.skel-*` from theme tokens (the assumed `.card`/`.btn-primary`
+  globals don't exist; CSS imported per-file). `getIdentity` from `@/lib/auth`. Flat
+  per the current system (no backdrop-filter, no DM Mono, eckige buttons).
+- `not-found.tsx` is identity-aware and builds `ƒ` dynamic (async + cookies) — clean,
+  no `force-dynamic`.
+- **Finding:** unmatched routes hit the `(public)` catch-all `[...slug]`, whose
+  auth-gate **307-redirects anon → `/login` before the 404 renders**. So the branded
+  404 shows for **authenticated** users ("Zurück zum Dashboard"); anon get `/login`
+  (the not-found anon branch is effectively unreachable). **No bug / no regression** —
+  pre-B2 anon were also redirected, then served a default Next 404; authed users now
+  get the branded one.
+- Verify (honest): branded-404 markup confirmed served live (curl:
+  `nf-card`/`nf-code`/`Seite nicht gefunden`); gates green; build flips `/_not-found`
+  ○→ƒ. Authed-404 **visual not captured** (no connected browser; scripting a password
+  login is out per safety rules). Dark-mode correct by construction (token-only).
+  Error-boundary live-trigger skipped (needs a code throw).
+- Deploy `dpl_7AhawUATP6z8RDgYXZgZHMw1u8sJ` READY ~22s.
+
+**B3 — Doc sync** (this commit, Closes SWEEP-004)
+- Current State refreshed: HEAD `14c0b86`→`4cfd33b`, dated 2026-06-26, **60
+  migrations** (highest `20260625140402_selin_stammdaten_db_cleanup`), live counts
+  (profiles 3→**4**, auth 3→**4**, ai_chat 53/144→**58/186**, ai_corrections 0→**1**;
+  all others unchanged incl. RAG corpus 410).
+- Remaining de-staled (AP3 Phase 5 shipped → removed). Shipped gained 3 summary
+  bullets for work merged since `14c0b86` (dashboard UI-redesign, AP3 Phase 5, Selin
+  cleanups) — no detail backfill.
+- DECISIONS.md unchanged (B1/B2 operational; highest stays D-064).
 
 ---
 
