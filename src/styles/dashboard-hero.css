@@ -52,15 +52,20 @@
   width: 100%;
   box-sizing: border-box;
   background: var(--surface-flat);
-  border: 1px solid var(--hairline);
-  border-radius: var(--card-radius);
-  box-shadow: var(--card-shadow);
-  padding: var(--card-padding);
+  border: 1px solid var(--hairline);             /* Figma 1px #EBEBEB = --hairline */
+  border-radius: var(--radius-25);               /* Figma 25px */
+  box-shadow: var(--shadow-searchbox);           /* soft default lift */
+  padding: 15px;                                 /* Figma */
   transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }
+.ai-search-box:hover {
+  border-color: var(--hairline-strong);
+}
+/* Dashboard-Box: bewusst grauer Fokus statt Accent-Ring (Hero-Sonderfall). The
+   system-wide D-036 blue focus ring still applies to all other inputs. */
 .ai-search-box.is-focused {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--hairline-strong);
+  box-shadow: var(--shadow-searchbox-focus);
 }
 .ai-search-textarea {
   width: 100%;
@@ -70,9 +75,11 @@
   resize: none;
   outline: none;
   font-family: inherit;
-  font-size: var(--fs-md);
-  line-height: var(--lh-normal);
+  font-size: 16px;                  /* Figma */
+  font-weight: var(--weight-regular);
+  line-height: 22.4px;              /* Figma */
   color: var(--text-1);
+  padding: 5px 0 0 6px;             /* Figma: top 5, left 6 */
   min-height: 72px;
   max-height: 220px;
   overflow-y: auto;
@@ -103,14 +110,16 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  height: 32px;                 /* Figma */
+  padding: 0 12px;              /* Figma */
   border-radius: var(--radius-full);
   border: 1px solid var(--hairline);
   background: var(--surface-muted);
   color: var(--text-2);
   font-family: inherit;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-base);    /* Figma 14px */
   font-weight: var(--weight-medium);
+  box-shadow: 0px 2px 8px rgba(17, 24, 39, 0.06); /* Figma chip shadow (single use) */
   cursor: pointer;
   transition: all 150ms var(--ease-smooth);
   white-space: nowrap;
@@ -142,14 +151,18 @@
 }
 
 /* ── Send ── */
+/* D-036 EXCEPTION: the send button is BLACK (not Quantum-Blue accent), per the
+   Figma design. background=--text-1 / arrow=--bg auto-inverts per theme (black
+   button + white arrow in light; white button + dark arrow in dark). The
+   focus-ring accent (D-036) elsewhere is unchanged — only this button deviates. */
 .ai-search-send {
-  width: 38px;
-  height: 38px;
+  width: 32px;                       /* Figma (was 38px) */
+  height: 32px;
   flex-shrink: 0;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: var(--accent);
-  color: #fff;
+  border: 1px solid var(--hairline); /* Figma #3F3F3F-equivalent hairline */
+  border-radius: var(--radius-full); /* Figma round */
+  background: var(--text-1);
+  color: var(--bg);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -163,8 +176,8 @@
   cursor: not-allowed;
 }
 .ai-search-send-icon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 /* ── Model selector ── */
