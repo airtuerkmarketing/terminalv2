@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import "@/styles/document-library.css";
 import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
-import TreeNodeTooltip, { type TreeNode } from "@/components/ui/tree-node-tooltip";
 import { searchFilesInFolder } from "@/app/(public)/documents-library/actions";
 import type { FileDTO, FileSortKey, FolderDTO } from "@/lib/documents";
 import { Breadcrumb } from "./breadcrumb";
@@ -19,14 +18,12 @@ const PAGE_SIZE = 60;
 export function FolderPage({
   folder,
   trail,
-  childFolders,
   initialFiles,
   initialHasMore,
   isSuperAdmin,
 }: {
   folder: FolderDTO;
   trail: FolderDTO[];
-  childFolders: FolderDTO[];
   initialFiles: FileDTO[];
   initialHasMore: boolean;
   isSuperAdmin: boolean;
@@ -123,7 +120,6 @@ export function FolderPage({
   }
 
   const noFiles = files.length === 0;
-  const hasSubfolders = childFolders.length > 0;
 
   // List-view column header: a sort button (active column gets a chevron).
   const SortTh = ({ label, sortKey }: { label: string; sortKey: FileSortKey }) => (
@@ -146,18 +142,14 @@ export function FolderPage({
           <div className="dl-empty">
             <span>No files match “{search}”.</span>
           </div>
-        ) : !hasSubfolders ? (
+        ) : (
           <div className="dl-empty">
             <strong>This folder is empty.</strong>
             {isSuperAdmin ? (
-              <span>Upload a file or create a subfolder to get started.</span>
+              <span>Upload a file, or open a subfolder from the left sidebar.</span>
             ) : (
               <span>No files here yet.</span>
             )}
-          </div>
-        ) : (
-          <div className="dl-empty">
-            <span>No files in this folder — open a subfolder on the left.</span>
           </div>
         )
       ) : view === "list" ? (
@@ -198,24 +190,8 @@ export function FolderPage({
     </>
   );
 
-  // Subfolder tree (left nav). Direct children only → flat node list, one
-  // TreeNodeTooltip per child (mirrors the component's demo usage).
-  const treePanel = (
-    <aside className="dl-tree-panel" aria-label="Subfolders">
-      <div className="dl-tree-head">Folders</div>
-      {childFolders.map((f) => {
-        const node: TreeNode = {
-          id: f.id,
-          name: f.name,
-          tooltip: f.name,
-          type: "folder",
-          href: `/documents-library/${f.path}`,
-        };
-        return <TreeNodeTooltip key={f.id} node={node} />;
-      })}
-    </aside>
-  );
-
+  // Subfolder navigation now lives in the DocumentsSidebar (left), so the main
+  // panel shows only the file area — no second "FOLDERS" list here.
   return (
     <article className="document-library">
       <Breadcrumb trail={trail} />
@@ -267,16 +243,8 @@ export function FolderPage({
         </div>
       </div>
 
-      {/* Below the search bar: split into a subfolder tree (≈15%) + the file
-          area (rest) when this folder has subfolders; otherwise full width. */}
-      {hasSubfolders ? (
-        <div className="dl-split">
-          {treePanel}
-          <div className="dl-split-main">{filesArea}</div>
-        </div>
-      ) : (
-        filesArea
-      )}
+      {/* File area (subfolder nav moved to the DocumentsSidebar). */}
+      {filesArea}
 
       {isSuperAdmin && (
         <UploadModal

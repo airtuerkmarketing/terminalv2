@@ -1090,3 +1090,15 @@
   .dl-shell { display: block; }
   .dl-sidebar { display: none; }
 }
+
+/* Full-bleed page wrapper for the Documents Library (used INSTEAD of .main-inner
+   on this route) so the secondary sidebar sits flush left next to the global
+   rail rather than inside the centred 1400px box. Other routes keep .main-inner. */
+.dl-page { width: 100%; padding: var(--space-5) var(--space-6) 0; }
+
+/* Subfolder entry nested under the open folder (navigates deeper). */
+.dl-tree-subfolder { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 8px; border-radius: var(--radius-sm); text-decoration: none; color: var(--text-1); transition: background-color 150ms var(--ease-smooth); }
+.dl-tree-subfolder:hover { background: rgba(120, 120, 128, 0.08); }
+.dl-tree-subfolder .dl-tree-icon { width: 16px; height: 16px; }
+.dl-tree-subfolder .dl-tree-icon svg { width: 15px; height: 15px; }
+.dl-tree-subfolder .dl-file-name { color: var(--text-1); font-weight: var(--weight-medium); }

@@ -21,7 +21,7 @@ export interface DocSidebarFolder {
   id: string;
   name: string;
   path: string;
-  fileCount: number;
+  fileCount?: number; // top-level folders carry a count; subfolders don't
   isPublic: boolean;
 }
 export interface DocSidebarFile {
@@ -33,6 +33,7 @@ export interface DocumentsSidebarProps {
   title?: string;
   folders: DocSidebarFolder[];
   activePath: string | null; // current folder path ("" / null at root)
+  subFolders?: DocSidebarFolder[]; // child folders of the active folder
   openFolderFiles?: DocSidebarFile[]; // files of the active folder, shown under it
   isSuperAdmin: boolean;
 }
@@ -53,6 +54,7 @@ export function DocumentsSidebar({
   title = "Documents Library",
   folders,
   activePath,
+  subFolders = [],
   openFolderFiles = [],
   isSuperAdmin,
 }: DocumentsSidebarProps) {
@@ -70,6 +72,7 @@ export function DocumentsSidebar({
   const folderMatches = (f: DocSidebarFolder) =>
     !query || f.name.toLowerCase().includes(query) || f.path === activePath;
   const visible = folders.filter(folderMatches);
+  const subs = query ? subFolders.filter((f) => f.name.toLowerCase().includes(query)) : subFolders;
   const files = query
     ? openFolderFiles.filter((f) => f.title.toLowerCase().includes(query))
     : openFolderFiles;
@@ -133,10 +136,19 @@ export function DocumentsSidebar({
               <Link href={`/documents-library/${f.path}`} className={cn("dl-tree-item", isAncestor && "is-active")}>
                 <span className="dl-tree-icon">{isOpen ? <FolderOpen aria-hidden /> : <Folder aria-hidden />}</span>
                 <span className="dl-tree-name">{f.name}</span>
-                <span className="dl-tree-count">{f.fileCount}</span>
+                {typeof f.fileCount === "number" && <span className="dl-tree-count">{f.fileCount}</span>}
               </Link>
-              {isOpen && files.length > 0 && (
+              {isOpen && (subs.length > 0 || files.length > 0) && (
                 <ul className="dl-tree-files">
+                  {/* Subfolders first (navigate deeper), then files. */}
+                  {subs.map((sf) => (
+                    <li key={sf.id}>
+                      <Link className="dl-tree-subfolder" href={`/documents-library/${sf.path}`}>
+                        <span className="dl-tree-icon"><Folder aria-hidden /></span>
+                        <span className="dl-file-name">{sf.name}</span>
+                      </Link>
+                    </li>
+                  ))}
                   {files.map((file) => {
                     const b = BADGE[fileKind(file.extension)];
                     return (

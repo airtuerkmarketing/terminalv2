@@ -39,7 +39,7 @@ export default async function DocumentLibraryPage({ params }: Params) {
     const folders = await getRootFoldersWithPreview();
     const sidebarFolders = folders.map((f) => ({ id: f.id, name: f.name, path: f.path, fileCount: f.fileCount, isPublic: f.isPublic }));
     return (
-      <div className="main-inner">
+      <div className="dl-page">
         <div className="dl-shell">
           <DocumentsSidebar folders={sidebarFolders} activePath={null} isSuperAdmin={isSuperAdmin} />
           <div className="dl-shell-main">
@@ -63,14 +63,16 @@ export default async function DocumentLibraryPage({ params }: Params) {
     getRootFoldersWithPreview(),
   ]);
   const sidebarFolders = rootFolders.map((f) => ({ id: f.id, name: f.name, path: f.path, fileCount: f.fileCount, isPublic: f.isPublic }));
+  const subFolders = childFolders.map((f) => ({ id: f.id, name: f.name, path: f.path, isPublic: f.isPublic }));
   const openFolderFiles = page.files.map((f) => ({ id: f.id, title: f.title, extension: f.extension }));
 
   return (
-    <div className="main-inner">
+    <div className="dl-page">
       <div className="dl-shell">
         <DocumentsSidebar
           folders={sidebarFolders}
           activePath={current.path}
+          subFolders={subFolders}
           openFolderFiles={openFolderFiles}
           isSuperAdmin={isSuperAdmin}
         />
@@ -79,7 +81,6 @@ export default async function DocumentLibraryPage({ params }: Params) {
             key={current.id}
             folder={current}
             trail={trail}
-            childFolders={childFolders}
             initialFiles={page.files}
             initialHasMore={page.hasMore}
             isSuperAdmin={isSuperAdmin}
