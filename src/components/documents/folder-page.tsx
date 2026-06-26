@@ -2,14 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Globe, Lock, Pencil, Plus, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, Lock, Pencil, Plus, Upload } from "lucide-react";
 import "@/styles/document-library.css";
 import type { ViewMode } from "@/components/ui/view-toggle";
-import {
-  renameFolder,
-  searchFilesInFolder,
-  setFolderVisibility,
-} from "@/app/(public)/documents-library/actions";
+import { renameFolder, searchFilesInFolder } from "@/app/(public)/documents-library/actions";
 import type { FileDTO, FileSortKey, FolderDTO } from "@/lib/documents";
 import { fileKind } from "@/lib/documents-constants";
 import { Breadcrumb } from "./breadcrumb";
@@ -22,6 +18,7 @@ import { FolderActionsMenu } from "./folder-actions-menu";
 import { FolderCard3D, FolderRow } from "./folder-card-3d";
 import { LibraryToolbar } from "./library-toolbar";
 import { EmptySpaceContextMenu } from "./empty-space-context-menu";
+import { VisibilityPopover } from "./visibility-popover";
 import { DEFAULT_FILTER, type LibraryFilter } from "./filter-sort-popover";
 
 const PAGE_SIZE = 60;
@@ -162,10 +159,6 @@ export function FolderPage({
     const res = await renameFolder(folder.id, t);
     if (res.ok) router.refresh();
     else setTitleDraft(folder.name);
-  }
-  async function toggleVisibility() {
-    await setFolderVisibility(folder.id, !folder.isPublic);
-    router.refresh();
   }
 
   // ── Client filter/sort layer (type + direction) over the loaded list ───────
@@ -345,15 +338,7 @@ export function FolderPage({
           )}
 
           {isSuperAdmin ? (
-            <button
-              type="button"
-              className={`dl-status-pill${folder.isPublic ? "" : " is-private"}`}
-              onClick={toggleVisibility}
-              title={folder.isPublic ? "Public — click to make private" : "Private — click to make public"}
-            >
-              {folder.isPublic ? <Globe size={13} aria-hidden="true" /> : <Lock size={13} aria-hidden="true" />}
-              {folder.isPublic ? "Public" : "Private"}
-            </button>
+            <VisibilityPopover folderId={folder.id} isPublic={folder.isPublic} />
           ) : (
             !folder.isPublic && (
               <span className="dl-status-pill is-private is-static">

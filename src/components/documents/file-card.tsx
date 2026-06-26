@@ -7,7 +7,6 @@ import { deleteFile, editFile } from "@/app/(public)/documents-library/actions";
 import { FlagIcon } from "@/components/ui/flag-icon";
 import { RelativeTime } from "./relative-time";
 import { FileTypeGraphic } from "./file-type-graphic";
-import { FileObject } from "./file-object";
 
 function fileHref(id: string, download = false) {
   return `/api/library/file/${id}${download ? "?download=1" : ""}`;
@@ -63,8 +62,9 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
 
 /**
  * One file in the document grid.
- *   - "card" → Windows-Explorer-style free-standing cell: a typed FileObject SVG,
- *     the name (inline-rename on click), then flag + size. No box; hover gives a
+ *   - "card" → Windows-Explorer-style free-standing cell: the shared FileTypeGraphic
+ *     (image types show a real thumbnail), the name (inline-rename on click), then
+ *     flag + size. Same graphic as the list view, only larger. No box; hover gives a
  *     subtle bg. Whole cell opens the file; right-click = context menu. Rename /
  *     move / delete reuse the existing handlers (editFile / FileEditModal /
  *     deleteFile) with live grid updates via onUpdated / onRemoved.
@@ -131,7 +131,13 @@ export function FileCard({
       >
         <button type="button" className="dl-cell__hit" onClick={openFile} aria-label={`Open ${file.title}`}>
           <span className="dl-cell__visual">
-            <FileObject kind={kind} imageUrl={isImage ? href : undefined} />
+            {isImage ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
+              <img className="dl-cell__thumb" src={href} alt="" loading="lazy" decoding="async" />
+            ) : (
+              /* Same graphic as the list view, larger — one element across both views. */
+              <FileTypeGraphic extension={file.extension} scale={1.8} />
+            )}
           </span>
         </button>
         {/* Hover-only download (opens the same serving route with ?download=1). */}

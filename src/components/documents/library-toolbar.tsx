@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Search } from "lucide-react";
 import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
 import { FilterSortPopover, type LibraryFilter } from "./filter-sort-popover";
 
@@ -49,10 +50,8 @@ export function LibraryToolbar({
   return (
     <div className="dl-toolbar">
       <div className="dl-search">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="M21 21l-4.3-4.3" strokeLinecap="round" />
-        </svg>
+        {/* Same lucide Search icon as the DocumentsSidebar search. */}
+        <Search size={16} aria-hidden="true" />
         <input
           type="search"
           value={searchValue}

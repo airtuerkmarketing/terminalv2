@@ -123,7 +123,7 @@ export function DocumentsSidebar({
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Suchen…"
+          placeholder="Search…"
           aria-label="Ordner und Dateien durchsuchen"
         />
       </div>
