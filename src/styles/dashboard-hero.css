@@ -137,6 +137,21 @@
   height: 15px;
   flex-shrink: 0;
 }
+/* The terminal mark spins a single smooth 360° on KI-button hover (and eases back
+   out), not a continuous spin. Purely visual — doesn't intercept the click. */
+.ai-ask-mark {
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+.ai-search-ki:hover .ai-ask-mark {
+  transform: rotate(360deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-ask-mark {
+    transition: none;
+    transform: none !important;
+  }
+}
 .ai-search-pill-caret {
   width: 14px;
   height: 14px;
