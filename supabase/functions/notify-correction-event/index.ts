@@ -60,8 +60,13 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: CORS })
 
   try {
-    const { type, correctionId, reason, probe } = await req.json()
+    const { type, correctionId, reason, probe, to_override } = await req.json()
     const resendKey = Deno.env.get('RESEND_API_KEY') ?? ''
+    // One-shot verification override: when set, ALL mail goes to this address
+    // instead of the normal recipients (used to test the pipeline without
+    // emailing the real reviewers). Authenticated-internal only (verify_jwt).
+    const overrideTo: string[] | null =
+      typeof to_override === 'string' && to_override ? [to_override] : null
 
     if (probe) {
       return new Response(
@@ -102,7 +107,7 @@ Deno.serve(async (req: Request) => {
         <p><b>Frage:</b> ${question}</p>
         <p style="background:#f7f7f7;border-radius:8px;padding:12px"><b>Vorgeschlagene Korrektur:</b><br>${proposed}</p>
         <p><a href="${REVIEWS_URL}" style="display:inline-block;background:#0A82DF;color:#fff;text-decoration:none;padding:9px 16px;border-radius:8px">Review öffnen</a></p>`)
-      result = await sendEmail(resendKey, REVIEWERS, 'Neue Wissens-Korrektur wartet', html)
+      result = await sendEmail(resendKey, overrideTo ?? REVIEWERS, 'Neue Wissens-Korrektur wartet', html)
     } else {
       const { data: prof } = await supabase
         .from('profiles')
@@ -118,13 +123,13 @@ Deno.serve(async (req: Request) => {
           <p><b>Frage:</b> ${question}</p>
           <p style="background:#e9f7ee;border-radius:8px;padding:12px">${finalText}</p>
           <p>Die KI nutzt diese Information ab sofort. Danke für deinen Beitrag!</p>`)
-        result = await sendEmail(resendKey, [to], 'Deine Korrektur wurde übernommen', html)
+        result = await sendEmail(resendKey, overrideTo ?? [to], 'Deine Korrektur wurde übernommen', html)
       } else if (type === 'rejected') {
         const html = shell('Deine Korrektur wurde nicht übernommen', `
           <p><b>Frage:</b> ${question}</p>
           <p><b>Begründung:</b> ${esc(reason ?? '—')}</p>
           <p>Bei Rückfragen melde dich bei Murat oder Selin.</p>`)
-        result = await sendEmail(resendKey, [to], 'Deine Korrektur wurde abgelehnt', html)
+        result = await sendEmail(resendKey, overrideTo ?? [to], 'Deine Korrektur wurde abgelehnt', html)
       } else {
         return new Response(JSON.stringify({ ok: false, error: `unknown type: ${type}` }), {
           status: 400,
