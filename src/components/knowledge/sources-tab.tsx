@@ -165,8 +165,17 @@ export function SourcesTab({
                   <span className="kb-tag kb-tag--layer">{LAYER_LABEL[c.layer]}</span>
                   <span className="kb-tag">{c.sourceType}</span>
                   {c.priority === 1 && <span className="kb-tag kb-tag--priority">Priorität 1</span>}
-                  {c.tags.topics?.map((t) => <span key={t} className="kb-tag">{t}</span>)}
-                  {c.tags.airlines?.map((t) => <span key={t} className="kb-tag">{t}</span>)}
+                  {[
+                    ...(c.tags.topics ?? []),
+                    ...(c.tags.airlines ?? []),
+                    ...(c.tags.departments ?? []),
+                    ...(c.tags.brands ?? []),
+                    ...(c.tags.providers ?? []),
+                  ].map((t, i) => (
+                    <span key={`${t}-${i}`} className="kb-tag">
+                      {t}
+                    </span>
+                  ))}
                 </div>
                 {c.editable && (
                   <button className="kb-chip" onClick={() => setEditing(c)}>
