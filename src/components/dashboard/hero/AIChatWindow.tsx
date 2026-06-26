@@ -5,13 +5,14 @@ import { ArrowUp, Plus, X } from "lucide-react";
 import { AIAnswerBlock } from "@/components/dashboard/hero/AIAnswerBlock";
 import type { AiTurn } from "@/lib/search/types";
 
-/* Right-side sliding chat window (BAU-Auftrag §5). Non-modal side panel
- * (Linear/Notion pattern): position:fixed, own scroll container, the main page
- * scrolls independently behind it — no backdrop, no body scroll-lock. Always
- * mounted so the slide-out transition plays; `open` toggles `.is-open`.
- * Closes via ✕ or Esc (Esc only when focus is inside the panel). The footer
- * input reuses the parent's submitAi; "Neuer Chat" resets the persisted thread
- * behind a two-step inline confirm. */
+/* Full-page chat surface (BAU-Auftrag §5). Opens as its own page — an opaque
+ * full-viewport view that cross-fades + rises in (no side-drawer slide); the
+ * conversation sits in a centered readable column with its own scroll. Always
+ * mounted so the fade plays; `open` toggles `.is-open` (closed state is faded +
+ * inert). Closes via ✕ or Esc (Esc only when focus is inside the panel). The
+ * composer is a centered floating input — bottom-anchored during a chat,
+ * centered for a fresh/empty thread — and reuses the parent's submitAi;
+ * "Neuer Chat" resets the persisted thread behind a two-step inline confirm. */
 
 interface Props {
   open: boolean;
@@ -55,6 +56,21 @@ export function AIChatWindow({
   // Focus the follow-up input when the panel opens.
   useEffect(() => {
     if (open) inputRef.current?.focus();
+  }, [open]);
+
+  // Lock background scroll while the full-page chat is open — it's a takeover,
+  // not a side panel, so the dashboard behind shouldn't scroll-chain. Removing
+  // the viewport scrollbar also keeps the centered composer/surface from being
+  // offset by the scrollbar gutter (the window is 100vw). Restores the prior
+  // value on close/unmount.
+  useEffect(() => {
+    if (!open) return;
+    const html = document.documentElement;
+    const prev = html.style.overflow;
+    html.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = prev;
+    };
   }, [open]);
 
   // Auto-grow the follow-up input as the draft changes (reset to 1 row after
@@ -128,22 +144,16 @@ export function AIChatWindow({
   }
 
   return (
-    <>
-      <div
-        className={`ai-chat-overlay${open ? " is-visible" : ""}`}
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <aside
-        ref={panelRef}
-        className={`ai-chat-window${open ? " is-open" : ""}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ai-chat-title"
-        // `inert` while closed removes the off-screen panel from the tab order and
-        // a11y tree (it still animates) — prevents tabbing into hidden controls.
-        inert={!open}
-      >
+    <aside
+      ref={panelRef}
+      className={`ai-chat-window${open ? " is-open" : ""}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ai-chat-title"
+      // `inert` while closed removes the faded-out view from the tab order and
+      // a11y tree (it still cross-fades) — prevents tabbing into hidden controls.
+      inert={!open}
+    >
       <header className="ai-chat-header">
         <h2 id="ai-chat-title" className="ai-chat-title">airtuerk Intelligence</h2>
         <div className="ai-chat-header-actions">
@@ -169,38 +179,50 @@ export function AIChatWindow({
       </header>
 
       <div className="ai-chat-body" ref={bodyRef}>
-        {turns.map((t, i) => (
-          <AIAnswerBlock
-            key={t.id}
-            turn={t}
-            typewriter={i === turns.length - 1}
-            onCorrect={onCorrect}
-            onFeedbackChange={onFeedbackChange}
-          />
-        ))}
+        <div className="ai-chat-thread">
+          {turns.map((t, i) => (
+            <AIAnswerBlock
+              key={t.id}
+              turn={t}
+              typewriter={i === turns.length - 1}
+              onCorrect={onCorrect}
+              onFeedbackChange={onFeedbackChange}
+            />
+          ))}
+        </div>
       </div>
 
-      <div className="ai-chat-input">
-        <textarea
-          ref={inputRef}
-          className="ai-chat-textarea"
-          rows={1}
-          value={draft}
-          placeholder="Nachfrage stellen…"
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={onKeyDown}
-        />
-        <button
-          type="button"
-          className="ai-chat-send"
-          disabled={!draft.trim()}
-          onClick={send}
-          aria-label="Senden"
-        >
-          <ArrowUp className="ai-chat-send-icon" aria-hidden="true" />
-        </button>
+      {/* Centered floating composer. `is-centered` lifts it to the vertical
+          middle (with a greeting) when the thread is empty; otherwise it sits
+          bottom-centered. */}
+      <div className={`ai-chat-input${turns.length === 0 ? " is-centered" : ""}`}>
+        {turns.length === 0 && (
+          <div className="ai-chat-greeting">
+            <h3 className="ai-chat-greeting-title">Wie kann ich helfen?</h3>
+            <p className="ai-chat-greeting-sub">Frag mich alles über euer Wissen.</p>
+          </div>
+        )}
+        <div className="ai-chat-composer">
+          <textarea
+            ref={inputRef}
+            className="ai-chat-textarea"
+            rows={1}
+            value={draft}
+            placeholder="Nachfrage stellen…"
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={onKeyDown}
+          />
+          <button
+            type="button"
+            className="ai-chat-send"
+            disabled={!draft.trim()}
+            onClick={send}
+            aria-label="Senden"
+          >
+            <ArrowUp className="ai-chat-send-icon" aria-hidden="true" />
+          </button>
+        </div>
       </div>
-      </aside>
-    </>
+    </aside>
   );
 }
