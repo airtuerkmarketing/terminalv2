@@ -94,6 +94,69 @@
   padding: 1px 7px;
 }
 
+/* Inline-rename trigger on the page title: looks like the bare h1, with a pencil
+   that fades in on hover (admins only). The input matches the h1 type scale. */
+.dl-title-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border-radius: 8px;
+  cursor: text;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition: background-color 150ms var(--ease-smooth);
+}
+.dl-title-btn:hover { background: rgba(120, 120, 128, 0.10); }
+.dl-title-pencil { color: var(--text-3); opacity: 0; transition: opacity 150ms var(--ease-smooth); }
+.dl-title-btn:hover .dl-title-pencil,
+.dl-title-btn:focus-visible .dl-title-pencil { opacity: 1; }
+.dl-title-edit {
+  font-size: clamp(20px, 2.4vw, 26px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 1px 7px;
+  margin: 0;
+  outline: none;
+  min-width: 220px;
+}
+
+/* Status pill (replaces the loud red Private badge): a calm neutral chip with a
+   lock/globe glyph. For admins it's a clickable toggle (setFolderVisibility);
+   for everyone else it's static. Private leans on a soft torch tint, not a fill. */
+.dl-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 11px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.dl-status-pill svg { flex-shrink: 0; }
+.dl-status-pill:hover:not(.is-static) {
+  background: var(--surface-muted);
+  border-color: var(--accent-border);
+  color: var(--text-1);
+}
+.dl-status-pill.is-private { color: var(--torch); border-color: var(--accent-border); }
+.dl-status-pill.is-static { cursor: default; }
+
 /* ── Chips (child folders) ──────────────────────────────────────────────── */
 .dl-chips {
   display: flex;
@@ -228,10 +291,11 @@
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
 }
-/* The 3D folder card (FolderCard3D) self-styles via bridged Tailwind utilities +
-   JS-driven inline transforms (the overshoot hover is scoped here, not global).
-   Only the glass blur is added — NO layout/color props, since unlayered CSS would
-   otherwise override the component's Tailwind utilities. */
+/* The split-layer 3D folder card (FolderCard3D) stands free — no box (bg/border/
+   shadow); only the SVG layers carry shadow. It self-styles via bridged Tailwind
+   utilities + JS-driven inline transforms (the overshoot hover is scoped in the
+   component, not global). No layout/colour props here, since unlayered CSS would
+   override the component's utilities. */
 .dl-folder-card {
 }
 
@@ -450,121 +514,99 @@
 
 /* ── Card tile (Option A) — 16/10 cover, badge + overlay Edit, tight meta with
    an overlay Download. Edit shows for super_admin only; Download for everyone. ── */
+/* Card view (Variant D): a format monogram head + a data row; Edit/Download
+   appear on hover top-right; the whole card opens the file via a stretched link. */
 .dl-tile {
-  background: var(--surface-flat);
+  position: relative;
+  background: var(--surface);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 200ms var(--ease-smooth), background-color 200ms var(--ease-smooth);
+  transition: box-shadow 200ms var(--ease-smooth), transform 200ms var(--ease-smooth);
 }
 .dl-tile:hover {
-  box-shadow: var(--shadow-hover);
-  background-color: var(--surface-strong);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.10);
+  transform: translateY(-2px);
 }
-.dl-tile__cover {
-  aspect-ratio: 16 / 10;
-  overflow: hidden;
-  position: relative;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  background: var(--surface-muted);
-}
-.dl-tile__preview {
-  position: absolute;
-  inset: 0;
+/* Stretched open-link overlay — covers the card; action buttons sit above it. */
+.dl-tile__open { position: absolute; inset: 0; z-index: 1; }
+/* Head: only the format monogram (or, for images, the real thumbnail). */
+.dl-tile__head {
+  height: 88px;
   display: flex;
   align-items: center;
   justify-content: center;
-  text-decoration: none;
+  background: var(--surface-muted);
+  overflow: hidden;
 }
-.dl-tile__preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.dl-tile__badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  background: rgba(0, 0, 0, 0.55);
+.dl-tile__thumb { width: 100%; height: 100%; object-fit: cover; }
+.dl-mono {
+  width: 46px;
+  height: 46px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
   color: #fff;
-  backdrop-filter: blur(8px);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
-.dl-tile__edit {
+/* Hover actions (top-right): hidden at rest, revealed on card hover/focus. */
+.dl-tile__actions {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 28px;
-  height: 28px;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 150ms var(--ease-smooth);
+}
+.dl-tile:hover .dl-tile__actions,
+.dl-tile:focus-within .dl-tile__actions { opacity: 1; }
+.dl-tile__act {
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-sm);
-  background: var(--surface-flat);
+  background: var(--surface);
   border: 1px solid var(--hairline);
   display: grid;
   place-items: center;
-  color: var(--text-1);
-  opacity: 1;
+  color: var(--text-2);
   cursor: pointer;
-  transition: color 150ms var(--ease-smooth), border-color 150ms;
+  text-decoration: none;
+  transition: color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth);
 }
-.dl-tile__edit:hover {
-  color: var(--accent);
-  border-color: var(--accent-border);
-}
+.dl-tile__act:hover { color: var(--text-1); border-color: var(--hairline-strong); }
+.dl-tile__act svg { width: 14px; height: 14px; }
+/* Data row. */
 .dl-tile__meta {
   padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
   gap: 4px;
-  flex: 1;
-  position: relative;
+  border-top: 1px solid var(--separator);
 }
 .dl-tile__title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding-right: 36px;
 }
 .dl-tile__sub {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-3);
 }
-.dl-tile__download {
-  position: absolute;
-  bottom: var(--space-3);
-  right: var(--space-3);
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-flat);
-  border: 1px solid var(--hairline);
-  display: grid;
-  place-items: center;
-  color: var(--text-1);
-  text-decoration: none;
-  opacity: 1;
-  transition: color 150ms var(--ease-smooth), border-color 150ms;
-}
-.dl-tile__download:hover {
-  color: var(--accent);
-  border-color: var(--accent-border);
-}
-.dl-tile__edit svg,
-.dl-tile__download svg {
-  width: 14px;
-  height: 14px;
+@media (prefers-reduced-motion: reduce) {
+  .dl-tile { transition: box-shadow 200ms var(--ease-smooth); }
+  .dl-tile:hover { transform: none; }
 }
 /* Clickable list-view column headers (sort triggers; no asc/desc toggle). */
 .dl-sort-th {
@@ -766,6 +808,12 @@
   gap: 6px;
   justify-self: end;
 }
+
+/* Folder rows (list view): a folder glyph instead of a file thumb, and the name
+   reads slightly stronger so folders separate from files. Folders are listed
+   first; the right-click menu matches the folder card. */
+.dl-row--folder .dl-row-type { color: var(--text-2); }
+.dl-row--folder .dl-row-name { font-weight: 600; }
 /* Reuse the card download + manage buttons inline (not cover-absolute), revealed
    on row hover/focus. */
 .dl-row .card-dl,
@@ -1031,4 +1079,351 @@
   .dl-modal {
     max-width: none;
   }
+}
+
+/* ============================================================================
+   Documents-Library secondary sidebar (DocumentsSidebar) — LOCAL to this area,
+   independent of the global app sidebar. Collapse state is component-local.
+   ============================================================================ */
+
+/* Two-column shell: sidebar + the existing content (.document-library). The
+   sidebar stretches to the content height so its right border reads as a full
+   divider. */
+.dl-shell { display: flex; align-items: stretch; gap: 0; }
+/* Main content keeps its own top + side padding (the wrapper has none). */
+.dl-shell-main { flex: 1; min-width: 0; padding: var(--space-5) var(--space-6) 0; }
+
+/* Sidebar full height (desktop): align-items:stretch already sizes the sidebar to
+   the shell, so the only thing missing is shell height when the file area is
+   short. .main is a global block (height-by-content, out of scope), so we drive
+   the height from the shell itself — fill the viewport minus the 96px FAB
+   clearance (.main's padding-bottom) so the sidebar reaches the bottom without
+   forcing a scrollbar. Scoped to ≥768px, where the sidebar is actually shown. */
+@media (min-width: 768px) {
+  .dl-shell { min-height: calc(100dvh - 96px); }
+}
+
+/* Clear divider + panel tone consistent with the global sidebar (--sidebar-bg,
+   --hairline edge). Internal padding (not on the wrapper) so the bg + border
+   reach the top + left edge — no white frame. */
+.dl-sidebar { width: 280px; flex-shrink: 0; background: var(--sidebar-bg); border-right: 1px solid var(--hairline); padding: var(--space-5) var(--space-4) 0; }
+.dl-sidebar.is-collapsed { width: 52px; padding: var(--space-5) 6px 0; }
+
+/* Head: title + transparent icon buttons (no stroke; fill only on hover — like
+   the rail buttons / the global collapse-btn). */
+.dl-sidebar-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: 0 var(--space-1) var(--space-3); }
+.dl-sidebar-title { font-size: var(--fs-base); font-weight: var(--weight-semibold); color: var(--text-1); }
+.dl-sidebar-head-actions { display: flex; gap: 4px; }
+.dl-ico-btn { width: 30px; height: 30px; border-radius: var(--radius-sm); border: 0; background: transparent; color: var(--text-2); display: grid; place-items: center; cursor: pointer; transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth); }
+.dl-ico-btn:hover { background: rgba(120, 120, 128, 0.10); color: var(--text-1); }
+.dl-ico-btn svg { width: 16px; height: 16px; }
+/* Collapse button mirrors the global .collapse-btn icon size. */
+.dl-collapse-btn svg { width: 18px; height: 18px; }
+
+/* Full-width search: NO border-radius — only a hairline top + bottom rule. */
+.dl-sidebar-search { display: flex; align-items: center; gap: 8px; padding: var(--space-3) var(--space-1); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); color: var(--text-3); }
+.dl-sidebar-search-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.dl-sidebar-search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-family: inherit; font-size: var(--fs-sm); color: var(--text-1); }
+.dl-sidebar-search input::placeholder { color: var(--text-3); }
+
+/* Folder tree. */
+.dl-sidebar-tree { display: flex; flex-direction: column; gap: 2px; padding-top: var(--space-3); }
+.dl-tree-item { display: flex; align-items: center; gap: var(--space-2); min-height: 36px; padding: 6px 8px; border-radius: var(--radius-md); color: var(--text-1); text-decoration: none; transition: background-color 150ms var(--ease-smooth); }
+.dl-tree-item:hover { background: rgba(120, 120, 128, 0.08); }
+.dl-tree-item.is-active { background: rgba(120, 120, 128, 0.12); }
+.dl-tree-icon { display: grid; place-items: center; flex-shrink: 0; color: var(--text-2); }
+.dl-tree-icon svg { width: 18px; height: 18px; }
+.dl-tree-item.is-active .dl-tree-icon { color: var(--accent); }
+.dl-tree-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); font-weight: var(--weight-medium); }
+.dl-tree-count { flex-shrink: 0; font-size: var(--fs-xs); color: var(--text-3); background: var(--surface-muted); border-radius: var(--radius-full); padding: 1px 7px; }
+
+/* Files under the open folder (indented). */
+.dl-tree-files { list-style: none; margin: 2px 0 var(--space-2); padding: 0 0 0 26px; display: flex; flex-direction: column; gap: 1px; }
+.dl-tree-file { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 8px; border-radius: var(--radius-sm); text-decoration: none; transition: background-color 150ms var(--ease-smooth); }
+.dl-tree-file:hover { background: rgba(120, 120, 128, 0.08); }
+.dl-file-badge { flex-shrink: 0; display: inline-grid; place-items: center; min-width: 30px; height: 16px; padding: 0 4px; border-radius: 3px; font-size: 9px; font-weight: var(--weight-bold); color: #fff; letter-spacing: 0.02em; }
+.dl-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); color: var(--text-2); }
+
+/* Collapsed rail: square icon buttons, transparent at rest, fill on hover. */
+.dl-rail { display: flex; flex-direction: column; gap: 4px; }
+.dl-rail-btn { width: 40px; height: 40px; border-radius: var(--radius-md); border: 0; background: transparent; color: var(--text-2); display: grid; place-items: center; cursor: pointer; transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth); }
+.dl-rail-btn:hover { background: rgba(120, 120, 128, 0.08); color: var(--text-1); }
+.dl-rail-btn svg { width: 18px; height: 18px; }
+
+/* Desktop-only: hide the secondary sidebar below the drawer boundary (the main
+   content stays full-width). No new mobile features. */
+@media (max-width: 767px) {
+  .dl-shell { display: block; }
+  .dl-sidebar { display: none; }
+}
+
+/* Full-bleed page wrapper for the Documents Library (used INSTEAD of .main-inner
+   on this route) so the secondary sidebar sits flush left next to the global
+   rail rather than inside the centred 1400px box. Other routes keep .main-inner. */
+/* Full-bleed wrapper for the Documents route (used INSTEAD of .main-inner — which
+   is unchanged for all other pages). No max-width / centring / outer padding, so
+   the sidebar sits flush at the left edge of .main (next to the global rail) and
+   reaches the top edge. Breathing room lives INSIDE the columns (see .dl-sidebar
+   / .dl-shell-main padding), so there's no white frame above/left of the panel. */
+.dl-fullbleed { width: 100%; }
+
+/* Subfolder entry nested under the open folder (navigates deeper). */
+.dl-tree-subfolder { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 8px; border-radius: var(--radius-sm); text-decoration: none; color: var(--text-1); transition: background-color 150ms var(--ease-smooth); }
+.dl-tree-subfolder:hover { background: rgba(120, 120, 128, 0.08); }
+.dl-tree-subfolder .dl-tree-icon { width: 16px; height: 16px; }
+.dl-tree-subfolder .dl-tree-icon svg { width: 15px; height: 15px; }
+.dl-tree-subfolder .dl-file-name { color: var(--text-1); font-weight: var(--weight-medium); }
+
+/* ── Documents toolbar (Variant A: one row) ─────────────────────────────────
+   [Search (flex:1, shrinks)] [Sort] [ViewToggle] [Upload]. Right controls never
+   wrap; only the search shrinks. Overrides are scoped to .dl-toolbar so the
+   global .view-toggle (shared with the Asset library) is untouched. */
+.dl-toolbar { flex-wrap: nowrap; }
+.dl-toolbar .dl-search { border-radius: var(--radius-full); flex: 1 1 auto; min-width: 0; }
+.dl-toolbar-right { flex-shrink: 0; flex-wrap: nowrap; }
+.dl-toolbar .dl-sort { border-radius: var(--radius-full); }
+.dl-toolbar-right .dl-btn { border-radius: var(--radius-full); }
+
+/* ViewToggle: grey track, no border, full radius; active = white pill + shadow. */
+.dl-toolbar .view-toggle { background: rgba(120, 120, 128, 0.12); border: 0; border-radius: var(--radius-full); }
+.dl-toolbar .view-toggle-btn { color: var(--text-2); border-radius: var(--radius-full); }
+.dl-toolbar .view-toggle-btn:hover:not(.active) { background: rgba(120, 120, 128, 0.10); color: var(--text-1); }
+.dl-toolbar .view-toggle-btn.active { background: var(--surface); color: var(--text-1); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06); }
+
+/* ── Filter / Sort popover ───────────────────────────────────────────────────
+   Anchored under the trigger; full-radius panel; closes on outside-click / Esc.
+   The trigger shows an active-count dot when a type/show filter is set. */
+.dl-fsp { position: relative; }
+.dl-fsp-btn.is-active { border-color: var(--accent-border); color: var(--accent); }
+.dl-fsp-dot {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.dl-fsp-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 200;
+  width: 280px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card-hover);
+}
+.dl-fsp-group { display: flex; flex-direction: column; gap: 8px; }
+.dl-fsp-glabel { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-3); }
+.dl-fsp-sep { height: 1px; background: var(--separator); }
+.dl-fsp-sorts { display: flex; flex-direction: column; gap: 2px; }
+.dl-fsp-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-1);
+  cursor: pointer;
+  text-align: left;
+}
+.dl-fsp-opt:hover { background: rgba(120, 120, 128, 0.10); }
+.dl-fsp-opt.is-on { font-weight: 600; }
+.dl-fsp-check { display: inline-grid; place-items: center; width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; }
+.dl-fsp-dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.dl-fsp-dir:hover { background: var(--surface-muted); color: var(--text-1); }
+.dl-fsp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.dl-fsp-chip {
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  padding: 5px 11px;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.dl-fsp-chip:hover { background: var(--surface-muted); color: var(--text-1); }
+.dl-fsp-chip.is-on { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent); }
+.dl-fsp-segment { display: inline-flex; padding: 2px; gap: 2px; background: rgba(120, 120, 128, 0.12); border-radius: var(--radius-full); }
+.dl-fsp-seg {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.dl-fsp-seg:hover:not(.is-on) { color: var(--text-1); }
+.dl-fsp-seg.is-on { background: var(--surface); color: var(--text-1); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+.dl-fsp-clear {
+  border: 0;
+  background: transparent;
+  padding: 4px 8px;
+  align-self: flex-start;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+}
+.dl-fsp-clear:hover { text-decoration: underline; }
+
+/* Content area that captures the empty-space right-click menu. min-height so the
+   menu is reachable even when the folder is sparse (files/folders stopPropagation
+   their own menu, so this only fires on genuine empty space). */
+.dl-space { min-height: 40vh; }
+
+/* ── Explorer view (Windows-Explorer logic) ─────────────────────────────────
+   Free-standing cells (no box): typed object on top, name, then sub-line.
+   Folders and files share the same grid + cell size (folders first). */
+.dl-explorer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: var(--space-3);
+  align-items: start;
+}
+.dl-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px;
+  border-radius: 14px;
+  text-align: center;
+  transition: background-color 150ms var(--ease-smooth);
+}
+.dl-cell:hover { background: rgba(120, 120, 128, 0.08); }
+/* Clickable visual (opens the file/folder). Button + Link share this class. */
+.dl-cell__hit { display: block; width: 100%; border: 0; background: transparent; padding: 0; cursor: pointer; text-decoration: none; }
+.dl-cell__visual { display: flex; align-items: center; justify-content: center; height: 150px; }
+.fo-svg { width: 104px; height: auto; display: block; transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.dl-cell:hover .fo-svg { transform: translateY(-4px) rotate(-1deg); }
+/* Folder hover lift mirrors the file object (the 3D stage animates on its own). */
+.dl-folder-cell .dl-cell__visual { transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.dl-folder-cell:hover .dl-cell__visual { transform: translateY(-4px); }
+
+/* Hover-only download button (top-right of a file cell). Ghost square, revealed
+   on cell hover/focus; stopPropagation in JSX keeps it from opening the file. */
+.dl-cell__dl {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-rest);
+  opacity: 0;
+  transition: opacity 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.dl-cell:hover .dl-cell__dl,
+.dl-cell:focus-within .dl-cell__dl,
+.dl-cell__dl:focus-visible { opacity: 1; }
+.dl-cell__dl:hover { background: rgba(120, 120, 128, 0.12); color: var(--text-1); }
+
+/* Name: a rename trigger (click) — looks like text, not a button. */
+.dl-cell__name {
+  max-width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 2px 4px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-1);
+  cursor: text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 6px;
+}
+.dl-cell__name:hover { background: rgba(120, 120, 128, 0.10); }
+.dl-cell__rename {
+  max-width: 100%;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 1px 4px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-1);
+  background: var(--surface);
+  text-align: center;
+  outline: none;
+}
+.dl-cell__sub { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-3); }
+
+/* ── Right-click context menu (files + folders) ─────────────────────────────
+   z-index 200: above page content + the radial FAB (90), below modals/toasts. */
+.dl-ctx {
+  position: fixed;
+  z-index: 200;
+  min-width: 184px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card-hover);
+}
+.dl-ctx-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-1);
+  cursor: pointer;
+}
+.dl-ctx-item:hover { background: rgba(120, 120, 128, 0.10); }
+.dl-ctx-item.danger { color: var(--torch); }
+.dl-ctx-sep { height: 1px; background: var(--separator); margin: 4px 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fo-svg, .dl-cell:hover .fo-svg,
+  .dl-folder-cell .dl-cell__visual, .dl-folder-cell:hover .dl-cell__visual { transition: none; transform: none; }
 }

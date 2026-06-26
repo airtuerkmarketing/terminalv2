@@ -29,15 +29,22 @@ export function ViewToggle({
   value,
   onChange,
   storageKey,
+  allowed,
 }: {
   value: ViewMode;
   onChange: (v: ViewMode) => void;
   storageKey: string;
+  /** Which modes this toggle offers. Defaults to all three; the Document library
+   *  passes ["card","list"] (no grid) without changing the shared Asset toggle. */
+  allowed?: ViewMode[];
 }) {
+  const shown = allowed ? OPTIONS.filter((o) => allowed.includes(o.value)) : OPTIONS;
   useEffect(() => {
     try {
       const stored = localStorage.getItem(storageKey);
-      if (isViewMode(stored) && stored !== value) onChange(stored);
+      // Don't lift a stored mode this toggle no longer offers (e.g. an old "grid").
+      const ok = isViewMode(stored) && (!allowed || allowed.includes(stored));
+      if (ok && stored !== value) onChange(stored as ViewMode);
     } catch {
       // localStorage unavailable — keep the default.
     }
@@ -57,7 +64,7 @@ export function ViewToggle({
 
   return (
     <div className="view-toggle" role="group" aria-label="View mode">
-      {OPTIONS.map(({ value: v, label, Icon }) => (
+      {shown.map(({ value: v, label, Icon }) => (
         <button
           key={v}
           type="button"

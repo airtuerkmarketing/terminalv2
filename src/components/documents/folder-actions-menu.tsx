@@ -3,20 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "./modal";
-import { CreateFolderModal } from "./create-folder-modal";
-import {
-  deleteFolder,
-  moveFolder,
-  renameFolder,
-  setFolderVisibility,
-} from "@/app/(public)/documents-library/actions";
+import { deleteFolder, moveFolder } from "@/app/(public)/documents-library/actions";
 import type { FolderDTO } from "@/lib/documents";
 import { invalidateMoveTargets, useMoveTargets } from "./move-targets";
 
-type ActiveModal = "create" | "rename" | "move" | "delete" | null;
+type ActiveModal = "move" | "delete" | null;
 
-/** ⋮ menu for the CURRENT folder. Rendered only for admins; super-admin-only
- *  items (visibility, delete) are gated by `isSuperAdmin`. */
+/** ⋮ menu for the CURRENT folder. Rendered only for admins. The common actions
+ *  now live ON the object — Rename on the page title, Make public on the status
+ *  pill, New subfolder as a toolbar button — so this menu keeps only the rarer /
+ *  destructive ones: Move + Delete (delete is super-admin only). */
 export function FolderActionsMenu({
   folder,
   isSuperAdmin,
@@ -30,7 +26,6 @@ export function FolderActionsMenu({
   const [modal, setModal] = useState<ActiveModal>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [name, setName] = useState(folder.name);
   const [dest, setDest] = useState<string>(folder.parentId ?? "");
 
   // Destination list is fetched lazily when the Move modal opens (cached for the
@@ -49,7 +44,6 @@ export function FolderActionsMenu({
   function open(m: ActiveModal) {
     setMenuOpen(false);
     setError(null);
-    setName(folder.name);
     setDest(folder.parentId ?? "");
     setModal(m);
   }
@@ -64,11 +58,6 @@ export function FolderActionsMenu({
     }
   }
 
-  async function doRename() {
-    setBusy(true);
-    setError(null);
-    after(await renameFolder(folder.id, name));
-  }
   async function doMove() {
     setBusy(true);
     setError(null);
@@ -91,11 +80,6 @@ export function FolderActionsMenu({
     const parentUrl =
       segs.length > 1 ? `/documents-library/${segs.slice(0, -1).join("/")}` : "/documents-library";
     router.push(parentUrl);
-    router.refresh();
-  }
-  async function toggleVisibility() {
-    setMenuOpen(false);
-    await setFolderVisibility(folder.id, !folder.isPublic);
     router.refresh();
   }
 
@@ -124,48 +108,16 @@ export function FolderActionsMenu({
 
       {menuOpen && (
         <div className="dl-menu" role="menu">
-          <button type="button" role="menuitem" onClick={() => open("create")}>
-            New subfolder
-          </button>
-          <button type="button" role="menuitem" onClick={() => open("rename")}>
-            Rename
-          </button>
           <button type="button" role="menuitem" onClick={() => open("move")}>
             Move
           </button>
           {isSuperAdmin && (
-            <>
-              <div className="dl-menu-sep" />
-              <button type="button" role="menuitem" onClick={toggleVisibility}>
-                {folder.isPublic ? "Make private" : "Make public"}
-              </button>
-              <button type="button" role="menuitem" className="danger" onClick={() => open("delete")}>
-                Delete folder
-              </button>
-            </>
+            <button type="button" role="menuitem" className="danger" onClick={() => open("delete")}>
+              Delete folder
+            </button>
           )}
         </div>
       )}
-
-      <CreateFolderModal open={modal === "create"} onClose={() => setModal(null)} parentId={folder.id} />
-
-      <Modal open={modal === "rename"} onClose={() => setModal(null)} title="Rename folder" width={420}>
-        <div className="dl-form">
-          <label className="dl-field">
-            <span>Folder name</span>
-            <input className="dl-input" autoFocus value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
-          {error && <p className="dl-error">{error}</p>}
-          <div className="dl-form-actions">
-            <button type="button" className="dl-btn ghost" onClick={() => setModal(null)}>
-              Cancel
-            </button>
-            <button type="button" className="dl-btn primary" onClick={doRename} disabled={busy || !name.trim()}>
-              {busy ? "Saving…" : "Rename"}
-            </button>
-          </div>
-        </div>
-      </Modal>
 
       <Modal open={modal === "move"} onClose={() => setModal(null)} title="Move folder" width={460}>
         <div className="dl-form">
