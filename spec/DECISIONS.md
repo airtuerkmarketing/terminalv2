@@ -503,6 +503,36 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-074 — Document Library: persistent, shared folder colour
+**Date:** 2026-06-26
+**Status:** Adopted. Migration `20260626170000_document_folders_color` (additive `color text`, nullable, CHECK in grey/blue/green/yellow). Applied to prod via SQL editor (gated; sign-off given).
+**Context:** Folder colour variants (grey/blue/green/yellow) were client-only (`localStorage`) — lost on reload/device change, a marked transition awaiting a DB column.
+**Decision:** Colour becomes a **shared folder property** (everyone sees it; only admins change it via `setFolderColor`, same gate as rename/move), replacing the per-device localStorage. The colour **VALUES live in CSS** (`document-library.css` → `.dl-folder-fx[data-color]` gradients + `--folder-swatch-*`); the DB + the `FOLDER_COLORS` enum (`documents-constants.ts`) only store the identifier. Add a colour = extend the CHECK + the enum + one CSS block. NULL = default grey.
+**Verified:** `tsc` + `next build` green; live preview — set blue → full reload → persisted from DB → reset grey.
+
+---
+
+## D-075 — Document Library: rename redirects to new slug + non-empty-folder delete guard
+**Date:** 2026-06-26
+**Status:** Adopted (code-only, no migration).
+**Context:** Renaming a folder on its own page changed the slug → the path trigger rewrote `path`, but the page did `router.refresh()` on the now-stale URL → **404**. Separately, `deleteFolder` was a recursive cascade that silently removed files + subfolders.
+**Decision:**
+1. `renameFolder` returns the new `path`; the folder page `router.replace`s to `/documents-library/<newPath>` when it changed (else refresh) — no more 404.
+2. `deleteFolder` **refuses** when the subtree contains ANY file rows (live or trashed — they'd be orphaned), with *"This folder isn't empty. Delete the files inside it first."* (toast on cards/rows, inline in the on-page menu). Column-independent count.
+**Verified:** live preview — rename followed to new slug (200, no 404), then restored; delete-guard copy confirmed.
+
+---
+
+## D-076 — Document Library: file Trash (soft-delete, 30-day retention)
+**Date:** 2026-06-26
+**Status:** Adopted. Migration `20260626180000_document_files_trash` (additive `deleted_at`/`deleted_by` + partial indexes + `purge_expired_trashed_documents()` SECURITY DEFINER + daily `pg_cron` job). Applied to prod via SQL editor (gated; sign-off given, cron jobid 2).
+**Context:** Deleting a file was an immediate hard delete (row + blob, no recovery).
+**Decision:** `deleteFile` is now **soft** — sets `deleted_at`; the file leaves every normal listing/count but survives **30 days**, restorable. New admin actions: **Restore**, **Delete forever** (real row+blob removal), **Empty trash**. A reserved admin-only route `/documents-library/trash` (shadows folder resolution so a folder can't be named `trash`) renders the Trash view (origin folder, "N days left", actions); the **Trash entry is pinned at the bottom of the Documents secondary sidebar**. A daily `pg_cron` job purges items >30 days (row + `storage.objects`). All file reads filter `deleted_at IS NULL`. **Rollout guard:** the data layer probes for the columns each request, so the library renders + deletes degrade gracefully before the migration lands (same pattern as D-074).
+**Verified:** `tsc` + `next build` green; columns confirmed live; Trash view + bottom-pinned sidebar entry render; rollout guards held pre-migration. (Soft-delete→restore UI round-trip not auto-driven — the Preview harness can't dispatch the right-click menu — but the write path is identical to the D-074 colour write, verified live.)
+**Related:** the same construct (tree, colour, trash, full-height secondary sidebar) is queued to port to `/presentation-hub` (its own parallel stack: `presentations.ts`, `presentation_*` tables).
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

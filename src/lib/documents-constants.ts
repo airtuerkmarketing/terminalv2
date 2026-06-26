@@ -82,6 +82,26 @@ export function normalizeLanguage(v: string | null | undefined): LanguageCode | 
   return LANGUAGE_CODES.has(c) ? (c as LanguageCode) : null;
 }
 
+/**
+ * Folder colour palette (D-074). The ENUM lives here (server + client share it:
+ * the DB CHECK, the action validator, and the picker). The actual colour VALUES
+ * live in CSS — `src/styles/document-library.css`, the `.dl-folder-fx[data-color]`
+ * blocks + the `--folder-swatch-*` vars — so adding a colour is: extend this list,
+ * the DB CHECK constraint, and add one CSS block. NULL in the DB == the default
+ * (grey); the UI always resolves a concrete colour via `?? DEFAULT_FOLDER_COLOR`.
+ */
+export const FOLDER_COLORS = ["grey", "blue", "green", "yellow"] as const;
+export type FolderColor = (typeof FOLDER_COLORS)[number];
+export const DEFAULT_FOLDER_COLOR: FolderColor = "grey";
+const FOLDER_COLOR_SET = new Set<string>(FOLDER_COLORS);
+
+/** Coerce a stored/posted value to a known colour, or null (= default). */
+export function normalizeFolderColor(v: string | null | undefined): FolderColor | null {
+  if (!v) return null;
+  const c = v.trim().toLowerCase();
+  return FOLDER_COLOR_SET.has(c) ? (c as FolderColor) : null;
+}
+
 /** File-type badge buckets (semantic; styled via --ft-* tokens). */
 export type FileKind = "pdf" | "word" | "excel" | "ppt" | "image" | "txt" | "zip" | "file";
 

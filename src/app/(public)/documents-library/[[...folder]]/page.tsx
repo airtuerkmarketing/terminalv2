@@ -2,15 +2,19 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
   getBreadcrumb,
-  getChildFolders,
+  getChildFoldersWithPreview,
   getFilesInFolder,
   getFolderByPath,
+  getFolderTreeForPath,
   getIdentity,
   getRootFoldersWithPreview,
+  getTrashedFiles,
+  TRASH_RETENTION_DAYS,
 } from "@/lib/documents";
 import { DocumentLibraryRoot } from "@/components/documents/document-library-root";
 import { FolderPage } from "@/components/documents/folder-page";
 import { DocumentsSidebar } from "@/components/documents/documents-sidebar";
+import { TrashView } from "@/components/documents/trash-view";
 
 /**
  * Document Library (File System v2). Optional catch-all under /documents-library/
@@ -34,14 +38,35 @@ export default async function DocumentLibraryPage({ params }: Params) {
 
   const identity = await getIdentity();
   const isSuperAdmin = identity?.isSuperAdmin ?? false;
+  const isAdmin = identity?.isAdmin ?? false;
+
+  // Reserved Trash view (admin-only) — a special segment that shadows folder
+  // resolution, so a folder can't be named "trash" and steal it (D-076).
+  if (segs.length === 1 && segs[0] === "trash") {
+    if (!isAdmin) notFound();
+    const [trashed, tree] = await Promise.all([getTrashedFiles(), getFolderTreeForPath(null)]);
+    return (
+      <div className="dl-page">
+        <div className="dl-shell">
+          <DocumentsSidebar tree={tree} activePath={null} activeView="trash" isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
+          <div className="dl-shell-main">
+            <TrashView files={trashed} retentionDays={TRASH_RETENTION_DAYS} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (segs.length === 0) {
-    const folders = await getRootFoldersWithPreview();
-    const sidebarFolders = folders.map((f) => ({ id: f.id, name: f.name, path: f.path, fileCount: f.fileCount, isPublic: f.isPublic }));
+    // Root: grid folders + the sidebar tree (top level, nothing expanded yet).
+    const [folders, tree] = await Promise.all([
+      getRootFoldersWithPreview(),
+      getFolderTreeForPath(null),
+    ]);
     return (
       <div className="dl-fullbleed">
         <div className="dl-shell">
-          <DocumentsSidebar folders={sidebarFolders} activePath={null} isSuperAdmin={isSuperAdmin} />
+          <DocumentsSidebar tree={tree} activePath={null} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
           <div className="dl-shell-main">
             <DocumentLibraryRoot folders={folders} isSuperAdmin={isSuperAdmin} />
           </div>
@@ -53,27 +78,25 @@ export default async function DocumentLibraryPage({ params }: Params) {
   const current = await getFolderByPath(segs.join("/"));
   if (!current) notFound();
 
-  // The secondary sidebar needs the top-level folder list in folder views too.
-  // getRootFoldersWithPreview is an existing fn (a handful of folders) — one
-  // extra read here so the sidebar can show counts + the open folder's files.
-  const [trail, childFolders, page, rootFolders] = await Promise.all([
+  // The secondary sidebar shows the WHOLE open path as an expanded tree (siblings
+  // at every level), plus the open folder's direct files. getFolderTreeForPath
+  // builds that from the materialized path (D-074).
+  const [trail, childFolders, page, tree] = await Promise.all([
     getBreadcrumb(current.path),
-    getChildFolders(current.id),
+    getChildFoldersWithPreview(current.id),
     getFilesInFolder(current.id, { limit: 60, sort: "name" }),
-    getRootFoldersWithPreview(),
+    getFolderTreeForPath(current.path),
   ]);
-  const sidebarFolders = rootFolders.map((f) => ({ id: f.id, name: f.name, path: f.path, fileCount: f.fileCount, isPublic: f.isPublic }));
-  const subFolders = childFolders.map((f) => ({ id: f.id, name: f.name, path: f.path, isPublic: f.isPublic }));
   const openFolderFiles = page.files.map((f) => ({ id: f.id, title: f.title, extension: f.extension }));
 
   return (
     <div className="dl-page">
       <div className="dl-shell">
         <DocumentsSidebar
-          folders={sidebarFolders}
+          tree={tree}
           activePath={current.path}
-          subFolders={subFolders}
           openFolderFiles={openFolderFiles}
+          isAdmin={isAdmin}
           isSuperAdmin={isSuperAdmin}
         />
         <div className="dl-shell-main">

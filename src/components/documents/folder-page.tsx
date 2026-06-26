@@ -6,7 +6,7 @@ import { ChevronDown, ChevronUp, Lock, Pencil, Plus, Upload } from "lucide-react
 import "@/styles/document-library.css";
 import type { ViewMode } from "@/components/ui/view-toggle";
 import { createFolder, renameFolder, searchFilesInFolder } from "@/app/(public)/documents-library/actions";
-import type { FileDTO, FileSortKey, FolderDTO } from "@/lib/documents";
+import type { FileDTO, FileSortKey, FolderDTO, RootFolderDTO } from "@/lib/documents";
 import { fileKind } from "@/lib/documents-constants";
 import { Breadcrumb } from "./breadcrumb";
 import { FileCard, type CtxItem } from "./file-card";
@@ -50,7 +50,7 @@ export function FolderPage({
 }: {
   folder: FolderDTO;
   trail: FolderDTO[];
-  childFolders: FolderDTO[];
+  childFolders: RootFolderDTO[];
   initialFiles: FileDTO[];
   initialHasMore: boolean;
   isSuperAdmin: boolean;
@@ -169,8 +169,12 @@ export function FolderPage({
       return;
     }
     const res = await renameFolder(folder.id, t);
-    if (res.ok) router.refresh();
-    else setTitleDraft(folder.name);
+    if (res.ok) {
+      // Slug changed → this page's URL is now stale; navigate to the new path so
+      // we don't 404 (otherwise router.refresh re-requests the old, gone slug).
+      if (res.path && res.path !== folder.path) router.replace(`/documents-library/${res.path}`);
+      else router.refresh();
+    } else setTitleDraft(folder.name);
   }
 
   // New folder: create immediately with a default name, then drop the new folder
@@ -238,18 +242,21 @@ export function FolderPage({
 
   // Folder cells (Windows-Explorer style): free-standing 3D folder cards. They
   // share the SAME grid + cell size as the file cells in card view (folders
-  // first). childFolders is a plain FolderDTO (no fileCount/previewFiles), so the
-  // cards show 0 files / no peek for now (reported). isSuperAdmin enables the
-  // folder context-menu actions.
+  // first). childFolders now carries real fileCount/previewFiles/color (D-074),
+  // so subfolder cards show their count + docs peek like the root grid.
+  // isSuperAdmin enables the folder context-menu actions.
   const folderCards = visibleFolders.map((f) => (
     <FolderCard3D
       key={f.id}
       id={f.id}
       name={f.name}
       href={`/documents-library/${f.path}`}
+      path={f.path}
+      parentId={f.parentId}
       isPublic={f.isPublic}
-      fileCount={0}
-      previewFiles={[]}
+      fileCount={f.fileCount}
+      previewFiles={f.previewFiles}
+      color={f.color}
       isSuperAdmin={isSuperAdmin}
       autoRename={f.id === pendingRenameId}
     />
@@ -291,8 +298,11 @@ export function FolderPage({
               id={f.id}
               name={f.name}
               href={`/documents-library/${f.path}`}
+              path={f.path}
+              parentId={f.parentId}
               isPublic={f.isPublic}
-              fileCount={0}
+              fileCount={f.fileCount}
+              color={f.color}
               isSuperAdmin={isSuperAdmin}
               autoRename={f.id === pendingRenameId}
             />

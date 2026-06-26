@@ -5,10 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
-import { deleteFolder, renameFolder, setFolderVisibility } from "@/app/(public)/documents-library/actions";
+import {
+  deleteFolder,
+  renameFolder,
+  setFolderColor,
+  setFolderVisibility,
+} from "@/app/(public)/documents-library/actions";
+import { DEFAULT_FOLDER_COLOR, type FolderColor } from "@/lib/documents-constants";
+import { useToast } from "@/components/ui/toast";
 import { CreateFolderModal } from "./create-folder-modal";
 import { ContextMenu, type CtxItem } from "./file-card";
 import { ConfirmDialog } from "./confirm-dialog";
+import { FolderMoveModal } from "./folder-move-modal";
 
 /**
  * Split-layer 3D folder card (Figma redesign). The folder is two SVG layers —
@@ -35,9 +43,14 @@ export interface FolderCard3DProps {
   id?: string;
   name: string;
   href: string;
+  /** Folder path + parent — enable the standalone Move modal (D-074). */
+  path?: string;
+  parentId?: string | null;
   isPublic: boolean;
   fileCount: number;
   previewFiles: FolderPreviewFile[];
+  /** Persisted folder colour (D-074); null/undefined → the default (grey). */
+  color?: FolderColor | null;
   isSuperAdmin?: boolean;
   className?: string;
   /** Mount directly in rename mode (just-created folder). */
@@ -47,59 +60,18 @@ export interface FolderCard3DProps {
 const EASE = "cubic-bezier(0.34, 1.56, 0.64, 1)";
 
 // ── Folder colour variants ─────────────────────────────────────────────────
-// Same SVG geometry; only the two wall gradients + the stroke change. back wall =
-// stop0→stop1 (paint0, deeper), front wall = stop0→stop1 (paint1, lighter). Values
-// taken from the delivered Figma SVGs (grey/blue/green/yellow).
-export type FolderColor = "grey" | "blue" | "green" | "yellow";
-const FOLDER_COLORS: Record<FolderColor, { backFrom: string; backTo: string; frontFrom: string; frontTo: string; stroke: string }> = {
-  grey:   { backFrom: "#4C4C4C", backTo: "#676767", frontFrom: "#616161", frontTo: "#666666", stroke: "#B0B0B0" },
-  blue:   { backFrom: "#C0DFFF", backTo: "#006EE2", frontFrom: "#DBEFFF", frontTo: "#9AD3FF", stroke: "#0A82DF" },
-  green:  { backFrom: "#50DD57", backTo: "#196903", frontFrom: "#7CFC96", frontTo: "#47B767", stroke: "#0ADF38" },
-  yellow: { backFrom: "#FFEC2D", backTo: "#A76B0B", frontFrom: "#FFFB7E", frontTo: "#EEB85C", stroke: "#DF9C0A" },
-};
-// Solid swatch shown in the context menu per colour.
+// The colour VALUES live in CSS (document-library.css → .dl-folder-fx[data-color]
+// drives the two wall gradients + stroke; --folder-swatch-* drives the dots). Here
+// we only reference them. The selected colour is a persisted, shared folder
+// property (DB column, D-074) passed in as a prop — no more localStorage.
+// Solid swatch shown in the context-menu colour picker (one per colour). The
+// values are CSS var references so the palette stays single-sourced in CSS.
 const COLOR_SWATCHES: { value: FolderColor; color: string }[] = [
-  { value: "grey", color: "#6E6E6E" },
-  { value: "blue", color: "#0A82DF" },
-  { value: "green", color: "#2FB344" },
-  { value: "yellow", color: "#E0A100" },
+  { value: "grey", color: "var(--folder-swatch-grey)" },
+  { value: "blue", color: "var(--folder-swatch-blue)" },
+  { value: "green", color: "var(--folder-swatch-green)" },
+  { value: "yellow", color: "var(--folder-swatch-yellow)" },
 ];
-
-// ── Per-folder colour persistence ───────────────────────────────────────────
-// Colour is client-only for now (localStorage). Once a DB column folder.color
-// exists (Buhara), replace the localStorage read/write with the DB value — the UI
-// stays identical (FolderColor + FOLDER_COLORS + the context-menu swatches).
-const colorKey = (id: string) => `terminal_folder_color:${id}`;
-const colorListeners = new Set<() => void>();
-function readFolderColor(id?: string): FolderColor {
-  if (!id || typeof window === "undefined") return "grey";
-  const v = window.localStorage.getItem(colorKey(id));
-  return v === "blue" || v === "green" || v === "yellow" || v === "grey" ? v : "grey";
-}
-function writeFolderColor(id: string, color: FolderColor) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(colorKey(id), color);
-  colorListeners.forEach((l) => l()); // notify same-tab subscribers
-}
-function subscribeFolderColor(cb: () => void) {
-  colorListeners.add(cb);
-  if (typeof window !== "undefined") window.addEventListener("storage", cb);
-  return () => {
-    colorListeners.delete(cb);
-    if (typeof window !== "undefined") window.removeEventListener("storage", cb);
-  };
-}
-/** SSR-safe per-folder colour (server snapshot = "grey", hydrates to the stored
- *  value), mirroring the RadialKit localStorage-position pattern. */
-function useFolderColor(id?: string) {
-  const color = useSyncExternalStore(
-    subscribeFolderColor,
-    () => readFolderColor(id),
-    () => "grey" as FolderColor
-  );
-  const setColor = (c: FolderColor) => { if (id) writeFolderColor(id, c); };
-  return { color, setColor };
-}
 
 // prefers-reduced-motion mirror (useSyncExternalStore — no setState-in-effect).
 function subscribeRM(cb: () => void) {
@@ -123,8 +95,16 @@ function useReducedMotion() {
  *  (childFolders is a server prop, so the grid/list updates without a reload).
  *  No standalone folder-move modal is reachable from a card/row, so Move is
  *  omitted here (it lives in FolderActionsMenu on the folder's own page). */
-function useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename = false, color, setColor }: { id?: string; name: string; href: string; isPublic: boolean; isSuperAdmin: boolean; autoRename?: boolean; color: FolderColor; setColor: (c: FolderColor) => void }) {
+function useFolderActions({ id, name, href, path, parentId, isPublic, isSuperAdmin, autoRename = false, color }: { id?: string; name: string; href: string; path?: string; parentId?: string | null; isPublic: boolean; isSuperAdmin: boolean; autoRename?: boolean; color: FolderColor }) {
   const router = useRouter();
+  const { toast } = useToast();
+  // Colour is now a shared folder property (DB, admin-write) — persist + refresh
+  // so the new colour shows everywhere it's read (grid cards + sidebar tree).
+  async function setColor(c: FolderColor) {
+    if (!id) return;
+    const res = await setFolderColor(id, c);
+    if (res.ok) router.refresh();
+  }
   // Freshly-created folders mount straight into rename mode (autoRename) — set as
   // the initial state so no setState-in-effect is needed; the instance persists
   // across the post-rename refresh (same id ⇒ same key), so it won't re-trigger.
@@ -132,6 +112,7 @@ function useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename =
   const [draft, setDraft] = useState(name);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const canManage = !!id && isSuperAdmin;
@@ -150,12 +131,18 @@ function useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename =
     setDeleting(true);
     const res = await deleteFolder(id);
     setDeleting(false);
-    if (res.ok) { setConfirmDelete(false); router.refresh(); }
+    if (res.ok) {
+      setConfirmDelete(false);
+      router.refresh();
+    } else {
+      // e.g. the non-empty-folder guard → surface why (the dialog stays open).
+      toast({ title: res.error, variant: "error" });
+    }
   }
 
   const menuItems: CtxItem[] = [{ kind: "item", label: "Open", onClick: () => router.push(href) }];
-  if (id) {
-    // Colour is a per-user view preference (localStorage) — offered for any folder.
+  if (canManage) {
+    // Colour is a shared folder property now (DB write) → admins only.
     menuItems.push({
       kind: "swatches",
       label: "Color",
@@ -163,11 +150,12 @@ function useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename =
       options: COLOR_SWATCHES,
       onSelect: (v) => setColor(v as FolderColor),
     });
-  }
-  if (canManage) {
     menuItems.push(
       { kind: "item", label: "Rename", onClick: startRename },
       { kind: "item", label: "New subfolder", onClick: () => setCreateOpen(true) },
+    );
+    if (path) menuItems.push({ kind: "item", label: "Move…", onClick: () => setMoveOpen(true) });
+    menuItems.push(
       { kind: "item", label: isPublic ? "Make private" : "Make public", onClick: toggleVisibility },
       { kind: "sep" },
       { kind: "item", label: "Delete folder", onClick: () => setConfirmDelete(true), danger: true },
@@ -195,6 +183,15 @@ function useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename =
     <>
       {id && menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
       {id && isSuperAdmin && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={id} />}
+      {id && path && canManage && (
+        <FolderMoveModal
+          open={moveOpen}
+          onClose={() => setMoveOpen(false)}
+          folderId={id}
+          folderPath={path}
+          parentId={parentId ?? null}
+        />
+      )}
       {id && (
         <ConfirmDialog
           open={confirmDelete}
@@ -202,7 +199,7 @@ function useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename =
           onConfirm={doDelete}
           tone="danger"
           title="Delete this folder?"
-          message={`“${name}” and everything inside it (subfolders and files) will be removed. This cannot be undone.`}
+          message={`“${name}” will be deleted. A folder that still contains files can’t be deleted — clear its files first. This cannot be undone.`}
           confirmLabel="Delete folder"
           busy={deleting}
           icon={<Trash2 size={24} aria-hidden="true" />}
@@ -234,7 +231,6 @@ export function FolderGraphic3D({
 }) {
   const reduced = useReducedMotion();
   const uid = useId().replace(/:/g, ""); // namespace SVG gradient/filter ids per instance
-  const c = FOLDER_COLORS[color] ?? FOLDER_COLORS.grey;
 
   const tiles = previewFiles.slice(0, 3);
   // Degrade: not animating / 0 files / reduced-motion → folder stays closed.
@@ -247,7 +243,7 @@ export function FolderGraphic3D({
   const LIFT = open ? -34 : 0;
 
   return (
-    <div className="relative" style={{ width, aspectRatio: "299 / 235" }}>
+    <div className="dl-folder-fx relative" data-color={color} style={{ width, aspectRatio: "299 / 235" }}>
       {/* Back wall (behind the docs) */}
       <svg
         viewBox="0 0 299 235"
@@ -263,14 +259,14 @@ export function FolderGraphic3D({
       >
         <defs>
           <linearGradient id={`bw-${uid}`} x1="274.301" y1="93" x2="18.3008" y2="93" gradientUnits="userSpaceOnUse">
-            <stop stopColor={c.backFrom} />
-            <stop offset="1" stopColor={c.backTo} />
+            <stop stopColor="var(--fc-back-from)" />
+            <stop offset="1" stopColor="var(--fc-back-to)" />
           </linearGradient>
         </defs>
         <path
           d="M251.301 175H41.3008C28.5982 175 18.3008 164.703 18.3008 152V34C18.3008 21.2975 28.5982 11 41.3008 11H251.301C264.003 11 274.301 21.2974 274.301 34V152C274.301 164.703 264.003 175 251.301 175Z"
           fill={`url(#bw-${uid})`}
-          stroke={c.stroke}
+          stroke="var(--fc-stroke)"
           strokeWidth="1"
         />
       </svg>
@@ -321,8 +317,8 @@ export function FolderGraphic3D({
       >
         <defs>
           <linearGradient id={`fw-${uid}`} x1="149.301" y1="29" x2="149.301" y2="215" gradientUnits="userSpaceOnUse">
-            <stop stopColor={c.frontFrom} />
-            <stop offset="1" stopColor={c.frontTo} />
+            <stop stopColor="var(--fc-front-from)" />
+            <stop offset="1" stopColor="var(--fc-front-to)" />
           </linearGradient>
           {/* Lock badge's own soft shadow (Figma): dy3.24 blur6.47 #111826 @ 6%. */}
           <filter id={`lk-${uid}`} x="-30%" y="-30%" width="160%" height="180%">
@@ -332,7 +328,7 @@ export function FolderGraphic3D({
         <path
           d="M18.3008 192V48C18.3008 37.5066 26.8074 29 37.3008 29H117.713C126.299 29 134.746 31.1679 142.272 35.3026L164.83 47.6974C172.355 51.8321 180.803 54 189.389 54H257.301C270.003 54 280.301 64.2975 280.301 77V192C280.301 204.703 270.003 215 257.301 215H41.3008C28.5982 215 18.3008 204.703 18.3008 192Z"
           fill={`url(#fw-${uid})`}
-          stroke={c.stroke}
+          stroke="var(--fc-stroke)"
           strokeWidth="1"
         />
         {/* Private cue — prominent lock badge bottom-right (Lockedicon.svg, 1:1
@@ -357,17 +353,20 @@ export function FolderCard3D({
   id,
   name,
   href,
+  path,
+  parentId,
   isPublic,
   fileCount,
   previewFiles,
+  color,
   isSuperAdmin = false,
   className,
   autoRename = false,
 }: FolderCard3DProps) {
   const [hovered, setHovered] = useState(false);
-  const { color, setColor } = useFolderColor(id);
+  const folderColor = color ?? DEFAULT_FOLDER_COLOR;
   const { canManage, editing, startRename, renameInput, onContextMenu, portals } =
-    useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename, color, setColor });
+    useFolderActions({ id, name, href, path, parentId, isPublic, isSuperAdmin, autoRename, color: folderColor });
 
   return (
     <div
@@ -379,7 +378,7 @@ export function FolderCard3D({
       <Link href={href} className="dl-cell__hit" aria-label={`Open ${name}`} onFocus={() => setHovered(true)} onBlur={() => setHovered(false)}>
         {/* Folder stage — fixed aspect so the coins/docs scale with the SVG. */}
         <span className="dl-cell__visual">
-          <FolderGraphic3D previewFiles={previewFiles} isPublic={isPublic} hovered={hovered} color={color} />
+          <FolderGraphic3D previewFiles={previewFiles} isPublic={isPublic} hovered={hovered} color={folderColor} />
         </span>
       </Link>
 
@@ -406,27 +405,33 @@ export function FolderRow({
   id,
   name,
   href,
+  path,
+  parentId,
   isPublic,
   fileCount,
+  color,
   isSuperAdmin = false,
   autoRename = false,
 }: {
   id: string;
   name: string;
   href: string;
+  path?: string;
+  parentId?: string | null;
   isPublic: boolean;
   fileCount: number;
+  color?: FolderColor | null;
   isSuperAdmin?: boolean;
   autoRename?: boolean;
 }) {
-  const { color, setColor } = useFolderColor(id);
+  const folderColor = color ?? DEFAULT_FOLDER_COLOR;
   const { editing, renameInput, onContextMenu, portals } =
-    useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename, color, setColor });
+    useFolderActions({ id, name, href, path, parentId, isPublic, isSuperAdmin, autoRename, color: folderColor });
   return (
     <div className="dl-row dl-row--folder" onContextMenu={onContextMenu}>
       <span className="dl-row-type dl-row-type--folder" aria-hidden="true">
         {/* Same 3D folder visual as the card, shrunk to the row (static, no fan). */}
-        <FolderGraphic3D isPublic={isPublic} width={40} animate={false} color={color} />
+        <FolderGraphic3D isPublic={isPublic} width={40} animate={false} color={folderColor} />
       </span>
       {/* Name navigates on click; rename is via the right-click menu. */}
       {editing ? renameInput : <Link className="dl-row-name" href={href} title={name}>{name}</Link>}

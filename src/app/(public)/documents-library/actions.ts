@@ -34,11 +34,13 @@ import {
   EXT_TO_MIME,
   MAX_BYTES,
   extFromFilename,
+  normalizeFolderColor,
   normalizeLanguage,
   slugify,
+  type FolderColor,
 } from "@/lib/documents-constants";
 
-export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
+export type ActionResult = { ok: true; id?: string; path?: string } | { ok: false; error: string };
 /** File mutations return the affected row so the client can update in place (no F5). */
 export type FileResult = { ok: true; file?: FileDTO } | { ok: false; error: string };
 
@@ -137,13 +139,18 @@ export async function renameFolder(folderId: string, name: string): Promise<Acti
   if (!trimmed || !slug) return { ok: false, error: "Please enter a valid folder name." };
 
   const admin = createAdminClient();
-  const { error } = await admin
+  // Return the NEW path: renaming changes the slug → the trigger rewrites `path`
+  // (and every descendant's), so a caller sitting ON this folder's page must
+  // redirect to the new URL or it 404s (the old slug no longer resolves).
+  const { data, error } = await admin
     .from("document_folders")
     .update({ name: trimmed, slug })
-    .eq("id", folderId);
+    .eq("id", folderId)
+    .select("path")
+    .single();
   if (error) return { ok: false, error: toMessage(error, "folder") };
   revalidateStructure();
-  return { ok: true };
+  return { ok: true, path: data?.path as string | undefined };
 }
 
 export async function moveFolder(folderId: string, newParentId: string | null): Promise<ActionResult> {
@@ -161,6 +168,37 @@ export async function moveFolder(folderId: string, newParentId: string | null): 
     .update({ parent_id: newParentId })
     .eq("id", folderId);
   if (error) return { ok: false, error: toMessage(error, "folder") };
+  revalidateStructure();
+  return { ok: true };
+}
+
+/**
+ * Persist a folder's colour (D-074). Admin-gated like rename/move — the colour
+ * is now a SHARED folder property (everyone sees it), replacing the old per-device
+ * localStorage. `null` clears it back to the default (grey). The colour VALUES
+ * live in CSS; this only stores the enum, validated against the DB CHECK.
+ */
+export async function setFolderColor(
+  folderId: string,
+  color: FolderColor | null
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  const normalized = color === null ? null : normalizeFolderColor(color);
+  if (color !== null && normalized === null) {
+    return { ok: false, error: "That colour isn't allowed." };
+  }
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("document_folders")
+    .update({ color: normalized })
+    .eq("id", folderId);
+  if (error) return { ok: false, error: toMessage(error, "folder") };
+  // Colour shows in BOTH the grid cards and the shared sidebar tree → revalidate
+  // the whole tree (cheap; folder structure rarely changes).
   revalidateStructure();
   return { ok: true };
 }
@@ -213,6 +251,18 @@ export async function deleteFolder(folderId: string): Promise<ActionResult> {
   const folderRows = (folders as { id: string; path: string }[] | null) ?? [];
   const folderIds = folderRows.map((f) => f.id);
   if (!folderIds.includes(folderId)) return { ok: false, error: "Folder not found." };
+
+  // Refuse to delete a non-empty folder (D-075): the user must clear its files
+  // first. Count ANY file rows in the subtree (live or trashed) — deleting the
+  // folder would orphan them. Column-independent (no deleted_at dependency).
+  const { count: fileCount, error: cntErr } = await admin
+    .from("document_files")
+    .select("id", { count: "exact", head: true })
+    .in("folder_id", folderIds);
+  if (cntErr) return { ok: false, error: toMessage(cntErr, "folder") };
+  if ((fileCount ?? 0) > 0) {
+    return { ok: false, error: "This folder isn't empty. Delete the files inside it first." };
+  }
 
   // Files in the subtree (capture storage paths before deleting rows).
   const { data: files, error: filesErr } = await admin
@@ -443,12 +493,40 @@ export async function replaceFile(fileId: string, formData: FormData): Promise<F
   return { ok: true, file: (await getFileById(fileId)) ?? undefined };
 }
 
+/**
+ * Delete a file → Trash (D-076). Soft delete: set deleted_at so the file leaves
+ * every normal listing/count but survives 30 days (restorable). The blob stays.
+ * Pre-migration fallback: if the deleted_at column doesn't exist yet, do the
+ * legacy hard delete so the action never breaks.
+ */
 export async function deleteFile(fileId: string): Promise<ActionResult> {
+  let id: Identity;
   try {
-    await requireAdmin();
+    id = await requireAdmin();
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("document_files")
+    .update({ deleted_at: new Date().toISOString(), deleted_by: id.userId })
+    .eq("id", fileId);
+  if (error) {
+    if (error.code === "42703") {
+      // Trash not migrated yet → legacy hard delete.
+      const res = await hardDeleteFile(fileId);
+      if (res.ok) revalidateFiles();
+      return res;
+    }
+    return { ok: false, error: toMessage(error, "file") };
+  }
+  revalidateFiles();
+  revalidateStructure(); // folder file-counts (sidebar tree + cards) change
+  return { ok: true, id: fileId };
+}
+
+/** The real removal: drop the row + the storage blob. No revalidation (callers do). */
+async function hardDeleteFile(fileId: string): Promise<ActionResult> {
   const admin = createAdminClient();
   const { data: existing, error: getErr } = await admin
     .from("document_files")
@@ -457,10 +535,68 @@ export async function deleteFile(fileId: string): Promise<ActionResult> {
     .maybeSingle();
   if (getErr) return { ok: false, error: toMessage(getErr, "file") };
   if (!existing) return { ok: true, id: fileId };
-
   const { error: delErr } = await admin.from("document_files").delete().eq("id", fileId);
   if (delErr) return { ok: false, error: toMessage(delErr, "file") };
   await admin.storage.from(BUCKET).remove([existing.storage_path as string]);
-  revalidateFiles();
   return { ok: true, id: fileId };
+}
+
+/** Restore a trashed file (clear deleted_at) — back to its original folder. */
+export async function restoreFile(fileId: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("document_files")
+    .update({ deleted_at: null, deleted_by: null })
+    .eq("id", fileId);
+  if (error) return { ok: false, error: toMessage(error, "file") };
+  revalidateFiles();
+  revalidateStructure();
+  return { ok: true, id: fileId };
+}
+
+/** Permanently delete one trashed file (row + blob) — the "Delete forever" action. */
+export async function deleteFilePermanently(fileId: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  const res = await hardDeleteFile(fileId);
+  if (res.ok) {
+    revalidateFiles();
+    revalidateStructure();
+  }
+  return res;
+}
+
+/** Permanently delete EVERY trashed file (row + blob). Admin-gated. */
+export async function emptyTrash(): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("document_files")
+    .select("storage_path")
+    .not("deleted_at", "is", null);
+  if (error) {
+    if (error.code === "42703") return { ok: true }; // trash not migrated yet → nothing to empty
+    return { ok: false, error: toMessage(error, "file") };
+  }
+  const paths = ((data as { storage_path: string }[] | null) ?? []).map((r) => r.storage_path);
+  if (paths.length === 0) return { ok: true };
+
+  const { error: delErr } = await admin.from("document_files").delete().not("deleted_at", "is", null);
+  if (delErr) return { ok: false, error: toMessage(delErr, "file") };
+  await admin.storage.from(BUCKET).remove(paths);
+  revalidateFiles();
+  revalidateStructure();
+  return { ok: true };
 }

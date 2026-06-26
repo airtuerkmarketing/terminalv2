@@ -9,7 +9,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-26)
 
-- **HEAD:** `main` (`febc625`) — **Mode-Chips + platform UI→English + gold-set quiz removed** (D-072/D-073: AI mode-chips with per-mode RAG bypass + per-chip glow, whole-UI English, AI answers in the user's input language, `"Alright {name}, what are we fixing today?"` greeting). **Shipped:** `rag-query` v12 live + migration `20260626160000` applied (gold-set quiz removed). Prev: Onboarding + self-profile (D-071, `20260626140000`). **Demo:** 2026-08-01.
+- **HEAD:** `main` — **Document Library data/shell hardening** (D-074/075/076): nested open-path sidebar tree with per-level counts; subfolder file-counts + 3D peek; persistent **shared folder colour** (DB, palette in CSS); standalone folder **Move** modal; rename **redirects to the new slug** (no 404); non-empty-folder **delete guard**; **file Trash** (soft-delete, 30-day `pg_cron` purge, Trash route + bottom-of-sidebar entry); global rail auto-collapses + hides its duplicate node on library routes; full-height secondary sidebar. Migrations `20260626170000` (colour) + `20260626180000` (trash) **applied to prod** (SQL editor, sign-off given). Next: port the same construct to `/presentation-hub`. Prev: Mode-Chips + platform UI→English + gold-set removal (D-072/D-073, `febc625`); `rag-query` v12 live. **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
@@ -20,8 +20,10 @@ it is append-only history (do not rewrite past entries — add new ones).
   **51 pages** (gold-set quiz pages removed), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **68 migrations**, highest:
-  `20260626160000_remove_gold_set_quiz_pages` (applied). Highest decision: **D-073**.
+  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **70 migrations**, highest:
+  `20260626180000_document_files_trash` (applied). `document_folders` +`color`;
+  `document_files` +`deleted_at`/`deleted_by` (Trash); daily `purge-expired-trashed-documents`
+  cron. Highest decision: **D-076**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +

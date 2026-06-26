@@ -2,28 +2,23 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Folder, FolderOpen, PanelLeft, Plus, Search } from "lucide-react";
+import { Folder, FolderOpen, PanelLeft, Plus, Search, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fileKind, type FileKind } from "@/lib/documents-constants";
+import type { DocFolderTreeNode } from "@/lib/documents";
 import { CreateFolderModal } from "./create-folder-modal";
 
 /**
  * Documents-Library-local secondary sidebar (NOT the global app sidebar in
  * shell/sidebar.tsx). A reusable pattern: title + add/collapse, a full-width
- * borderless search, a flat folder tree (top-level only — the data layer doesn't
- * expose nested children, see getRootFolders), and the open folder's files
- * listed beneath it. Collapse state is LOCAL (useState) — independent of the
- * global data-sidebar attribute. Built with clear props so Assets can adopt it
- * later (title / folders / activePath / openFolderFiles / isSuperAdmin).
+ * borderless search, and a folder TREE expanded along the open path (D-074) —
+ * every ancestor of the current folder is unfolded with its sibling folders
+ * visible at each level, so the sidebar mirrors the breadcrumb main→sub→sub
+ * sequence at any depth. The open folder's files list beneath it. Collapse state
+ * is LOCAL (useState) — independent of the global data-sidebar attribute. Built
+ * with clear props so Assets/Presentations can adopt it later.
  */
 
-export interface DocSidebarFolder {
-  id: string;
-  name: string;
-  path: string;
-  fileCount?: number; // top-level folders carry a count; subfolders don't
-  isPublic: boolean;
-}
 export interface DocSidebarFile {
   id: string;
   title: string;
@@ -31,11 +26,13 @@ export interface DocSidebarFile {
 }
 export interface DocumentsSidebarProps {
   title?: string;
-  folders: DocSidebarFolder[];
+  /** Folder tree, expanded along the open path (see getFolderTreeForPath). */
+  tree: DocFolderTreeNode[];
   activePath: string | null; // current folder path ("" / null at root)
-  subFolders?: DocSidebarFolder[]; // child folders of the active folder
   openFolderFiles?: DocSidebarFile[]; // files of the active folder, shown under it
+  isAdmin?: boolean; // gates the Trash footer (admins can manage trash)
   isSuperAdmin: boolean;
+  activeView?: "trash"; // highlight the Trash entry when on the trash route
 }
 
 // Self-drawn format badges (label + colour) — never app/brand logos.
@@ -50,13 +47,29 @@ const BADGE: Record<FileKind, { label: string; color: string }> = {
   file:  { label: "FILE", color: "#6B7280" },
 };
 
+/** Recursive name filter: keep a node if it (or a loaded descendant) matches, or
+ *  it's on the open path (so the current location stays visible while searching). */
+function filterTree(nodes: DocFolderTreeNode[], q: string, onPath: (p: string) => boolean): DocFolderTreeNode[] {
+  if (!q) return nodes;
+  const out: DocFolderTreeNode[] = [];
+  for (const n of nodes) {
+    const keptKids = filterTree(n.children, q, onPath);
+    const selfMatch = n.name.toLowerCase().includes(q);
+    if (selfMatch || keptKids.length > 0 || onPath(n.path)) {
+      out.push({ ...n, children: selfMatch ? n.children : keptKids });
+    }
+  }
+  return out;
+}
+
 export function DocumentsSidebar({
   title = "Documents Library",
-  folders,
+  tree,
   activePath,
-  subFolders = [],
   openFolderFiles = [],
+  isAdmin = false,
   isSuperAdmin,
+  activeView,
 }: DocumentsSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [q, setQ] = useState("");
@@ -69,13 +82,51 @@ export function DocumentsSidebar({
   };
 
   const query = q.trim().toLowerCase();
-  const folderMatches = (f: DocSidebarFolder) =>
-    !query || f.name.toLowerCase().includes(query) || f.path === activePath;
-  const visible = folders.filter(folderMatches);
-  const subs = query ? subFolders.filter((f) => f.name.toLowerCase().includes(query)) : subFolders;
+  // A folder is "open" (unfolded, folder-open icon) when it's the active folder
+  // or one of its ancestors — same predicate the data layer expanded the tree by.
+  const onPath = (p: string) => !!activePath && (activePath === p || activePath.startsWith(`${p}/`));
+  const visibleTree = filterTree(tree, query, onPath);
   const files = query
     ? openFolderFiles.filter((f) => f.title.toLowerCase().includes(query))
     : openFolderFiles;
+
+  function renderNode(node: DocFolderTreeNode) {
+    const open = onPath(node.path);
+    const isCurrent = node.path === activePath;
+    return (
+      <div key={node.id} className="dl-tree-group">
+        <Link
+          href={`/documents-library/${node.path}`}
+          className={cn("dl-tree-item", open && "is-active", isCurrent && "is-current")}
+          aria-current={isCurrent ? "page" : undefined}
+        >
+          <span className="dl-tree-icon">{open ? <FolderOpen aria-hidden /> : <Folder aria-hidden />}</span>
+          <span className="dl-tree-name">{node.name}</span>
+          {node.fileCount > 0 && <span className="dl-tree-count">{node.fileCount}</span>}
+        </Link>
+        {open && (node.children.length > 0 || (isCurrent && files.length > 0)) && (
+          <div className="dl-tree-children">
+            {node.children.map(renderNode)}
+            {isCurrent && files.length > 0 && (
+              <ul className="dl-tree-files">
+                {files.map((file) => {
+                  const b = BADGE[fileKind(file.extension)];
+                  return (
+                    <li key={file.id}>
+                      <a className="dl-tree-file" href={`/api/library/file/${file.id}`}>
+                        <span className="dl-file-badge" style={{ background: b.color }}>{b.label}</span>
+                        <span className="dl-file-name">{file.title}</span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (collapsed) {
     return (
@@ -92,6 +143,16 @@ export function DocumentsSidebar({
           <button type="button" className="dl-rail-btn" aria-label="Search" title="Search" onClick={() => expandAnd(() => searchRef.current?.focus())}>
             <Search aria-hidden />
           </button>
+          {isAdmin && (
+            <Link
+              href="/documents-library/trash"
+              className={cn("dl-rail-btn dl-rail-foot", activeView === "trash" && "is-active")}
+              aria-label="Trash"
+              title="Trash"
+            >
+              <Trash2 aria-hidden />
+            </Link>
+          )}
         </div>
         {isSuperAdmin && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={null} />}
       </aside>
@@ -129,44 +190,22 @@ export function DocumentsSidebar({
       </div>
 
       <nav className="dl-sidebar-tree" aria-label="Folders">
-        {visible.map((f) => {
-          const isAncestor = activePath === f.path || (!!activePath && activePath.startsWith(`${f.path}/`));
-          const isOpen = activePath === f.path; // exact top-level folder open
-          return (
-            <div key={f.id} className="dl-tree-group">
-              <Link href={`/documents-library/${f.path}`} className={cn("dl-tree-item", isAncestor && "is-active")}>
-                <span className="dl-tree-icon">{isOpen ? <FolderOpen aria-hidden /> : <Folder aria-hidden />}</span>
-                <span className="dl-tree-name">{f.name}</span>
-                {typeof f.fileCount === "number" && <span className="dl-tree-count">{f.fileCount}</span>}
-              </Link>
-              {isOpen && (subs.length > 0 || files.length > 0) && (
-                <ul className="dl-tree-files">
-                  {/* Subfolders first (navigate deeper), then files. */}
-                  {subs.map((sf) => (
-                    <li key={sf.id}>
-                      <Link className="dl-tree-subfolder" href={`/documents-library/${sf.path}`}>
-                        <span className="dl-tree-icon"><Folder aria-hidden /></span>
-                        <span className="dl-file-name">{sf.name}</span>
-                      </Link>
-                    </li>
-                  ))}
-                  {files.map((file) => {
-                    const b = BADGE[fileKind(file.extension)];
-                    return (
-                      <li key={file.id}>
-                        <a className="dl-tree-file" href={`/api/library/file/${file.id}`}>
-                          <span className="dl-file-badge" style={{ background: b.color }}>{b.label}</span>
-                          <span className="dl-file-name">{file.title}</span>
-                        </a>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          );
-        })}
+        {visibleTree.map(renderNode)}
       </nav>
+
+      {/* Trash pinned at the bottom (admins) — soft-deleted files, 30-day hold. */}
+      {isAdmin && (
+        <div className="dl-sidebar-foot">
+          <Link
+            href="/documents-library/trash"
+            className={cn("dl-tree-item dl-trash-link", activeView === "trash" && "is-active is-current")}
+            aria-current={activeView === "trash" ? "page" : undefined}
+          >
+            <span className="dl-tree-icon"><Trash2 aria-hidden /></span>
+            <span className="dl-tree-name">Trash</span>
+          </Link>
+        </div>
+      )}
 
       {isSuperAdmin && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={null} />}
     </aside>

@@ -152,8 +152,8 @@ export function FolderActionsMenu({
       <Modal open={modal === "delete"} onClose={() => setModal(null)} title="Delete folder" width={460}>
         <div className="dl-form">
           <p className="dl-confirm-text">
-            Delete <strong>{folder.name}</strong> and <strong>everything inside it</strong>
-            (subfolders and files)? This can’t be undone.
+            Delete <strong>{folder.name}</strong>? A folder that still contains files can’t be
+            deleted — clear its files first. This can’t be undone.
           </p>
           {error && <p className="dl-error">{error}</p>}
           <div className="dl-form-actions">

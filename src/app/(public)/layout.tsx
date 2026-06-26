@@ -137,7 +137,10 @@ async function getNav(): Promise<SidebarNav> {
 }
 
 // Apply persisted theme/sidebar before paint to avoid a flash.
-const PREFS_SCRIPT = `(function(){try{var d=document.documentElement;var t=localStorage.getItem('terminalv2-theme');if(t==='ios18-light'||t==='ios18-dark')d.dataset.theme=t;var s=localStorage.getItem('terminalv2-sidebar');if(s==='expanded'||s==='collapsed')d.dataset.sidebar=s;}catch(e){}})();`;
+// Also pre-paint-collapses the global rail on library routes (own secondary
+// sidebar) so there's no expand→collapse flash on a hard load. Keep the prefix
+// list in lock-step with LIBRARY_ROUTE_PREFIXES in shell/sidebar.tsx.
+const PREFS_SCRIPT = `(function(){try{var d=document.documentElement;var t=localStorage.getItem('terminalv2-theme');if(t==='ios18-light'||t==='ios18-dark')d.dataset.theme=t;var s=localStorage.getItem('terminalv2-sidebar');if(s==='expanded'||s==='collapsed')d.dataset.sidebar=s;var p=location.pathname;if(p==='/documents-library'||p.indexOf('/documents-library/')===0)d.dataset.sidebar='collapsed';}catch(e){}})();`;
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);

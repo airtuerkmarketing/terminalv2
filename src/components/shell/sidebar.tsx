@@ -23,6 +23,15 @@ type SidebarIdentity = { name: string; email: string; role: string; initials: st
 
 const SIDEBAR_KEY = "terminalv2-sidebar";
 
+// Routes that render their OWN secondary sidebar (Documents Library, …). On these
+// the global rail (a) auto-collapses to free space and (b) hides its own duplicate
+// nav node. Add a prefix here to opt another library-style page into the pattern.
+// Keep in lock-step with the same list inlined in the layout's pre-paint script.
+const LIBRARY_ROUTE_PREFIXES = ["/documents-library"];
+function isLibraryRoute(pathname: string) {
+  return LIBRARY_ROUTE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 // Brands split into two visual groups (slug-keyed, position-independent): the
 // platform group (IBE suite + APIX) renders below a divider, the rest above.
 const PLATFORM_SLUGS = new Set(["ibe-product-suite", "airtuerk-apix"]);
@@ -67,6 +76,29 @@ export function Sidebar({
   const drawerOpen = useDrawerOpen();
   const asideRef = useRef<HTMLElement>(null);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
+
+  // Library pages (own secondary sidebar) auto-collapse the global rail for space.
+  // We force the data-sidebar attribute on ENTER without writing localStorage, so
+  // the user's saved preference is preserved and restored on LEAVE. A manual toggle
+  // while inside persists (writes localStorage) and is what we restore to — so user
+  // choice wins. Pre-paint collapse (no flash) is handled by the layout script.
+  const onLibraryRoute = isLibraryRoute(pathname);
+  const wasLibraryRoute = useRef(false);
+  useEffect(() => {
+    const el = document.documentElement;
+    if (onLibraryRoute && !wasLibraryRoute.current) {
+      el.dataset.sidebar = "collapsed";
+    } else if (!onLibraryRoute && wasLibraryRoute.current) {
+      let pref = "expanded";
+      try {
+        pref = localStorage.getItem(SIDEBAR_KEY) || "expanded";
+      } catch {
+        // ignore
+      }
+      el.dataset.sidebar = pref === "collapsed" ? "collapsed" : "expanded";
+    }
+    wasLibraryRoute.current = onLibraryRoute;
+  }, [onLibraryRoute]);
 
   function toggleCollapse() {
     // Read the live attribute (source of truth) so direction is correct for any
@@ -254,6 +286,9 @@ export function Sidebar({
             <nav className="nav-section" aria-label="Resources">
               {nav.resources.map((r) => {
                 const isDocLib = r.iconKey === "document-library";
+                // The Documents page renders its own sidebar with the folder tree —
+                // hide the global duplicate while we're on it (D-074).
+                if (isDocLib && onLibraryRoute) return null;
                 const showSub = (r.children && r.children.length > 0) || (isDocLib && isAdmin);
                 if (!showSub) {
                   return (

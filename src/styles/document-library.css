@@ -1218,14 +1218,27 @@ textarea.dl-input { min-height: 64px; }
    clearance (.main's padding-bottom) so the sidebar reaches the bottom without
    forcing a scrollbar. Scoped to ≥768px, where the sidebar is actually shown. */
 @media (min-width: 768px) {
-  .dl-shell { min-height: calc(100dvh - 96px); }
+  /* Fill the FULL viewport so the secondary sidebar reaches the bottom edge, same
+     as the global rail. .main carries a 96px padding-bottom (FAB clearance); we
+     cancel it on the documents wrapper so the shell can be 100dvh without forcing
+     a scrollbar, then re-apply that clearance to the CONTENT column only (the FAB
+     sits bottom-centre, so the left sidebar reaching the bottom is fine). */
+  .dl-shell { min-height: 100dvh; }
+  .dl-fullbleed, .dl-page { margin-bottom: -96px; }
+  .dl-shell-main { padding-bottom: 96px; }
 }
 
 /* Clear divider + panel tone consistent with the global sidebar (--sidebar-bg,
    --hairline edge). Internal padding (not on the wrapper) so the bg + border
    reach the top + left edge — no white frame. */
-.dl-sidebar { width: 280px; flex-shrink: 0; background: var(--sidebar-bg); border-right: 1px solid var(--hairline); padding: var(--space-5) var(--space-4) 0; }
+.dl-sidebar { width: 280px; flex-shrink: 0; background: var(--sidebar-bg); border-right: 1px solid var(--hairline); padding: var(--space-5) var(--space-4) 0; display: flex; flex-direction: column; }
 .dl-sidebar.is-collapsed { width: 52px; padding: var(--space-5) 6px 0; }
+.dl-sidebar.is-collapsed .dl-rail { flex: 1; }
+/* Trash sits at the very bottom of the panel (per design). */
+.dl-rail-foot { margin-top: auto; }
+.dl-sidebar-foot { margin-top: auto; padding: var(--space-2) 0 var(--space-3); border-top: 1px solid var(--hairline); }
+.dl-trash-link .dl-tree-icon { color: var(--text-3); }
+.dl-trash-link:hover .dl-tree-icon, .dl-trash-link.is-active .dl-tree-icon { color: var(--accent); }
 
 /* Head: title + transparent icon buttons (no stroke; fill only on hover — like
    the rail buttons / the global collapse-btn). */
@@ -1245,7 +1258,7 @@ textarea.dl-input { min-height: 64px; }
 .dl-sidebar-search input::placeholder { color: var(--text-3); }
 
 /* Folder tree. */
-.dl-sidebar-tree { display: flex; flex-direction: column; gap: 2px; padding-top: var(--space-3); }
+.dl-sidebar-tree { display: flex; flex-direction: column; gap: 6px; padding-top: var(--space-3); flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .dl-tree-item { display: flex; align-items: center; gap: var(--space-2); min-height: 36px; padding: 6px 8px; border-radius: var(--radius-md); color: var(--text-1); text-decoration: none; transition: background-color 150ms var(--ease-smooth); }
 .dl-tree-item:hover { background: rgba(120, 120, 128, 0.08); }
 .dl-tree-item.is-active { background: rgba(120, 120, 128, 0.12); }
@@ -1254,9 +1267,15 @@ textarea.dl-input { min-height: 64px; }
 .dl-tree-item.is-active .dl-tree-icon { color: var(--accent); }
 .dl-tree-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); font-weight: var(--weight-medium); }
 .dl-tree-count { flex-shrink: 0; font-size: var(--fs-xs); color: var(--text-3); background: var(--surface-muted); border-radius: var(--radius-full); padding: 1px 7px; }
+.dl-tree-item.is-current { background: rgba(120, 120, 128, 0.16); }
+.dl-tree-item.is-current .dl-tree-name { color: var(--text-1); font-weight: var(--weight-semibold); }
 
-/* Files under the open folder (indented). */
-.dl-tree-files { list-style: none; margin: 2px 0 var(--space-2); padding: 0 0 0 26px; display: flex; flex-direction: column; gap: 1px; }
+/* Nested level: each open folder's children + files indent one step under it,
+   with a hairline guide so the main→sub→sub path reads as a tree at any depth. */
+.dl-tree-children { margin-left: 16px; padding-left: 8px; border-left: 1px solid var(--hairline); display: flex; flex-direction: column; gap: 6px; padding-top: 2px; }
+
+/* Files under the open folder (sit inside .dl-tree-children, already indented). */
+.dl-tree-files { list-style: none; margin: 2px 0 var(--space-2); padding: 0 0 0 4px; display: flex; flex-direction: column; gap: 1px; }
 .dl-tree-file { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 8px; border-radius: var(--radius-sm); text-decoration: none; transition: background-color 150ms var(--ease-smooth); }
 .dl-tree-file:hover { background: rgba(120, 120, 128, 0.08); }
 .dl-file-badge { flex-shrink: 0; display: inline-grid; place-items: center; min-width: 30px; height: 16px; padding: 0 4px; border-radius: 3px; font-size: 9px; font-weight: var(--weight-bold); color: #fff; letter-spacing: 0.02em; }
@@ -1291,6 +1310,53 @@ textarea.dl-input { min-height: 64px; }
 .dl-tree-subfolder .dl-tree-icon { width: 16px; height: 16px; }
 .dl-tree-subfolder .dl-tree-icon svg { width: 15px; height: 15px; }
 .dl-tree-subfolder .dl-file-name { color: var(--text-1); font-weight: var(--weight-medium); }
+
+/* ── Folder colour palette (D-074) ──────────────────────────────────────────
+   SINGLE SOURCE OF TRUTH for folder colours. The 3D folder SVG reads the --fc-*
+   vars (the wrapper carries .dl-folder-fx[data-color]); the colour-picker swatch
+   dots read --folder-swatch-*. To add a colour: add a value to the DB CHECK +
+   FOLDER_COLORS (documents-constants.ts), then add a [data-color="…"] block here
+   and a --folder-swatch-… var. Values came from the delivered Figma SVGs. */
+.dl-folder-fx {
+  --fc-back-from: #4C4C4C; --fc-back-to: #676767;
+  --fc-front-from: #616161; --fc-front-to: #666666;
+  --fc-stroke: #B0B0B0;
+}
+.dl-folder-fx[data-color="blue"] {
+  --fc-back-from: #C0DFFF; --fc-back-to: #006EE2;
+  --fc-front-from: #DBEFFF; --fc-front-to: #9AD3FF;
+  --fc-stroke: #0A82DF;
+}
+.dl-folder-fx[data-color="green"] {
+  --fc-back-from: #50DD57; --fc-back-to: #196903;
+  --fc-front-from: #7CFC96; --fc-front-to: #47B767;
+  --fc-stroke: #0ADF38;
+}
+.dl-folder-fx[data-color="yellow"] {
+  --fc-back-from: #FFEC2D; --fc-back-to: #A76B0B;
+  --fc-front-from: #FFFB7E; --fc-front-to: #EEB85C;
+  --fc-stroke: #DF9C0A;
+}
+/* Solid swatch shown in the colour picker (one per colour). */
+:root {
+  --folder-swatch-grey: #6E6E6E;
+  --folder-swatch-blue: #0A82DF;
+  --folder-swatch-green: #2FB344;
+  --folder-swatch-yellow: #E0A100;
+}
+
+/* ── Trash view (D-076) ──────────────────────────────────────────────────── */
+.dl-trash-note { margin: 0 0 var(--space-4); color: var(--text-3); font-size: var(--fs-sm); }
+.dl-trash-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.dl-trash-row { display: flex; align-items: center; gap: var(--space-3); padding: 10px var(--space-3); border: 1px solid var(--hairline); border-radius: var(--radius-md); background: var(--surface); }
+.dl-trash-row:hover { background: var(--surface-strong); }
+.dl-trash-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dl-trash-name { font-size: var(--fs-sm); font-weight: var(--weight-medium); color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-trash-meta { font-size: var(--fs-xs); color: var(--text-3); }
+.dl-trash-left { flex-shrink: 0; font-size: var(--fs-xs); color: var(--text-3); background: var(--surface-muted); border-radius: var(--radius-full); padding: 2px 10px; }
+.dl-trash-left.is-soon { color: var(--danger, #D8352A); background: color-mix(in srgb, var(--danger, #D8352A) 12%, transparent); }
+.dl-trash-actions { flex-shrink: 0; display: flex; gap: 6px; }
+.dl-trash-actions .dl-btn { padding: 6px 12px; font-size: var(--fs-xs); display: inline-flex; align-items: center; gap: 5px; }
 
 /* ── Documents toolbar (Variant A: one row) ─────────────────────────────────
    [Search (flex:1, shrinks)] [Sort] [ViewToggle] [Upload]. Right controls never

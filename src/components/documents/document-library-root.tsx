@@ -125,8 +125,11 @@ export function DocumentLibraryRoot({
                 id={f.id}
                 name={f.name}
                 href={`/documents-library/${f.path}`}
+                path={f.path}
+                parentId={f.parentId}
                 isPublic={f.isPublic}
                 fileCount={f.fileCount}
+                color={f.color}
                 isSuperAdmin={isSuperAdmin}
                 autoRename={f.id === pendingRenameId}
               />
@@ -140,9 +143,12 @@ export function DocumentLibraryRoot({
                 id={f.id}
                 name={f.name}
                 href={`/documents-library/${f.path}`}
+                path={f.path}
+                parentId={f.parentId}
                 isPublic={f.isPublic}
                 fileCount={f.fileCount}
                 previewFiles={f.previewFiles}
+                color={f.color}
                 isSuperAdmin={isSuperAdmin}
                 autoRename={f.id === pendingRenameId}
               />

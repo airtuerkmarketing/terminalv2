@@ -13,7 +13,12 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { fileKind, type LanguageCode } from "@/lib/documents-constants";
+import {
+  fileKind,
+  normalizeFolderColor,
+  type FolderColor,
+  type LanguageCode,
+} from "@/lib/documents-constants";
 
 // Auth helpers moved to src/lib/auth.ts in Stage 5 of the user panel work.
 // Re-exported here for backward compatibility — existing importers
@@ -31,6 +36,8 @@ export interface FolderDTO {
   path: string;
   isPublic: boolean;
   sortOrder: number;
+  /** Persisted folder colour (D-074); null = the default (grey). */
+  color: FolderColor | null;
 }
 
 export interface FileDTO {
@@ -56,7 +63,42 @@ export interface FilesPage {
 /** Sort options for the in-folder file list (matches the toolbar dropdown). */
 export type FileSortKey = "name" | "date" | "size";
 
-const FOLDER_COLS = "id, parent_id, name, slug, path, is_public, sort_order";
+const FOLDER_COLS = "id, parent_id, name, slug, path, is_public, sort_order, color";
+const FOLDER_COLS_BASE = "id, parent_id, name, slug, path, is_public, sort_order";
+
+/**
+ * Colour-column rollout guard (D-074). The `color` column (migration
+ * 20260626170000) may not be applied in a given environment yet — so folder
+ * reads must NOT hard-depend on it (selecting a missing column 500s the whole
+ * library). Probe once: if `color` is absent (Postgres 42703), read the base
+ * columns (colour resolves to the default grey); once present, cache that and
+ * always select it. Safe to delete after the migration is everywhere.
+ */
+let _folderColorReady = false;
+async function folderCols(
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<string> {
+  if (_folderColorReady) return FOLDER_COLS;
+  const { error } = await supabase.from("document_folders").select("color").limit(1);
+  if (error?.code === "42703") return FOLDER_COLS_BASE; // not migrated yet
+  _folderColorReady = true; // present (or an unrelated error → let the real read surface it)
+  return FOLDER_COLS;
+}
+
+/**
+ * Soft-delete (Trash) rollout guard (D-076), same pattern as the colour guard.
+ * Until `deleted_at` exists, file reads skip the `deleted_at IS NULL` filter (so
+ * the library renders pre-migration); once present, every normal listing/count
+ * excludes trashed files. `applyLive()` adds the filter only when ready.
+ */
+let _trashReady = false;
+async function trashReady(supabase: Awaited<ReturnType<typeof createClient>>): Promise<boolean> {
+  if (_trashReady) return true;
+  const { error } = await supabase.from("document_files").select("deleted_at").limit(1);
+  if (error?.code === "42703") return false; // not migrated yet
+  _trashReady = true;
+  return true;
+}
 const FILE_COLS =
   "id, folder_id, title, description, extension, mime_type, size_bytes, language, group_id, sort_order, created_at, updated_at";
 
@@ -68,6 +110,7 @@ type FolderRow = {
   path: string;
   is_public: boolean;
   sort_order: number;
+  color: string | null;
 };
 type FileRow = {
   id: string;
@@ -93,6 +136,7 @@ function mapFolder(r: FolderRow): FolderDTO {
     path: r.path,
     isPublic: r.is_public,
     sortOrder: r.sort_order,
+    color: normalizeFolderColor(r.color),
   };
 }
 function mapFile(r: FileRow): FileDTO {
@@ -119,7 +163,7 @@ export const getRootFolders = cache(async (): Promise<FolderDTO[]> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("document_folders")
-    .select(FOLDER_COLS)
+    .select(await folderCols(supabase))
     .is("parent_id", null)
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
@@ -141,21 +185,24 @@ export interface RootFolderDTO extends FolderDTO {
 }
 
 /**
- * Top-level folders for the root grid, each with a count of its DIRECT files and
- * up to 3 preview files (for the 3D card fan-out). RLS-scoped. Kept separate from
- * getRootFolders (which the per-request sidebar uses) so the sidebar stays one
- * cheap query; there are only a handful of top-level folders, so N small preview
- * queries here are fine.
+ * Decorate folders with a count of their DIRECT files + up to 3 preview files
+ * (for the 3D card fan-out). RLS-scoped (the count + preview rows respect the
+ * viewer's visibility, same as every read here). One small query per folder —
+ * fine for the handful shown in a grid level; callers pass an already-bounded
+ * list (a single tree level), never the whole library.
  */
-export async function getRootFoldersWithPreview(): Promise<RootFolderDTO[]> {
-  const folders = await getRootFolders();
+async function withPreview(folders: FolderDTO[]): Promise<RootFolderDTO[]> {
+  if (folders.length === 0) return [];
   const supabase = await createClient();
+  const liveOnly = await trashReady(supabase);
   return Promise.all(
     folders.map(async (f) => {
-      const { data, count } = await supabase
+      let pq = supabase
         .from("document_files")
         .select("id, title, extension", { count: "exact" })
-        .eq("folder_id", f.id)
+        .eq("folder_id", f.id);
+      if (liveOnly) pq = pq.is("deleted_at", null); // exclude trashed (D-076)
+      const { data, count } = await pq
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true })
         .limit(3);
@@ -172,6 +219,24 @@ export async function getRootFoldersWithPreview(): Promise<RootFolderDTO[]> {
   );
 }
 
+/**
+ * Top-level folders for the root grid, each with file count + preview. Kept
+ * separate from getRootFolders (which the per-request sidebar uses) so the
+ * sidebar stays one cheap query.
+ */
+export async function getRootFoldersWithPreview(): Promise<RootFolderDTO[]> {
+  return withPreview(await getRootFolders());
+}
+
+/**
+ * Direct child folders WITH count + preview (the cards/rows on a folder page).
+ * Same shape as the root grid so subfolders show a real "N files" + the docs
+ * peek — not the "0 files" placeholder the bare getChildFolders gave (D-074).
+ */
+export async function getChildFoldersWithPreview(parentId: string): Promise<RootFolderDTO[]> {
+  return withPreview(await getChildFolders(parentId));
+}
+
 /** Resolve a slug path ("business-development/contracts") to a folder, or null. */
 export const getFolderByPath = cache(async (path: string): Promise<FolderDTO | null> => {
   const clean = path.replace(/^\/+|\/+$/g, "");
@@ -179,20 +244,20 @@ export const getFolderByPath = cache(async (path: string): Promise<FolderDTO | n
   const supabase = await createClient();
   const { data } = await supabase
     .from("document_folders")
-    .select(FOLDER_COLS)
+    .select(await folderCols(supabase))
     .eq("path", clean)
     .maybeSingle();
-  return data ? mapFolder(data as FolderRow) : null;
+  return data ? mapFolder(data as unknown as FolderRow) : null;
 });
 
 export async function getFolderById(id: string): Promise<FolderDTO | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("document_folders")
-    .select(FOLDER_COLS)
+    .select(await folderCols(supabase))
     .eq("id", id)
     .maybeSingle();
-  return data ? mapFolder(data as FolderRow) : null;
+  return data ? mapFolder(data as unknown as FolderRow) : null;
 }
 
 /** A single file by id (RLS-scoped) — used by mutations to return the affected row. */
@@ -211,7 +276,7 @@ export async function getAllFolders(): Promise<FolderDTO[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("document_folders")
-    .select(FOLDER_COLS)
+    .select(await folderCols(supabase))
     .order("path", { ascending: true });
   return ((data as FolderRow[] | null) ?? []).map(mapFolder);
 }
@@ -221,7 +286,7 @@ export async function getChildFolders(folderId: string): Promise<FolderDTO[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("document_folders")
-    .select(FOLDER_COLS)
+    .select(await folderCols(supabase))
     .eq("parent_id", folderId)
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
@@ -240,11 +305,100 @@ export async function getBreadcrumb(path: string): Promise<FolderDTO[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("document_folders")
-    .select(FOLDER_COLS)
+    .select(await folderCols(supabase))
     .in("path", prefixes);
   return ((data as FolderRow[] | null) ?? [])
     .map(mapFolder)
     .sort((a, b) => a.path.length - b.path.length);
+}
+
+// ── Nested sidebar tree (open-path expansion) ───────────────────────────────
+
+export interface DocFolderTreeNode {
+  id: string;
+  parentId: string | null;
+  name: string;
+  path: string;
+  isPublic: boolean;
+  color: FolderColor | null;
+  fileCount: number;
+  /** True if the folder has child folders (chevron affordance when collapsed). */
+  hasChildren: boolean;
+  /** Loaded only when the node is on the open spine; [] for collapsed siblings. */
+  children: DocFolderTreeNode[];
+}
+
+/**
+ * Folder tree for the Documents-Library secondary sidebar, expanded along the
+ * OPEN PATH only (D-074). Returns the full top level; every ancestor of
+ * `activePath` (and the active folder itself) is expanded to show its direct
+ * children — so the sidebar mirrors the breadcrumb main→sub→sub sequence at any
+ * depth, with sibling folders visible at each level. Collapsed siblings carry a
+ * `hasChildren` flag but no loaded children (they expand when navigated into).
+ *
+ * Cost: one folder query (small table, RLS-scoped) + one file-count per RENDERED
+ * node (top level + the open spine's children) — never one per folder library-wide.
+ */
+export async function getFolderTreeForPath(
+  activePath: string | null
+): Promise<DocFolderTreeNode[]> {
+  const all = await getAllFolders();
+  const active = (activePath ?? "").replace(/^\/+|\/+$/g, "");
+
+  // Children grouped by parent, each level ordered sort_order → name (sidebar order).
+  const byParent = new Map<string | null, FolderDTO[]>();
+  for (const f of all) {
+    const list = byParent.get(f.parentId);
+    if (list) list.push(f);
+    else byParent.set(f.parentId, [f]);
+  }
+  for (const list of byParent.values()) {
+    list.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+  }
+
+  // A folder is "open" if it is the active folder or one of its ancestors.
+  const isOpen = (p: string) => !!active && (active === p || active.startsWith(`${p}/`));
+
+  // Rendered = top level + children of every open folder. Count files for exactly
+  // those (RLS-scoped, so the counts match what this viewer can actually see).
+  const rendered: FolderDTO[] = [];
+  const collect = (parentId: string | null) => {
+    for (const f of byParent.get(parentId) ?? []) {
+      rendered.push(f);
+      if (isOpen(f.path)) collect(f.id);
+    }
+  };
+  collect(null);
+
+  const supabase = await createClient();
+  const liveOnly = await trashReady(supabase);
+  const counts = new Map<string, number>();
+  await Promise.all(
+    rendered.map(async (f) => {
+      let cq = supabase
+        .from("document_files")
+        .select("id", { count: "exact", head: true })
+        .eq("folder_id", f.id);
+      if (liveOnly) cq = cq.is("deleted_at", null); // exclude trashed (D-076)
+      const { count } = await cq;
+      counts.set(f.id, count ?? 0);
+    })
+  );
+
+  const build = (parentId: string | null): DocFolderTreeNode[] =>
+    (byParent.get(parentId) ?? []).map((f) => ({
+      id: f.id,
+      parentId: f.parentId,
+      name: f.name,
+      path: f.path,
+      isPublic: f.isPublic,
+      color: f.color,
+      fileCount: counts.get(f.id) ?? 0,
+      hasChildren: (byParent.get(f.id) ?? []).length > 0,
+      children: isOpen(f.path) ? build(f.id) : [],
+    }));
+
+  return build(null);
 }
 
 /** Escape SQL LIKE/ILIKE metacharacters so a search term matches literally. */
@@ -298,6 +452,7 @@ export async function getFilesInFolder(
     .from("document_files")
     .select(FILE_COLS)
     .in("folder_id", folderIds);
+  if (await trashReady(supabase)) query = query.is("deleted_at", null); // exclude trashed (D-076)
   // Substring title search; the term is escaped so % / _ are matched literally.
   // Index-backed by document_files_title_trgm_idx (pg_trgm GIN), migration 0031.
   if (q) query = query.ilike("title", `%${escapeLike(q)}%`);
@@ -313,4 +468,63 @@ export async function getFilesInFolder(
   const hasMore = rows.length > limit;
   const files = rows.slice(0, limit).map(mapFile);
   return { files, hasMore };
+}
+
+// ── Trash (soft-deleted files) ──────────────────────────────────────────────
+
+export const TRASH_RETENTION_DAYS = 30;
+
+export interface TrashedFileDTO {
+  id: string;
+  title: string;
+  extension: string;
+  sizeBytes: number;
+  folderId: string;
+  folderName: string;
+  folderPath: string;
+  deletedAt: string;
+  /** Whole days until auto-purge (0 = due now). */
+  daysLeft: number;
+}
+
+/**
+ * All trashed files (deleted_at set), newest-deleted first, with their origin
+ * folder + days-until-purge (D-076). RLS-scoped: an admin sees everything; the
+ * Trash route is admin-gated. Empty before the trash migration is applied.
+ */
+export async function getTrashedFiles(): Promise<TrashedFileDTO[]> {
+  const supabase = await createClient();
+  if (!(await trashReady(supabase))) return [];
+  const { data } = await supabase
+    .from("document_files")
+    .select("id, title, extension, size_bytes, folder_id, deleted_at, document_folders(name, path)")
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
+  const now = Date.now();
+  return (
+    (data as
+      | {
+          id: string;
+          title: string;
+          extension: string;
+          size_bytes: number;
+          folder_id: string;
+          deleted_at: string;
+          document_folders: { name: string; path: string } | null;
+        }[]
+      | null) ?? []
+  ).map((r) => {
+    const ageDays = Math.floor((now - new Date(r.deleted_at).getTime()) / 86_400_000);
+    return {
+      id: r.id,
+      title: r.title,
+      extension: r.extension,
+      sizeBytes: Number(r.size_bytes),
+      folderId: r.folder_id,
+      folderName: r.document_folders?.name ?? "—",
+      folderPath: r.document_folders?.path ?? "",
+      deletedAt: r.deleted_at,
+      daysLeft: Math.max(0, TRASH_RETENTION_DAYS - ageDays),
+    };
+  });
 }
