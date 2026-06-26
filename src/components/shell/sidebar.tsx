@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { PanelLeft } from "lucide-react";
 import { useDrawerOpen, setDrawer } from "./drawer";
 import { ChevronIcon, NavIcon } from "./icons";
+import { TerminalLogo } from "./TerminalLogo";
 import { UserMenu } from "./user-menu";
 import { CreateFolderModal } from "@/components/documents/create-folder-modal";
 import { cn } from "@/lib/utils";
@@ -198,10 +199,10 @@ export function Sidebar({
           <div className="sidebar-top">
             <div className="brand-mark">
               <Link href="/" className="brand-logo-link" aria-label="terminal home" onClick={closeDrawer}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logos/terminal/wordmark.svg" alt="terminal" className="brand-logo-wordmark" />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logos/terminal/icon-32.svg" alt="terminal" className="brand-logo-icon" />
+                {/* Single source of truth (currentColor → light/dark). The Link is
+                    already labelled, so the logos are decorative (title=""). */}
+                <TerminalLogo variant="wordmark" title="" className="brand-logo-wordmark" />
+                <TerminalLogo variant="mark" title="" className="brand-logo-icon" />
               </Link>
               <button
                 type="button"

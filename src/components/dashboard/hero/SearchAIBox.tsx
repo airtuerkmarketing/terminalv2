@@ -10,7 +10,8 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Paperclip, Sparkles } from "lucide-react";
+import { ArrowUp, Paperclip } from "lucide-react";
+import { TerminalLogo } from "@/components/shell/TerminalLogo";
 import { ModelSelector } from "@/components/dashboard/hero/ModelSelector";
 import { QuickChips } from "@/components/dashboard/hero/QuickChips";
 import { SearchDropdown, ASK_AI_ID } from "@/components/dashboard/hero/SearchDropdown";
@@ -443,7 +444,7 @@ export function SearchAIBox() {
                 onClick={toggleKi}
                 aria-pressed={mode === "ai"}
               >
-                <Sparkles className="ai-search-pill-icon" aria-hidden="true" />
+                <TerminalLogo variant="mark" title="" className="ai-search-pill-icon ai-ask-mark" />
                 <span>KI fragen</span>
               </button>
             </div>

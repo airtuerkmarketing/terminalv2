@@ -61,14 +61,12 @@ html { scrollbar-gutter: stable; }
 :root[data-theme="ios18-dark"] .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(235, 235, 245, 0.35); }
 
 .brand-mark { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--radius-md); }
-/* terminal SVG logo: wordmark when expanded, icon mark when collapsed. */
-.brand-logo-link { flex: 1; display: flex; align-items: center; min-width: 0; text-decoration: none; }
+/* terminal SVG logo (TerminalLogo, single source of truth): wordmark when
+   expanded, glyph mark when collapsed. Both paint with currentColor, so they
+   inherit the rail's text colour and need no per-theme invert hack. */
+.brand-logo-link { flex: 1; display: flex; align-items: center; min-width: 0; text-decoration: none; color: var(--text-1); }
 .brand-logo-wordmark { height: 22px; width: auto; display: block; max-width: 100%; }
 .brand-logo-icon { height: 28px; width: 28px; display: none; }
-/* Dark theme: both marks are bare near-black transparent art (no plate), so
-   invert them to read white on the dark rail. */
-:root[data-theme="ios18-dark"] .brand-logo-wordmark,
-:root[data-theme="ios18-dark"] .brand-logo-icon { filter: invert(1); }
 
 .collapse-btn { width: 28px; height: 28px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-3); cursor: pointer; display: grid; place-items: center; transition: all 150ms; margin-left: auto; }
 .collapse-btn:hover { background: rgba(120, 120, 128, 0.10); color: var(--text-1); }

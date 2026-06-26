@@ -137,6 +137,21 @@
   height: 15px;
   flex-shrink: 0;
 }
+/* The terminal mark spins a single smooth 360° on KI-button hover (and eases back
+   out), not a continuous spin. Purely visual — doesn't intercept the click. */
+.ai-ask-mark {
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+.ai-search-ki:hover .ai-ask-mark {
+  transform: rotate(360deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-ask-mark {
+    transition: none;
+    transform: none !important;
+  }
+}
 .ai-search-pill-caret {
   width: 14px;
   height: 14px;
@@ -790,22 +805,28 @@
   font-size: var(--fs-base);
   color: var(--text-2);
 }
-/* Rounded floating container — the composer surface. */
+/* Rounded floating composer surface — styled to match the dashboard searchbar
+   (.ai-search-box): same radius/padding/surface/shadow + grey hover & focus (the
+   Hero's deliberate non-accent focus, D-036 exception), not the blue ring. */
 .ai-chat-composer {
   display: flex;
   align-items: flex-end;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
-  background: var(--surface);
+  box-sizing: border-box;
+  padding: 15px;                                 /* match .ai-search-box */
+  background: var(--surface-flat);
   border: 1px solid var(--hairline);
-  border-radius: 20px;
+  border-radius: var(--radius-25);
   box-shadow: var(--shadow-searchbox);
   transition: border-color 150ms var(--ease-smooth),
               box-shadow 150ms var(--ease-smooth);
 }
+.ai-chat-composer:hover {
+  border-color: var(--hairline-strong);
+}
 .ai-chat-composer:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-searchbox), 0 0 0 3px var(--accent-soft);
+  border-color: var(--hairline-strong);
+  box-shadow: var(--shadow-searchbox-focus);
 }
 .ai-chat-textarea {
   flex: 1;
@@ -835,6 +856,8 @@
   flex-shrink: 0;
   border: 0;
   border-radius: var(--radius-full);
+  /* Stays Quantum blue — the Dashboard's black send is the deliberate exception,
+     the chat follows the normal accent rule. */
   background: var(--accent);
   color: #fff;
   display: grid;

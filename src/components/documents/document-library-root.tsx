@@ -4,13 +4,14 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FolderPlus } from "lucide-react";
 import "@/styles/document-library.css";
+import { createFolder } from "@/app/(public)/documents-library/actions";
 import type { RootFolderDTO } from "@/lib/documents";
 import type { ViewMode } from "@/components/ui/view-toggle";
-import { CreateFolderModal } from "./create-folder-modal";
 import { FolderCard3D, FolderRow } from "./folder-card-3d";
 import { LibraryToolbar } from "./library-toolbar";
 import { EmptySpaceContextMenu } from "./empty-space-context-menu";
 import { DEFAULT_FILTER, type LibraryFilter } from "./filter-sort-popover";
+import { nextFolderName } from "./folder-page";
 import type { CtxItem } from "./file-card";
 
 /** Root index: visible top-level folders. Uses the SAME LibraryToolbar + card/
@@ -25,10 +26,23 @@ export function DocumentLibraryRoot({
   isSuperAdmin: boolean;
 }) {
   const router = useRouter();
-  const [createOpen, setCreateOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<LibraryFilter>(DEFAULT_FILTER);
   const [view, setView] = useState<ViewMode>("card");
+  // "New folder" creates immediately then auto-renames (see folder-page).
+  const [pendingRenameId, setPendingRenameId] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  async function createTopFolder() {
+    setCreateError(null);
+    const res = await createFolder(null, nextFolderName(folders.map((f) => f.name)));
+    if (!res.ok) {
+      setCreateError(res.error ?? "Couldn’t create the folder.");
+      return;
+    }
+    setPendingRenameId(res.id ?? null);
+    router.refresh();
+  }
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -43,7 +57,7 @@ export function DocumentLibraryRoot({
 
   const spaceItems: CtxItem[] = [];
   if (isSuperAdmin) {
-    spaceItems.push({ kind: "item", label: "New folder", onClick: () => setCreateOpen(true) }, { kind: "sep" });
+    spaceItems.push({ kind: "item", label: "New folder", onClick: createTopFolder }, { kind: "sep" });
   }
   spaceItems.push({ kind: "item", label: "Refresh", onClick: () => router.refresh() });
 
@@ -74,8 +88,10 @@ export function DocumentLibraryRoot({
         viewStorageKey="terminalv2-doclib-view"
         actionLabel={isSuperAdmin ? "New Folder" : undefined}
         actionIcon={isSuperAdmin ? <FolderPlus size={16} aria-hidden="true" /> : undefined}
-        onAction={isSuperAdmin ? () => setCreateOpen(true) : undefined}
+        onAction={isSuperAdmin ? createTopFolder : undefined}
       />
+
+      {createError && <p className="dl-error">{createError}</p>}
 
       <EmptySpaceContextMenu items={spaceItems} className="dl-space">
         {shown.length === 0 ? (
@@ -112,6 +128,7 @@ export function DocumentLibraryRoot({
                 isPublic={f.isPublic}
                 fileCount={f.fileCount}
                 isSuperAdmin={isSuperAdmin}
+                autoRename={f.id === pendingRenameId}
               />
             ))}
           </div>
@@ -127,15 +144,12 @@ export function DocumentLibraryRoot({
                 fileCount={f.fileCount}
                 previewFiles={f.previewFiles}
                 isSuperAdmin={isSuperAdmin}
+                autoRename={f.id === pendingRenameId}
               />
             ))}
           </div>
         )}
       </EmptySpaceContextMenu>
-
-      {isSuperAdmin && (
-        <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={null} />
-      )}
     </article>
   );
 }

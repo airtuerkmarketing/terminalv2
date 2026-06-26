@@ -7,7 +7,6 @@ import { deleteFile, editFile } from "@/app/(public)/documents-library/actions";
 import { FlagIcon } from "@/components/ui/flag-icon";
 import { RelativeTime } from "./relative-time";
 import { FileTypeGraphic } from "./file-type-graphic";
-import { FileObject } from "./file-object";
 
 function fileHref(id: string, download = false) {
   return `/api/library/file/${id}${download ? "?download=1" : ""}`;
@@ -29,7 +28,14 @@ const EditIcon = () => (
 
 export type CtxItem =
   | { kind: "item"; label: string; onClick: () => void; danger?: boolean }
-  | { kind: "sep" };
+  | { kind: "sep" }
+  | {
+      kind: "swatches";
+      label: string;
+      value: string;
+      options: { value: string; color: string }[];
+      onSelect: (v: string) => void;
+    };
 
 /** Right-click popover at the cursor; closes on outside-click / Esc / scroll. */
 export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; items: CtxItem[]; onClose: () => void }) {
@@ -51,6 +57,23 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
       {items.map((it, i) =>
         it.kind === "sep" ? (
           <div key={i} className="dl-ctx-sep" />
+        ) : it.kind === "swatches" ? (
+          <div key={i} className="dl-ctx-swatches">
+            <span className="dl-ctx-swatch-label">{it.label}</span>
+            <div className="dl-ctx-swatch-row">
+              {it.options.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  className={`dl-ctx-swatch${o.value === it.value ? " is-on" : ""}`}
+                  style={{ background: o.color }}
+                  aria-label={o.value}
+                  aria-pressed={o.value === it.value}
+                  onClick={() => { it.onSelect(o.value); onClose(); }}
+                />
+              ))}
+            </div>
+          </div>
         ) : (
           <button key={i} type="button" role="menuitem" className={`dl-ctx-item${it.danger ? " danger" : ""}`} onClick={() => { it.onClick(); onClose(); }}>
             {it.label}
@@ -63,8 +86,9 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
 
 /**
  * One file in the document grid.
- *   - "card" → Windows-Explorer-style free-standing cell: a typed FileObject SVG,
- *     the name (inline-rename on click), then flag + size. No box; hover gives a
+ *   - "card" → Windows-Explorer-style free-standing cell: the shared FileTypeGraphic
+ *     (image types show a real thumbnail), the name (inline-rename on click), then
+ *     flag + size. Same graphic as the list view, only larger. No box; hover gives a
  *     subtle bg. Whole cell opens the file; right-click = context menu. Rename /
  *     move / delete reuse the existing handlers (editFile / FileEditModal /
  *     deleteFile) with live grid updates via onUpdated / onRemoved.
@@ -93,6 +117,7 @@ export function FileCard({
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(file.title);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [imgError, setImgError] = useState(false);
 
   const openFile = () => window.open(href, "_blank", "noopener,noreferrer");
 
@@ -131,7 +156,22 @@ export function FileCard({
       >
         <button type="button" className="dl-cell__hit" onClick={openFile} aria-label={`Open ${file.title}`}>
           <span className="dl-cell__visual">
-            <FileObject kind={kind} imageUrl={isImage ? href : undefined} />
+            {/* Full image as preview; a real server-side thumbnail would be a later
+                backend topic. onError falls back to the type graphic. */}
+            {isImage && !imgError ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
+              <img
+                className="dl-cell__thumb"
+                src={href}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              /* Same graphic as the list view, larger — one element across both views. */
+              <FileTypeGraphic extension={file.extension} scale={1.8} />
+            )}
           </span>
         </button>
         {/* Hover-only download (opens the same serving route with ?download=1). */}

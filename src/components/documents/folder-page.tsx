@@ -2,14 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Globe, Lock, Pencil, Plus, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, Lock, Pencil, Plus, Upload } from "lucide-react";
 import "@/styles/document-library.css";
 import type { ViewMode } from "@/components/ui/view-toggle";
-import {
-  renameFolder,
-  searchFilesInFolder,
-  setFolderVisibility,
-} from "@/app/(public)/documents-library/actions";
+import { createFolder, renameFolder, searchFilesInFolder } from "@/app/(public)/documents-library/actions";
 import type { FileDTO, FileSortKey, FolderDTO } from "@/lib/documents";
 import { fileKind } from "@/lib/documents-constants";
 import { Breadcrumb } from "./breadcrumb";
@@ -17,11 +13,11 @@ import { FileCard, type CtxItem } from "./file-card";
 import { FileRow } from "./file-row";
 import { FileEditModal } from "./file-edit-modal";
 import { UploadModal } from "./upload-modal";
-import { CreateFolderModal } from "./create-folder-modal";
 import { FolderActionsMenu } from "./folder-actions-menu";
 import { FolderCard3D, FolderRow } from "./folder-card-3d";
 import { LibraryToolbar } from "./library-toolbar";
 import { EmptySpaceContextMenu } from "./empty-space-context-menu";
+import { VisibilityPopover } from "./visibility-popover";
 import { DEFAULT_FILTER, type LibraryFilter } from "./filter-sort-popover";
 
 const PAGE_SIZE = 60;
@@ -32,6 +28,16 @@ function compareFiles(a: FileDTO, b: FileDTO, key: FileSortKey): number {
   if (key === "size") return a.sizeBytes - b.sizeBytes;
   if (key === "date") return a.createdAt.localeCompare(b.createdAt);
   return a.title.localeCompare(b.title);
+}
+
+// Smallest free "New Folder" / "New Folder 2" / … not already in the list.
+export function nextFolderName(names: string[]): string {
+  const base = "New Folder";
+  const taken = new Set(names);
+  if (!taken.has(base)) return base;
+  let n = 2;
+  while (taken.has(`${base} ${n}`)) n++;
+  return `${base} ${n}`;
 }
 
 export function FolderPage({
@@ -59,7 +65,10 @@ export function FolderPage({
   const [filter, setFilter] = useState<LibraryFilter>(DEFAULT_FILTER);
   const [manageFile, setManageFile] = useState<FileDTO | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
+  // "New folder" creates immediately, then auto-renames: the just-created id is
+  // stashed here and passed down so its card/row mounts in inline-rename mode.
+  const [pendingRenameId, setPendingRenameId] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   // Inline rename of the folder title (mirrors the card/row inline-rename).
   const [editingTitle, setEditingTitle] = useState(false);
@@ -163,8 +172,17 @@ export function FolderPage({
     if (res.ok) router.refresh();
     else setTitleDraft(folder.name);
   }
-  async function toggleVisibility() {
-    await setFolderVisibility(folder.id, !folder.isPublic);
+
+  // New folder: create immediately with a default name, then drop the new folder
+  // straight into inline-rename (no modal). 2 roundtrips (create + rename) by design.
+  async function createSubfolder() {
+    setCreateError(null);
+    const res = await createFolder(folder.id, nextFolderName(childFolders.map((f) => f.name)));
+    if (!res.ok) {
+      setCreateError(res.error ?? "Couldn’t create the folder.");
+      return;
+    }
+    setPendingRenameId(res.id ?? null);
     router.refresh();
   }
 
@@ -211,7 +229,7 @@ export function FolderPage({
   const spaceItems: CtxItem[] = [];
   if (isSuperAdmin) {
     spaceItems.push(
-      { kind: "item", label: "New subfolder", onClick: () => setCreateOpen(true) },
+      { kind: "item", label: "New subfolder", onClick: createSubfolder },
       { kind: "item", label: "Upload file", onClick: () => setUploadOpen(true) },
       { kind: "sep" }
     );
@@ -233,6 +251,7 @@ export function FolderPage({
       fileCount={0}
       previewFiles={[]}
       isSuperAdmin={isSuperAdmin}
+      autoRename={f.id === pendingRenameId}
     />
   ));
 
@@ -275,6 +294,7 @@ export function FolderPage({
               isPublic={f.isPublic}
               fileCount={0}
               isSuperAdmin={isSuperAdmin}
+              autoRename={f.id === pendingRenameId}
             />
           ))}
           {visibleFiles.map((f) => (
@@ -345,15 +365,7 @@ export function FolderPage({
           )}
 
           {isSuperAdmin ? (
-            <button
-              type="button"
-              className={`dl-status-pill${folder.isPublic ? "" : " is-private"}`}
-              onClick={toggleVisibility}
-              title={folder.isPublic ? "Public — click to make private" : "Private — click to make public"}
-            >
-              {folder.isPublic ? <Globe size={13} aria-hidden="true" /> : <Lock size={13} aria-hidden="true" />}
-              {folder.isPublic ? "Public" : "Private"}
-            </button>
+            <VisibilityPopover folderId={folder.id} isPublic={folder.isPublic} />
           ) : (
             !folder.isPublic && (
               <span className="dl-status-pill is-private is-static">
@@ -377,20 +389,19 @@ export function FolderPage({
         viewStorageKey="terminalv2-doclib-view"
         secondaryLabel={isSuperAdmin ? "New subfolder" : undefined}
         secondaryIcon={isSuperAdmin ? <Plus size={16} aria-hidden="true" /> : undefined}
-        onSecondary={isSuperAdmin ? () => setCreateOpen(true) : undefined}
+        onSecondary={isSuperAdmin ? createSubfolder : undefined}
         actionLabel={isSuperAdmin ? "Upload File" : undefined}
         actionIcon={isSuperAdmin ? <Upload size={16} aria-hidden="true" /> : undefined}
         onAction={isSuperAdmin ? () => setUploadOpen(true) : undefined}
       />
+
+      {createError && <p className="dl-error">{createError}</p>}
 
       {/* Right-click anywhere in this area (not on a file/folder) → space menu. */}
       <EmptySpaceContextMenu items={spaceItems} className="dl-space">
         {filesArea}
       </EmptySpaceContextMenu>
 
-      {isSuperAdmin && (
-        <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={folder.id} />
-      )}
       {isSuperAdmin && (
         <UploadModal
           open={uploadOpen}
