@@ -6,9 +6,9 @@ import {
   FileStack,
   ImageIcon,
   Tag,
-  Sparkles,
   type LucideProps,
 } from "lucide-react";
+import { TerminalLogo } from "@/components/shell/TerminalLogo";
 import type { SearchHit, SearchResults } from "@/lib/search/types";
 
 /* Floating results dropdown under the box, Linear-style (BAU-Auftrag §5.3).
@@ -95,7 +95,7 @@ export function SearchDropdown({
         onMouseEnter={() => onHover(ASK_AI_ID)}
         onClick={onAskAi}
       >
-        <Sparkles className="ai-search-hit-icon" aria-hidden="true" />
+        <TerminalLogo variant="mark" title="" className="ai-search-hit-icon ai-search-askai-mark" />
         <span className="ai-search-askai-text">
           Ask the AI instead: <strong>“{query}”</strong>
         </span>
