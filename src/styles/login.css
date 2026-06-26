@@ -2,7 +2,7 @@
    Auth pages (login / forgot-password / update-password) — Liquid Glass.
    Theme-aware via the shared token system; the particle backdrop is mounted
    per page via <AuthParticles>. Mark colours follow D5: the transparent
-   wordmark inverts on dark, the icon badge does not.
+   wordmark is a bare near-black mark and inverts to white on dark.
    ───────────────────────────────────────────────────────────────────────── */
 
 .login-page {

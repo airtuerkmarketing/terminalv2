@@ -24,25 +24,30 @@ export const metadata: Metadata = {
   description:
     "Internal brand and resource hub for airtuerk and the AERTiCKET Group — brand guidelines, assets, documents and tools.",
   icons: {
+    // SVG mark (adaptive light/dark) for modern tabs; .ico for legacy/non-SVG
+    // UAs and the default /favicon.ico request.
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.svg", type: "image/svg+xml", sizes: "any" },
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
     ],
+    // iOS Safari ignores SVG touch icons — PNG only.
     apple: [
-      { url: "/apple-touch-icon.svg", type: "image/svg+xml" },
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
   openGraph: {
     title: "terminal",
     description: "Internal brand and resource hub for airtuerk Service GmbH",
+    // PNG, not SVG — Slack/Teams/Twitter/Facebook don't unfurl SVG og:images.
     images: [
-      { url: "/logos/terminal/icon-250.svg", width: 250, height: 250, alt: "terminal" },
+      { url: "/logos/terminal/icon-250.png", width: 250, height: 250, alt: "terminal" },
     ],
   },
   twitter: {
     card: "summary",
     title: "terminal",
     description: "Internal brand and resource hub for airtuerk Service GmbH",
-    images: ["/logos/terminal/icon-250.svg"],
+    images: ["/logos/terminal/icon-250.png"],
   },
   robots: {
     index: false,
