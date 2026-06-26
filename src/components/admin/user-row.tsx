@@ -38,9 +38,9 @@ const ROLE_CLASS: Record<string, string> = {
   user: "uap-pill--user",
 };
 const STATUS_LABEL: Record<TeamMemberListItem["loginStatus"], string> = {
-  active: "Aktiv",
-  invited: "Eingeladen",
-  not_invited: "Nicht eingeladen",
+  active: "Active",
+  invited: "Invited",
+  not_invited: "Not invited",
 };
 
 export function UserRow({
@@ -61,7 +61,7 @@ export function UserRow({
     <tr
       className={`uap-row${selected ? " is-selected" : ""}`}
       tabIndex={0}
-      aria-label={`Details zu ${name} öffnen`}
+      aria-label={`Open details for ${name}`}
       onClick={onClick}
       onKeyDown={(e) => {
         // Only the row itself toggles the detail modal via keyboard; a focused
@@ -77,7 +77,7 @@ export function UserRow({
         <Checkbox
           checked={selected}
           onChange={() => onToggleSelect()}
-          aria-label={selected ? `${name} abwählen` : `${name} auswählen`}
+          aria-label={selected ? `Deselect ${name}` : `Select ${name}`}
         />
       </td>
       {visibility.avatar && (

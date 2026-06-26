@@ -83,7 +83,7 @@ export function KbPresets({
         {presets.length > 0 && <span className="kb-fdrop-badge">{presets.length}</span>}
       </button>
       {open && (
-        <div className="kb-fdrop-menu" role="group" aria-label="Filter-Presets">
+        <div className="kb-fdrop-menu" role="group" aria-label="Filter presets">
           <div className="kb-fdrop-search">
             <input
               value={name}
@@ -91,8 +91,8 @@ export function KbPresets({
               onKeyDown={(e) => {
                 if (e.key === "Enter") save();
               }}
-              placeholder="Aktuelle Filter speichern als…"
-              aria-label="Preset-Name"
+              placeholder="Save current filters as…"
+              aria-label="Preset name"
             />
             <button
               type="button"
@@ -100,12 +100,12 @@ export function KbPresets({
               onClick={save}
               disabled={!name.trim() || presets.length >= MAX}
             >
-              Speichern
+              Save
             </button>
           </div>
           <div className="kb-fdrop-list">
             {presets.length === 0 ? (
-              <p className="kb-fdrop-empty">Noch keine Presets</p>
+              <p className="kb-fdrop-empty">No presets yet</p>
             ) : (
               presets.map((p) => (
                 <div key={p.name} className="kb-fdrop-row" style={{ cursor: "default" }}>
@@ -126,7 +126,7 @@ export function KbPresets({
                     type="button"
                     className="kb-preset-del"
                     onClick={() => persist(presets.filter((x) => x.name !== p.name))}
-                    aria-label={`${p.name} löschen`}
+                    aria-label={`Delete ${p.name}`}
                   >
                     <Trash2 size={13} />
                   </button>
@@ -136,7 +136,7 @@ export function KbPresets({
           </div>
           {presets.length >= MAX && (
             <div className="kb-fdrop-foot">
-              <span className="kb-fdrop-search-count">Max {MAX} Presets erreicht</span>
+              <span className="kb-fdrop-search-count">Max {MAX} presets reached</span>
             </div>
           )}
         </div>

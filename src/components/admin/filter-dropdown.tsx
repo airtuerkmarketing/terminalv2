@@ -70,7 +70,7 @@ export function FilterDropdown({
       {open && (
         <div className="uap-fdrop-menu" role="group" aria-label={label}>
           {options.length === 0 ? (
-            <p className="uap-fdrop-empty">Keine Optionen</p>
+            <p className="uap-fdrop-empty">No options</p>
           ) : (
             options.map((o) => (
               <label key={o.value} className="uap-fdrop-item">

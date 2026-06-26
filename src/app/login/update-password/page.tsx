@@ -9,7 +9,7 @@ type SearchParams = Promise<{
 }>;
 
 export const metadata = {
-  title: "Passwort ändern — terminal",
+  title: "Change password — terminal",
 };
 
 export default async function UpdatePasswordPage({
@@ -26,19 +26,19 @@ export default async function UpdatePasswordPage({
   }
 
   const heading =
-    type === "welcome" ? "Willkommen bei terminal" :
-    type === "force" ? "Bitte ändere dein Passwort" :
-    type === "recovery" ? "Neues Passwort setzen" :
-    "Passwort ändern";
+    type === "welcome" ? "Welcome to terminal" :
+    type === "force" ? "Please change your password" :
+    type === "recovery" ? "Set a new password" :
+    "Change password";
 
   const subtitle =
     type === "welcome"
-      ? "Lege jetzt dein persönliches Passwort fest, um dein Konto zu aktivieren."
+      ? "Set your personal password now to activate your account."
       : type === "force"
-      ? "Aus Sicherheitsgründen musst du beim ersten Login dein Passwort ändern."
+      ? "For security reasons, you must change your password on first login."
       : type === "recovery"
-      ? "Setze ein neues Passwort für deinen Account."
-      : "Wähle ein neues Passwort.";
+      ? "Set a new password for your account."
+      : "Choose a new password.";
 
   return (
     <main className="login-page">

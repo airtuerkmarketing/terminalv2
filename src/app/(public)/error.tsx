@@ -25,15 +25,15 @@ export default function PublicError({
   return (
     <div className="err-root">
       <div className="err-card">
-        <h1 className="err-title">Etwas ist schiefgelaufen</h1>
-        <p className="err-subhead">Diese Seite konnte nicht geladen werden.</p>
-        {error.digest && <p className="err-digest">Fehler-ID: {error.digest}</p>}
+        <h1 className="err-title">Something went wrong</h1>
+        <p className="err-subhead">This page could not be loaded.</p>
+        {error.digest && <p className="err-digest">Error ID: {error.digest}</p>}
         <div className="err-actions">
           <button type="button" onClick={reset} className="err-btn err-btn--primary">
-            Erneut versuchen
+            Try again
           </button>
           <button type="button" onClick={() => router.back()} className="err-btn err-btn--secondary">
-            Zurück
+            Back
           </button>
         </div>
       </div>

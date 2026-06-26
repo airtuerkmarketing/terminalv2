@@ -21,15 +21,15 @@ import {
 const PAGE_SIZE = 25;
 
 const LAYER_LABEL: Record<ChunkLayer, string> = {
-  company: "Identität",
+  company: "Identity",
   confluence: "Confluence",
   brand: "Brands",
 };
 
 const AXIS_LABEL: Record<TagAxis, string> = {
-  topic: "Themen",
+  topic: "Topics",
   airline: "Airlines",
-  department: "Abteilungen",
+  department: "Departments",
   provider: "Provider",
   brand: "Brands",
 };
@@ -84,7 +84,7 @@ function ChunkBody({ chunk }: { chunk: KnowledgeChunk }) {
       </div>
       {long && (
         <button className="kb-expand" onClick={() => setExpanded((v) => !v)}>
-          {expanded ? "Weniger" : "Mehr anzeigen"}
+          {expanded ? "Less" : "Show more"}
         </button>
       )}
     </div>
@@ -225,13 +225,13 @@ export function SourcesTab({
           />
         ))}
         <button className="kb-btn kb-btn--primary" style={{ marginLeft: "auto" }} onClick={() => setCreating(true)}>
-          <Plus size={14} /> Neuer Eintrag
+          <Plus size={14} /> New entry
         </button>
       </div>
 
       {activeChips.length > 0 && (
         <div className="kb-chipstack">
-          <span className="kb-chipstack-label">Aktiv:</span>
+          <span className="kb-chipstack-label">Active:</span>
           {activeChips.map((c, i) => (
             <button key={i} className="kb-filterchip" onClick={c.remove}>
               <span className="kb-filterchip-axis">{c.label}</span>
@@ -240,7 +240,7 @@ export function SourcesTab({
             </button>
           ))}
           <button className="kb-chipstack-clear" onClick={clearAll}>
-            Alle löschen
+            Clear all
           </button>
         </div>
       )}
@@ -248,32 +248,32 @@ export function SourcesTab({
       <div className="kb-toolbar">
         <input
           className="kb-search"
-          placeholder="Chunks durchsuchen…"
+          placeholder="Search chunks…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <button className="kb-chip" aria-pressed={layers.size === 0} onClick={() => setLayers(new Set())}>
-          Alle
+          All
         </button>
         {(["company", "confluence", "brand"] as ChunkLayer[]).map((l) => (
           <button key={l} className="kb-chip" aria-pressed={layers.has(l)} onClick={() => toggleLayer(l)}>
             {LAYER_LABEL[l]} {stats.byLayer[l]}
           </button>
         ))}
-        <select className="kb-select" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sortierung">
-          <option value="newest">Neueste</option>
-          <option value="oldest">Älteste</option>
-          <option value="most-retrieved">Meist abgerufen</option>
+        <select className="kb-select" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort">
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="most-retrieved">Most retrieved</option>
         </select>
         <KbPresets current={{ search, layers: [...layers], sort, axes: axisSel }} onApply={applyPreset} />
       </div>
 
       <p className="kb-resultcount" style={{ margin: "var(--space-3) 0" }}>
-        {filtered.length} von {chunks.length} Chunks
+        {filtered.length} of {chunks.length} chunks
       </p>
 
       {pageItems.length === 0 ? (
-        <div className="kb-empty">Keine Chunks für diese Filter.</div>
+        <div className="kb-empty">No chunks for these filters.</div>
       ) : (
         <div className="kb-cards">
           {pageItems.map((c) => (
@@ -282,7 +282,7 @@ export function SourcesTab({
                 <div className="kb-card-tags">
                   <span className="kb-tag kb-tag--layer">{LAYER_LABEL[c.layer]}</span>
                   <span className="kb-tag">{c.sourceType}</span>
-                  {c.priority === 1 && <span className="kb-tag kb-tag--priority">Priorität 1</span>}
+                  {c.priority === 1 && <span className="kb-tag kb-tag--priority">Priority 1</span>}
                   {[
                     ...(c.tags.topics ?? []),
                     ...(c.tags.airlines ?? []),
@@ -297,14 +297,14 @@ export function SourcesTab({
                 </div>
                 {c.editable ? (
                   <button className="kb-chip" onClick={() => setEditing(c)}>
-                    <Pencil size={13} /> Bearbeiten
+                    <Pencil size={13} /> Edit
                   </button>
                 ) : (
                   <span
                     className="kb-readonly"
-                    title="Inhalt kommt aus der Quelle und wird beim nächsten Embedding neu erzeugt. Korrekturen über den KI-Chat → Reviews."
+                    title="Content comes from the source and is regenerated on the next embedding. Corrections via the AI chat → Reviews."
                   >
-                    <Lock size={11} aria-hidden="true" /> Nur-Lesen
+                    <Lock size={11} aria-hidden="true" /> Read-only
                   </span>
                 )}
               </div>
@@ -315,19 +315,19 @@ export function SourcesTab({
                   <Database size={12} style={{ verticalAlign: "-2px", marginRight: 4 }} />
                   {LAYER_LABEL[c.layer]}
                 </span>
-                <span className="kb-foot-dot">Abgerufen ×{c.retrievedCount}</span>
+                <span className="kb-foot-dot">Retrieved ×{c.retrievedCount}</span>
                 <span className="kb-foot-dot">
                   {new Date(c.createdAt).toLocaleDateString("de-DE")}
                 </span>
                 {!c.hasEmbedding && (
                   <span className="kb-foot-dot kb-noembed">
                     <AlertCircle size={12} style={{ verticalAlign: "-2px", marginRight: 3 }} />
-                    kein Embedding
+                    no embedding
                   </span>
                 )}
                 <button className="kb-expand" style={{ marginLeft: "auto" }} onClick={() => setAuditing(c)}>
                   <History size={12} style={{ verticalAlign: "-2px", marginRight: 3 }} />
-                  Verlauf
+                  History
                 </button>
               </div>
             </article>
@@ -338,11 +338,11 @@ export function SourcesTab({
       {pageCount > 1 && (
         <div className="kb-pager">
           <button className="kb-pager-btn" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-            ← Neuer
+            ← Newer
           </button>
-          <span className="kb-pager-label">Seite {page + 1} / {pageCount}</span>
+          <span className="kb-pager-label">Page {page + 1} / {pageCount}</span>
           <button className="kb-pager-btn" disabled={page >= pageCount - 1} onClick={() => setPage((p) => p + 1)}>
-            Älter →
+            Older →
           </button>
         </div>
       )}

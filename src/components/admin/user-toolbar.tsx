@@ -8,9 +8,9 @@ import { FilterPill } from "./filter-pill";
 import { ColumnVisibilityDropdown } from "./column-visibility-dropdown";
 
 const STATUS_OPTIONS = [
-  { value: "active", label: "Aktiv" },
-  { value: "invited", label: "Eingeladen" },
-  { value: "not_invited", label: "Ausstehend" },
+  { value: "active", label: "Active" },
+  { value: "invited", label: "Invited" },
+  { value: "not_invited", label: "Pending" },
 ];
 
 /**
@@ -62,8 +62,8 @@ export function UserToolbar({
           type="search"
           value={q}
           onChange={(e) => onQ(e.target.value)}
-          placeholder="Suchen: Name, E-Mail, Position…"
-          aria-label="Personen suchen"
+          placeholder="Search: name, email, position…"
+          aria-label="Search people"
         />
       </div>
 
@@ -80,19 +80,19 @@ export function UserToolbar({
         onChange={onStatuses}
       />
 
-      <FilterPill label="Nur Privat-E-Mail" active={privateOnly} onClick={() => onPrivateOnly(!privateOnly)} />
-      <FilterPill label="Ohne Foto" active={noPhoto} onClick={() => onNoPhoto(!noPhoto)} />
+      <FilterPill label="Private email only" active={privateOnly} onClick={() => onPrivateOnly(!privateOnly)} />
+      <FilterPill label="No photo" active={noPhoto} onClick={() => onNoPhoto(!noPhoto)} />
 
       {hasActiveFilters && (
         <button type="button" className="uap-reset" onClick={onReset}>
-          Zurücksetzen
+          Reset
         </button>
       )}
 
       <div className="uap-toolbar-end">
         <button type="button" className="uap-create-btn" onClick={onCreatePersonClick}>
           <UserPlus size={16} aria-hidden="true" />
-          <span>Neue Person</span>
+          <span>New person</span>
         </button>
         <ColumnVisibilityDropdown visibility={columnVisibility} onChange={onColumnVisibility} />
       </div>

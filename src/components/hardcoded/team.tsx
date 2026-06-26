@@ -52,7 +52,7 @@ export function TeamDirectory({ title, members }: { title: string; members: Team
       counts.set(d, (counts.get(d) ?? 0) + 1);
     }
     return [
-      { key: "All", label: "Alle", count: members.length },
+      { key: "All", label: "All", count: members.length },
       // Departments in the canonical order; zero-count chips hidden.
       ...TEAM_ORDER.map((d) => ({ key: d, label: d, count: counts.get(d) ?? 0 })).filter(
         (d) => d.count > 0
@@ -90,8 +90,8 @@ export function TeamDirectory({ title, members }: { title: string; members: Team
         <div className="eyebrow">Resources</div>
         <h1>{title}</h1>
         <p className="lead">
-          Das airtuerk-Team — {members.length} Menschen über alle Abteilungen und Marken hinweg.
-          Suche nach Name oder Rolle, oder filtere nach Abteilung.
+          The airtuerk team — {members.length} people across all departments and brands.
+          Search by name or role, or filter by department.
         </p>
       </header>
 
@@ -102,14 +102,14 @@ export function TeamDirectory({ title, members }: { title: string; members: Team
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={`${members.length} Mitarbeiter durchsuchen…`}
-            aria-label="Team durchsuchen"
+            placeholder={`Search ${members.length} team members…`}
+            aria-label="Search team"
           />
         </div>
         <ViewToggle value={view} onChange={setView} storageKey="terminalv2-team-view" />
       </div>
 
-      <div className="tm-filters" role="tablist" aria-label="Abteilungen">
+      <div className="tm-filters" role="tablist" aria-label="Departments">
         {chips.map((c) => (
           <button
             key={c.key}
@@ -126,13 +126,13 @@ export function TeamDirectory({ title, members }: { title: string; members: Team
       </div>
 
       <div className="tm-count">
-        {filtered.length} {filtered.length === 1 ? "Person" : "Personen"}
+        {filtered.length} {filtered.length === 1 ? "person" : "people"}
       </div>
 
       {sections.length === 0 ? (
         <div className="tm-empty">
-          <strong>Keine Treffer.</strong>
-          <span>Versuch einen anderen Namen oder Abteilungsfilter.</span>
+          <strong>No matches.</strong>
+          <span>Try a different name or department filter.</span>
         </div>
       ) : (
         sections.map((s) => (
@@ -233,11 +233,11 @@ function MemberDetailModal({ member, onClose }: { member: TeamMemberDTO; onClose
         className="tmd-modal"
         role="dialog"
         aria-modal="true"
-        aria-label={`Profil von ${name}`}
+        aria-label={`Profile of ${name}`}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
-        <button type="button" className="tmd-close" onClick={onClose} aria-label="Schließen">
+        <button type="button" className="tmd-close" onClick={onClose} aria-label="Close">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
@@ -269,20 +269,20 @@ function MemberDetailModal({ member, onClose }: { member: TeamMemberDTO; onClose
 
           {hasContact && (
             <section className="tmd-block">
-              <h3 className="tmd-block-title">Kontakt</h3>
+              <h3 className="tmd-block-title">Contact</h3>
               <dl className="tmd-dl">
                 {member.email && (
-                  <Row label="E-Mail">
+                  <Row label="Email">
                     <a href={asHref(member.email, "mailto")!}>{member.email}</a>
                   </Row>
                 )}
                 {member.phone && (
-                  <Row label="Telefon">
+                  <Row label="Phone">
                     <a href={asHref(member.phone, "tel")!}>{member.phone}</a>
                   </Row>
                 )}
-                {member.location && <Row label="Standort">{member.location}</Row>}
-                {member.company && <Row label="Firma / Team">{member.company}</Row>}
+                {member.location && <Row label="Location">{member.location}</Row>}
+                {member.company && <Row label="Company / Team">{member.company}</Row>}
               </dl>
             </section>
           )}
@@ -313,8 +313,8 @@ function MemberDetailModal({ member, onClose }: { member: TeamMemberDTO; onClose
                 </div>
               )}
               <dl className="tmd-dl">
-                {member.joinedYear && <Row label="Im Team seit">{member.joinedYear}</Row>}
-                {member.birthday && <Row label="Geburtstag">{formatBirthday(member.birthday)}</Row>}
+                {member.joinedYear && <Row label="On the team since">{member.joinedYear}</Row>}
+                {member.birthday && <Row label="Birthday">{formatBirthday(member.birthday)}</Row>}
               </dl>
             </section>
           )}

@@ -17,10 +17,10 @@ export default async function NotFound() {
     <div className="nf-root">
       <div className="nf-card">
         <div className="nf-code">404</div>
-        <h1 className="nf-title">Seite nicht gefunden</h1>
-        <p className="nf-subhead">Diese Seite existiert nicht (mehr).</p>
+        <h1 className="nf-title">Page not found</h1>
+        <p className="nf-subhead">This page does not exist (anymore).</p>
         <Link href={isAuthed ? "/" : "/login"} className="err-btn err-btn--primary">
-          {isAuthed ? "Zurück zum Dashboard" : "Zur Anmeldung"}
+          {isAuthed ? "Back to dashboard" : "To sign in"}
         </Link>
       </div>
     </div>

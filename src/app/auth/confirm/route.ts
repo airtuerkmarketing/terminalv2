@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!ok) {
-    const msg = "Der Link ist ungültig oder abgelaufen. Bitte fordere einen neuen an.";
+    const msg = "This link is invalid or has expired. Please request a new one.";
     return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(msg)}`);
   }
 

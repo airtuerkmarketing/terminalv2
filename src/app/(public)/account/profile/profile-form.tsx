@@ -9,14 +9,14 @@ import { updateOwnAvatarAction, updateOwnProfileAction } from "./actions";
 // Editable text fields rendered in the two-column grid (status/about/dob handled
 // separately below). Order matches the profile mockup.
 const TEXT_FIELDS = [
-  { key: "location", label: "Standort", placeholder: "Frankfurt, Deutschland", type: "text" },
-  { key: "company", label: "Firma / Team", placeholder: "airtuerk Service GmbH", type: "text" },
+  { key: "location", label: "Location", placeholder: "Frankfurt, Germany", type: "text" },
+  { key: "company", label: "Company / Team", placeholder: "airtuerk Service GmbH", type: "text" },
   { key: "website", label: "Portfolio / Website", placeholder: "https://…", type: "url" },
   { key: "github", label: "GitHub", placeholder: "https://github.com/…", type: "url" },
   { key: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/in/…", type: "url" },
   { key: "instagram", label: "Instagram", placeholder: "@username", type: "text" },
-  { key: "phone", label: "Telefon (geschäftlich)", placeholder: "+49 …", type: "tel" },
-  { key: "privatePhone", label: "Telefon (privat)", placeholder: "+49 …", type: "tel" },
+  { key: "phone", label: "Phone (work)", placeholder: "+49 …", type: "tel" },
+  { key: "privatePhone", label: "Phone (private)", placeholder: "+49 …", type: "tel" },
 ] as const;
 
 type EditableKey =
@@ -76,7 +76,7 @@ export default function ProfileForm({ profile }: { profile: OwnProfile }) {
       if (res.ok) {
         // cache-bust the public URL so the new image shows immediately
         setAvatarUrl(`${res.url}?t=${Date.now()}`);
-        toast({ variant: "success", title: "Profilbild aktualisiert" });
+        toast({ variant: "success", title: "Profile picture updated" });
       } else {
         toast({ variant: "error", title: res.error });
       }
@@ -101,7 +101,7 @@ export default function ProfileForm({ profile }: { profile: OwnProfile }) {
         showBirthday: form.showBirthday,
       });
       if (res.ok) {
-        toast({ variant: "success", title: "Profil gespeichert" });
+        toast({ variant: "success", title: "Profile saved" });
         router.refresh();
       } else {
         toast({ variant: "error", title: res.error });
@@ -135,8 +135,8 @@ export default function ProfileForm({ profile }: { profile: OwnProfile }) {
             className="acp-avatar-edit"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            aria-label="Profilbild ändern"
-            title="Profilbild ändern"
+            aria-label="Change profile picture"
+            title="Change profile picture"
           >
             {uploading ? <Spinner /> : <CameraIcon />}
           </button>
@@ -164,9 +164,9 @@ export default function ProfileForm({ profile }: { profile: OwnProfile }) {
       {/* Read-only identity row */}
       <section className="acp-section">
         <div className="acp-field acp-field--full">
-          <label className="acp-label">Login-E-Mail</label>
+          <label className="acp-label">Login email</label>
           <input className="acp-input" value={profile.email ?? ""} disabled readOnly />
-          <span className="acp-hint">Nicht änderbar — die Adresse, an die deine Einladung ging.</span>
+          <span className="acp-hint">Not editable — the address your invitation was sent to.</span>
         </div>
       </section>
 
@@ -174,7 +174,7 @@ export default function ProfileForm({ profile }: { profile: OwnProfile }) {
       <section className="acp-section">
         <div className="acp-field acp-field--full">
           <label htmlFor="acp-status" className="acp-label">
-            Status <span className="acp-label-sub">— ein Satz über dich</span>
+            Status <span className="acp-label-sub">— one sentence about you</span>
           </label>
           <input
             id="acp-status"
@@ -208,7 +208,7 @@ export default function ProfileForm({ profile }: { profile: OwnProfile }) {
 
         {/* Date of birth + visibility */}
         <div className="acp-field">
-          <label htmlFor="acp-dob" className="acp-label">Geburtsdatum</label>
+          <label htmlFor="acp-dob" className="acp-label">Date of birth</label>
           <input
             id="acp-dob"
             className="acp-input"
@@ -224,7 +224,7 @@ export default function ProfileForm({ profile }: { profile: OwnProfile }) {
               checked={form.showBirthday}
               onChange={(e) => set("showBirthday", e.target.checked)}
             />
-            <span>Geburtstag im Team anzeigen</span>
+            <span>Show birthday in team</span>
           </label>
         </div>
       </section>
@@ -232,13 +232,13 @@ export default function ProfileForm({ profile }: { profile: OwnProfile }) {
       {/* About */}
       <section className="acp-section">
         <div className="acp-field acp-field--full">
-          <label htmlFor="acp-about" className="acp-label">Über mich</label>
+          <label htmlFor="acp-about" className="acp-label">About me</label>
           <textarea
             id="acp-about"
             className="acp-input acp-textarea"
             rows={4}
             value={form.about}
-            placeholder="Erzähl kurz etwas über dich, deine Rolle oder woran du arbeitest."
+            placeholder="Tell us a bit about yourself, your role or what you're working on."
             onChange={(e) => set("about", e.target.value)}
           />
         </div>
@@ -252,7 +252,7 @@ export default function ProfileForm({ profile }: { profile: OwnProfile }) {
           disabled={!dirty || saving}
           onClick={() => setForm(initial)}
         >
-          Verwerfen
+          Discard
         </button>
         <button
           type="button"
@@ -260,7 +260,7 @@ export default function ProfileForm({ profile }: { profile: OwnProfile }) {
           disabled={!dirty || saving}
           onClick={handleSave}
         >
-          {saving ? "Wird gespeichert…" : "Änderungen speichern"}
+          {saving ? "Saving…" : "Save changes"}
         </button>
       </footer>
     </div>

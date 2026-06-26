@@ -17,17 +17,17 @@ export interface QuickGrabCard {
 }
 
 export const QUICK_GRABS: QuickGrabCard[] = [
-  { id: "sig",    kind: "aktion", title: "Signatur erstellen",
-    sub: "In 3 Schritten zur fertigen E-Mail-Signatur", cta: "Starten",
+  { id: "sig",    kind: "aktion", title: "Create signature",
+    sub: "Your email signature in 3 steps", cta: "Start",
     href: "#", accentHex: "#0A82DF" },
-  { id: "deck",   kind: "asset",  title: "Neuestes Master Deck",
-    sub: "airtuerk Service · Version 4 · DE / EN", cta: "Anzeigen",
+  { id: "deck",   kind: "asset",  title: "Latest master deck",
+    sub: "airtuerk Service · Version 4 · DE / EN", cta: "View",
     href: "#", accentHex: "#1D9E75" },
-  { id: "logos",  kind: "aktion", title: "Logo-Pakete holen",
-    sub: "Alle Marken · SVG, PNG & Favicons", cta: "Öffnen",
+  { id: "logos",  kind: "aktion", title: "Get logo packages",
+    sub: "All brands · SVG, PNG & favicons", cta: "Open",
     href: "#", accentHex: "#BA7517" },
-  { id: "farben", kind: "asset",  title: "Farbpaletten kopieren",
-    sub: "Hex-Codes aller Marken auf einen Klick", cta: "Anzeigen",
+  { id: "farben", kind: "asset",  title: "Copy color palettes",
+    sub: "Hex codes of all brands in one click", cta: "View",
     href: "#", accentHex: "#D85A30" },
 ];
 
@@ -41,8 +41,8 @@ export interface BrandTab {
 // Only the 4 real single-page brands (BrandSlug). Labels mirror brand-data.ts
 // marks; descriptions are placeholder one-liners.
 export const BRAND_TABS: BrandTab[] = [
-  { slug: "airtuerk-service",       label: "airtuerk Service",      description: "Flugkonsolidator & Tech-Partner",           href: "/airtuerk-service" },
-  { slug: "airtuerk-holidays",      label: "airtuerk Holidays",     description: "Pauschalreisen & Veranstalter-Marke",       href: "/airtuerk-holidays" },
-  { slug: "atbeds",                 label: "atBeds",                description: "Hotelbetten & Kontingente",                 href: "/atbeds" },
-  { slug: "service-center-antalya", label: "Service Center Antalya", description: "Reiseservice & Betreuung vor Ort",          href: "/service-center-antalya" },
+  { slug: "airtuerk-service",       label: "airtuerk Service",      description: "Flight consolidator & tech partner",        href: "/airtuerk-service" },
+  { slug: "airtuerk-holidays",      label: "airtuerk Holidays",     description: "Package tours & tour operator brand",       href: "/airtuerk-holidays" },
+  { slug: "atbeds",                 label: "atBeds",                description: "Hotel beds & allotments",                   href: "/atbeds" },
+  { slug: "service-center-antalya", label: "Service Center Antalya", description: "Travel service & on-site support",          href: "/service-center-antalya" },
 ];

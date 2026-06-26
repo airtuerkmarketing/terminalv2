@@ -13,8 +13,8 @@ export type ActionResult =
 
 function mapErr(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
-  if (msg === "NOT_AUTHENTICATED") return "Nicht angemeldet";
-  if (msg === "NOT_AUTHORIZED") return "Keine Berechtigung";
+  if (msg === "NOT_AUTHENTICATED") return "Not signed in";
+  if (msg === "NOT_AUTHORIZED") return "No permission";
   return msg;
 }
 
@@ -89,7 +89,7 @@ export async function approveCorrection(
     .single();
 
   if (error || !data) {
-    return { ok: false, error: error?.message ?? "Korrektur nicht gefunden oder bereits bearbeitet" };
+    return { ok: false, error: error?.message ?? "Correction not found or already processed" };
   }
 
   // Materialise the chunk through the existing pipeline (idempotent: it only
@@ -119,7 +119,7 @@ export async function rejectCorrection(correctionId: string, reason: string): Pr
     return { ok: false, error: mapErr(e) };
   }
   const trimmed = reason.trim();
-  if (!trimmed) return { ok: false, error: "Ein Grund ist erforderlich" };
+  if (!trimmed) return { ok: false, error: "A reason is required" };
 
   const db = await createClient();
   const { data, error } = await db
@@ -136,7 +136,7 @@ export async function rejectCorrection(correctionId: string, reason: string): Pr
     .single();
 
   if (error || !data) {
-    return { ok: false, error: error?.message ?? "Korrektur nicht gefunden oder bereits bearbeitet" };
+    return { ok: false, error: error?.message ?? "Correction not found or already processed" };
   }
 
   await logActivity(identity, "reject_correction", correctionId, { reason: trimmed });
@@ -159,7 +159,7 @@ export async function updateCompanyContextChunk(
   } catch (e) {
     return { ok: false, error: mapErr(e) };
   }
-  if (!reason.trim()) return { ok: false, error: "Ein Grund für die Änderung ist erforderlich" };
+  if (!reason.trim()) return { ok: false, error: "A reason for the change is required" };
 
   const admin = createAdminClient();
   const { data: before } = await admin
@@ -167,7 +167,7 @@ export async function updateCompanyContextChunk(
     .select("content, tags")
     .eq("id", id)
     .single();
-  if (!before) return { ok: false, error: "Eintrag nicht gefunden" };
+  if (!before) return { ok: false, error: "Entry not found" };
   const prev = before as { content: string; tags: ChunkTags | null };
 
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -219,9 +219,9 @@ export async function createCompanyContextChunk(
     return { ok: false, error: mapErr(e) };
   }
   if (!input.topic.trim() || !input.category.trim() || !input.content.trim()) {
-    return { ok: false, error: "Titel, Kategorie und Inhalt sind erforderlich" };
+    return { ok: false, error: "Title, category, and content are required" };
   }
-  if (!reason.trim()) return { ok: false, error: "Ein Grund ist erforderlich" };
+  if (!reason.trim()) return { ok: false, error: "A reason is required" };
 
   const db = await createClient(); // authenticated; company_context INSERT allows super_admin
   const { data, error } = await db
@@ -237,7 +237,7 @@ export async function createCompanyContextChunk(
     .single();
   if (error || !data) {
     const msg = error?.message ?? "";
-    return { ok: false, error: msg.includes("duplicate") ? "Ein Eintrag mit identischem Inhalt existiert bereits" : msg || "Anlegen fehlgeschlagen" };
+    return { ok: false, error: msg.includes("duplicate") ? "An entry with identical content already exists" : msg || "Creation failed" };
   }
   const id = (data as { id: string }).id;
 
@@ -281,7 +281,7 @@ export async function createVocabTerm(input: {
   } catch (e) {
     return { ok: false, error: mapErr(e) };
   }
-  if (!input.value.trim() || !input.labelDe.trim()) return { ok: false, error: "Wert und Label sind erforderlich" };
+  if (!input.value.trim() || !input.labelDe.trim()) return { ok: false, error: "Value and label are required" };
 
   const db = await createClient();
   const { error } = await db.from("tag_vocabulary").insert({
@@ -295,7 +295,7 @@ export async function createVocabTerm(input: {
     approved_by: identity.userId,
     created_by: identity.userId,
   });
-  if (error) return { ok: false, error: error.message.includes("duplicate") ? "Dieser Wert existiert bereits" : error.message };
+  if (error) return { ok: false, error: error.message.includes("duplicate") ? "This value already exists" : error.message };
   revalidatePath("/admin/knowledge");
   return { ok: true };
 }

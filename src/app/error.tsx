@@ -24,15 +24,15 @@ export default function RootError({
   return (
     <div className="err-root">
       <div className="err-card">
-        <h1 className="err-title">Etwas ist schiefgelaufen</h1>
-        <p className="err-subhead">Wir konnten diese Seite nicht laden.</p>
-        {error.digest && <p className="err-digest">Fehler-ID: {error.digest}</p>}
+        <h1 className="err-title">Something went wrong</h1>
+        <p className="err-subhead">We couldn&apos;t load this page.</p>
+        {error.digest && <p className="err-digest">Error ID: {error.digest}</p>}
         <div className="err-actions">
           <button type="button" onClick={reset} className="err-btn err-btn--primary">
-            Erneut versuchen
+            Try again
           </button>
           <Link href="/" className="err-btn err-btn--secondary">
-            Zurück zum Dashboard
+            Back to dashboard
           </Link>
         </div>
       </div>

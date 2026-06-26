@@ -58,7 +58,7 @@ const ROLE_SECTIONS: { key: string; label: string; color: string }[] = [
   { key: "super_admin", label: "Super-Admin", color: "var(--torch)" },
   { key: "admin", label: "Admin", color: "var(--accent)" },
   { key: "user", label: "User", color: "var(--text-3)" },
-  { key: "null", label: "Ohne Rolle", color: "var(--text-3)" },
+  { key: "null", label: "No role", color: "var(--text-3)" },
 ];
 
 // Default collapse state: the two privileged groups open, the rest collapsed.
@@ -130,7 +130,7 @@ export function UserAdminPanel({
   const bulkCount = bulkTarget?.members.length ?? 0;
   const bulkPreview = bulkTarget?.members.slice(0, BULK_PREVIEW_LIMIT).map((m) => `${m.firstName} ${m.lastName}`.trim()) ?? [];
   const bulkExtra = bulkCount - bulkPreview.length;
-  const bulkItems = bulkExtra > 0 ? [...bulkPreview, `…und ${bulkExtra} weitere`] : bulkPreview;
+  const bulkItems = bulkExtra > 0 ? [...bulkPreview, `…and ${bulkExtra} more`] : bulkPreview;
 
   // Collapse state. Starts from the defaults (matches the server HTML), then a
   // stored override is applied one tick later on mount — no hydration mismatch.
@@ -303,7 +303,7 @@ export function UserAdminPanel({
 
     // Case A — nothing invitable: warn and stop (don't open an empty confirm dialog).
     if (invitableMembers.length === 0) {
-      toast({ variant: "warning", title: "Keine einladbaren Personen in der Auswahl" });
+      toast({ variant: "warning", title: "No invitable people in the selection" });
       return;
     }
 
@@ -311,10 +311,10 @@ export function UserAdminPanel({
     // no completion hook, so the skip hint is surfaced up-front, not after the run.
     // Case B (all invitable → skipped === 0) shows no extra toast.
     if (skipped > 0) {
-      toast({ variant: "info", title: `${skipped} nicht einladbar – übersprungen` });
+      toast({ variant: "info", title: `${skipped} not invitable – skipped` });
     }
 
-    bulk.request("Auswahl", invitableMembers);
+    bulk.request("Selection", invitableMembers);
   }
 
   // Export the current selection to CSV — or, with nothing selected, the filtered
@@ -330,7 +330,7 @@ export function UserAdminPanel({
     const scope: "selection" | "filtered" = hasSelection ? "selection" : "filtered";
 
     if (exportMembers.length === 0) {
-      toast({ variant: "warning", title: "Keine Personen zum Exportieren" });
+      toast({ variant: "warning", title: "No people to export" });
       return;
     }
 
@@ -345,16 +345,16 @@ export function UserAdminPanel({
 
     toast({
       variant: "success",
-      title: `${exportMembers.length} ${exportMembers.length === 1 ? "Person" : "Personen"} exportiert`,
+      title: `${exportMembers.length} ${exportMembers.length === 1 ? "person" : "people"} exported`,
     });
   }
 
   return (
     <div className="uap">
       <header className="uap-head">
-        <h1 className="uap-title">User-Management</h1>
+        <h1 className="uap-title">User Management</h1>
         <p className="uap-sub">
-          {filtered.length} von {totalCount} Personen
+          {filtered.length} of {totalCount} people
         </p>
       </header>
 
@@ -390,7 +390,7 @@ export function UserAdminPanel({
                     if (selection.size === selectableIds.length) selection.clear();
                     else selection.selectAll(selectableIds);
                   }}
-                  aria-label="Alle sichtbaren Personen auswählen"
+                  aria-label="Select all visible people"
                 />
               </th>
               {visibleColumns.map((col) => {
@@ -421,10 +421,10 @@ export function UserAdminPanel({
             <tbody>
               <tr>
                 <td className="uap-empty" colSpan={colSpan + 1}>
-                  Keine Personen gefunden{q.trim() ? ` für „${q.trim()}“` : ""}.
+                  No people found{q.trim() ? ` for “${q.trim()}”` : ""}.
                   {hasActiveFilters && (
                     <button type="button" className="uap-empty-reset" onClick={resetFilters}>
-                      Filter zurücksetzen
+                      Reset filters
                     </button>
                   )}
                 </td>
@@ -487,10 +487,10 @@ export function UserAdminPanel({
         open={!!bulkTarget}
         onClose={bulk.cancel}
         onConfirm={bulk.confirm}
-        title={`${bulkCount} ${bulkCount === 1 ? "Person" : "Personen"} aus „${bulkTarget?.label ?? ""}“ einladen?`}
-        description="Es werden Einladungs-E-Mails an folgende Firmen-Adressen gesendet:"
+        title={`Invite ${bulkCount} ${bulkCount === 1 ? "person" : "people"} from “${bulkTarget?.label ?? ""}”?`}
+        description="Invitation emails will be sent to the following company addresses:"
         items={bulkItems}
-        confirmLabel={`${bulkCount} einladen`}
+        confirmLabel={`Invite ${bulkCount}`}
       />
     </div>
   );

@@ -63,11 +63,11 @@ export function ColumnVisibilityDropdown({
           <rect x="3" y="4" width="18" height="16" rx="2" />
           <path d="M9 4v16M15 4v16" />
         </svg>
-        <span>Spalten</span>
+        <span>Columns</span>
         {hiddenCount > 0 && <span className="uap-fdrop-count">{hiddenCount}</span>}
       </button>
       {open && (
-        <div className="uap-fdrop-menu uap-colvis-menu" role="group" aria-label="Spalten ein-/ausblenden">
+        <div className="uap-fdrop-menu uap-colvis-menu" role="group" aria-label="Show/hide columns">
           {toggleable.map((c) => (
             <label key={c.key} className="uap-fdrop-item">
               <Checkbox

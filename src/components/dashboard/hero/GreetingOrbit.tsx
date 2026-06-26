@@ -9,8 +9,8 @@ import { NavIcon } from "@/components/shell/icons";
 
 // The greeting name comes from the signed-in user's profile, resolved by the "/"
 // server component (getIdentity) and passed in — this stays presentational.
-// Anon or unnamed users (e.g. dev@ with no linked team_member) fall back to "Kollege".
-const FALLBACK_NAME = "Kollege";
+// Anon or unnamed users (e.g. dev@ with no linked team_member) fall back to "there".
+const FALLBACK_NAME = "there";
 
 export function GreetingOrbit({ name }: { name?: string | null }) {
   const greetingName = name?.trim() || FALLBACK_NAME;
@@ -35,7 +35,7 @@ export function GreetingOrbit({ name }: { name?: string | null }) {
           <NavIcon name="airtuerk-service" />
         </div>
       </div>
-      <h1 className="dh-greeting-title">Was steht an, {greetingName}?</h1>
+      <h1 className="dh-greeting-title">Alright {greetingName}, what are we fixing today?</h1>
     </div>
   );
 }

@@ -43,7 +43,7 @@ export function AuditDrawer({ chunk, onClose }: { chunk: KnowledgeChunk; onClose
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <aside className="kb-drawer" role="dialog" aria-modal="true" aria-label="Verlauf">
+      <aside className="kb-drawer" role="dialog" aria-modal="true" aria-label="History">
         <header className="kb-drawer-head">
           <div>
             <div className="kb-drawer-title">{chunk.title}</div>
@@ -51,7 +51,7 @@ export function AuditDrawer({ chunk, onClose }: { chunk: KnowledgeChunk; onClose
               {chunk.layer} · {chunk.sourceType} · id {chunk.id}
             </div>
           </div>
-          <button className="kb-modal-close" onClick={onClose} aria-label="Schließen">
+          <button className="kb-modal-close" onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
         </header>
@@ -61,17 +61,17 @@ export function AuditDrawer({ chunk, onClose }: { chunk: KnowledgeChunk; onClose
               {new Date(chunk.createdAt).toLocaleString("de-DE")} · System
             </div>
             <div className="kb-audit-text">
-              Initiales Embedding · {chunk.hasEmbedding ? "Embedding aktiv" : "kein Embedding"} ·
-              Abgerufen ×{chunk.retrievedCount}
+              Initial embedding · {chunk.hasEmbedding ? "Embedding active" : "no embedding"} ·
+              Retrieved ×{chunk.retrievedCount}
             </div>
           </div>
 
           {entries === null ? (
             <div className="kb-audit-empty">
-              <Loader2 size={14} className="kb-spin" /> Lädt…
+              <Loader2 size={14} className="kb-spin" /> Loading…
             </div>
           ) : entries.length === 0 ? (
-            <div className="kb-audit-empty">Noch keine manuellen Änderungen erfasst.</div>
+            <div className="kb-audit-empty">No manual changes recorded yet.</div>
           ) : (
             entries.map((e) => (
               <div key={e.id} className="kb-audit-item">
@@ -79,7 +79,7 @@ export function AuditDrawer({ chunk, onClose }: { chunk: KnowledgeChunk; onClose
                   {new Date(e.createdAt).toLocaleString("de-DE")} · {e.editedByName ?? "—"}
                 </div>
                 <div className="kb-audit-text">
-                  <b>Grund:</b> {e.editReason}
+                  <b>Reason:</b> {e.editReason}
                 </div>
                 {e.diffBefore != null && (
                   <div className="kb-diff-box kb-diff-box--old" style={{ marginTop: 6 }}>
@@ -94,7 +94,7 @@ export function AuditDrawer({ chunk, onClose }: { chunk: KnowledgeChunk; onClose
                   </div>
                 )}
                 {e.sourceCorrectionId && (
-                  <div className="kb-audit-src">aus Korrektur #{e.sourceCorrectionId.slice(0, 8)}</div>
+                  <div className="kb-audit-src">from correction #{e.sourceCorrectionId.slice(0, 8)}</div>
                 )}
               </div>
             ))

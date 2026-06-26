@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { UserAdminPanel } from "@/components/admin/user-admin-panel";
 import { parseSort } from "@/lib/admin-users-preferences";
 
-export const metadata: Metadata = { title: "User-Management" };
+export const metadata: Metadata = { title: "User Management" };
 
 // Lives in the (public) route group so it renders inside the main glass shell
 // (sidebar + topbar), NOT the bare top-level /admin dashboard. Access is gated

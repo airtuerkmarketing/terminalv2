@@ -39,16 +39,16 @@ export function CreateContextModal({ onClose }: { onClose: () => void }) {
     const res = await createCompanyContextChunk({ topic, category, content }, reason);
     setSaving(false);
     if (!res.ok) {
-      toast({ variant: "error", title: "Fehler", description: res.error });
+      toast({ variant: "error", title: "Error", description: res.error });
       return;
     }
     toast({
       variant: res.embedded === false ? "warning" : "success",
-      title: "Eintrag angelegt",
+      title: "Entry created",
       description:
         res.embedded === false
-          ? "Re-Embedding folgt beim nächsten Lauf."
-          : "Eingebettet — die KI nutzt ihn ab dem nächsten Query.",
+          ? "Re-embedding will follow on the next run."
+          : "Embedded — the AI will use it from the next query onward.",
     });
     onClose();
     router.refresh();
@@ -64,35 +64,35 @@ export function CreateContextModal({ onClose }: { onClose: () => void }) {
       }}
       role="dialog"
       aria-modal="true"
-      aria-label="Neuer Identitäts-Eintrag"
+      aria-label="New identity entry"
     >
       <div className="kb-modal">
         <header className="kb-modal-head">
-          <h2>Neuer Identitäts-Eintrag</h2>
-          <button className="kb-modal-close" onClick={onClose} disabled={saving} aria-label="Schließen">
+          <h2>New identity entry</h2>
+          <button className="kb-modal-close" onClick={onClose} disabled={saving} aria-label="Close">
             <X size={18} />
           </button>
         </header>
         <div className="kb-modal-body">
-          <div className="kb-diff-label">Titel</div>
-          <input className="kb-search" style={{ width: "100%" }} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="z.B. Eskalationspfad Buchhaltung" />
-          <div className="kb-diff-label" style={{ marginTop: "var(--space-3)" }}>Kategorie</div>
-          <input className="kb-search" style={{ width: "100%" }} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="z.B. process, team_structure, mission" />
-          <div className="kb-diff-label" style={{ marginTop: "var(--space-3)" }}>Inhalt</div>
-          <textarea className="kb-edit-area" style={{ minHeight: 140 }} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Der Wissens-/Identitäts-Fakt, den die KI kennen soll…" />
-          <div className="kb-diff-label" style={{ marginTop: "var(--space-3)" }}>Grund (Pflicht)</div>
-          <input className="kb-search" style={{ width: "100%" }} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="z.B. Neue Eskalationsregel ab 07/2026" />
+          <div className="kb-diff-label">Title</div>
+          <input className="kb-search" style={{ width: "100%" }} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Escalation path accounting" />
+          <div className="kb-diff-label" style={{ marginTop: "var(--space-3)" }}>Category</div>
+          <input className="kb-search" style={{ width: "100%" }} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. process, team_structure, mission" />
+          <div className="kb-diff-label" style={{ marginTop: "var(--space-3)" }}>Content</div>
+          <textarea className="kb-edit-area" style={{ minHeight: 140 }} value={content} onChange={(e) => setContent(e.target.value)} placeholder="The knowledge/identity fact the AI should know…" />
+          <div className="kb-diff-label" style={{ marginTop: "var(--space-3)" }}>Reason (required)</div>
+          <input className="kb-search" style={{ width: "100%" }} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. New escalation rule from 07/2026" />
           <p className="kb-resultcount" style={{ marginTop: "var(--space-3)" }}>
-            Hinweis: Operative Fakten besser über den KI-Chat → „Korrigieren" einpflegen.
-            Confluence/Brand-Inhalte kommen aus ihren Quellen.
+            Note: Operational facts are better added via the AI chat → “Correct”.
+            Confluence/brand content comes from its own sources.
           </p>
         </div>
         <footer className="kb-modal-foot">
           <button className="kb-btn kb-btn--ghost" onClick={onClose} disabled={saving}>
-            Abbrechen
+            Cancel
           </button>
           <button className="kb-btn kb-btn--primary" onClick={save} disabled={saving || !valid}>
-            {saving ? <Loader2 size={15} className="kb-spin" /> : <Plus size={15} />} Anlegen + Embedding
+            {saving ? <Loader2 size={15} className="kb-spin" /> : <Plus size={15} />} Create + embedding
           </button>
         </footer>
       </div>

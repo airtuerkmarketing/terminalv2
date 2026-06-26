@@ -4,9 +4,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 // Status breakdown shown in the section header, in a fixed order. "ausstehend"
 // is the human label for not_invited (no invite sent yet).
 const BREAKDOWN_LABELS: { key: LoginStatus; label: string }[] = [
-  { key: "active", label: "aktiv" },
-  { key: "invited", label: "eingeladen" },
-  { key: "not_invited", label: "ausstehend" },
+  { key: "active", label: "active" },
+  { key: "invited", label: "invited" },
+  { key: "not_invited", label: "pending" },
 ];
 
 /**
@@ -62,7 +62,7 @@ export function UserSectionHeader({
           indeterminate={selectAllIndeterminate}
           disabled={selectDisabled}
           onChange={() => onToggleSelectAll()}
-          aria-label={`Alle in „${label}“ auswählen`}
+          aria-label={`Select all in “${label}”`}
         />
       </td>
       <td colSpan={colSpan}>
@@ -98,7 +98,7 @@ export function UserSectionHeader({
               onClick={onBulkInvite}
               disabled={bulkDisabled}
             >
-              Alle einladen ({invitableCount})
+              Invite all ({invitableCount})
             </button>
           )}
         </div>

@@ -24,9 +24,9 @@ function fmtAge(iso: string | null): string {
   if (!iso) return "—";
   const ms = Date.now() - new Date(iso).getTime();
   const h = Math.floor(ms / 3.6e6);
-  if (h < 1) return "< 1 Std";
-  if (h < 24) return `vor ${h} Std`;
-  return `vor ${Math.floor(h / 24)} T`;
+  if (h < 1) return "< 1 hr";
+  if (h < 24) return `${h} hr ago`;
+  return `${Math.floor(h / 24)} d ago`;
 }
 
 export interface KnowledgeAppProps {
@@ -54,9 +54,9 @@ export function KnowledgeApp(props: KnowledgeAppProps) {
   return (
     <div className="kb-page">
       <header className="kb-head">
-        <h1 className="kb-title">Wissensbasis</h1>
+        <h1 className="kb-title">Knowledge base</h1>
         <p className="kb-subtitle">
-          {stats.totalChunks} Chunks · {stats.byLayer.company} Identität · {stats.byLayer.confluence} Confluence ·{" "}
+          {stats.totalChunks} Chunks · {stats.byLayer.company} Identity · {stats.byLayer.confluence} Confluence ·{" "}
           {stats.byLayer.brand} Brands
         </p>
       </header>
@@ -64,11 +64,11 @@ export function KnowledgeApp(props: KnowledgeAppProps) {
       <div className="kb-kpis">
         <div className="kb-kpi">
           <span className="kb-kpi-value">{stats.totalChunks}</span>
-          <span className="kb-kpi-label">Chunks gesamt</span>
+          <span className="kb-kpi-label">Total chunks</span>
         </div>
         <div className={`kb-kpi ${stats.pendingReviews > 0 ? "kb-kpi--alert" : ""}`}>
           <span className="kb-kpi-value">{stats.pendingReviews}</span>
-          <span className="kb-kpi-label">Offene Reviews</span>
+          <span className="kb-kpi-label">Open reviews</span>
         </div>
         <div className="kb-kpi">
           <span className="kb-kpi-value">{stats.goldSetPct}%</span>
@@ -76,7 +76,7 @@ export function KnowledgeApp(props: KnowledgeAppProps) {
         </div>
         <div className="kb-kpi">
           <span className="kb-kpi-value">{fmtAge(stats.lastEmbeddingRun)}</span>
-          <span className="kb-kpi-label">Letztes Embedding</span>
+          <span className="kb-kpi-label">Last embedding</span>
         </div>
       </div>
 
@@ -87,13 +87,13 @@ export function KnowledgeApp(props: KnowledgeAppProps) {
           </span>
         ))}
         <span className="kb-layerbadge">
-          Übernommene Korrekturen <b>{stats.approvedCorrections}</b>
+          Approved corrections <b>{stats.approvedCorrections}</b>
         </span>
       </div>
 
-      <div className="kb-tabs" role="tablist" aria-label="Wissensbasis-Bereiche">
+      <div className="kb-tabs" role="tablist" aria-label="Knowledge base areas">
         <button role="tab" aria-selected={tab === "sources"} className="kb-tab" onClick={() => go("sources")}>
-          <BookOpen size={15} /> Quellen
+          <BookOpen size={15} /> Sources
         </button>
         <button role="tab" aria-selected={tab === "reviews"} className="kb-tab" onClick={() => go("reviews")}>
           <ClipboardCheck size={15} /> Reviews
@@ -102,10 +102,10 @@ export function KnowledgeApp(props: KnowledgeAppProps) {
           )}
         </button>
         <button role="tab" aria-selected={tab === "quality"} className="kb-tab" onClick={() => go("quality")}>
-          <BarChart3 size={15} /> Qualität
+          <BarChart3 size={15} /> Quality
         </button>
         <button role="tab" aria-selected={tab === "taxonomy"} className="kb-tab" onClick={() => go("taxonomy")}>
-          <Tags size={15} /> Taxonomie
+          <Tags size={15} /> Taxonomy
         </button>
       </div>
 

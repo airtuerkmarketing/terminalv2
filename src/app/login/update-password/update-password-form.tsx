@@ -26,12 +26,12 @@ export default function UpdatePasswordForm({
     const confirm = formData.get("confirm") as string;
 
     if (pw.length < 12) {
-      setError("Passwort muss mindestens 12 Zeichen lang sein.");
+      setError("Password must be at least 12 characters long.");
       return;
     }
 
     if (pw !== confirm) {
-      setError("Die Passwörter stimmen nicht überein.");
+      setError("The passwords do not match.");
       return;
     }
 
@@ -40,7 +40,7 @@ export default function UpdatePasswordForm({
         const result = await updatePasswordAction(formData);
 
         if (!result) {
-          setError("Keine Antwort vom Server. Bitte erneut versuchen.");
+          setError("No response from the server. Please try again.");
           return;
         }
 
@@ -59,13 +59,13 @@ export default function UpdatePasswordForm({
           return;
         }
 
-        setError("Unerwartete Antwort. Bitte logge dich aus und wieder ein.");
+        setError("Unexpected response. Please sign out and sign in again.");
       } catch (e) {
         console.error("Submit error:", e);
         setError(
           e instanceof Error
-            ? `Fehler: ${e.message}`
-            : "Unbekannter Fehler beim Speichern."
+            ? `Error: ${e.message}`
+            : "Unknown error while saving."
         );
       }
     });
@@ -74,7 +74,7 @@ export default function UpdatePasswordForm({
   return (
     <form action={handleSubmit} className="login-form">
       <div className="login-field">
-        <label htmlFor="password" className="login-label">Neues Passwort</label>
+        <label htmlFor="password" className="login-label">New password</label>
         <input
           id="password"
           name="password"
@@ -87,11 +87,11 @@ export default function UpdatePasswordForm({
           disabled={isPending || success}
           className="login-input"
         />
-        <p className="login-hint">Mindestens 12 Zeichen</p>
+        <p className="login-hint">At least 12 characters</p>
       </div>
 
       <div className="login-field">
-        <label htmlFor="confirm" className="login-label">Passwort wiederholen</label>
+        <label htmlFor="confirm" className="login-label">Repeat password</label>
         <input
           id="confirm"
           name="confirm"
@@ -114,12 +114,12 @@ export default function UpdatePasswordForm({
 
       {success && (
         <div className="login-success">
-          ✓ Passwort gespeichert! Du wirst weitergeleitet…
+          ✓ Password saved! You are being redirected…
         </div>
       )}
 
       <button type="submit" disabled={isPending || success} className="login-submit">
-        {success ? "Erfolgreich" : isPending ? "Wird gespeichert..." : "Passwort speichern"}
+        {success ? "Success" : isPending ? "Saving..." : "Save password"}
       </button>
     </form>
   );

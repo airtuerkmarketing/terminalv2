@@ -71,14 +71,14 @@ export async function updateUserRoleAction(userId: string, newRole: Role): Promi
     const msg = err instanceof Error ? err.message : "UNKNOWN";
     const error =
       msg === "SELF_LOCK"
-        ? "Du kannst deine eigene Rolle nicht ändern."
+        ? "You cannot change your own role."
         : msg === "NOT_AUTHORIZED"
-          ? "Keine Berechtigung für diese Aktion."
+          ? "You do not have permission for this action."
           : msg === "NOT_AUTHENTICATED"
-            ? "Bitte melde dich an."
+            ? "Please sign in."
             : msg === "NOT_FOUND"
-              ? "Benutzer nicht gefunden."
-              : "Aktion fehlgeschlagen.";
+              ? "User not found."
+              : "Action failed.";
     return { ok: false, error };
   }
 }
@@ -93,41 +93,41 @@ export async function updateUserRoleAction(userId: string, newRole: Role): Promi
  * wording); new actions share this helper.
  */
 function toGermanMessage(err: unknown): string {
-  if (!(err instanceof Error)) return "Ein unbekannter Fehler ist aufgetreten.";
+  if (!(err instanceof Error)) return "An unknown error occurred.";
   const msg = err.message;
 
   if (msg.startsWith("RATE_LIMIT:")) {
     const seconds = msg.split(":")[1];
-    return `Bitte warte noch ${seconds} Sekunden, bevor du erneut einlädst.`;
+    return `Please wait another ${seconds} seconds before inviting again.`;
   }
 
   switch (msg) {
     case "NOT_AUTHENTICATED":
-      return "Du bist nicht angemeldet.";
+      return "You are not signed in.";
     case "NOT_AUTHORIZED":
-      return "Du hast keine Berechtigung für diese Aktion.";
+      return "You do not have permission for this action.";
     case "SELF_LOCK":
-      return "Diese Aktion ist auf dich selbst nicht erlaubt.";
+      return "This action is not allowed on yourself.";
     case "NO_TEAM_MEMBER":
-      return "Team-Mitglied nicht gefunden.";
+      return "Team member not found.";
     case "NO_EMAIL":
-      return "Dieses Team-Mitglied hat keine E-Mail-Adresse.";
+      return "This team member has no email address.";
     case "PRIVATE_EMAIL_BLOCKED":
-      return "Privat-E-Mail — Einladung gesperrt. Bitte zuerst eine @airtuerk.de-Adresse einrichten.";
+      return "Private email — invitation blocked. Please set up an @airtuerk.de address first.";
     case "INVALID_NAME":
-      return "Bitte gib Vor- und Nachnamen an.";
+      return "Please provide a first and last name.";
     case "INVALID_EMAIL":
-      return "Bitte gib eine gültige E-Mail-Adresse an.";
+      return "Please provide a valid email address.";
     case "DUPLICATE_EMAIL":
-      return "Diese E-Mail-Adresse ist bereits vergeben.";
+      return "This email address is already taken.";
     case "INSERT_FAILED":
-      return "Speichern fehlgeschlagen. Bitte erneut versuchen.";
+      return "Save failed. Please try again.";
     case "INVITE_FAILED":
-      return "Einladung konnte nicht versendet werden.";
+      return "The invitation could not be sent.";
     case "NOT_FOUND":
-      return "Eintrag nicht gefunden.";
+      return "Entry not found.";
     default:
-      return `Fehler: ${msg}`;
+      return `Error: ${msg}`;
   }
 }
 

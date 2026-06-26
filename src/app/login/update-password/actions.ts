@@ -8,23 +8,23 @@ export async function updatePasswordAction(formData: FormData) {
   const confirm = formData.get("confirm") as string;
 
   if (!password || password.length < 12) {
-    return { error: "Passwort muss mindestens 12 Zeichen lang sein." };
+    return { error: "Password must be at least 12 characters long." };
   }
   if (password !== confirm) {
-    return { error: "Die Passwörter stimmen nicht überein." };
+    return { error: "The passwords do not match." };
   }
 
   const supabase = await createClient();
 
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
-    return { error: "Nicht eingeloggt. Bitte erneut anmelden." };
+    return { error: "Not signed in. Please sign in again." };
   }
 
   // Step 1: Passwort via RLS-Client setzen
   const { error: updateError } = await supabase.auth.updateUser({ password });
   if (updateError) {
-    return { error: `Passwort konnte nicht gespeichert werden: ${updateError.message}` };
+    return { error: `Password could not be saved: ${updateError.message}` };
   }
 
   // Step 2: Flag via service-role admin client entfernen
@@ -34,7 +34,7 @@ export async function updatePasswordAction(formData: FormData) {
   } catch (initError) {
     console.error("Admin client init failed:", initError);
     return {
-      error: "Passwort gespeichert. Aber System-Update fehlgeschlagen. Bitte logge dich aus und kontaktiere bdemir@airtuerk.de."
+      error: "Password saved. But the system update failed. Please sign out and contact bdemir@airtuerk.de."
     };
   }
 
@@ -49,7 +49,7 @@ export async function updatePasswordAction(formData: FormData) {
   if (metaError) {
     console.error("Flag removal failed:", metaError);
     return {
-      error: `Passwort gespeichert. Aber Flag konnte nicht entfernt werden (${metaError.message}). Bitte kontaktiere bdemir@airtuerk.de.`
+      error: `Password saved. But the flag could not be removed (${metaError.message}). Please contact bdemir@airtuerk.de.`
     };
   }
 
@@ -59,7 +59,7 @@ export async function updatePasswordAction(formData: FormData) {
   if (verifyError || !verifyData?.user) {
     console.error("Verify failed:", verifyError);
     return {
-      error: "Passwort gespeichert, aber System-Verify fehlgeschlagen. Bitte logge dich aus und wieder ein."
+      error: "Password saved, but the system verification failed. Please sign out and sign in again."
     };
   }
 
@@ -69,7 +69,7 @@ export async function updatePasswordAction(formData: FormData) {
   if (flagStillThere) {
     console.error("Flag still set after removal attempt!");
     return {
-      error: "Passwort gespeichert, aber Flag-Removal hat nicht durchgegriffen. Bitte logge dich aus und kontaktiere bdemir@airtuerk.de."
+      error: "Password saved, but the flag removal did not take effect. Please sign out and contact bdemir@airtuerk.de."
     };
   }
 

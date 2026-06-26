@@ -20,23 +20,23 @@ type CorrectionType = "factual_error" | "missing_info" | "outdated" | "context_w
 const CORRECTION_TYPES: Array<{ value: CorrectionType; label: string; description: string }> = [
   {
     value: "factual_error",
-    label: "Fakten-Fehler",
-    description: "Die Antwort enthält falsche Informationen",
+    label: "Factual error",
+    description: "The answer contains incorrect information",
   },
   {
     value: "missing_info",
-    label: "Fehlende Information",
-    description: "Wichtige Details fehlen in der Antwort",
+    label: "Missing information",
+    description: "Important details are missing from the answer",
   },
   {
     value: "outdated",
-    label: "Veraltet",
-    description: "Die Information ist nicht mehr aktuell",
+    label: "Outdated",
+    description: "The information is no longer current",
   },
   {
     value: "context_wrong",
-    label: "Falscher Kontext",
-    description: "Die KI hat die Frage missverstanden",
+    label: "Wrong context",
+    description: "The AI misunderstood the question",
   },
 ];
 
@@ -91,14 +91,14 @@ export function CorrectionModal({
         userReference: userReference.trim() || undefined,
       });
       toast({
-        title: "Korrektur eingereicht",
+        title: "Correction submitted",
         description:
-          "Murat oder Selin reviewt deinen Vorschlag — du bekommst eine Email, sobald entschieden wurde.",
+          "Murat or Selin will review your suggestion — you'll get an email once a decision has been made.",
         variant: "success",
       });
       onSubmitted();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unbekannter Fehler");
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setSubmitting(false);
     }
@@ -116,13 +116,13 @@ export function CorrectionModal({
     >
       <div className="ai-correction-modal">
         <header className="ai-correction-header">
-          <h2 id="correction-modal-title">Antwort korrigieren</h2>
+          <h2 id="correction-modal-title">Correct answer</h2>
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
             className="ai-correction-close"
-            aria-label="Schließen"
+            aria-label="Close"
           >
             <X size={20} aria-hidden="true" />
           </button>
@@ -130,15 +130,15 @@ export function CorrectionModal({
 
         <div className="ai-correction-body">
           <section className="ai-correction-context">
-            <div className="ai-correction-label">Frage</div>
+            <div className="ai-correction-label">Question</div>
             <div className="ai-correction-original-q">{originalQuestion}</div>
-            <div className="ai-correction-label">KI-Antwort</div>
+            <div className="ai-correction-label">AI answer</div>
             <div className="ai-correction-original-a">{originalAnswer}</div>
           </section>
 
           <section className="ai-correction-form">
             <div className="ai-correction-field">
-              <span className="ai-correction-field-label">Art der Korrektur</span>
+              <span className="ai-correction-field-label">Type of correction</span>
               <div className="ai-correction-types">
                 {CORRECTION_TYPES.map((type) => (
                   <label key={type.value} className={`ai-correction-type ${correctionType === type.value ? "ai-correction-type--selected" : ""}`}>
@@ -161,12 +161,12 @@ export function CorrectionModal({
 
             <label className="ai-correction-field">
               <span className="ai-correction-field-label">
-                Richtige Antwort <span className="ai-correction-required">*</span>
+                Correct answer <span className="ai-correction-required">*</span>
               </span>
               <textarea
                 value={proposedCorrection}
                 onChange={(e) => setProposedCorrection(e.target.value)}
-                placeholder="Wie sollte die Antwort lauten? Bitte präzise und mit allen relevanten Details."
+                placeholder="What should the answer be? Please be precise and include all relevant details."
                 rows={5}
                 disabled={submitting}
                 className="ai-correction-textarea"
@@ -176,13 +176,13 @@ export function CorrectionModal({
 
             <label className="ai-correction-field">
               <span className="ai-correction-field-label">
-                Quelle / Referenz <span className="ai-correction-optional">(optional)</span>
+                Source / Reference <span className="ai-correction-optional">(optional)</span>
               </span>
               <input
                 type="text"
                 value={userReference}
                 onChange={(e) => setUserReference(e.target.value)}
-                placeholder="z.B. Confluence-Link, Dokument, Person die das bestätigen kann"
+                placeholder="e.g. Confluence link, document, person who can confirm it"
                 disabled={submitting}
                 className="ai-correction-input"
               />
@@ -203,7 +203,7 @@ export function CorrectionModal({
             disabled={submitting}
             className="ai-correction-btn ai-correction-btn--secondary"
           >
-            Abbrechen
+            Cancel
           </button>
           <button
             type="button"
@@ -214,12 +214,12 @@ export function CorrectionModal({
             {submitting ? (
               <>
                 <Loader2 size={16} className="ai-correction-spin" aria-hidden="true" />
-                Wird gesendet...
+                Sending...
               </>
             ) : (
               <>
                 <Send size={16} aria-hidden="true" />
-                Korrektur einreichen
+                Submit correction
               </>
             )}
           </button>

@@ -58,14 +58,14 @@ export function useBulkInvite() {
     setTarget(null);
 
     if (pending.length === 0) {
-      toast({ variant: "info", title: "Niemand mehr einzuladen" });
+      toast({ variant: "info", title: "No one left to invite" });
       router.refresh();
       return;
     }
 
     setRunning(true);
     const total = pending.length;
-    const progressId = toast({ variant: "info", title: `Lädt ein… 0/${total}`, duration: 0 });
+    const progressId = toast({ variant: "info", title: `Inviting… 0/${total}`, duration: 0 });
 
     const failures: { name: string; error: string }[] = [];
     let done = 0;
@@ -73,15 +73,15 @@ export function useBulkInvite() {
       const res = await inviteUserAction(m.teamMemberId);
       done++;
       if (!res.ok) failures.push({ name: fullName(m), error: res.error });
-      update(progressId, { title: `Lädt ein… ${done}/${total}` });
+      update(progressId, { title: `Inviting… ${done}/${total}` });
     }
     dismiss(progressId);
 
     const sent = total - failures.length;
     if (failures.length === 0) {
-      toast({ variant: "success", title: `${sent} ${sent === 1 ? "Person" : "Personen"} eingeladen` });
+      toast({ variant: "success", title: `${sent} ${sent === 1 ? "person" : "people"} invited` });
     } else {
-      toast({ variant: "warning", title: `${sent} eingeladen, ${failures.length} Fehler` });
+      toast({ variant: "warning", title: `${sent} invited, ${failures.length} errors` });
       // The toast is single-line (toast-desc is hidden by design), so the full
       // per-person breakdown also goes to the console for the admin to inspect.
       console.error("[bulk-invite] failures:", failures);

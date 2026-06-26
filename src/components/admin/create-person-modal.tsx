@@ -153,8 +153,8 @@ export function CreatePersonModal({
 
     if (!res.ok) {
       // DUPLICATE_EMAIL is the only field-specific error → inline at the email
-      // field; everything else is a toast (matches the action's German strings).
-      if (res.error.includes("bereits vergeben")) {
+      // field; everything else is a toast (matches the action's error strings).
+      if (res.error.includes("already taken")) {
         setEmailError(res.error);
         emailFieldRef.current?.focus();
       } else {
@@ -163,14 +163,14 @@ export function CreatePersonModal({
       return;
     }
 
-    toast({ variant: "success", title: "Person angelegt" });
+    toast({ variant: "success", title: "Person created" });
     // A non-user intended role only takes effect once the person is invited (it
     // lives in user_role_defaults until then), so the new row shows under "Ohne
     // Rolle". Explain that up front.
     if (form.role !== "user") {
       toast({
         variant: "info",
-        title: `Rolle '${ROLE_LABEL[form.role]}' wird aktiv, sobald ${firstName} eingeladen wurde`,
+        title: `Role '${ROLE_LABEL[form.role]}' becomes active once ${firstName} has been invited`,
         duration: 5000,
       });
     }
@@ -184,7 +184,7 @@ export function CreatePersonModal({
     } else {
       toast({
         variant: "info",
-        title: "Einladung später möglich nach Wechsel zu Corp-E-Mail",
+        title: "Invitation possible later after switching to a corp email",
         duration: 5000,
       });
       router.refresh();
@@ -201,7 +201,7 @@ export function CreatePersonModal({
     setInvitePrompt(null);
     const res = await inviteUserAction(teamMemberId);
     if (res.ok) {
-      toast({ variant: "success", title: `Einladung an ${email} versendet` });
+      toast({ variant: "success", title: `Invitation sent to ${email}` });
     } else {
       toast({ variant: "error", title: res.error });
     }
@@ -232,7 +232,7 @@ export function CreatePersonModal({
                 type="button"
                 className="uap-modal-close"
                 onClick={handleClose}
-                aria-label="Schließen"
+                aria-label="Close"
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
                   <path d="M6 6l12 12M18 6L6 18" />
@@ -240,14 +240,14 @@ export function CreatePersonModal({
               </button>
 
               <div className="uap-modal-header uap-create-header">
-                <h2 className="uap-modal-name" id="cp-title">Neue Person</h2>
+                <h2 className="uap-modal-name" id="cp-title">New person</h2>
               </div>
 
               <form className="uap-create-form" onSubmit={handleSubmit} noValidate>
                 <div className="uap-modal-body">
                   <div className="uap-create-grid">
                     <div className="uap-field">
-                      <label htmlFor="cp-first">Vorname *</label>
+                      <label htmlFor="cp-first">First name *</label>
                       <input
                         id="cp-first"
                         ref={firstFieldRef}
@@ -258,7 +258,7 @@ export function CreatePersonModal({
                       />
                     </div>
                     <div className="uap-field">
-                      <label htmlFor="cp-last">Nachname *</label>
+                      <label htmlFor="cp-last">Last name *</label>
                       <input
                         id="cp-last"
                         value={form.lastName}
@@ -269,7 +269,7 @@ export function CreatePersonModal({
                     </div>
 
                     <div className={`uap-field uap-field--full${emailError ? " uap-field--error" : ""}`}>
-                      <label htmlFor="cp-email">E-Mail *</label>
+                      <label htmlFor="cp-email">Email *</label>
                       <input
                         id="cp-email"
                         ref={emailFieldRef}
@@ -295,7 +295,7 @@ export function CreatePersonModal({
                         value={form.department}
                         onChange={(e) => set("department", e.target.value)}
                       >
-                        <option value="">— Kein Department —</option>
+                        <option value="">— No department —</option>
                         {departments.map((d) => (
                           <option key={d} value={d}>
                             {d}
@@ -314,7 +314,7 @@ export function CreatePersonModal({
                     </div>
 
                     <div className="uap-field uap-field--full">
-                      <label htmlFor="cp-role">Rolle</label>
+                      <label htmlFor="cp-role">Role</label>
                       <select
                         id="cp-role"
                         value={form.role}
@@ -330,10 +330,10 @@ export function CreatePersonModal({
 
                 <div className="uap-modal-footer uap-create-actions">
                   <button type="button" className="uap-modal-btn" onClick={handleClose} disabled={pending}>
-                    Abbrechen
+                    Cancel
                   </button>
                   <button type="submit" className="uap-create-submit" disabled={!canSubmit}>
-                    {pending ? "Anlegen…" : "Person anlegen"}
+                    {pending ? "Creating…" : "Create person"}
                   </button>
                 </div>
               </form>
@@ -346,14 +346,14 @@ export function CreatePersonModal({
         open={invitePrompt !== null}
         onClose={skipInvite}
         onConfirm={confirmInvite}
-        title="Diese Person jetzt einladen?"
+        title="Invite this person now?"
         description={
           invitePrompt
-            ? `${invitePrompt.firstName} erhält eine Einladung an ${invitePrompt.email}.`
+            ? `${invitePrompt.firstName} will receive an invitation at ${invitePrompt.email}.`
             : undefined
         }
-        confirmLabel="Einladen senden"
-        cancelLabel="Später"
+        confirmLabel="Send invitation"
+        cancelLabel="Later"
       />
     </>
   );

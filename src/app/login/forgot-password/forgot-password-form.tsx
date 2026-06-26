@@ -23,8 +23,8 @@ export default function ForgotPasswordForm() {
   if (sent) {
     return (
       <div className="login-success" role="status">
-        ✓ Falls ein Konto mit dieser Adresse existiert, haben wir dir einen Link zum
-        Zurücksetzen geschickt. Bitte prüfe dein Postfach.
+        ✓ If an account exists for this address, we have sent you a link to reset
+        your password. Please check your inbox.
       </div>
     );
   }
@@ -32,7 +32,7 @@ export default function ForgotPasswordForm() {
   return (
     <form action={handleSubmit} className="login-form">
       <div className="login-field">
-        <label htmlFor="email" className="login-label">E-Mail</label>
+        <label htmlFor="email" className="login-label">Email</label>
         <input
           id="email"
           name="email"
@@ -52,7 +52,7 @@ export default function ForgotPasswordForm() {
       )}
 
       <button type="submit" disabled={isPending} className="login-submit">
-        {isPending ? "Wird gesendet…" : "Link zum Zurücksetzen senden"}
+        {isPending ? "Sending…" : "Send reset link"}
       </button>
     </form>
   );

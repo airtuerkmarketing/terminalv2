@@ -6,7 +6,7 @@ import { AuthParticles } from "@/components/effects/auth-particles";
 type SearchParams = Promise<{ next?: string; error?: string }>;
 
 export const metadata = {
-  title: "Anmelden — terminal",
+  title: "Sign in — terminal",
 };
 
 export default async function LoginPage({
@@ -33,8 +33,8 @@ export default async function LoginPage({
           <img src="/logos/terminal/wordmark.svg" alt="terminal" className="login-wordmark" />
         </div>
 
-        <h1 className="login-title">Anmelden</h1>
-        <p className="login-subtitle">Internes Brand- und Knowledge-Hub</p>
+        <h1 className="login-title">Sign in</h1>
+        <p className="login-subtitle">Internal brand and knowledge hub</p>
 
         <LoginForm next={next} initialError={error} />
 

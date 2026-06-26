@@ -78,7 +78,7 @@ export function KbFilterDropdown({
         {icon}
         <span>{label}</span>
         <span className={`kb-fdrop-badge${selected.length ? " is-active" : ""}`}>
-          {selected.length || "Alle"}
+          {selected.length || "All"}
         </span>
         <ChevronDown size={13} aria-hidden="true" />
       </button>
@@ -91,8 +91,8 @@ export function KbFilterDropdown({
               ref={searchRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder={`${label} durchsuchen…`}
-              aria-label={`${label} durchsuchen`}
+              placeholder={`Search ${label}…`}
+              aria-label={`Search ${label}`}
             />
             <span className="kb-fdrop-search-count">
               {filtered.length}/{options.length}
@@ -101,7 +101,7 @@ export function KbFilterDropdown({
 
           <div className="kb-fdrop-list">
             {filtered.length === 0 ? (
-              <p className="kb-fdrop-empty">Keine Treffer</p>
+              <p className="kb-fdrop-empty">No matches</p>
             ) : (
               filtered.map((o) => {
                 const on = selected.includes(o.value);
@@ -131,7 +131,7 @@ export function KbFilterDropdown({
               onClick={() => onChange([])}
               disabled={!selected.length}
             >
-              Alle abwählen
+              Deselect all
             </button>
             {onManage && (
               <button
@@ -142,7 +142,7 @@ export function KbFilterDropdown({
                   onManage();
                 }}
               >
-                Tag verwalten →
+                Manage tags →
               </button>
             )}
           </div>

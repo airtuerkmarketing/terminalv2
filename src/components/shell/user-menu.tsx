@@ -271,7 +271,7 @@ export function UserMenu({
                 <span className="um-item-icon">
                   <ProfileIcon />
                 </span>
-                <span className="um-item-label">Profil</span>
+                <span className="um-item-label">Profile</span>
               </Link>
 
               <button
@@ -284,7 +284,7 @@ export function UserMenu({
                 <span className="um-item-icon">
                   <SettingsIcon />
                 </span>
-                <span className="um-item-label">Einstellungen</span>
+                <span className="um-item-label">Settings</span>
               </button>
 
               <button
@@ -295,8 +295,8 @@ export function UserMenu({
                 onClick={toggleTheme}
               >
                 <span className="um-item-icon">{dark ? <MoonIcon /> : <SunIcon />}</span>
-                <span className="um-item-label">Erscheinungsbild</span>
-                <span className="um-item-state">{dark ? "Dunkel" : "Hell"}</span>
+                <span className="um-item-label">Appearance</span>
+                <span className="um-item-state">{dark ? "Dark" : "Light"}</span>
               </button>
 
               {/* super_admin-only: User-Management lives in the account menu,
@@ -315,7 +315,7 @@ export function UserMenu({
                     <span className="um-item-icon">
                       <UserCogIcon />
                     </span>
-                    <span className="um-item-label">User-Management</span>
+                    <span className="um-item-label">User Management</span>
                   </Link>
                   <Link
                     href="/admin/knowledge"
@@ -329,7 +329,7 @@ export function UserMenu({
                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                       </svg>
                     </span>
-                    <span className="um-item-label">Wissensbasis</span>
+                    <span className="um-item-label">Knowledge base</span>
                   </Link>
                 </>
               )}
@@ -344,7 +344,7 @@ export function UserMenu({
                   <span className="um-item-icon">
                     <LogoutIcon />
                   </span>
-                  <span className="um-item-label">Abmelden</span>
+                  <span className="um-item-label">Sign out</span>
                 </button>
               </form>
             </div>,

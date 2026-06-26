@@ -41,7 +41,7 @@ export async function logoutAction() {
 export async function requestPasswordResetAction(formData: FormData) {
   const email = ((formData.get("email") as string) || "").trim().toLowerCase();
   if (!email || !email.includes("@")) {
-    return { error: "Bitte gib eine gültige E-Mail-Adresse ein." };
+    return { error: "Please enter a valid email address." };
   }
 
   const supabase = await createClient();

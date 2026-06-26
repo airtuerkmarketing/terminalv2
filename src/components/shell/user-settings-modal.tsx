@@ -50,7 +50,7 @@ export function UserSettingsModal({
       >
         <header className="usm-header">
           <h2 id="usm-title" className="usm-title">
-            Einstellungen
+            Settings
           </h2>
           <button
             type="button"
@@ -74,14 +74,14 @@ export function UserSettingsModal({
           </section>
 
           <section className="usm-section">
-            <div className="usm-section-label">Darstellung</div>
+            <div className="usm-section-label">Appearance</div>
             <div className="usm-row">
-              <span>Design</span>
+              <span>Theme</span>
               <ThemeToggle />
             </div>
           </section>
 
-          <p className="usm-note">Weitere Einstellungen folgen.</p>
+          <p className="usm-note">More settings coming soon.</p>
         </div>
       </div>
     </div>,

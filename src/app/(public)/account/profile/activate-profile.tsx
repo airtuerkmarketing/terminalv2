@@ -16,10 +16,10 @@ export default function ActivateProfile({ name }: { name: string }) {
 
   return (
     <div className="acp-card acp-activate">
-      <h1 className="acp-title">Profil einrichten</h1>
+      <h1 className="acp-title">Set up profile</h1>
       <p className="acp-muted">
-        Für <strong>{name}</strong> ist noch kein Team-Profil hinterlegt. Lege es
-        jetzt an, um deine Angaben zu vervollständigen.
+        No team profile exists yet for <strong>{name}</strong>. Create one now to
+        complete your details.
       </p>
       {error && (
         <div className="acp-error" role="alert">
@@ -39,7 +39,7 @@ export default function ActivateProfile({ name }: { name: string }) {
           });
         }}
       >
-        {pending ? "Wird angelegt…" : "Profil anlegen"}
+        {pending ? "Creating…" : "Create profile"}
       </button>
     </div>
   );

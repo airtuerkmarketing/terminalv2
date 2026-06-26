@@ -10,10 +10,10 @@ const AUTO_MS = 5000;
 
 // Fixed tab set + order. Only "all" has content for now (the brand list).
 const QG_TABS = [
-  { id: "all", label: "Alle Marken" },
-  { id: "featured", label: "Vorgestellt" },
+  { id: "all", label: "All brands" },
+  { id: "featured", label: "Featured" },
   { id: "tools", label: "Tools" },
-  { id: "templates", label: "Vorlagen" },
+  { id: "templates", label: "Templates" },
 ];
 
 function prefersReducedMotion(): boolean {
@@ -56,12 +56,12 @@ export function QuickGrabs() {
       <header className="qg-head">
         <div className="qg-head-text">
           <h2 className="qg-title">Quick Grabs</h2>
-          <p className="qg-sub">Deine wichtigsten Assets — direkt griffbereit</p>
+          <p className="qg-sub">Your most important assets — right at your fingertips</p>
         </div>
         {/* Visual-only search affordance (no state yet). */}
         <div className="qg-search" aria-hidden="true">
           <Search className="qg-search-icon" aria-hidden />
-          <span className="qg-search-ph">Apps suchen</span>
+          <span className="qg-search-ph">Search apps</span>
         </div>
       </header>
 
@@ -100,17 +100,17 @@ export function QuickGrabs() {
               key={c.id}
               type="button"
               className={`qg-dot${i === active ? " is-active" : ""}`}
-              aria-label={`Karte ${i + 1}`}
+              aria-label={`Card ${i + 1}`}
               aria-current={i === active}
               onClick={() => go(i)}
             />
           ))}
         </div>
 
-        <button type="button" className="qg-arrow qg-arrow-prev" aria-label="Vorherige" onClick={prev}>
+        <button type="button" className="qg-arrow qg-arrow-prev" aria-label="Previous" onClick={prev}>
           <ChevronLeft aria-hidden />
         </button>
-        <button type="button" className="qg-arrow qg-arrow-next" aria-label="Nächste" onClick={next}>
+        <button type="button" className="qg-arrow qg-arrow-next" aria-label="Next" onClick={next}>
           <ChevronRight aria-hidden />
         </button>
       </div>
@@ -145,7 +145,7 @@ export function QuickGrabs() {
           </li>
         ))}
         {rows.length === 0 ? (
-          <li className="qg-brand-empty">Inhalte folgen in Kürze.</li>
+          <li className="qg-brand-empty">Content coming soon.</li>
         ) : null}
       </ul>
     </section>

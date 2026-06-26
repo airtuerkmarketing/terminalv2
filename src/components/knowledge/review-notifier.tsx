@@ -27,10 +27,10 @@ export function ReviewNotifier() {
       if (prev.current !== null && n > prev.current) {
         toast({
           variant: "warning",
-          title: "Neue Wissens-Korrektur wartet",
-          description: `${n} offene Review${n === 1 ? "" : "s"}`,
+          title: "New knowledge correction pending",
+          description: `${n} open review${n === 1 ? "" : "s"}`,
           duration: 8000,
-          action: { label: "Öffnen", onClick: () => router.push("/admin/knowledge?tab=reviews") },
+          action: { label: "Open", onClick: () => router.push("/admin/knowledge?tab=reviews") },
         });
       }
       prev.current = n;
@@ -48,7 +48,7 @@ export function ReviewNotifier() {
   return (
     <span
       className="um-review-pill"
-      title={`${count} offene Review${count === 1 ? "" : "s"} — Wissensbasis`}
+      title={`${count} open review${count === 1 ? "" : "s"} — Knowledge base`}
       style={{
         display: "inline-flex",
         alignItems: "center",

@@ -11,7 +11,7 @@ import {
 import { EMPTY_FILTERS, type ChunkLayer, type TagAxis } from "@/lib/knowledge/types";
 import { KnowledgeApp } from "@/components/knowledge/knowledge-app";
 
-export const metadata = { title: "Wissensbasis" };
+export const metadata = { title: "Knowledge base" };
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 type Tab = "sources" | "reviews" | "quality" | "taxonomy";

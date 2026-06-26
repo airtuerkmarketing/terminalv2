@@ -6,7 +6,7 @@ import ProfileForm from "./profile-form";
 import ActivateProfile from "./activate-profile";
 import "@/styles/account-profile.css";
 
-export const metadata: Metadata = { title: "Profil" };
+export const metadata: Metadata = { title: "Profile" };
 
 /**
  * Self-service profile (AP 3). Lives in the (public) route group so it renders in
@@ -25,7 +25,7 @@ export default async function AccountProfilePage() {
       {profile ? (
         <ProfileForm profile={profile} />
       ) : (
-        <ActivateProfile name={identity.fullName ?? identity.email ?? "dein Konto"} />
+        <ActivateProfile name={identity.fullName ?? identity.email ?? "your account"} />
       )}
     </div>
   );

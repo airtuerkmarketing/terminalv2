@@ -41,7 +41,7 @@ export default function LoginForm({
       </div>
 
       <div className="login-field">
-        <label htmlFor="password" className="login-label">Passwort</label>
+        <label htmlFor="password" className="login-label">Password</label>
         <input
           id="password"
           name="password"
@@ -61,11 +61,11 @@ export default function LoginForm({
       )}
 
       <button type="submit" disabled={isPending} className="login-submit">
-        {isPending ? "Wird angemeldet..." : "Anmelden"}
+        {isPending ? "Signing in..." : "Sign in"}
       </button>
 
       <Link href="/login/forgot-password" className="login-link">
-        Passwort vergessen?
+        Forgot password?
       </Link>
     </form>
   );

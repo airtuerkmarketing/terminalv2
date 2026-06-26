@@ -3,7 +3,7 @@ import { AuthParticles } from "@/components/effects/auth-particles";
 import ForgotPasswordForm from "./forgot-password-form";
 
 export const metadata = {
-  title: "Passwort vergessen — terminal",
+  title: "Forgot password — terminal",
 };
 
 export default function ForgotPasswordPage() {
@@ -17,16 +17,16 @@ export default function ForgotPasswordPage() {
           <img src="/logos/terminal/wordmark.svg" alt="terminal" className="login-wordmark" />
         </div>
 
-        <h1 className="login-title">Passwort vergessen</h1>
+        <h1 className="login-title">Forgot password</h1>
         <p className="login-subtitle">
-          Gib deine E-Mail-Adresse ein — wir schicken dir einen Link zum
-          Zurücksetzen deines Passworts.
+          Enter your email address — we&apos;ll send you a link to reset
+          your password.
         </p>
 
         <ForgotPasswordForm />
 
         <Link href="/login" className="login-link">
-          ← Zurück zur Anmeldung
+          ← Back to sign in
         </Link>
       </div>
     </main>

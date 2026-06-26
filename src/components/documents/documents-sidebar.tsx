@@ -81,15 +81,15 @@ export function DocumentsSidebar({
     return (
       <aside className="dl-sidebar is-collapsed" aria-label={title}>
         <div className="dl-rail">
-          <button type="button" className="dl-rail-btn" aria-label="Sidebar ausklappen" title="Ausklappen" onClick={() => expandAnd()}>
+          <button type="button" className="dl-rail-btn" aria-label="Expand sidebar" title="Expand" onClick={() => expandAnd()}>
             <PanelLeft aria-hidden />
           </button>
           {isSuperAdmin && (
-            <button type="button" className="dl-rail-btn" aria-label="Ordner hinzufügen" title="Hinzufügen" onClick={() => expandAnd(() => setCreateOpen(true))}>
+            <button type="button" className="dl-rail-btn" aria-label="Add folder" title="Add" onClick={() => expandAnd(() => setCreateOpen(true))}>
               <Plus aria-hidden />
             </button>
           )}
-          <button type="button" className="dl-rail-btn" aria-label="Suchen" title="Suchen" onClick={() => expandAnd(() => searchRef.current?.focus())}>
+          <button type="button" className="dl-rail-btn" aria-label="Search" title="Search" onClick={() => expandAnd(() => searchRef.current?.focus())}>
             <Search aria-hidden />
           </button>
         </div>
@@ -104,12 +104,12 @@ export function DocumentsSidebar({
         <span className="dl-sidebar-title">{title}</span>
         <div className="dl-sidebar-head-actions">
           {isSuperAdmin && (
-            <button type="button" className="dl-ico-btn" aria-label="Ordner hinzufügen" title="Hinzufügen" onClick={() => setCreateOpen(true)}>
+            <button type="button" className="dl-ico-btn" aria-label="Add folder" title="Add" onClick={() => setCreateOpen(true)}>
               <Plus aria-hidden />
             </button>
           )}
           {/* Same icon (PanelLeft) + behaviour as the global sidebar's collapse-btn. */}
-          <button type="button" className="dl-ico-btn dl-collapse-btn" aria-label="Sidebar einklappen" title="Einklappen" onClick={() => setCollapsed(true)}>
+          <button type="button" className="dl-ico-btn dl-collapse-btn" aria-label="Collapse sidebar" title="Collapse" onClick={() => setCollapsed(true)}>
             <PanelLeft aria-hidden />
           </button>
         </div>
@@ -124,11 +124,11 @@ export function DocumentsSidebar({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search…"
-          aria-label="Ordner und Dateien durchsuchen"
+          aria-label="Search folders and files"
         />
       </div>
 
-      <nav className="dl-sidebar-tree" aria-label="Ordner">
+      <nav className="dl-sidebar-tree" aria-label="Folders">
         {visible.map((f) => {
           const isAncestor = activePath === f.path || (!!activePath && activePath.startsWith(`${f.path}/`));
           const isOpen = activePath === f.path; // exact top-level folder open

@@ -20,9 +20,9 @@ const KONFIDENZ_LEVEL: Record<AiKonfidenz, number> = {
   hoch: 3,
 };
 const KONFIDENZ_LABEL: Record<AiKonfidenz, string> = {
-  niedrig: "Niedrige Konfidenz",
-  mittel: "Mittlere Konfidenz",
-  hoch: "Hohe Konfidenz",
+  niedrig: "Low confidence",
+  mittel: "Medium confidence",
+  hoch: "High confidence",
 };
 
 /* Strip inline "[Quelle: …]" / "[Quellen: …]" / "[Kontext: …]" markers the model
@@ -61,7 +61,7 @@ export function AIAnswerBlock({
         ) : showLoading ? (
           <div className="ai-chat-loading">
             <Loader2 className="ai-chat-spin" aria-hidden="true" />
-            <span>KI denkt nach…</span>
+            <span>AI is thinking…</span>
           </div>
         ) : (
           <AITurnAnswer
@@ -122,12 +122,12 @@ function AITurnAnswer({
             type="button"
             className="ai-chat-websearch-btn"
             disabled
-            title="Web-Suche kommt in Workstream 4"
-            aria-label="Web-Suche aktivieren (kommt bald)"
+            title="Web search arrives in Workstream 4"
+            aria-label="Enable web search (coming soon)"
           >
             <span className="ai-chat-websearch-icon">🌐</span>
-            <span>Ja, im Web suchen</span>
-            <span className="ai-chat-websearch-coming-soon">(bald verfügbar)</span>
+            <span>Yes, search the web</span>
+            <span className="ai-chat-websearch-coming-soon">(coming soon)</span>
           </button>
         </div>
       )}
@@ -166,7 +166,7 @@ function AITurnAnswer({
           )}
           {answer.quellen.length > 0 && (
             <details className="ai-chat-sources-toggle">
-              <summary aria-label={`${answer.quellen.length} Quellen anzeigen`}>
+              <summary aria-label={`Show ${answer.quellen.length} sources`}>
                 <BookOpen size={13} aria-hidden="true" />
                 <span className="ai-chat-sources-count">{answer.quellen.length}</span>
               </summary>

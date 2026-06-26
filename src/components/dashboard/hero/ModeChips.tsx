@@ -23,7 +23,7 @@ export function ModeChips({
   onToggle: (mode: ChatMode) => void;
 }) {
   return (
-    <div className="ai-mode-chips" role="group" aria-label="KI-Modus">
+    <div className="ai-mode-chips" role="group" aria-label="AI mode">
       {MODE_CHIPS.map((chip) => {
         const Icon = ICONS[chip.id];
         const isActive = active === chip.id;

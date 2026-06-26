@@ -32,10 +32,10 @@ export function BulkActionBar({
   onClear: () => void;
 }) {
   return (
-    <div className="uap-bulk-bar uap-bulk-bar--visible" role="region" aria-label="Massenaktionen">
+    <div className="uap-bulk-bar uap-bulk-bar--visible" role="region" aria-label="Bulk actions">
       <div className="uap-bulk-bar__counter">
-        <span className="uap-bulk-bar__count">{selectedCount} ausgewählt</span>
-        <span className="uap-bulk-bar__hint">· {invitableCount} einladbar</span>
+        <span className="uap-bulk-bar__count">{selectedCount} selected</span>
+        <span className="uap-bulk-bar__hint">· {invitableCount} invitable</span>
       </div>
       <div className="uap-bulk-bar__actions">
         <button
@@ -46,21 +46,21 @@ export function BulkActionBar({
           aria-busy={invitePending}
         >
           <UserPlus size={15} aria-hidden="true" />
-          Einladen
+          Invite
         </button>
         <button type="button" className="uap-bulk-bar__btn" onClick={onExportCsv}>
           <Download size={15} aria-hidden="true" />
-          CSV-Export
+          CSV Export
         </button>
       </div>
       <button
         type="button"
         className="uap-bulk-bar__clear"
         onClick={onClear}
-        aria-label="Auswahl aufheben"
+        aria-label="Clear selection"
       >
         <X size={15} aria-hidden="true" />
-        Aufheben
+        Clear
       </button>
     </div>
   );

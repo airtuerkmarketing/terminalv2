@@ -29,12 +29,12 @@ type Action = {
 };
 
 const ACTIONS: Action[] = [
-  { id: "logo",   label: "Logo holen",     href: "#", Icon: Package,      tx: 0,   ty: -104 },
-  { id: "color",  label: "Farbe kopieren", href: "#", Icon: Palette,      tx: 90,  ty: -52 },
+  { id: "logo",   label: "Get logo",       href: "#", Icon: Package,      tx: 0,   ty: -104 },
+  { id: "color",  label: "Copy color",     href: "#", Icon: Palette,      tx: 90,  ty: -52 },
   { id: "deck",   label: "Master Deck",    href: "#", Icon: Presentation, tx: 90,  ty: 52 },
-  { id: "sig",    label: "Signatur",       href: "#", Icon: PenLine,      tx: 0,   ty: 104 },
-  { id: "search", label: "Suche",          href: "#", Icon: Search,       tx: -90, ty: 52 },
-  { id: "ki",     label: "KI fragen",      href: "#", Icon: Sparkles,     tx: -90, ty: -52 },
+  { id: "sig",    label: "Signature",      href: "#", Icon: PenLine,      tx: 0,   ty: 104 },
+  { id: "search", label: "Search",         href: "#", Icon: Search,       tx: -90, ty: 52 },
+  { id: "ki",     label: "Ask AI",         href: "#", Icon: Sparkles,     tx: -90, ty: -52 },
 ];
 
 const GRACE_MS = 220;

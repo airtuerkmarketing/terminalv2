@@ -13,10 +13,10 @@ function when(iso: string): string {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  approved: "Übernommen",
-  edited_approved: "Bearbeitet übernommen",
-  rejected: "Abgelehnt",
-  pending: "Offen",
+  approved: "Applied",
+  edited_approved: "Edited and applied",
+  rejected: "Rejected",
+  pending: "Open",
 };
 
 function CorrectionCard({ c, onChanged }: { c: CorrectionRow; onChanged: () => void }) {
@@ -35,16 +35,16 @@ function CorrectionCard({ c, onChanged }: { c: CorrectionRow; onChanged: () => v
     const res = await approveCorrection(c.id, edited !== undefined ? { editedContent: edited } : {});
     setBusy(null);
     if (!res.ok) {
-      toast({ variant: "error", title: "Fehler", description: res.error });
+      toast({ variant: "error", title: "Error", description: res.error });
       return;
     }
     toast({
       variant: res.embedded === false ? "warning" : "success",
-      title: "Korrektur übernommen",
+      title: "Correction applied",
       description:
         res.embedded === false
-          ? "Re-Embedding fehlgeschlagen — wird beim nächsten Lauf nachgeholt."
-          : "Neuer Chunk eingebettet — die KI nutzt ihn ab dem nächsten Query.",
+          ? "Re-embedding failed — it will be retried on the next run."
+          : "New chunk embedded — the AI will use it from the next query.",
     });
     setEditing(false);
     onChanged();
@@ -53,17 +53,17 @@ function CorrectionCard({ c, onChanged }: { c: CorrectionRow; onChanged: () => v
 
   async function doReject() {
     if (!reason.trim()) {
-      toast({ variant: "error", title: "Grund erforderlich" });
+      toast({ variant: "error", title: "Reason required" });
       return;
     }
     setBusy("reject");
     const res = await rejectCorrection(c.id, reason.trim());
     setBusy(null);
     if (!res.ok) {
-      toast({ variant: "error", title: "Fehler", description: res.error });
+      toast({ variant: "error", title: "Error", description: res.error });
       return;
     }
-    toast({ variant: "info", title: "Korrektur abgelehnt", description: "Der Einreicher wird benachrichtigt." });
+    toast({ variant: "info", title: "Correction rejected", description: "The submitter will be notified." });
     setRejecting(false);
     onChanged();
     router.refresh();
@@ -74,34 +74,34 @@ function CorrectionCard({ c, onChanged }: { c: CorrectionRow; onChanged: () => v
       <div className="kb-corr-head">
         <span className="kb-corr-type">{CORRECTION_TYPE_LABEL[c.correctionType]}</span>
         <span className="kb-corr-meta">
-          {isPending ? "Eingereicht" : STATUS_LABEL[c.status]} von {c.submittedByName ?? "Unbekannt"} · {when(c.submittedAt)}
-          {c.reviewedByName ? ` · geprüft: ${c.reviewedByName}` : ""}
+          {isPending ? "Submitted" : STATUS_LABEL[c.status]} by {c.submittedByName ?? "Unknown"} · {when(c.submittedAt)}
+          {c.reviewedByName ? ` · reviewed: ${c.reviewedByName}` : ""}
         </span>
       </div>
 
       <div className="kb-corr-reason">
-        <b>Frage:</b> {c.originalQuestion}
+        <b>Question:</b> {c.originalQuestion}
       </div>
 
       <div className="kb-diff">
         <div className="kb-diff-col">
-          <span className="kb-diff-label">KI-Antwort (alt)</span>
+          <span className="kb-diff-label">AI answer (old)</span>
           <div className="kb-diff-box kb-diff-box--old">{c.originalAnswer}</div>
         </div>
         <div className="kb-diff-col">
-          <span className="kb-diff-label">Vorgeschlagene Korrektur</span>
+          <span className="kb-diff-label">Proposed correction</span>
           <div className="kb-diff-box kb-diff-box--new">{c.finalContent ?? c.proposedCorrection}</div>
         </div>
       </div>
 
       {c.userReference && (
         <div className="kb-corr-reason">
-          <b>Referenz:</b> {c.userReference}
+          <b>Reference:</b> {c.userReference}
         </div>
       )}
       {!isPending && c.reviewerNotes && (
         <div className="kb-corr-reason">
-          <b>Notiz:</b> {c.reviewerNotes}
+          <b>Note:</b> {c.reviewerNotes}
         </div>
       )}
 
@@ -110,7 +110,7 @@ function CorrectionCard({ c, onChanged }: { c: CorrectionRow; onChanged: () => v
           className="kb-edit-area"
           value={editText}
           onChange={(e) => setEditText(e.target.value)}
-          aria-label="Korrektur bearbeiten"
+          aria-label="Edit correction"
         />
       )}
       {isPending && rejecting && (
@@ -118,8 +118,8 @@ function CorrectionCard({ c, onChanged }: { c: CorrectionRow; onChanged: () => v
           className="kb-edit-area"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Grund für die Ablehnung (Pflicht)…"
-          aria-label="Ablehnungsgrund"
+          placeholder="Reason for rejection (required)…"
+          aria-label="Rejection reason"
         />
       )}
 
@@ -129,13 +129,13 @@ function CorrectionCard({ c, onChanged }: { c: CorrectionRow; onChanged: () => v
             <>
               <button className="kb-btn kb-btn--approve" disabled={!!busy} onClick={() => doApprove()}>
                 {busy === "approve" ? <Loader2 size={15} className="kb-spin" /> : <Check size={15} />}
-                Übernehmen
+                Apply
               </button>
               <button className="kb-btn kb-btn--ghost" disabled={!!busy} onClick={() => setEditing(true)}>
-                <Edit3 size={15} /> Bearbeiten &amp; übernehmen
+                <Edit3 size={15} /> Edit &amp; apply
               </button>
               <button className="kb-btn kb-btn--danger" disabled={!!busy} onClick={() => setRejecting(true)}>
-                <X size={15} /> Ablehnen
+                <X size={15} /> Reject
               </button>
             </>
           )}
@@ -143,10 +143,10 @@ function CorrectionCard({ c, onChanged }: { c: CorrectionRow; onChanged: () => v
             <>
               <button className="kb-btn kb-btn--approve" disabled={!!busy || !editText.trim()} onClick={() => doApprove(editText.trim())}>
                 {busy === "approve" ? <Loader2 size={15} className="kb-spin" /> : <Check size={15} />}
-                Bearbeitet übernehmen
+                Apply edited
               </button>
               <button className="kb-btn kb-btn--ghost" disabled={!!busy} onClick={() => { setEditing(false); setEditText(c.proposedCorrection); }}>
-                Abbrechen
+                Cancel
               </button>
             </>
           )}
@@ -154,10 +154,10 @@ function CorrectionCard({ c, onChanged }: { c: CorrectionRow; onChanged: () => v
             <>
               <button className="kb-btn kb-btn--danger" disabled={!!busy || !reason.trim()} onClick={doReject}>
                 {busy === "reject" ? <Loader2 size={15} className="kb-spin" /> : <X size={15} />}
-                Ablehnung bestätigen
+                Confirm rejection
               </button>
               <button className="kb-btn kb-btn--ghost" disabled={!!busy} onClick={() => { setRejecting(false); setReason(""); }}>
-                Abbrechen
+                Cancel
               </button>
             </>
           )}
@@ -175,12 +175,12 @@ export function ReviewsTab({ pending, history }: { pending: CorrectionRow[]; his
   return (
     <div>
       <div className="kb-rev-section-title">
-        <Inbox size={16} /> Offen
+        <Inbox size={16} /> Open
         {pending.length > 0 && <span className="kb-tab-count kb-tab-count--warn">{pending.length}</span>}
       </div>
 
       {pending.length === 0 ? (
-        <div className="kb-empty">Keine offenen Reviews. Korrekturen aus dem KI-Chat erscheinen hier.</div>
+        <div className="kb-empty">No open reviews. Corrections from the AI chat appear here.</div>
       ) : (
         <div className="kb-cards">
           {pending.map((c) => (
@@ -196,7 +196,7 @@ export function ReviewsTab({ pending, history }: { pending: CorrectionRow[]; his
         onClick={() => setShowHistory((v) => !v)}
       >
         <ChevronDown size={15} style={{ transform: showHistory ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
-        Verlauf ({history.length})
+        History ({history.length})
       </button>
 
       {showHistory && history.length > 0 && (

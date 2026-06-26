@@ -8,9 +8,9 @@ import { createVocabTerm, deleteVocabTerm, reviewSuggestion } from "@/lib/knowle
 import { TAG_AXES, type TagAxis, type VocabTerm, type TagSuggestion } from "@/lib/knowledge/types";
 
 const AXIS_LABEL: Record<TagAxis, string> = {
-  topic: "Themen",
+  topic: "Topics",
   airline: "Airlines",
-  department: "Abteilungen",
+  department: "Departments",
   provider: "Provider",
   brand: "Brands",
 };
@@ -28,8 +28,8 @@ export function TaxonomyTab({ vocab, suggestions }: { vocab: VocabTerm[]; sugges
     setBusy("add");
     const res = await createVocabTerm({ axis, value: val.trim(), labelDe: label.trim() });
     setBusy(null);
-    if (!res.ok) return toast({ variant: "error", title: "Fehler", description: res.error });
-    toast({ variant: "success", title: "Tag hinzugefügt" });
+    if (!res.ok) return toast({ variant: "error", title: "Error", description: res.error });
+    toast({ variant: "success", title: "Tag added" });
     setVal(""); setLabel(""); setAddAxis(null);
     router.refresh();
   }
@@ -38,7 +38,7 @@ export function TaxonomyTab({ vocab, suggestions }: { vocab: VocabTerm[]; sugges
     setBusy(id);
     const res = await deleteVocabTerm(id);
     setBusy(null);
-    if (!res.ok) return toast({ variant: "error", title: "Fehler", description: res.error });
+    if (!res.ok) return toast({ variant: "error", title: "Error", description: res.error });
     router.refresh();
   }
 
@@ -46,8 +46,8 @@ export function TaxonomyTab({ vocab, suggestions }: { vocab: VocabTerm[]; sugges
     setBusy(id);
     const res = await reviewSuggestion(id, decision);
     setBusy(null);
-    if (!res.ok) return toast({ variant: "error", title: "Fehler", description: res.error });
-    toast({ variant: "info", title: decision === "approved" ? "Vorschlag übernommen" : "Vorschlag abgelehnt" });
+    if (!res.ok) return toast({ variant: "error", title: "Error", description: res.error });
+    toast({ variant: "info", title: decision === "approved" ? "Suggestion accepted" : "Suggestion rejected" });
     router.refresh();
   }
 
@@ -55,15 +55,15 @@ export function TaxonomyTab({ vocab, suggestions }: { vocab: VocabTerm[]; sugges
     <div>
       {suggestions.length > 0 && (
         <div style={{ marginBottom: "var(--space-5)" }}>
-          <div className="kb-rev-section-title">KI-Vorschläge ({suggestions.length})</div>
+          <div className="kb-rev-section-title">AI suggestions ({suggestions.length})</div>
           <div className="kb-tax-rows">
             {suggestions.map((s) => (
               <span key={s.id} className="kb-tax-row">
                 <b>{AXIS_LABEL[s.axis]}:</b> {s.suggestedValue}
-                <button disabled={busy === s.id} onClick={() => review(s.id, "approved")} aria-label="Übernehmen" style={{ color: "var(--success)" }}>
+                <button disabled={busy === s.id} onClick={() => review(s.id, "approved")} aria-label="Accept" style={{ color: "var(--success)" }}>
                   {busy === s.id ? <Loader2 size={13} className="kb-spin" /> : <Check size={13} />}
                 </button>
-                <button disabled={busy === s.id} onClick={() => review(s.id, "rejected")} aria-label="Ablehnen">
+                <button disabled={busy === s.id} onClick={() => review(s.id, "rejected")} aria-label="Reject">
                   <X size={13} />
                 </button>
               </span>
@@ -85,23 +85,23 @@ export function TaxonomyTab({ vocab, suggestions }: { vocab: VocabTerm[]; sugges
 
             {addAxis === axis && (
               <div className="kb-toolbar" style={{ marginBottom: "var(--space-2)" }}>
-                <input className="kb-search" placeholder="wert (z.B. pegasus)" value={val} onChange={(e) => setVal(e.target.value)} />
-                <input className="kb-search" placeholder="Label (z.B. Pegasus)" value={label} onChange={(e) => setLabel(e.target.value)} />
+                <input className="kb-search" placeholder="value (e.g. pegasus)" value={val} onChange={(e) => setVal(e.target.value)} />
+                <input className="kb-search" placeholder="Label (e.g. Pegasus)" value={label} onChange={(e) => setLabel(e.target.value)} />
                 <button className="kb-btn kb-btn--primary" disabled={busy === "add" || !val.trim() || !label.trim()} onClick={() => add(axis)}>
-                  {busy === "add" ? <Loader2 size={15} className="kb-spin" /> : <Plus size={15} />} Hinzufügen
+                  {busy === "add" ? <Loader2 size={15} className="kb-spin" /> : <Plus size={15} />} Add
                 </button>
               </div>
             )}
 
             {terms.length === 0 ? (
-              <p className="kb-resultcount">Noch keine Tags.</p>
+              <p className="kb-resultcount">No tags yet.</p>
             ) : (
               <div className="kb-tax-rows">
                 {terms.map((t) => (
                   <span key={t.id} className="kb-tax-row">
                     {t.labelDe}
                     {t.citedCount > 0 && <span style={{ color: "var(--text-3)" }}> ·{t.citedCount}</span>}
-                    <button disabled={busy === t.id} onClick={() => remove(t.id)} aria-label={`${t.labelDe} löschen`}>
+                    <button disabled={busy === t.id} onClick={() => remove(t.id)} aria-label={`Delete ${t.labelDe}`}>
                       {busy === t.id ? <Loader2 size={13} className="kb-spin" /> : <Trash2 size={13} />}
                     </button>
                   </span>

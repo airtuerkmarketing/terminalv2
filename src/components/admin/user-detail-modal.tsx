@@ -21,9 +21,9 @@ const ROLE_CLASS: Record<string, string> = {
   user: "uap-pill--user",
 };
 const STATUS_LABEL: Record<TeamMemberListItem["loginStatus"], string> = {
-  active: "Aktiv",
-  invited: "Eingeladen",
-  not_invited: "Nicht eingeladen",
+  active: "Active",
+  invited: "Invited",
+  not_invited: "Not invited",
 };
 
 /**
@@ -82,7 +82,7 @@ export function UserDetailModal({
     if (res.ok) {
       setRole(pendingRole);
       setEditingRole(false);
-      toast({ variant: "success", title: "Rolle aktualisiert" });
+      toast({ variant: "success", title: "Role updated" });
       router.refresh(); // refresh the list behind the modal with the new role
     } else {
       toast({ variant: "error", title: res.error });
@@ -175,23 +175,23 @@ export function UserDetailModal({
         <dd>{user.email ?? "—"}</dd>
       </div>
       <div>
-        <dt>Im Team</dt>
-        <dd>{user.joinedYear ? `seit ${user.joinedYear}` : "—"}</dd>
+        <dt>On the team</dt>
+        <dd>{user.joinedYear ? `since ${user.joinedYear}` : "—"}</dd>
       </div>
       {!isTabbed && user.intendedRole && user.intendedRole !== "user" && (
         <div>
-          <dt>Rolle</dt>
+          <dt>Role</dt>
           <dd>
             <span className="uap-pill uap-pill--none">—</span>
             <span className="uap-role-planned">
-              Geplante Rolle: {ROLE_LABEL[user.intendedRole]} (aktiv nach Einladung)
+              Planned role: {ROLE_LABEL[user.intendedRole]} (active after invitation)
             </span>
           </dd>
         </div>
       )}
       {isTabbed && (
         <div>
-          <dt>Rolle</dt>
+          <dt>Role</dt>
           <dd>
             {editingRole ? (
               <span className="uap-role-edit">
@@ -200,14 +200,14 @@ export function UserDetailModal({
                   value={pendingRole}
                   onChange={(e) => setPendingRole(e.target.value as Role)}
                   disabled={savingRole}
-                  aria-label="Rolle wählen"
+                  aria-label="Select role"
                 >
                   <option value="user">User</option>
                   <option value="admin">Admin</option>
                   <option value="super_admin">Super-Admin</option>
                 </select>
                 <button type="button" className="uap-role-save" onClick={saveRole} disabled={savingRole}>
-                  {savingRole ? "…" : "Speichern"}
+                  {savingRole ? "…" : "Save"}
                 </button>
                 <button
                   type="button"
@@ -215,7 +215,7 @@ export function UserDetailModal({
                   onClick={() => setEditingRole(false)}
                   disabled={savingRole}
                 >
-                  Abbrechen
+                  Cancel
                 </button>
               </span>
             ) : (
@@ -233,8 +233,8 @@ export function UserDetailModal({
                     setEditingRole(true);
                   }}
                   disabled={isSelf}
-                  title={isSelf ? "Du kannst deine eigene Rolle nicht ändern." : "Rolle ändern"}
-                  aria-label="Rolle ändern"
+                  title={isSelf ? "You can't change your own role." : "Change role"}
+                  aria-label="Change role"
                 >
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 20h9" />
@@ -248,7 +248,7 @@ export function UserDetailModal({
       )}
       {isTabbed && (
         <div>
-          <dt>Letzter Login</dt>
+          <dt>Last login</dt>
           <dd>{user.lastSignInAt ? <RelativeTime iso={user.lastSignInAt} /> : "—"}</dd>
         </div>
       )}
@@ -269,18 +269,18 @@ export function UserDetailModal({
         </dd>
       </div>
       <div className="uap-fields-full">
-        <dt>Aufgaben</dt>
+        <dt>Tasks</dt>
         <dd>{user.tasks ?? "—"}</dd>
       </div>
     </dl>
   );
 
   const activityPanel = activityLoading ? (
-    <p className="uap-modal-empty">Lädt…</p>
+    <p className="uap-modal-empty">Loading…</p>
   ) : activityError ? (
-    <p className="uap-modal-empty">Aktivität konnte nicht geladen werden.</p>
+    <p className="uap-modal-empty">Activity could not be loaded.</p>
   ) : !activity || activity.items.length === 0 ? (
-    <p className="uap-modal-empty">Keine Aktivität bisher</p>
+    <p className="uap-modal-empty">No activity yet</p>
   ) : (
     <ul className="uap-activity">
       {activity.items.map((a) => (
@@ -296,20 +296,20 @@ export function UserDetailModal({
   );
 
   const chatPanel = chatLoading ? (
-    <p className="uap-modal-empty">Lädt…</p>
+    <p className="uap-modal-empty">Loading…</p>
   ) : chatError ? (
-    <p className="uap-modal-empty">Chat-Verlauf konnte nicht geladen werden.</p>
+    <p className="uap-modal-empty">Chat history could not be loaded.</p>
   ) : !chat || chat.length === 0 ? (
-    <p className="uap-modal-empty">Keine KI-Chat-Anfragen bisher</p>
+    <p className="uap-modal-empty">No AI chat requests yet</p>
   ) : (
     <div className="uap-chat">
       <p className="uap-chat-note">
-        Nur für Super-Admins sichtbar. Der Zugriff wird protokolliert.
+        Visible to super admins only. Access is logged.
       </p>
       {chat.map((s) => (
         <section key={s.sessionId} className="uap-chat-session">
           <header className="uap-chat-session-head">
-            <span className="uap-chat-session-title">{s.title?.trim() || "Unterhaltung"}</span>
+            <span className="uap-chat-session-title">{s.title?.trim() || "Conversation"}</span>
             <span className="uap-chat-session-time">
               <RelativeTime iso={s.createdAt} />
             </span>
@@ -317,7 +317,7 @@ export function UserDetailModal({
           <ul className="uap-chat-turns">
             {s.messages.map((m) => (
               <li key={m.id} className={`uap-chat-msg uap-chat-msg--${m.role}`}>
-                <span className="uap-chat-role">{m.role === "user" ? "Frage" : "Antwort"}</span>
+                <span className="uap-chat-role">{m.role === "user" ? "Question" : "Answer"}</span>
                 <span className="uap-chat-text">{m.content}</span>
               </li>
             ))}
@@ -341,7 +341,7 @@ export function UserDetailModal({
           type="button"
           className="uap-modal-close"
           onClick={onClose}
-          aria-label="Schließen"
+          aria-label="Close"
           ref={closeRef}
         >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
@@ -374,7 +374,7 @@ export function UserDetailModal({
         </div>
 
         {isTabbed && (
-          <div className="uap-tabs" role="tablist" aria-label="Detailbereiche">
+          <div className="uap-tabs" role="tablist" aria-label="Detail sections">
             <button
               type="button"
               role="tab"
@@ -382,7 +382,7 @@ export function UserDetailModal({
               className={`uap-tab${tab === "profile" ? " is-active" : ""}`}
               onClick={() => setTab("profile")}
             >
-              Profil
+              Profile
             </button>
             <button
               type="button"
@@ -391,7 +391,7 @@ export function UserDetailModal({
               className={`uap-tab${tab === "activity" ? " is-active" : ""}`}
               onClick={() => setTab("activity")}
             >
-              Aktivität
+              Activity
             </button>
             <button
               type="button"
@@ -400,7 +400,7 @@ export function UserDetailModal({
               className={`uap-tab${tab === "chat" ? " is-active" : ""}`}
               onClick={() => setTab("chat")}
             >
-              KI-Chat
+              AI Chat
             </button>
           </div>
         )}
@@ -416,7 +416,7 @@ export function UserDetailModal({
         <div className="uap-modal-footer">
           <InviteFooter user={user} />
           <button type="button" className="uap-modal-btn" onClick={onClose}>
-            Schließen
+            Close
           </button>
         </div>
       </div>

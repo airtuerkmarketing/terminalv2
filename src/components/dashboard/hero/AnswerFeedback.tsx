@@ -35,14 +35,14 @@ export function AnswerFeedback({
   };
 
   return (
-    <div className="ai-chat-feedback" role="group" aria-label="Antwort bewerten">
+    <div className="ai-chat-feedback" role="group" aria-label="Rate answer">
       <button
         type="button"
         className={`ai-chat-feedback-btn ${currentFeedback === "helpful" ? "ai-chat-feedback-btn--active" : ""}`}
         onClick={() => handleFeedback("helpful")}
         disabled={!!currentFeedback || !!submitting || disabled}
-        aria-label="Hilfreich"
-        title={currentFeedback === "helpful" ? "Als hilfreich markiert" : "Hilfreich"}
+        aria-label="Helpful"
+        title={currentFeedback === "helpful" ? "Marked as helpful" : "Helpful"}
       >
         <ThumbsUp size={13} aria-hidden="true" />
       </button>
@@ -51,8 +51,8 @@ export function AnswerFeedback({
         className={`ai-chat-feedback-btn ${currentFeedback === "not_helpful" ? "ai-chat-feedback-btn--active" : ""}`}
         onClick={() => handleFeedback("not_helpful")}
         disabled={!!currentFeedback || !!submitting || disabled}
-        aria-label="Nicht hilfreich"
-        title={currentFeedback === "not_helpful" ? "Als nicht hilfreich markiert" : "Nicht hilfreich"}
+        aria-label="Not helpful"
+        title={currentFeedback === "not_helpful" ? "Marked as not helpful" : "Not helpful"}
       >
         <ThumbsDown size={13} aria-hidden="true" />
       </button>
@@ -61,11 +61,11 @@ export function AnswerFeedback({
         className="ai-chat-feedback-btn ai-chat-feedback-btn--correct"
         onClick={onCorrect}
         disabled={disabled}
-        aria-label="Antwort korrigieren"
-        title="Antwort korrigieren"
+        aria-label="Correct answer"
+        title="Correct answer"
       >
         <Edit3 size={13} aria-hidden="true" />
-        <span className="ai-chat-feedback-label">Korrigieren</span>
+        <span className="ai-chat-feedback-label">Correct</span>
       </button>
     </div>
   );

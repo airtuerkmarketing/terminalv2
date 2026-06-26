@@ -22,10 +22,10 @@ export { ASK_AI_ID };
 type GroupKey = keyof SearchResults;
 
 const GROUPS: { key: GroupKey; label: string; Icon: ComponentType<LucideProps> }[] = [
-  { key: "pages", label: "Seiten", Icon: FileText },
-  { key: "documents", label: "Dokumente", Icon: FileStack },
+  { key: "pages", label: "Pages", Icon: FileText },
+  { key: "documents", label: "Documents", Icon: FileStack },
   { key: "assets", label: "Assets", Icon: ImageIcon },
-  { key: "brands", label: "Marken", Icon: Tag },
+  { key: "brands", label: "Brands", Icon: Tag },
 ];
 
 export function SearchDropdown({
@@ -83,9 +83,9 @@ export function SearchDropdown({
       })}
 
       {total === 0 && !loading && (
-        <div className="ai-search-empty">Keine Treffer für „{query}“</div>
+        <div className="ai-search-empty">No results for “{query}”</div>
       )}
-      {loading && total === 0 && <div className="ai-search-empty">Suche…</div>}
+      {loading && total === 0 && <div className="ai-search-empty">Searching…</div>}
 
       <button
         type="button"
@@ -97,7 +97,7 @@ export function SearchDropdown({
       >
         <Sparkles className="ai-search-hit-icon" aria-hidden="true" />
         <span className="ai-search-askai-text">
-          Frag stattdessen die KI: <strong>„{query}“</strong>
+          Ask the AI instead: <strong>“{query}”</strong>
         </span>
       </button>
     </div>

@@ -20,7 +20,7 @@ function Sparkline({ points }: { points: number[] }) {
   const path = coords.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
   const area = `${path} L${coords[coords.length - 1][0].toFixed(1)},${H - PAD} L${coords[0][0].toFixed(1)},${H - PAD} Z`;
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Gold-Set Genauigkeit pro Testlauf">
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Gold-set accuracy per test run">
       <path d={area} fill="var(--accent-soft)" />
       <path d={path} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
       {coords.map(([x, y], i) => (
@@ -37,12 +37,12 @@ export function QualityTab({ quality }: { quality: QualityStats }) {
         <div className="kb-q-score">
           <span className="kb-q-score-val">{quality.overallPct}%</span>
           <span className="kb-q-score-label">
-            Gold-Set Genauigkeit · {quality.correct}/{quality.total} richtig
+            Gold-set accuracy · {quality.correct}/{quality.total} correct
           </span>
         </div>
         <div className="kb-q-spark">
           <div className="kb-diff-label" style={{ marginBottom: "var(--space-2)" }}>
-            Genauigkeit pro Testlauf
+            Accuracy per test run
           </div>
           <Sparkline points={quality.bySet.map((s) => s.pct)} />
         </div>
@@ -62,13 +62,13 @@ export function QualityTab({ quality }: { quality: QualityStats }) {
 
       {quality.failures.length > 0 && (
         <>
-          <h3 className="kb-q-fail-title">Fehler-Cluster ({quality.failures.length})</h3>
+          <h3 className="kb-q-fail-title">Error clusters ({quality.failures.length})</h3>
           {quality.failures.map((f, i) => (
             <div key={i} className="kb-q-fail">
               <div>{f.frage}</div>
               <div className="kb-q-fail-set">
                 {f.testSet}
-                {f.frageNr != null ? ` · Frage ${f.frageNr}` : ""}
+                {f.frageNr != null ? ` · Question ${f.frageNr}` : ""}
               </div>
             </div>
           ))}

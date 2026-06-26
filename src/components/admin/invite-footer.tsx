@@ -10,16 +10,16 @@ import type { TeamMemberListItem } from "@/lib/users";
 import { inviteUserAction } from "@/app/(public)/admin/users/actions";
 
 const STRINGS = {
-  invite: "Einladen",
-  resend: "Erneut einladen",
-  sending: "Senden…",
-  active: "Aktiv",
-  lastLogin: "Letzter Login: ",
-  lastInvited: "Zuletzt eingeladen ",
-  noEmail: "Keine E-Mail-Adresse hinterlegt",
-  blocked: "Privat-E-Mail — Einladung gesperrt",
-  blockedTooltip: "Einladungen gehen nur an @airtuerk.de-Adressen. Bitte zuerst eine Firmen-Adresse einrichten.",
-  successTitle: (email: string) => `Einladung an ${email} versendet`,
+  invite: "Invite",
+  resend: "Invite again",
+  sending: "Sending…",
+  active: "Active",
+  lastLogin: "Last login: ",
+  lastInvited: "Last invited ",
+  noEmail: "No email address on file",
+  blocked: "Private email — invitation blocked",
+  blockedTooltip: "Invitations are only sent to @airtuerk.de addresses. Please set up a company address first.",
+  successTitle: (email: string) => `Invitation sent to ${email}`,
 };
 
 /**

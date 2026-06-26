@@ -20,30 +20,30 @@ import {
 } from "@/lib/users";
 
 function toGermanMessage(err: unknown): string {
-  if (!(err instanceof Error)) return "Ein unbekannter Fehler ist aufgetreten.";
+  if (!(err instanceof Error)) return "An unknown error occurred.";
   switch (err.message) {
     case "NOT_AUTHENTICATED":
-      return "Du bist nicht angemeldet.";
+      return "You are not signed in.";
     case "NOT_LINKED":
-      return "Dein Konto ist noch nicht mit einem Team-Profil verknüpft.";
+      return "Your account is not yet linked to a team profile.";
     case "PROVISION_FAILED":
-      return "Profil konnte nicht angelegt werden. Bitte erneut versuchen.";
+      return "Profile could not be created. Please try again.";
     case "INVALID_DATE":
-      return "Bitte gib ein gültiges Datum ein (JJJJ-MM-TT).";
+      return "Please enter a valid date (YYYY-MM-DD).";
     case "PHONE_TOO_LONG":
-      return "Telefonnummer zu lang (max. 50 Zeichen).";
+      return "Phone number too long (max. 50 characters).";
     case "STATUS_TOO_LONG":
-      return "Status-Zeile zu lang (max. 50 Zeichen).";
+      return "Status line too long (max. 50 characters).";
     case "VALUE_TOO_LONG":
-      return "Eingabe zu lang. Bitte kürze den Text.";
+      return "Input too long. Please shorten the text.";
     case "INVALID_FILE_TYPE":
-      return "Nur PNG, JPG oder WebP erlaubt.";
+      return "Only PNG, JPG or WebP allowed.";
     case "FILE_TOO_LARGE":
-      return "Bild zu groß (max. 2 MB).";
+      return "Image too large (max. 2 MB).";
     case "UPDATE_FAILED":
-      return "Speichern fehlgeschlagen. Bitte erneut versuchen.";
+      return "Save failed. Please try again.";
     default:
-      return `Fehler: ${err.message}`;
+      return `Error: ${err.message}`;
   }
 }
 
@@ -73,7 +73,7 @@ export async function updateOwnAvatarAction(formData: FormData): Promise<AvatarR
   try {
     const file = formData.get("avatar");
     if (!(file instanceof File) || file.size === 0) {
-      return { ok: false, error: "Keine Datei ausgewählt." };
+      return { ok: false, error: "No file selected." };
     }
     const { url } = await updateOwnAvatar(file);
     revalidatePath("/account/profile");
