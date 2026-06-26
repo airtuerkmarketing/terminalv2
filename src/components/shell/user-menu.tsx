@@ -23,6 +23,7 @@ import {
   UserCogIcon,
 } from "./icons";
 import { UserSettingsModal } from "./user-settings-modal";
+import { ReviewNotifier } from "@/components/knowledge/review-notifier";
 
 const THEME_KEY = "terminalv2-theme";
 
@@ -227,6 +228,7 @@ export function UserMenu({
         <span className="avatar">{initials}</span>
         <span className="meta">
           <span className="name">{name}</span>
+          {isSuperAdmin && <ReviewNotifier />}
         </span>
         <span className="um-caret" aria-hidden="true">
           <ChevronIcon />
