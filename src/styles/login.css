@@ -67,17 +67,26 @@
   display: block;
   max-width: 100%;
   color: var(--text-1);
+  /* The icon group scales 10% past its own box; don't clip the slight overflow. */
+  overflow: visible;
 }
 
-/* Letters: start filled-but-hidden, rise + fade in after the icon draws. */
+/* Letters: start filled-but-hidden, rise + fade in as the icon finishes drawing. */
 .login-wordmark-anim .wm-text {
   fill: currentColor;
   opacity: 0;
   transform: translateY(6px);
-  animation: wmTextRise 600ms var(--ease-smooth, ease) 500ms forwards;
+  animation: wmTextRise 650ms var(--ease-smooth, ease) 950ms forwards;
 }
 
-/* Icon chevrons: draw the outline, then fill. */
+/* Icon: 10% larger, scaled in place about its own centre (no layout shift). */
+.login-wordmark-anim .wm-icon {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(1.1);
+}
+
+/* Icon chevrons: draw the outline, then fill. Slower + smoother (easeInOutCubic). */
 .login-wordmark-anim .wm-icon polygon {
   fill: transparent;
   stroke: currentColor;
@@ -86,11 +95,11 @@
   /* dasharray covers the longest chevron perimeter (approx). */
   stroke-dasharray: 200;
   stroke-dashoffset: 200;
-  animation: wmIconDraw 1200ms cubic-bezier(0.19, 1, 0.22, 1) forwards;
+  animation: wmIconDraw 1600ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
 }
 .login-wordmark-anim .wm-icon polygon:nth-child(1) { animation-delay: 0ms; }
-.login-wordmark-anim .wm-icon polygon:nth-child(2) { animation-delay: 120ms; }
-.login-wordmark-anim .wm-icon polygon:nth-child(3) { animation-delay: 240ms; }
+.login-wordmark-anim .wm-icon polygon:nth-child(2) { animation-delay: 150ms; }
+.login-wordmark-anim .wm-icon polygon:nth-child(3) { animation-delay: 300ms; }
 
 @keyframes wmIconDraw {
   0%   { stroke-dashoffset: 200; fill: transparent; stroke: currentColor; }
