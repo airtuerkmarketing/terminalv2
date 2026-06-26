@@ -204,6 +204,67 @@ export async function updateCompanyContextChunk(
   return { ok: true, embedded };
 }
 
+/**
+ * Create a new company_context entry — the only durable, directly-creatable layer
+ * (the row IS the source). Confluence/brand/kb chunks come from their pipelines.
+ */
+export async function createCompanyContextChunk(
+  input: { topic: string; category: string; content: string },
+  reason: string,
+): Promise<ActionResult> {
+  let identity: Identity;
+  try {
+    identity = await requireSuperAdmin();
+  } catch (e) {
+    return { ok: false, error: mapErr(e) };
+  }
+  if (!input.topic.trim() || !input.category.trim() || !input.content.trim()) {
+    return { ok: false, error: "Titel, Kategorie und Inhalt sind erforderlich" };
+  }
+  if (!reason.trim()) return { ok: false, error: "Ein Grund ist erforderlich" };
+
+  const db = await createClient(); // authenticated; company_context INSERT allows super_admin
+  const { data, error } = await db
+    .from("company_context")
+    .insert({
+      topic: input.topic.trim(),
+      category: input.category.trim(),
+      content: input.content.trim(),
+      priority: 2,
+      created_by: identity.userId,
+    })
+    .select("id")
+    .single();
+  if (error || !data) {
+    const msg = error?.message ?? "";
+    return { ok: false, error: msg.includes("duplicate") ? "Ein Eintrag mit identischem Inhalt existiert bereits" : msg || "Anlegen fehlgeschlagen" };
+  }
+  const id = (data as { id: string }).id;
+
+  const admin = createAdminClient();
+  await admin.from("chunk_edit_log").insert({
+    chunk_table: "company_context",
+    chunk_id: id,
+    edited_by: identity.userId,
+    edit_reason: reason.trim(),
+    diff_before: null,
+    diff_after: input.content.trim(),
+    tags_before: {},
+    tags_after: {},
+  });
+  await logActivity(identity, "create_chunk", id, { table: "company_context" });
+
+  // New row has no embedding → force:false embeds exactly the unembedded rows.
+  let embedded = true;
+  const { error: embedErr } = await admin.functions.invoke("embed-knowledge", {
+    body: { source: "context", force: false },
+  });
+  if (embedErr) embedded = false;
+
+  revalidatePath("/admin/knowledge");
+  return { ok: true, embedded };
+}
+
 // ───────────────────────── Taxonomy CRUD (Tab 4) ────────────────────────────
 
 export async function createVocabTerm(input: {

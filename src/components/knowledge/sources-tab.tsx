@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Database, AlertCircle, Pencil, History, X } from "lucide-react";
+import { Database, AlertCircle, Pencil, History, X, Plus } from "lucide-react";
 import { inferContentShape } from "@/lib/knowledge/shape";
 import { EditChunkModal } from "./edit-chunk-modal";
 import { AuditDrawer } from "./audit-drawer";
+import { CreateContextModal } from "./create-context-modal";
 import { KbFilterDropdown, type FilterOption } from "./kb-filter-dropdown";
 import { KbPresets, type FilterState } from "./kb-presets";
 import {
@@ -110,6 +111,7 @@ export function SourcesTab({
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<KnowledgeChunk | null>(null);
   const [auditing, setAuditing] = useState<KnowledgeChunk | null>(null);
+  const [creating, setCreating] = useState(false);
 
   // Per-axis dropdown options with live counts from the loaded corpus.
   const axisOptions = useMemo(() => {
@@ -222,6 +224,9 @@ export function SourcesTab({
             onManage={onManageTags}
           />
         ))}
+        <button className="kb-btn kb-btn--primary" style={{ marginLeft: "auto" }} onClick={() => setCreating(true)}>
+          <Plus size={14} /> Neuer Eintrag
+        </button>
       </div>
 
       {activeChips.length > 0 && (
@@ -337,6 +342,7 @@ export function SourcesTab({
 
       {editing && <EditChunkModal chunk={editing} onClose={() => setEditing(null)} />}
       {auditing && <AuditDrawer chunk={auditing} onClose={() => setAuditing(null)} />}
+      {creating && <CreateContextModal onClose={() => setCreating(false)} />}
     </div>
   );
 }
