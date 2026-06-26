@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Database, AlertCircle, Pencil, History, X, Plus } from "lucide-react";
+import { Database, AlertCircle, Pencil, History, X, Plus, Lock } from "lucide-react";
 import { inferContentShape } from "@/lib/knowledge/shape";
 import { EditChunkModal } from "./edit-chunk-modal";
 import { AuditDrawer } from "./audit-drawer";
@@ -295,10 +295,17 @@ export function SourcesTab({
                     </span>
                   ))}
                 </div>
-                {c.editable && (
+                {c.editable ? (
                   <button className="kb-chip" onClick={() => setEditing(c)}>
                     <Pencil size={13} /> Bearbeiten
                   </button>
+                ) : (
+                  <span
+                    className="kb-readonly"
+                    title="Inhalt kommt aus der Quelle und wird beim nächsten Embedding neu erzeugt. Korrekturen über den KI-Chat → Reviews."
+                  >
+                    <Lock size={11} aria-hidden="true" /> Nur-Lesen
+                  </span>
                 )}
               </div>
               <div className="kb-card-title">{c.title}</div>

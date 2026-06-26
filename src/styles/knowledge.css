@@ -394,3 +394,11 @@
 .kb-preset-apply:hover { color: var(--accent); }
 .kb-preset-del { appearance: none; background: none; border: none; cursor: pointer; color: var(--text-3); padding: 0; display: inline-flex; }
 .kb-preset-del:hover { color: #E5484D; }
+
+/* Read-only cue on derived (non-editable) cards */
+.kb-readonly {
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; cursor: help;
+  font-size: var(--fs-xs); color: var(--text-3);
+  background: var(--surface-muted); border: 1px solid var(--hairline);
+  border-radius: 999px; padding: 3px var(--space-2);
+}
