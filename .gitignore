@@ -53,6 +53,7 @@ KEYS.txt
 # Local Claude/dev notes — never commit
 CLAUDE.local.md
 *.local.md
+.claude/
 
 # Vercel CLI
 .vercel

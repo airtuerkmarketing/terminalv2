@@ -9,7 +9,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-26)
 
-- **HEAD:** `290d092` (`main`, == origin/main) — **airtuerk-KI** `query_team_directory` live tool-call (D-069), prod `rag-query` v10. Prev: Wissensbasis `/admin/knowledge` (`e7c5995`). **Demo:** 2026-08-01.
+- **HEAD:** `4515437` (`main`, == origin/main) — **Wissensbasis filter-UX** (search-inside dropdowns, active chip-stack, localStorage presets, company_context "Neuer Eintrag", read-only cue on derived cards; `58000df`→`4515437`). Prev: **airtuerk-KI** `query_team_directory` live tool-call (D-069), prod `rag-query` v10. **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
@@ -57,7 +57,9 @@ it is append-only history (do not rewrite past entries — add new ones).
   **Wissensbasis `/admin/knowledge`** (D-065..068 — 4-tab super_admin surface over the
   RAG corpus: Quellen/provenance, correction review-loop with `embed-knowledge` + Resend
   notify + in-app pill, gold-set Qualität, Taxonomie + Haiku auto-tag; corrections-first
-  editing per D-A; `cb33469`→`e7c5995`, deployed).
+  editing per D-A; `cb33469`→`e7c5995`, deployed); Wissensbasis filter-UX follow-up
+  (5 search-inside dropdowns + active chip-stack + localStorage presets + company_context
+  "Neuer Eintrag" + read-only "Nur-Lesen" cue on derived cards — `58000df`→`4515437`, deployed).
 - **Remaining:** AP3 Phases 7–12 (per-section bulk-invite, quick-actions, density toggle,
   permissions matrix, per-user permissions, activity-log integration); RAG WS2
   (feedback+CorrectionModal finish) + WS3/WS4 (web-search) + S5 company-context UI
