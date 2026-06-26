@@ -9,7 +9,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-26)
 
-- **HEAD:** `e7c5995` (`main`, == origin/main) — **Wissensbasis** `/admin/knowledge` shipped + deployed (Vercel READY, `dpl_4aFWaHbH`). **Demo:** 2026-08-01.
+- **HEAD:** `290d092` (`main`, == origin/main) — **airtuerk-KI** `query_team_directory` live tool-call (D-069), prod `rag-query` v10. Prev: Wissensbasis `/admin/knowledge` (`e7c5995`). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
