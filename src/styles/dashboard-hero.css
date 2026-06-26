@@ -849,13 +849,15 @@
   color: var(--text-3);
 }
 .ai-chat-send {
-  width: 38px;                       /* keep chat size (Dashboard send is 32px) */
+  width: 38px;
   height: 38px;
   flex-shrink: 0;
-  border: 1px solid var(--hairline); /* match .ai-search-send */
+  border: 0;
   border-radius: var(--radius-full);
-  background: var(--text-1);         /* black send like the Dashboard (D-036 exc.) */
-  color: var(--bg);
+  /* Stays Quantum blue — the Dashboard's black send is the deliberate exception,
+     the chat follows the normal accent rule. */
+  background: var(--accent);
+  color: #fff;
   display: grid;
   place-items: center;
   cursor: pointer;
