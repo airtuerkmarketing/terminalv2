@@ -490,6 +490,19 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-073 — Platform UI → English (chrome only) + AI answers in input language + remove gold-set quiz
+**Date:** 2026-06-26
+**Status:** Adopted; merged to `main` (`febc625`, fast-forward over Emirkan's `74450e3`). Frontend auto-deploys via Vercel. **Pending prod actions (gated on sign-off):** `rag-query` v12 deploy + migration `20260626160000` apply.
+**Context:** The platform mixed German + English UI. Buhara: make the whole UI English now, real translations later; the AI must answer in the user's own language (TR question → TR answer), not forced German; brand copy + generated content stay German. Separately, the Gold-Set validation quiz (3 review pages + index) had finished collecting data and is no longer needed.
+**Decision:**
+1. **UI chrome → English** across app routes, auth/login, admin (users + knowledge), documents, shell, `/team`, and dashboard. Done via a multi-agent sweep (translate → adversarial verify) that touched only user-facing chrome and left logic strings, enum/union VALUES, route params, role/status discriminants, CSS classes, comments, and brand/content German. **Content stays in its language:** out-of-office & email-signature templates, AI demo data, brand copy, language endonyms (`Türkçe`).
+2. **AI input-language answers:** `rag-query` rule 4 changed from "always German" to "answer in the question's language (DE/EN/TR)"; the two frontend-detected protocol phrases (out-of-scope + identity, rules 7+8) stay exact German so detection still fires. Active on the v12 deploy.
+3. **Dashboard greeting:** `"Alright {name}, what are we fixing today?"` (fallback `there`).
+4. **Remove the Gold-Set quiz:** deleted `review-quiz`/`gold-set`/`ai-test-data` components + `gold-set.css` + `page-view` routing; migration `20260626160000` deletes the 4 `/gold-set*` pages rows at deploy. The **84 `gold_set_answers` rows + the knowledge-admin Gold-Set stats are kept** ("we just needed the data").
+**Verified:** `tsc --noEmit` green; `/login` + dashboard confirmed English live (worktree dev). `next build` not run in-worktree (a `/account/profile` prerender quirk fails identically on plain `origin/main` there); the main-repo build is authoritative. i18n is hardcoded-English — a real translation layer is future work.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)
