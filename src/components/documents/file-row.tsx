@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { fileKind, formatBytes } from "@/lib/documents-constants";
 import type { FileDTO } from "@/lib/documents";
 import { FlagIcon } from "@/components/ui/flag-icon";
@@ -23,13 +24,23 @@ export function FileRow({
 }) {
   const isImage = fileKind(file.extension) === "image";
   const href = `/api/library/file/${file.id}`;
+  const [imgError, setImgError] = useState(false);
 
   return (
     <div className="dl-row">
       <span className="dl-row-type">
-        {isImage ? (
+        {/* Real preview; a server-side thumbnail would be a later backend topic.
+            onError falls back to the type graphic. */}
+        {isImage && !imgError ? (
           /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
-          <img className="dl-row-thumb" src={href} alt="" loading="lazy" decoding="async" />
+          <img
+            className="dl-row-thumb"
+            src={href}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <FileTypeGraphic extension={file.extension} scale={0.56} />
         )}

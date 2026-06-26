@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { Modal } from "./modal";
+import { ConfirmDialog } from "./confirm-dialog";
 import {
   deleteFile,
   editFile,
@@ -117,6 +119,7 @@ function Inner({
     setError(null);
     const res = await deleteFile(file.id);
     if (res.ok) onRemoved(file.id);
+    else setConfirmDelete(false); // reveal the error behind the confirm
     done(res);
   }
 
@@ -200,24 +203,22 @@ function Inner({
 
         <hr className="dl-sep" />
 
-        {confirmDelete ? (
-          <div className="dl-confirm">
-            <span>Delete “{file.title}” permanently?</span>
-            <div className="dl-form-actions">
-              <button type="button" className="dl-btn ghost" onClick={() => setConfirmDelete(false)}>
-                Cancel
-              </button>
-              <button type="button" className="dl-btn danger" onClick={doDelete} disabled={busy !== null}>
-                {busy === "delete" ? "Deleting…" : "Delete file"}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button type="button" className="dl-btn danger-ghost" onClick={() => setConfirmDelete(true)}>
-            Delete file
-          </button>
-        )}
+        <button type="button" className="dl-btn danger-ghost" onClick={() => setConfirmDelete(true)}>
+          Delete file
+        </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={doDelete}
+        tone="danger"
+        title="Delete this file?"
+        message={`“${file.title}” will be permanently deleted. This cannot be undone.`}
+        confirmLabel="Delete file"
+        busy={busy === "delete"}
+        icon={<Trash2 size={24} aria-hidden="true" />}
+      />
     </Modal>
   );
 }

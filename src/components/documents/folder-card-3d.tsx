@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { fileKind, type FileKind } from "@/lib/documents-constants";
+import { Trash2 } from "lucide-react";
 import { deleteFolder, renameFolder, setFolderVisibility } from "@/app/(public)/documents-library/actions";
 import { CreateFolderModal } from "./create-folder-modal";
 import { ContextMenu, type CtxItem } from "./file-card";
+import { ConfirmDialog } from "./confirm-dialog";
 
 /**
  * Split-layer 3D folder card (Figma redesign). The folder is two SVG layers —
@@ -39,6 +41,8 @@ export interface FolderCard3DProps {
   previewFiles: FolderPreviewFile[];
   isSuperAdmin?: boolean;
   className?: string;
+  /** Mount directly in rename mode (just-created folder). */
+  autoRename?: boolean;
 }
 
 const EASE = "cubic-bezier(0.34, 1.56, 0.64, 1)";
@@ -85,12 +89,17 @@ function useReducedMotion() {
  *  (childFolders is a server prop, so the grid/list updates without a reload).
  *  No standalone folder-move modal is reachable from a card/row, so Move is
  *  omitted here (it lives in FolderActionsMenu on the folder's own page). */
-function useFolderActions({ id, name, href, isPublic, isSuperAdmin }: { id?: string; name: string; href: string; isPublic: boolean; isSuperAdmin: boolean }) {
+function useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename = false }: { id?: string; name: string; href: string; isPublic: boolean; isSuperAdmin: boolean; autoRename?: boolean }) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
+  // Freshly-created folders mount straight into rename mode (autoRename) — set as
+  // the initial state so no setState-in-effect is needed; the instance persists
+  // across the post-rename refresh (same id ⇒ same key), so it won't re-trigger.
+  const [editing, setEditing] = useState(!!autoRename);
   const [draft, setDraft] = useState(name);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const canManage = !!id && isSuperAdmin;
 
   const startRename = () => { setDraft(name); setEditing(true); };
@@ -103,9 +112,11 @@ function useFolderActions({ id, name, href, isPublic, isSuperAdmin }: { id?: str
   }
   async function toggleVisibility() { if (!id) return; await setFolderVisibility(id, !isPublic); router.refresh(); }
   async function doDelete() {
-    if (!id || !window.confirm(`Delete folder “${name}” and everything inside it?`)) return;
+    if (!id) return;
+    setDeleting(true);
     const res = await deleteFolder(id);
-    if (res.ok) router.refresh();
+    setDeleting(false);
+    if (res.ok) { setConfirmDelete(false); router.refresh(); }
   }
 
   const menuItems: CtxItem[] = [{ kind: "item", label: "Open", onClick: () => router.push(href) }];
@@ -115,7 +126,7 @@ function useFolderActions({ id, name, href, isPublic, isSuperAdmin }: { id?: str
       { kind: "item", label: "New subfolder", onClick: () => setCreateOpen(true) },
       { kind: "item", label: isPublic ? "Make private" : "Make public", onClick: toggleVisibility },
       { kind: "sep" },
-      { kind: "item", label: "Delete folder", onClick: doDelete, danger: true },
+      { kind: "item", label: "Delete folder", onClick: () => setConfirmDelete(true), danger: true },
     );
   }
 
@@ -140,6 +151,19 @@ function useFolderActions({ id, name, href, isPublic, isSuperAdmin }: { id?: str
     <>
       {id && menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
       {id && isSuperAdmin && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={id} />}
+      {id && (
+        <ConfirmDialog
+          open={confirmDelete}
+          onClose={() => setConfirmDelete(false)}
+          onConfirm={doDelete}
+          tone="danger"
+          title="Delete this folder?"
+          message={`“${name}” and everything inside it (subfolders and files) will be removed. This cannot be undone.`}
+          confirmLabel="Delete folder"
+          busy={deleting}
+          icon={<Trash2 size={24} aria-hidden="true" />}
+        />
+      )}
     </>
   );
   return { canManage, editing, startRename, renameInput, onContextMenu, portals };
@@ -318,10 +342,11 @@ export function FolderCard3D({
   previewFiles,
   isSuperAdmin = false,
   className,
+  autoRename = false,
 }: FolderCard3DProps) {
   const [hovered, setHovered] = useState(false);
   const { canManage, editing, startRename, renameInput, onContextMenu, portals } =
-    useFolderActions({ id, name, href, isPublic, isSuperAdmin });
+    useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename });
 
   return (
     <div
@@ -363,6 +388,7 @@ export function FolderRow({
   isPublic,
   fileCount,
   isSuperAdmin = false,
+  autoRename = false,
 }: {
   id: string;
   name: string;
@@ -370,9 +396,10 @@ export function FolderRow({
   isPublic: boolean;
   fileCount: number;
   isSuperAdmin?: boolean;
+  autoRename?: boolean;
 }) {
   const { editing, renameInput, onContextMenu, portals } =
-    useFolderActions({ id, name, href, isPublic, isSuperAdmin });
+    useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename });
   return (
     <div className="dl-row dl-row--folder" onContextMenu={onContextMenu}>
       <span className="dl-row-type dl-row-type--folder" aria-hidden="true">

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Globe, Lock } from "lucide-react";
 import { setFolderVisibility } from "@/app/(public)/documents-library/actions";
-import { Modal } from "./modal";
+import { ConfirmDialog } from "./confirm-dialog";
 
 /**
  * Status pill for a folder's visibility that is SAFE to operate: the pill itself
@@ -102,23 +102,21 @@ export function VisibilityPopover({ folderId, isPublic }: { folderId: string; is
         </div>
       )}
 
-      <Modal open={confirm} onClose={() => setConfirm(false)} title={nextLabel} width={440}>
-        <div className="dl-form">
-          <p className="dl-confirm-text">
-            {isPublic
-              ? "Are you sure? This folder will become private and hidden from everyone except admins."
-              : "Are you sure? This folder will be visible to everyone."}
-          </p>
-          <div className="dl-form-actions">
-            <button type="button" className="dl-btn ghost" onClick={() => setConfirm(false)} disabled={busy}>
-              Cancel
-            </button>
-            <button type="button" className="dl-btn primary" onClick={doToggle} disabled={busy}>
-              {busy ? "Saving…" : nextLabel}
-            </button>
-          </div>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        open={confirm}
+        onClose={() => setConfirm(false)}
+        onConfirm={doToggle}
+        tone="accent"
+        title={isPublic ? "Make this folder private?" : "Make this folder public?"}
+        message={
+          isPublic
+            ? "It will be hidden from everyone except admins. You can make it public again anytime."
+            : "It will be visible to everyone. You can make it private again anytime."
+        }
+        confirmLabel={nextLabel}
+        busy={busy}
+        icon={isPublic ? <Lock size={24} aria-hidden="true" /> : <Globe size={24} aria-hidden="true" />}
+      />
     </div>
   );
 }

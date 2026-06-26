@@ -93,6 +93,7 @@ export function FileCard({
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(file.title);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [imgError, setImgError] = useState(false);
 
   const openFile = () => window.open(href, "_blank", "noopener,noreferrer");
 
@@ -131,9 +132,18 @@ export function FileCard({
       >
         <button type="button" className="dl-cell__hit" onClick={openFile} aria-label={`Open ${file.title}`}>
           <span className="dl-cell__visual">
-            {isImage ? (
+            {/* Full image as preview; a real server-side thumbnail would be a later
+                backend topic. onError falls back to the type graphic. */}
+            {isImage && !imgError ? (
               /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
-              <img className="dl-cell__thumb" src={href} alt="" loading="lazy" decoding="async" />
+              <img
+                className="dl-cell__thumb"
+                src={href}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                onError={() => setImgError(true)}
+              />
             ) : (
               /* Same graphic as the list view, larger — one element across both views. */
               <FileTypeGraphic extension={file.extension} scale={1.8} />
