@@ -501,13 +501,15 @@
 .ai-chat-turn {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  /* ~15% more breathing room between the question bubble and its answer. */
+  gap: calc(var(--space-4) * 1.15);
 }
 .ai-chat-q {
   align-self: flex-end;
   max-width: 85%;
   padding: 10px 14px;
-  background: var(--accent-soft);
+  /* Light-grey bubble (was the accent-soft blue tint). */
+  background: var(--surface-muted);
   color: var(--text-1);
   border-radius: var(--radius-lg);
   border-top-right-radius: var(--radius-sm);
