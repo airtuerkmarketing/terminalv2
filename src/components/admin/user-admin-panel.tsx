@@ -20,12 +20,25 @@ import { SortableHeader } from "./sortable-header";
 import { UserDetailModal } from "./user-detail-modal";
 import { CreatePersonModal } from "./create-person-modal";
 import { useBulkInvite } from "./use-bulk-invite";
+import { useSelection } from "./use-selection";
+import { BulkActionBar } from "./bulk-action-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/components/ui/toast";
+import { exportUsersAction } from "@/app/(public)/admin/users/actions";
+import { buildUsersCsv, downloadCsv, generateCsvFilename } from "@/lib/admin-users-csv";
 import "@/styles/user-admin.css";
 
 // How many names to preview in the bulk-invite confirm dialog before collapsing
 // the rest into a "…und X weitere" line.
 const BULK_PREVIEW_LIMIT = 5;
+
+// Invitable = no auth account yet AND a corporate email. Mirrors the (module-
+// private) predicate in use-bulk-invite.ts and the section's own filter — the hook
+// re-applies it at confirm-time, so this is just the UI-side gate for the hint
+// count + the subset we hand to request().
+const isInvitableMember = (m: TeamMemberListItem) =>
+  m.loginStatus === "not_invited" && isCorpEmail(m.email);
 
 export interface UserAdminPanelFilters {
   q?: string;
@@ -102,6 +115,12 @@ export function UserAdminPanel({
   const openUser = openUserId
     ? teamMembers.find((u) => u.teamMemberId === openUserId) ?? null
     : null;
+
+  // Row selection (AP 3 Phase 5). Lives in the orchestrator like all other panel
+  // state; the checkbox column (B2) and the sticky bulk-action bar (B3+) consume
+  // it. The prune effect below the grouping enforces F4 (filter) + Q4 (collapse).
+  const selection = useSelection();
+  const { toast } = useToast();
 
   // Per-section bulk invite (Phase 6). The hook owns the confirm + sequential
   // invite run; the panel renders the single shared ConfirmDialog below and
@@ -226,6 +245,37 @@ export function UserAdminPanel({
     (s) => s.users.length > 0
   );
 
+  // Currently SELECTABLE rows = in the filtered view AND in a non-collapsed
+  // section (collapsed rows aren't rendered, so they can't be selected). Pruning
+  // the selection down to this set in a single effect enforces both F4 (a row
+  // leaving the filtered view drops out of the selection) and Q4 (collapsing a
+  // section clears its rows) — re-expanding or clearing the filter does NOT bring
+  // them back ("einmal weg = weg"). pruneTo no-ops when nothing leaves, so this
+  // is safe on every render and never churns state.
+  const selectableIds = useMemo(
+    () =>
+      filtered
+        .filter((u) => !(collapsed[u.role ?? "null"] ?? false))
+        .map((u) => u.teamMemberId),
+    [filtered, collapsed]
+  );
+  const { pruneTo } = selection;
+  useEffect(() => {
+    pruneTo(selectableIds);
+  }, [selectableIds, pruneTo]);
+
+  // Invitable subset of the current selection (corp email + not yet invited) — the
+  // bulk bar shows it as a hint, and B4 will invite exactly this subset. The Set
+  // identity in selection.selected changes on every toggle, so this recomputes
+  // when (and only when) it should.
+  const invitableSelectedCount = useMemo(() => {
+    let n = 0;
+    for (const u of teamMembers) {
+      if (selection.selected.has(u.teamMemberId) && isInvitableMember(u)) n++;
+    }
+    return n;
+  }, [teamMembers, selection.selected]);
+
   const visibleColumns = useMemo(() => COLUMNS.filter((c) => visibility[c.key]), [visibility]);
   const colSpan = visibleColumns.length;
 
@@ -240,6 +290,63 @@ export function UserAdminPanel({
     setSelectedStatuses([]);
     setPrivateOnly(false);
     setNoPhoto(false);
+  }
+
+  // Bulk-invite the current selection (B4). The invite logic lives here in the
+  // orchestrator (the bar stays presentational); we hand the *invitable* subset to
+  // the shared per-section bulk hook so its confirm dialog shows the right count
+  // and confirm() runs the same progress/result toasts as a section invite.
+  function handleBulkInvite() {
+    const selectedMembers = teamMembers.filter((m) => selection.selected.has(m.teamMemberId));
+    const invitableMembers = selectedMembers.filter(isInvitableMember);
+    const skipped = selectedMembers.length - invitableMembers.length;
+
+    // Case A — nothing invitable: warn and stop (don't open an empty confirm dialog).
+    if (invitableMembers.length === 0) {
+      toast({ variant: "warning", title: "Keine einladbaren Personen in der Auswahl" });
+      return;
+    }
+
+    // Case C — mixed: request() is void (it only opens the confirm dialog) and has
+    // no completion hook, so the skip hint is surfaced up-front, not after the run.
+    // Case B (all invitable → skipped === 0) shows no extra toast.
+    if (skipped > 0) {
+      toast({ variant: "info", title: `${skipped} nicht einladbar – übersprungen` });
+    }
+
+    bulk.request("Auswahl", invitableMembers);
+  }
+
+  // Export the current selection to CSV — or, with nothing selected, the filtered
+  // view (F1: selection preferred, filtered fallback). The file is built +
+  // downloaded client-side FIRST so it always reaches the user, then the audit log
+  // (exportUsersAction) is written best-effort — a log failure is console-only and
+  // never reported to the user as an export failure.
+  async function handleExportCsv() {
+    const hasSelection = selection.size > 0;
+    const exportMembers = hasSelection
+      ? teamMembers.filter((m) => selection.selected.has(m.teamMemberId))
+      : filtered;
+    const scope: "selection" | "filtered" = hasSelection ? "selection" : "filtered";
+
+    if (exportMembers.length === 0) {
+      toast({ variant: "warning", title: "Keine Personen zum Exportieren" });
+      return;
+    }
+
+    downloadCsv(generateCsvFilename(), buildUsersCsv(exportMembers));
+
+    try {
+      const res = await exportUsersAction({ count: exportMembers.length, scope });
+      if (!res.ok) console.error("[export] audit log failed:", res.error);
+    } catch (e) {
+      console.error("[export] audit log error:", e);
+    }
+
+    toast({
+      variant: "success",
+      title: `${exportMembers.length} ${exportMembers.length === 1 ? "Person" : "Personen"} exportiert`,
+    });
   }
 
   return (
@@ -274,6 +381,18 @@ export function UserAdminPanel({
         <table className="uap-table">
           <thead>
             <tr>
+              <th className="uap-col-select">
+                <Checkbox
+                  checked={selection.size > 0 && selection.size === selectableIds.length}
+                  indeterminate={selection.size > 0 && selection.size < selectableIds.length}
+                  disabled={selectableIds.length === 0}
+                  onChange={() => {
+                    if (selection.size === selectableIds.length) selection.clear();
+                    else selection.selectAll(selectableIds);
+                  }}
+                  aria-label="Alle sichtbaren Personen auswählen"
+                />
+              </th>
               {visibleColumns.map((col) => {
                 if (col.key === "avatar") {
                   return (
@@ -301,7 +420,7 @@ export function UserAdminPanel({
           {filtered.length === 0 ? (
             <tbody>
               <tr>
-                <td className="uap-empty" colSpan={colSpan}>
+                <td className="uap-empty" colSpan={colSpan + 1}>
                   Keine Personen gefunden{q.trim() ? ` für „${q.trim()}“` : ""}.
                   {hasActiveFilters && (
                     <button type="button" className="uap-empty-reset" onClick={resetFilters}>
@@ -321,6 +440,9 @@ export function UserAdminPanel({
                 collapsed={collapsed[s.key] ?? false}
                 colSpan={colSpan}
                 visibility={visibility}
+                selected={selection.selected}
+                onToggleRow={selection.toggle}
+                onToggleSection={selection.toggleMany}
                 bulkInProgress={bulk.inProgress}
                 onToggle={() => toggleSection(s.key)}
                 onOpenUser={setOpenUserId}
@@ -330,6 +452,17 @@ export function UserAdminPanel({
           )}
         </table>
       </div>
+
+      {selection.size > 0 && (
+        <BulkActionBar
+          selectedCount={selection.size}
+          invitableCount={invitableSelectedCount}
+          invitePending={bulk.inProgress}
+          onInvite={handleBulkInvite}
+          onExportCsv={handleExportCsv}
+          onClear={selection.clear}
+        />
+      )}
 
       {openUser && (
         <UserDetailModal

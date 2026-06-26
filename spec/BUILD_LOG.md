@@ -7,22 +7,34 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## Current State (updated 2026-06-24)
+## Current State (updated 2026-06-26)
 
+- **HEAD:** `4515437` (`main`, == origin/main) — **Wissensbasis filter-UX** (search-inside dropdowns, active chip-stack, localStorage presets, company_context "Neuer Eintrag", read-only cue on derived cards; `58000df`→`4515437`). Prev: **airtuerk-KI** `query_team_directory` live tool-call (D-069), prod `rag-query` v10. **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
-- **Database:** 28 tables + the `profiles_v` view (RAG foundation added 6:
+- **Database:** 32 tables + the `profiles_v` view (RAG foundation added 6:
   `company_context`, `confluence_chunks`, `brand_chunks`, `ai_chat_sessions`,
-  `ai_chat_messages`, `ai_corrections`). **55 pages**, **15 brands**,
+  `ai_chat_messages`, `ai_corrections`; Wissensbasis added 4: `tag_vocabulary`,
+  `tag_suggestions`, `chunk_edit_log`, `chunk_retrieval_stats` + `company_context.tags`).
+  **55 pages** (all published), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` installed. Highest migration:
-  `20260623115541_persona_v2_context_entries`. Highest decision: **D-064**.
-  RAG corpus: **438 chunks** (page 134 / pdf 159 / office 60 / brand 43 /
-  knowledge_base 14) + **36 company_context** entries. Edge functions:
-  `embed-knowledge` (7 source modes), `rag-query` v6 (persona v2, + 3 confluence fns).
+  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **65 migrations**, highest:
+  `20260626093000_chunk_retrieval_stats_job`. Highest decision: **D-069**.
+  RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
+  knowledge_base 14] + brand 43) + **37 company_context** entries (all tagged). Edge functions:
+  `embed-knowledge` (7 source modes), `rag-query` v10 (persona v2 + `query_team_directory`
+  live team-roster tool-call, D-069), `notify-correction-event`,
+  `tag-classify-chunks` (Haiku), + 3 confluence fns.
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
+- **Data counts (2026-06-26):** team_members **63**, profiles **4 (all super_admin,
+  0 admin/user)**, active auth users **4**, assets **718**, blocks **43**,
+  gold_set_answers **84** (92.9% accuracy baseline), ai_chat_sessions **62** /
+  messages **230**, ai_corrections **1**.
+- **⚠️ V1 blocker:** prod `profiles` has only **4 rows (all super_admin, 0 admin/0
+  user)** — the Stage-8 nine-key-user seed (`684d67f`) never reached prod; must be
+  re-run before the 2026-08-01 demo (details in the 2026-06-25 finding below).
 - **Auth/roles:** `super_admin | admin | user`; RLS via `is_admin()` /
   `is_super_admin()` / `get_profile_role()`; profile role-changes are
   super-admin-only (D-055).
@@ -32,9 +44,299 @@ it is append-only history (do not rewrite past entries — add new ones).
   all four APIX tool ports (0014–0016); signature + out-of-office generators;
   intelligence/RAG groundwork (0025–0029) + live `/api/search`; dead-code cleanup
   (`c397b29`); `/internal-branding/configurator` removed (D-056); 4 brand pages
-  ported to typed TSX section components (D-064).
-- **Remaining:** full Admin CMS (Phase 5), IBE Tools Showcase port, RAG chat UI +
-  correction workflow (File 03), email notify + gold-set re-run (File 04).
+  ported to typed TSX section components (D-064); 3 cleanup wellen on 2026-06-25
+  (lint+avatars, test-person+domain removal, brand sub-title rename); dashboard
+  UI-redesign merge (greeting orbit seal, Quick-Grabs carousel, portal-wide radial
+  FAB — `c2b12a1`); AP3 Phase 5 (admin/users multi-select + bulk-actions + CSV
+  export — `6419849`); Selin Stammdaten cleanup (Thoß→Köroglu / initials SK /
+  gold-set fixture — `77d14a6`); Welle B pre-demo hygiene (migration-ledger rename
+  + error/404/loading boundaries + this doc-sync); Welle C korpus-hygiene (C1
+  Confluence-stragglers audit, C2 full RAG-corpus audit → `AUDIT-KORPUS-2026-06-26.md`);
+  Welle D audit-fixes (D1 RAG secret-purge + `SECRET_PAGE_DENYLIST` guard `e58aeea`;
+  D2 Selin disambiguation `dbd67fd`); Voyage ZDR-Opt-Out activated 2026-06-26;
+  **Wissensbasis `/admin/knowledge`** (D-065..068 — 4-tab super_admin surface over the
+  RAG corpus: Quellen/provenance, correction review-loop with `embed-knowledge` + Resend
+  notify + in-app pill, gold-set Qualität, Taxonomie + Haiku auto-tag; corrections-first
+  editing per D-A; `cb33469`→`e7c5995`, deployed); Wissensbasis filter-UX follow-up
+  (5 search-inside dropdowns + active chip-stack + localStorage presets + company_context
+  "Neuer Eintrag" + read-only "Nur-Lesen" cue on derived cards — `58000df`→`4515437`, deployed).
+- **Remaining:** AP3 Phases 7–12 (per-section bulk-invite, quick-actions, density toggle,
+  permissions matrix, per-user permissions, activity-log integration); RAG WS2
+  (feedback+CorrectionModal finish) + WS3/WS4 (web-search) + S5 company-context UI
+  + S8 email-notify resend + S9 gold-set re-run + S10 demo polish; Audit fixes
+  P0a (cookie-free public-read) + P0c (proxy.ts) + P1 (APIX dynamic + RAG
+  robustness, 4 open decisions); Out-of-Office as its own brand section (Block 5b);
+  2 non-blocking bulk-invite fixes (`use-bulk-invite.ts`); Welle A (greeting
+  first-name + empty-`/admin` redirect — still recon-only); open C2 audit findings
+  AUDIT-002 (learning-loop never run) / AUDIT-003 (Hara-Filo source contradiction) /
+  AUDIT-004 (Pegasus check-in gen-error) / AUDIT-006 (frozen 2026-06-23 corpus);
+  D2 Phase-2 embed of the Selin row (ZDR-gated consistency follow-up).
+
+---
+
+## 2026-06-26 — airtuerk-KI: live team-directory tool-call (D-069)
+
+The KI was the only consumer not wired to `team_members` (the source of truth already
+shared by `/team` + `/admin/users`); its retrieval (`rag_hybrid_search`) scanned only the
+embedded corpus, so 60 of 63 staff were invisible and the Claude call had no tools.
+`supabase/functions/rag-query/index.ts` (edge-only, no migration) now has the Anthropic
+tool **`query_team_directory`** reading `team_members` LIVE via service-role (returns
+name/position/department/email/is_lead — never `phone`/`date_of_birth`).
+`streamClaudeResponse` rewritten into a tool-use loop (cap 3) with in-stream SSE
+interception → re-emits only text deltas + one final `message_stop` (preserves the client
+contract on both tool + no-tool paths). Deployed **prod `rag-query` v10 ACTIVE**; live-tested
+(person-not-in-corpus / dept-aggregate / privacy-refusal / ops-regression / admin-edit→AI-
+reflection), edge logs 200. Reconciliation note: `user ⊆ team_member` (63 vs 4 is correct;
+`dev@airtuerk.de` is the only user without a team_member — the intentional preview account).
+
+---
+
+## 2026-06-26 — Wissensbasis (`/admin/knowledge`) — Lernende-KI Admin-Surface
+
+4-tab super_admin page over the RAG corpus (D-065..068), `cb33469`→`e7c5995` (12 commits),
+merged to `main` + deployed (Vercel READY). 3 migrations (`20260625190000` foundation +
+`20260626090000` vocab-seed + `20260626093000` retrieval-stats `pg_cron`); 2 new edge fns
+(`notify-correction-event`, `tag-classify-chunks`). **0 new security advisors.**
+- **Quellen:** unified read of the 3 stores; content-shape render (heuristic, no stored col);
+  "Abgerufen ×N" (retrieval, not citation); company_context edit-modal + audit drawer.
+- **Reviews:** approve / edit&approve / reject → `embed-knowledge('corrections')` (K-6, no
+  manual insert) → durable chunk; in-app `ReviewNotifier` pill + Resend email (submitter +
+  Selin/Murat); submit-confirmation toast.
+- **Qualität:** gold-set 92.9% + per-set bars + failure cluster + hand-rolled SVG sparkline.
+- **Taxonomie:** `tag_vocabulary` CRUD + AI-suggestion queue; Haiku initial run 37/37 + 27 suggestions.
+- **Editing model (D-A):** only `company_context` editable (durable in-place re-embed);
+  confluence/brand are regenerable caches → read-only.
+- **Demo dry-run (throwaway data, deleted after):** approve → chunk 609 → `rag-query` retrieved
+  it **rank 3/8 (rerank 0.957)**, answer "7.7%" + Korrektur-citation → **no boost needed**.
+  Real email send OK (HTTP 200, Resend `614de2ba…`). State restored: 1 pending (Pegasus) + 0
+  correction-chunks. (Closes AUDIT-002 learning-loop-never-run.)
+- **Open (post-demo polish, not blockers):** submitter "my corrections" view; dynamic reviewer
+  recipients (vs hardcoded Selin/Murat); reviews-list realtime (currently 45s poll + click);
+  Resend-fail monitoring; modal focus-trap; orphan-cleanup for deleted chunks.
+
+---
+
+## 2026-06-26 — Welle D — Audit-Findings angehen
+
+**D1 — AUDIT-001 RAG secret-purge** (`e58aeea`, Closes AUDIT-001)
+- Removed 4 `confluence_chunks` carrying live payment/access data (cards + CVC, account
+  passwords, IBANs): page `444009709` "Operativ FAQ" (chunk 228) + page `768213063`
+  "Konti 2026 CC" (317) removed whole (by page_id — inherently sensitive); page
+  `444007659` "Involatus Genius" (261) + `444007669` "Involatus Konti" (336) only the
+  card-bearing chunk (their clean ops chunks 262/263/264 + 335 kept). `confluence_chunks`
+  367 → 363; post-scans card/cvc/pw/iban = 0; `confluence_raw` 86/86 untouched.
+- Pipeline guard `SECRET_PAGE_DENYLIST` in `embed-knowledge` (deployed v12): PERMANENT
+  {FAQ, Konti CC} + TEMPORARY {Involatus×2 — remove after Confluence source-clean +
+  re-embed} so the chunks can't return on a future embed run. Migration
+  `20260625180604_secret_cleanup_audit_001` + redacted pre-snapshot
+  `spec/d1-pre-snapshot-2026-06-26.md`.
+- Authority: Buhara Demir (CMO) + Ahmet Özbek (CFO). No card rotation (company shared
+  cards). Confluence SOURCE cleanup is a separate track (Buhara/Murat/Selin).
+- Deploy `dpl_6mhc2goaUBfLjn88HF6guZSaGUt1` READY.
+
+**D2 — AUDIT-008 Selin disambiguation** (`dbd67fd`, Closes AUDIT-008 functionally)
+- D1 live-test surfaced: RAG answered "Selin Ülker" to "Wer ist Selin?" — Selin Köroglu
+  was nowhere in the corpus (its only mention was the deleted FAQ chunk 228), while
+  `company_context` priority-1 named only Ülker.
+- Strategy A: priority-1 `company_context` INSERT disambiguating Selin Köroglu (Service
+  Agent, skoeroglu@) vs Selin Ülker (Operative Manager, suelker@), plus Selin vs Ufuk
+  Köroglu. Content deliberately WITHOUT "geb. Thoß" or marital/private data.
+  `company_context` 36 → 37. Migration `20260625182736_company_context_selin_disambiguation`.
+- The apply hit a cosmetic 502 but committed exactly once — verified read-only (count
+  36→37, single row, single ledger entry). `rag_hybrid_search` injects priority-1 context
+  by the priority filter (embedding-independent — arm 1), so the fix is live on insert;
+  the row's embedding is a ZDR-gated Phase-2 consistency follow-up (not yet run).
+- **Live-Test (Buhara, Incognito-Browser, 2026-06-26): 7/7 ✅** — KI nennt beide Selins
+  mit Kontext-Rückfrage, Köroglu-Disambiguierung proaktiv mitgegeben, Ufuk korrekt
+  zugeordnet, Ümit als CEO korrekt.
+
+**Voyage ZDR-Opt-Out aktiviert 2026-06-26** (laut Buhara, irreversibel per
+Voyage-Dashboard-Confirm-Dialog). Zukünftige Embeddings sind trainings-frei. Die
+initialen Embeds vom 2026-06-23 (Größenordnung confluence_chunks + brand_chunks +
+company_context zum Zeitpunkt T0) bleiben laut Buharas Lesart der Voyage ToS Section 3
+trainings-subject — nicht reversibel.
+
+---
+
+## 2026-06-26 — Welle C2 — Full RAG-Korpus Audit (read-only)
+
+**Status:** Read-only audit; deliverable `spec/AUDIT-KORPUS-2026-06-26.md`. No DB/code
+changes. Inventory + verification of the RAG corpus for demo-readiness — 7 findings:
+- 🔴 **AUDIT-001** (Critical) — live payment/access secrets (cards/CVC/passwords/IBANs)
+  in 4 RAG chunks, retrievable by the KI → actioned in **D1**.
+- 🟠 **AUDIT-002** (High) — the "learning loop" was never exercised: 6 gold-set
+  corrections + 1 `ai_corrections` row, **0** applied to the corpus
+  (`source_type='correction'` = 0). `gold_set_answers.korrektur` has no path into the
+  corpus; the lone `ai_corrections` is a pending test.
+- 🟠 **AUDIT-003** (High) — Hara-Filo Confluence source **contradicts** the gold-set
+  correction (source says "same price", correct = +20% Servicegebühr) → needs a source
+  edit, not just re-embed.
+- 🟡 **AUDIT-004** (Med) — Pegasus check-in generation error: corpus has the correct
+  "72 Std", RAG had hallucinated "7 Std" (no corpus gap).
+- 🟡 **AUDIT-005** (Med) — sthoss stragglers (carried from C1, deferred post-demo).
+- 🟢 **AUDIT-006** (Low) — corpus is a frozen single embed run from 2026-06-23 (no
+  re-embed/cron → drift risk for later Confluence edits).
+- 🟢 **AUDIT-007** (Info) — coverage healthy: 86/86 confluence pages embedded; 12/15
+  brands have chunks (apix / ibe-product-suite / presentation-hub = 0, by design).
+- Follow-on actions: AUDIT-001 → D1; AUDIT-008 (Selin, surfaced in D1's live-test) → D2.
+  AUDIT-002/003/004/006 remain open (Current State Remaining).
+
+---
+
+## 2026-06-26 — Welle C1 — Confluence-Stragglers Audit (read-only)
+
+**Status:** Read-only audit — no DB / edge-function / migration changes. Closes
+SWEEP-002 (with revision).
+
+Verified SWEEP-002 (3 reported `confluence_chunks` stragglers) against the actual
+Confluence-sync architecture (`confluence-extend` → `confluence_raw` →
+`embed-knowledge`).
+
+**AERCONSO part — false positive against the curated design.** `embed-knowledge`
+([index.ts:214](supabase/functions/embed-knowledge/index.ts)) has **no `bereich`
+filter** — it embeds every `confluence_raw` row with `is_deleted=false` + non-null
+`body_text`; AERCONSO is curated at *ingestion*: `confluence-extend` pulls **exactly
+one** AERCONSO page on purpose.
+- Chunk **230** (page `16165417` "Airline Kontakte", bereich=aerconso): the single
+  curated AERCONSO page; its `wiki_info@aer.de` content is the **only** corpus source
+  for gold-set **Q26** ("Airline Kontakte → wiki_info@aer.de"). Deleting it would
+  degrade the gold set → **kept**.
+- Chunk **231** (page `446989123` "[EMBED] Cockpit / GDS Kanal"): a deliberate
+  25-token pointer ("real content under 16165417"), harmless → **kept** (code-change
+  cost > value).
+- Correction: there are **2** AERCONSO-bereich chunks, not the 1 SWEEP-002's
+  literal-text search found (230 carries no literal "aerconso" string).
+
+**sthoss part — real, deferred post-demo.** 2 chunks (`276`, `277`, page `444008121`
+"Vtours Genius") hold `sthoss@airtuerk.de` URL-encoded inside an Outlook **SafeLinks**
+`&data=` tracking blob. `confluence_raw.body_text` still contains it, so a DB scrub
+without a Confluence **source** edit returns on the next re-sync. Risk very low
+(SafeLinks telemetry is never retrieved as a "who is Selin" answer). **Deferred
+post-demo** as a known issue — the source-page fix on the 101k-char Vtours-Genius page
+is its own AP (later: Selin/Murat as service mentors).
+
+**Cross-check:** `@gmx.de`=0, `airtuerk.online`=0, `thoß`(ß)=0 in `confluence_chunks`
+(367 total) — corpus otherwise clean. Prior OK to delete 230/231 + add a
+`bereich=aerconso` exclusion was **withdrawn** after this recon (would have degraded
+Q26 / contradicted the design).
+
+---
+
+## 2026-06-26 — Welle B (Pre-Demo Hygiene)
+
+Three isolated pre-demo hygiene items from the 2026-06-26 comprehensive sweep.
+Welle A (greeting first-name + empty-`/admin` redirect) was recon-only this
+session — no commits; prod-HEAD stayed `77d14a6` going in.
+
+**B1 — Migration-ledger-drift repair** (`6098201`, Closes SWEEP-005)
+- Renamed local `20260625135558_selin_stammdaten_db_cleanup.sql` → the ledger
+  timestamp `20260625140402_…` (`git mv`, R100, 0 content change).
+- Read-only verified first: the two `UPDATE`s are byte-identical to the ledger (only
+  the ledger's comment header is condensed) and every effect is already applied +
+  idempotent (Selin Köroglu / `SK` / gold-set) → **no DB touch**. Variante α
+  (rename); β (ledger `UPDATE`) rejected as needlessly risky. Migrations 59→**60**,
+  ledger untouched.
+- Surfaced, left by decision: **30 legacy `00NN` version-string drifts** remain →
+  `supabase db push` stays non-clean; harmless under the MCP `apply_migration`
+  workflow (CLI not installed). Tracked as a separate post-demo AP.
+- Deploy `dpl_EMJnUGdkLyHANGStbWy7RU6D239N` READY ~20s.
+
+**B2 — Error boundaries + 404 + loading skeleton** (`4cfd33b`, Closes SWEEP-006)
+- 4 new files (`src/app/error.tsx`, `not-found.tsx`, `(public)/loading.tsx`,
+  `(public)/error.tsx`) + `src/styles/error-states.css` with self-contained
+  `.err-*/.nf-*/.skel-*` from theme tokens (the assumed `.card`/`.btn-primary`
+  globals don't exist; CSS imported per-file). `getIdentity` from `@/lib/auth`. Flat
+  per the current system (no backdrop-filter, no DM Mono, eckige buttons).
+- `not-found.tsx` is identity-aware and builds `ƒ` dynamic (async + cookies) — clean,
+  no `force-dynamic`.
+- **Finding:** unmatched routes hit the `(public)` catch-all `[...slug]`, whose
+  auth-gate **307-redirects anon → `/login` before the 404 renders**. So the branded
+  404 shows for **authenticated** users ("Zurück zum Dashboard"); anon get `/login`
+  (the not-found anon branch is effectively unreachable). **No bug / no regression** —
+  pre-B2 anon were also redirected, then served a default Next 404; authed users now
+  get the branded one.
+- Verify (honest): branded-404 markup confirmed served live (curl:
+  `nf-card`/`nf-code`/`Seite nicht gefunden`); gates green; build flips `/_not-found`
+  ○→ƒ. Authed-404 **visual not captured** (no connected browser; scripting a password
+  login is out per safety rules). Dark-mode correct by construction (token-only).
+  Error-boundary live-trigger skipped (needs a code throw).
+- Deploy `dpl_7AhawUATP6z8RDgYXZgZHMw1u8sJ` READY ~22s.
+
+**B3 — Doc sync** (this commit, Closes SWEEP-004)
+- Current State refreshed: HEAD `14c0b86`→`4cfd33b`, dated 2026-06-26, **60
+  migrations** (highest `20260625140402_selin_stammdaten_db_cleanup`), live counts
+  (profiles 3→**4**, auth 3→**4**, ai_chat 53/144→**58/186**, ai_corrections 0→**1**;
+  all others unchanged incl. RAG corpus 410).
+- Remaining de-staled (AP3 Phase 5 shipped → removed). Shipped gained 3 summary
+  bullets for work merged since `14c0b86` (dashboard UI-redesign, AP3 Phase 5, Selin
+  cleanups) — no detail backfill.
+- DECISIONS.md unchanged (B1/B2 operational; highest stays D-064).
+
+---
+
+## Cleanup-Welle 3 — Brand-page sub-title rename (2026-06-25, `14c0b86`)
+
+**Status:** Shipped + live. Atomic DB+TSX commit (migration `20260625080714` + 3 TSX
+files: `brand-data.ts`, `brand-page.tsx`, `linkedin-banner-section.tsx`). Builds on D-064.
+
+Shortened the brand sub-section titles for sidebar/heading consistency. The sidebar
+anchor labels read DB `pages.title`; the in-page `<h2>` on the 4 TSX brands is
+hardcoded in TSX — so both surfaces were renamed together to stay in sync. **18 rows**
+renamed: Logo & Fav Icon→Logos, Colors Logo→Print Colors, Colors UX/UI→UX Colors,
+Presentation Master Deck→Master Deck, Email Signature→Signature, LinkedIn Banner→
+LinkedIn. Antalya angeglichen (Logo→Logos, Colors→Print Colors); anchor slugs unchanged
+(URL-stable). The `email-signature.tsx` generator heading "Your Signature" was
+deliberately left untouched (its `title` prop is dead/unused). Out-of-Office as its own
+section is a follow-up welle (it exists today embedded in `email-signature.tsx:705`).
+Vercel `dpl_ABXRfWLLmcv7K4MrQtWd4vdUsw4Z` READY ~21s.
+
+---
+
+## Cleanup-Welle 2 — Test person + airtuerk.online domain removed (2026-06-25, `66676a8`)
+
+**Status:** Shipped + live. Atomic migration `20260625074531` + `corp-email.ts`.
+
+Removed the test person `287d1b87` (`terminal@airtuerk.online`, "Test Terminal",
+role=user) — its linked auth user + profile + activity, in FK-respecting order — and
+dropped `airtuerk.online` from `CORP_EMAIL_PATTERN` (incl. the TEMPORARY scaffolding
+marker). The two were coupled (the test person was the only `@airtuerk.online` user).
+**team_members 64→63, profiles 4→3.** Verified read-only first (0 owned content, 0
+`team_member_brands`, role=user not admin). Vercel `dpl_3wvA2x15oMagm94GWVLKnVKN7GY7`
+READY ~20s.
+
+---
+
+## Cleanup-Welle 1 — Lint + stale avatars (2026-06-25, `bc51762`)
+
+**Status:** Shipped + live.
+
+Fixed the lone `no-html-link-for-pages` lint error in `login-form.tsx:66` (`<a>` →
+`next/link` `<Link>` for client-side nav). Deleted 6 orphaned avatar files in
+`images/team/*.png` via the Storage REST API (0 DB refs in `assets`, 0 code refs;
+superseded by the `avatars/<uuid>/avatar.<ext>` bucket). Lint baseline 20→19 problems.
+Vercel `dpl_E9pUuRmpCLLu3WUCxDjqr3J1M23D` READY ~22s.
+
+---
+
+## Production finding + deferred items (2026-06-25 project-history sweep)
+
+**⚠️ Critical V1 blocker — prod `profiles` = 3 (all super_admin).** A read-only sweep
+confirmed prod has only 3 profiles, all super_admin, **0 admins / 0 users**. The Stage-8
+nine-key-user pre-seed (`684d67f`) never reached prod — it only ran in a non-prod env.
+**Stage-8 pre-seeding must be re-run on prod before the 2026-08-01 demo** for the
+User-Management panel to show real data.
+
+**Deferred (non-blocking):**
+- `dev@airtuerk.de` row in `user_role_defaults` → remove after **2026-08-02** (post-demo;
+  dev@ is load-bearing as the preview test account until then).
+- ~30 legacy `00NN`-named migration files → rename to timestamped post-demo (cosmetic;
+  md5-identical to the ledger versions; local==DB==**59** count parity holds).
+- Lint drift (18 errors + 1 warning) → own task later (Next 16 `build` skips ESLint).
+- Dead prop `title="Email Signature"` in `email-signature-section.tsx:12` → cosmetic.
+- 2 stale code comments in `brand-palette.ts` + `logos-section.tsx` → cosmetic.
+
+**Stale branch:** `feature/ui-redesign` is 0-ahead / fully merged into `main` →
+deletion candidate.
 
 ---
 

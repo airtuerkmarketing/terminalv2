@@ -339,6 +339,26 @@
   color: var(--text-2);
 }
 
+/* ── Select column (Phase 5) ──────────────────────────────────────────────── */
+/* Fixed-width leftmost column for the row + select-all checkboxes. Deliberately
+   OUTSIDE the COLUMNS visibility system (always shown). The same fixed width on
+   the thead th, every row td and the section-header td keeps the checkbox pixel-
+   aligned down every <tbody> under the border-collapse table. */
+.uap-col-select {
+  width: 48px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+/* thead th sets text-align:left at higher specificity — re-center the checkbox. */
+.uap-table thead th.uap-col-select {
+  text-align: center;
+}
+.uap-row.is-selected,
+.uap-row.is-selected:hover {
+  background: var(--accent-soft);
+}
+
 /* ── Role sections (Phase 1) ──────────────────────────────────────────────── */
 /* Each section is its own <tbody>; the role marker is a 4px inset stripe down the
    left edge, applied to the first cell of every row (header + members) so it
@@ -1005,6 +1025,156 @@
 @media (prefers-reduced-motion: reduce) {
   .uap-modal-backdrop,
   .uap-modal {
+    animation: none;
+  }
+}
+
+/* ── Bulk-action bar (Phase 5) ────────────────────────────────────────────── */
+/* Sticky, bottom-centered floating toolbar (Gmail/Linear pattern); the panel
+   mounts it only while a selection exists. iOS-18 Liquid-Glass: translucent
+   surface + backdrop blur, hairline border, elevated shadow, Quantum-Blue accent
+   on the primary action only (the bar stays translucent). z-index sits above the
+   table + filter dropdowns (20) but below the detail/create modals (1000) and
+   toasts. Both backdrop-filter prefixes are kept so Lightning-CSS doesn't drop the
+   blur on the unprefixed property. */
+.uap-bulk-bar {
+  position: fixed;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: calc(100vw - 2 * var(--space-4));
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface-strong) 82%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  /* A dedicated floating-bar shadow (stronger + more directional than the card
+     --shadow-hover token) so the bar reads as lifted above the page content. */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+@keyframes uap-bulk-bar-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+/* Entrance fires on mount (the panel only renders the bar when visible). */
+.uap-bulk-bar--visible {
+  animation: uap-bulk-bar-in 0.2s var(--ease-smooth);
+}
+
+.uap-bulk-bar__counter {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+.uap-bulk-bar__count {
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-1);
+}
+.uap-bulk-bar__hint {
+  font-size: var(--fs-xs, 12px);
+  color: var(--text-2);
+}
+.uap-bulk-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.uap-bulk-bar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 34px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.uap-bulk-bar__btn:not(:disabled):hover {
+  background: var(--surface-muted);
+}
+.uap-bulk-bar__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.uap-bulk-bar__btn svg {
+  flex-shrink: 0;
+}
+.uap-bulk-bar__btn--primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+.uap-bulk-bar__btn--primary:not(:disabled):hover {
+  filter: brightness(1.05);
+}
+.uap-bulk-bar__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 34px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: 0;
+  border-left: 1px solid var(--separator);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.uap-bulk-bar__clear:hover {
+  color: var(--text-1);
+}
+.uap-bulk-bar__clear svg {
+  flex-shrink: 0;
+}
+
+/* Mobile: span the viewport (minus gutters) instead of center-translating; let the
+   row wrap if the actions don't fit. Uses a translateX-free entrance keyframe so
+   the animation doesn't re-introduce the desktop centering transform. */
+@media (max-width: 768px) {
+  .uap-bulk-bar {
+    left: var(--space-3);
+    right: var(--space-3);
+    transform: none;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    max-width: none;
+  }
+  .uap-bulk-bar--visible {
+    animation-name: uap-bulk-bar-in-mobile;
+  }
+}
+@keyframes uap-bulk-bar-in-mobile {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uap-bulk-bar--visible {
     animation: none;
   }
 }

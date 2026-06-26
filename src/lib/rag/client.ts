@@ -210,6 +210,11 @@ export async function submitCorrection(sub: CorrectionSubmission): Promise<{ id:
     .select("id")
     .single();
   if (error) throw error;
+
+  // Best-effort: notify the reviewers (Selin + Murat) by email. Never blocks submit.
+  supabase.functions
+    .invoke("notify-correction-event", { body: { type: "submitted", correctionId: data.id } })
+    .catch(() => {});
   return data;
 }
 

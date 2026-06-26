@@ -21,6 +21,9 @@ export function UserSection({
   collapsed,
   colSpan,
   visibility,
+  selected,
+  onToggleRow,
+  onToggleSection,
   bulkInProgress,
   onToggle,
   onOpenUser,
@@ -32,6 +35,12 @@ export function UserSection({
   collapsed: boolean;
   colSpan: number;
   visibility: ColumnVisibility;
+  /** Selected team_member ids (the whole set; the section derives its own state). */
+  selected: Set<string>;
+  /** Toggle a single row's selection. */
+  onToggleRow: (id: string) => void;
+  /** Section select-all: toggleMany over the section's ids (all→clear, else add). */
+  onToggleSection: (ids: string[]) => void;
   /** True while any section's bulk-invite run is in flight. */
   bulkInProgress: boolean;
   onToggle: () => void;
@@ -55,6 +64,17 @@ export function UserSection({
     [users]
   );
 
+  // Section select-all state, derived from the whole selection set. memberIds are
+  // every row in this (role) section; the select-all is disabled while collapsed
+  // because collapsed rows aren't selectable (the panel prunes them — Q4).
+  const memberIds = useMemo(() => users.map((u) => u.teamMemberId), [users]);
+  const selectedCount = useMemo(
+    () => memberIds.reduce((n, id) => (selected.has(id) ? n + 1 : n), 0),
+    [memberIds, selected]
+  );
+  const allSelected = memberIds.length > 0 && selectedCount === memberIds.length;
+  const someSelected = selectedCount > 0 && selectedCount < memberIds.length;
+
   return (
     <tbody className="uap-section" style={{ "--uap-section-color": color } as CSSProperties}>
       <UserSectionHeader
@@ -65,6 +85,10 @@ export function UserSection({
         colSpan={colSpan}
         invitableCount={invitable.length}
         bulkDisabled={bulkInProgress}
+        selectAllChecked={allSelected}
+        selectAllIndeterminate={someSelected}
+        selectDisabled={collapsed}
+        onToggleSelectAll={() => onToggleSection(memberIds)}
         onToggle={onToggle}
         onBulkInvite={() => onBulkInvite(label, invitable)}
       />
@@ -74,6 +98,8 @@ export function UserSection({
             key={u.teamMemberId}
             user={u}
             visibility={visibility}
+            selected={selected.has(u.teamMemberId)}
+            onToggleSelect={() => onToggleRow(u.teamMemberId)}
             onClick={() => onOpenUser(u.teamMemberId)}
           />
         ))}

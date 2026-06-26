@@ -1,4 +1,5 @@
 import { RelativeTime } from "@/components/documents/relative-time";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { TeamMemberListItem } from "@/lib/users";
 import type { ColumnVisibility } from "@/lib/admin-users-preferences";
 
@@ -45,26 +46,40 @@ const STATUS_LABEL: Record<TeamMemberListItem["loginStatus"], string> = {
 export function UserRow({
   user,
   visibility,
+  selected,
+  onToggleSelect,
   onClick,
 }: {
   user: TeamMemberListItem;
   visibility: ColumnVisibility;
+  selected: boolean;
+  onToggleSelect: () => void;
   onClick: () => void;
 }) {
   const name = `${user.firstName} ${user.lastName}`.trim();
   return (
     <tr
-      className="uap-row"
+      className={`uap-row${selected ? " is-selected" : ""}`}
       tabIndex={0}
       aria-label={`Details zu ${name} öffnen`}
       onClick={onClick}
       onKeyDown={(e) => {
+        // Only the row itself toggles the detail modal via keyboard; a focused
+        // child (the select checkbox) must not also trigger it.
+        if (e.target !== e.currentTarget) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onClick();
         }
       }}
     >
+      <td className="uap-col-select" onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={selected}
+          onChange={() => onToggleSelect()}
+          aria-label={selected ? `${name} abwählen` : `${name} auswählen`}
+        />
+      </td>
       {visibility.avatar && (
         <td className="uap-cell-avatar">
           <span
