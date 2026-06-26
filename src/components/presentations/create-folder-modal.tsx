@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Modal } from "./modal";
+import { Modal } from "@/components/documents/modal";
 import { createFolder } from "@/app/(public)/presentation-hub/actions";
 import { invalidateMoveTargets } from "./move-targets";
 
@@ -46,23 +46,23 @@ export function CreateFolderModal({
 
   return (
     <Modal open={open} onClose={close} title="New folder" width={440}>
-      <form onSubmit={submit} className="ph-form">
-        <label className="ph-field">
+      <form onSubmit={submit} className="dl-form">
+        <label className="dl-field">
           <span>Folder name</span>
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Sales"
-            className="ph-input"
+            className="dl-input"
           />
         </label>
-        {error && <p className="ph-error">{error}</p>}
-        <div className="ph-form-actions">
-          <button type="button" className="ph-btn ghost" onClick={close}>
+        {error && <p className="dl-error">{error}</p>}
+        <div className="dl-form-actions">
+          <button type="button" className="dl-btn ghost" onClick={close}>
             Cancel
           </button>
-          <button type="submit" className="ph-btn primary" disabled={busy || !name.trim()}>
+          <button type="submit" className="dl-btn primary" disabled={busy || !name.trim()}>
             {busy ? "Creating…" : "Create folder"}
           </button>
         </div>

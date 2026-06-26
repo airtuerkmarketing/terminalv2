@@ -2,21 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Modal } from "./modal";
-import { CreateFolderModal } from "./create-folder-modal";
-import {
-  deleteFolder,
-  moveFolder,
-  renameFolder,
-  setFolderVisibility,
-} from "@/app/(public)/presentation-hub/actions";
+import { Modal } from "@/components/documents/modal";
+import { deleteFolder, moveFolder } from "@/app/(public)/presentation-hub/actions";
 import type { PresentationFolderDTO } from "@/lib/presentations";
 import { invalidateMoveTargets, useMoveTargets } from "./move-targets";
 
-type ActiveModal = "create" | "rename" | "move" | "delete" | null;
+type ActiveModal = "move" | "delete" | null;
 
-/** ⋮ menu for the CURRENT folder (admin). Delete + visibility require super-admin.
- *  Private (D-079) = admin-only (the hub is login-only). */
+/** ⋮ menu for the CURRENT folder — 1:1 with the Document Library's (D-079). The
+ *  common actions live ON the object (Rename on the title, visibility on the
+ *  status pill, New subfolder in the toolbar / empty-space menu), so this menu
+ *  keeps only Move + Delete (delete is super-admin only). */
 export function FolderActionsMenu({
   folder,
   isSuperAdmin,
@@ -30,7 +26,6 @@ export function FolderActionsMenu({
   const [modal, setModal] = useState<ActiveModal>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [name, setName] = useState(folder.name);
   const [dest, setDest] = useState<string>(folder.parentId ?? "");
 
   const { folders, loading: loadingTargets } = useMoveTargets(modal === "move");
@@ -47,7 +42,6 @@ export function FolderActionsMenu({
   function open(m: ActiveModal) {
     setMenuOpen(false);
     setError(null);
-    setName(folder.name);
     setDest(folder.parentId ?? "");
     setModal(m);
   }
@@ -62,20 +56,10 @@ export function FolderActionsMenu({
     }
   }
 
-  async function doRename() {
-    setBusy(true);
-    setError(null);
-    after(await renameFolder(folder.id, name));
-  }
   async function doMove() {
     setBusy(true);
     setError(null);
     after(await moveFolder(folder.id, dest || null));
-  }
-  async function doToggleVisibility() {
-    setMenuOpen(false);
-    const res = await setFolderVisibility(folder.id, !folder.isPublic);
-    if (res.ok) router.refresh();
   }
   async function doDelete() {
     setBusy(true);
@@ -102,10 +86,10 @@ export function FolderActionsMenu({
   );
 
   return (
-    <div className="ph-folder-menu" ref={rootRef}>
+    <div className="dl-folder-menu" ref={rootRef}>
       <button
         type="button"
-        className="ph-iconbtn"
+        className="dl-iconbtn"
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((v) => !v)}
@@ -119,55 +103,28 @@ export function FolderActionsMenu({
       </button>
 
       {menuOpen && (
-        <div className="ph-menu" role="menu">
-          <button type="button" role="menuitem" onClick={() => open("create")}>
-            New subfolder
-          </button>
-          <button type="button" role="menuitem" onClick={() => open("rename")}>
-            Rename
-          </button>
+        <div className="dl-menu" role="menu">
           <button type="button" role="menuitem" onClick={() => open("move")}>
             Move
           </button>
           {isSuperAdmin && (
-            <>
-              <button type="button" role="menuitem" onClick={doToggleVisibility}>
-                {folder.isPublic ? "Make private" : "Make public"}
-              </button>
-              <div className="ph-menu-sep" />
-              <button type="button" role="menuitem" className="danger" onClick={() => open("delete")}>
-                Delete folder
-              </button>
-            </>
+            <button type="button" role="menuitem" className="danger" onClick={() => open("delete")}>
+              Delete folder
+            </button>
           )}
         </div>
       )}
 
-      <CreateFolderModal open={modal === "create"} onClose={() => setModal(null)} parentId={folder.id} />
-
-      <Modal open={modal === "rename"} onClose={() => setModal(null)} title="Rename folder" width={420}>
-        <div className="ph-form">
-          <label className="ph-field">
-            <span>Folder name</span>
-            <input className="ph-input" autoFocus value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
-          {error && <p className="ph-error">{error}</p>}
-          <div className="ph-form-actions">
-            <button type="button" className="ph-btn ghost" onClick={() => setModal(null)}>
-              Cancel
-            </button>
-            <button type="button" className="ph-btn primary" onClick={doRename} disabled={busy || !name.trim()}>
-              {busy ? "Saving…" : "Rename"}
-            </button>
-          </div>
-        </div>
-      </Modal>
-
       <Modal open={modal === "move"} onClose={() => setModal(null)} title="Move folder" width={460}>
-        <div className="ph-form">
-          <label className="ph-field">
+        <div className="dl-form">
+          <label className="dl-field">
             <span>Destination</span>
-            <select className="ph-input" value={dest} onChange={(e) => setDest(e.target.value)} disabled={loadingTargets}>
+            <select
+              className="dl-input"
+              value={dest}
+              onChange={(e) => setDest(e.target.value)}
+              disabled={loadingTargets}
+            >
               <option value="">Top level</option>
               {moveTargets.map((f) => (
                 <option key={f.id} value={f.id}>
@@ -176,12 +133,12 @@ export function FolderActionsMenu({
               ))}
             </select>
           </label>
-          {error && <p className="ph-error">{error}</p>}
-          <div className="ph-form-actions">
-            <button type="button" className="ph-btn ghost" onClick={() => setModal(null)}>
+          {error && <p className="dl-error">{error}</p>}
+          <div className="dl-form-actions">
+            <button type="button" className="dl-btn ghost" onClick={() => setModal(null)}>
               Cancel
             </button>
-            <button type="button" className="ph-btn primary" onClick={doMove} disabled={busy || loadingTargets}>
+            <button type="button" className="dl-btn primary" onClick={doMove} disabled={busy || loadingTargets}>
               {busy ? "Moving…" : "Move here"}
             </button>
           </div>
@@ -189,17 +146,17 @@ export function FolderActionsMenu({
       </Modal>
 
       <Modal open={modal === "delete"} onClose={() => setModal(null)} title="Delete folder" width={460}>
-        <div className="ph-form">
-          <p className="ph-confirm-text">
+        <div className="dl-form">
+          <p className="dl-confirm-text">
             Delete <strong>{folder.name}</strong>? A folder that still contains presentations can’t be
             deleted — clear its files first. This can’t be undone.
           </p>
-          {error && <p className="ph-error">{error}</p>}
-          <div className="ph-form-actions">
-            <button type="button" className="ph-btn ghost" onClick={() => setModal(null)}>
+          {error && <p className="dl-error">{error}</p>}
+          <div className="dl-form-actions">
+            <button type="button" className="dl-btn ghost" onClick={() => setModal(null)}>
               Cancel
             </button>
-            <button type="button" className="ph-btn danger" onClick={doDelete} disabled={busy}>
+            <button type="button" className="dl-btn danger" onClick={doDelete} disabled={busy}>
               {busy ? "Deleting…" : "Delete folder"}
             </button>
           </div>
