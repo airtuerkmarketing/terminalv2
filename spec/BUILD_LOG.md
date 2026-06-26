@@ -94,12 +94,15 @@ broken invite→onboarding gap and adds the self-service profile the demo needs.
   DoB only when `show_birthday`).
 - **Super-admin "KI-Chat" tab** in the user-detail modal — `getUserChatHistory` + `loadUserChat`
   (super_admin-only, access logged). No migration (RLS already grants `is_super_admin()`).
-- **Migration `20260626140000_self_service_profile_fields`** (authored, **pending apply**):
-  +9 `team_members` columns + `team_select_public`→`team_select_authenticated`.
-- **Gates:** `tsc --noEmit` + `next build` green.
-- **Go-live (3 sign-offs):** (1) apply the migration to prod, (2) swap the Invite + Recovery
-  email templates (`spec/AUTH_EMAIL_TEMPLATES.md`) AFTER the route deploys, (3) merge to `main`.
-  Order matters: apply the migration BEFORE deploying (else `/team` + profile read missing columns).
+- **Migration `20260626140000_self_service_profile_fields`** — **APPLIED to prod 2026-06-26**:
+  +9 `team_members` columns + `team_select_public`→`team_select_authenticated` (additive; live
+  site unaffected — old query is column-compatible).
+- **Gates:** `tsc --noEmit` + `next build` green. **Verified end-to-end** (local dev vs migrated
+  prod DB): `/team` 63 cards + detail modal; profile form load + email read-only + save persists
+  (RLS self-write); super-admin KI-Chat tab (real Q&A + audit log). Test provision of dev@ rolled
+  back (back to 63 members, dev@ unlinked).
+- **Pending go-live (2 sign-offs):** (1) swap the Invite + Recovery email templates
+  (`spec/AUTH_EMAIL_TEMPLATES.md`) AFTER the route deploys, (2) merge to `main`.
 
 ---
 
