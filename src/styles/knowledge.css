@@ -390,3 +390,7 @@
 .kb-filterchip:hover { filter: brightness(0.97); }
 .kb-filterchip-axis { color: var(--text-3); font-weight: var(--weight-regular); }
 .kb-chipstack-clear { appearance: none; background: none; border: none; cursor: pointer; font-size: var(--fs-xs); color: var(--text-3); padding: 2px 6px; }
+.kb-preset-apply { flex: 1; text-align: left; appearance: none; background: none; border: none; cursor: pointer; font-size: var(--fs-sm); color: var(--text-1); padding: 0; }
+.kb-preset-apply:hover { color: var(--accent); }
+.kb-preset-del { appearance: none; background: none; border: none; cursor: pointer; color: var(--text-3); padding: 0; display: inline-flex; }
+.kb-preset-del:hover { color: #E5484D; }

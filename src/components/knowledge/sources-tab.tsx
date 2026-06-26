@@ -6,6 +6,7 @@ import { inferContentShape } from "@/lib/knowledge/shape";
 import { EditChunkModal } from "./edit-chunk-modal";
 import { AuditDrawer } from "./audit-drawer";
 import { KbFilterDropdown, type FilterOption } from "./kb-filter-dropdown";
+import { KbPresets, type FilterState } from "./kb-presets";
 import {
   AXIS_TO_KEY,
   TAG_AXES,
@@ -140,6 +141,18 @@ export function SourcesTab({
     setAxisSel({ topic: [], airline: [], department: [], provider: [], brand: [] });
     setSearch("");
   }
+  function applyPreset(s: FilterState) {
+    setSearch(s.search);
+    setLayers(new Set(s.layers));
+    setSort(s.sort);
+    setAxisSel({
+      topic: s.axes.topic ?? [],
+      airline: s.axes.airline ?? [],
+      department: s.axes.department ?? [],
+      provider: s.axes.provider ?? [],
+      brand: s.axes.brand ?? [],
+    });
+  }
 
   // Reflect filter state to the URL (shareable) without re-fetching.
   useEffect(() => {
@@ -247,6 +260,7 @@ export function SourcesTab({
           <option value="oldest">Älteste</option>
           <option value="most-retrieved">Meist abgerufen</option>
         </select>
+        <KbPresets current={{ search, layers: [...layers], sort, axes: axisSel }} onApply={applyPreset} />
       </div>
 
       <p className="kb-resultcount" style={{ margin: "var(--space-3) 0" }}>
