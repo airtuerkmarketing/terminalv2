@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Upload } from "lucide-react";
+import { Lock, Pencil, Plus, Upload } from "lucide-react";
 import "@/styles/presentation-hub.css";
 import "@/styles/document-library.css";
 import type { ViewMode } from "@/components/ui/view-toggle";
 import { LibraryToolbar } from "@/components/documents/library-toolbar";
 import { DEFAULT_FILTER, type LibraryFilter } from "@/components/documents/filter-sort-popover";
+import { EmptySpaceContextMenu } from "@/components/documents/empty-space-context-menu";
+import type { CtxItem } from "@/components/documents/file-card";
+import { PresentationVisibilityPopover } from "./presentation-visibility-popover";
 import {
   createFolder,
   listPresentationFilesInFolder,
@@ -167,6 +170,17 @@ export function PresentationFolderPage({
   const noFiles = orderedFiles.length === 0;
   const hasSubfolders = childFolders.length > 0;
 
+  // Empty-space (right-click) menu, in the current-folder context (matches docs).
+  const spaceItems: CtxItem[] = [];
+  if (isSuperAdmin) {
+    spaceItems.push(
+      { kind: "item", label: "New subfolder", onClick: createSubfolder },
+      { kind: "item", label: "Upload", onClick: () => setUploadOpen(true) },
+      { kind: "sep" }
+    );
+  }
+  spaceItems.push({ kind: "item", label: "Refresh", onClick: () => router.refresh() });
+
   return (
     <article className="document-library">
       <PresentationBreadcrumb trail={trail} />
@@ -200,6 +214,17 @@ export function PresentationFolderPage({
           ) : (
             <h1>{folder.name}</h1>
           )}
+
+          {isSuperAdmin ? (
+            <PresentationVisibilityPopover folderId={folder.id} isPublic={folder.isPublic} />
+          ) : (
+            !folder.isPublic && (
+              <span className="dl-status-pill is-private is-static">
+                <Lock size={13} aria-hidden="true" />
+                Private
+              </span>
+            )
+          )}
         </div>
         {isSuperAdmin && <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />}
       </header>
@@ -225,6 +250,8 @@ export function PresentationFolderPage({
 
       {createError && <p className="dl-error">{createError}</p>}
 
+      {/* Right-click anywhere in this area (not on a file/folder) → space menu. */}
+      <EmptySpaceContextMenu items={spaceItems} className="dl-space">
       {/* Folders first (managed cards), then the presentation file area. */}
       {hasSubfolders && (
         <div className="dl-explorer-grid" style={{ marginBottom: "var(--space-5)" }}>
@@ -307,6 +334,7 @@ export function PresentationFolderPage({
           </button>
         </div>
       )}
+      </EmptySpaceContextMenu>
 
       {isSuperAdmin && (
         <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} folderId={folder.id} onUploaded={upsertFile} />
