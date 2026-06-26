@@ -139,36 +139,35 @@ export function FolderPage({
 
   const hasFolders = childFolders.length > 0;
 
-  // Subfolders render as 3D folder cards in their OWN grid (FolderCard3D has a
-  // fixed ~242px stage, so it can't share the narrower file-card grid track);
-  // they sit directly above the files — folders first, then files. childFolders
-  // is a plain FolderDTO with no fileCount/previewFiles, so the cards show 0
-  // files / no peek for now (reported).
-  const folderGrid = hasFolders ? (
-    <div className="dl-folder-grid" style={{ marginBottom: "var(--space-5)" }}>
-      {childFolders.map((f) => (
-        <FolderCard3D
-          key={f.id}
-          name={f.name}
-          href={`/documents-library/${f.path}`}
-          isPublic={f.isPublic}
-          fileCount={0}
-          previewFiles={[]}
-        />
-      ))}
-    </div>
-  ) : null;
+  // Folder cells (Windows-Explorer style): free-standing 3D folder cards. They
+  // share the SAME grid + cell size as the file cells in card view (folders
+  // first). childFolders is a plain FolderDTO (no fileCount/previewFiles), so the
+  // cards show 0 files / no peek for now (reported). isSuperAdmin enables the
+  // folder context-menu actions.
+  const folderCards = childFolders.map((f) => (
+    <FolderCard3D
+      key={f.id}
+      id={f.id}
+      name={f.name}
+      href={`/documents-library/${f.path}`}
+      isPublic={f.isPublic}
+      fileCount={0}
+      previewFiles={[]}
+      isSuperAdmin={isSuperAdmin}
+    />
+  ));
 
-  // Right-hand (or full-width) area: folders (3D cards) + files list/grid + load-more.
+  // Right-hand (or full-width) area: folders + files + load-more. In card view
+  // folders and files share one explorer grid; grid/list views keep their dense
+  // file layout with the folders in an explorer grid above.
   const filesArea = (
     <>
-      {folderGrid}
-      {noFiles ? (
+      {noFiles && !hasFolders ? (
         debouncedSearch ? (
           <div className="dl-empty">
             <span>No files match “{search}”.</span>
           </div>
-        ) : hasFolders ? null : (
+        ) : (
           <div className="dl-empty">
             <strong>This folder is empty.</strong>
             {isSuperAdmin ? (
@@ -178,32 +177,54 @@ export function FolderPage({
             )}
           </div>
         )
-      ) : view === "list" ? (
-        <div className="dl-list">
-          <div className="dl-list-head">
-            <span />
-            <SortTh label="Name" sortKey="name" />
-            <span>Language</span>
-            <SortTh label="Size" sortKey="size" />
-            <SortTh label="Modified" sortKey="date" />
-            <span />
-          </div>
-          {files.map((f) => (
-            <FileRow key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
-          ))}
-        </div>
-      ) : (
-        <div className="dl-grid" data-view={view}>
+      ) : view === "card" ? (
+        <div className="dl-explorer-grid">
+          {folderCards}
           {files.map((f) => (
             <FileCard
               key={f.id}
               file={f}
-              view={view === "grid" ? "grid" : "card"}
+              view="card"
               isSuperAdmin={isSuperAdmin}
               onManage={setManageFile}
+              onUpdated={upsertFile}
+              onRemoved={removeFile}
             />
           ))}
         </div>
+      ) : (
+        <>
+          {hasFolders && <div className="dl-explorer-grid" style={{ marginBottom: "var(--space-5)" }}>{folderCards}</div>}
+          {view === "list" ? (
+            <div className="dl-list">
+              <div className="dl-list-head">
+                <span />
+                <SortTh label="Name" sortKey="name" />
+                <span>Language</span>
+                <SortTh label="Size" sortKey="size" />
+                <SortTh label="Modified" sortKey="date" />
+                <span />
+              </div>
+              {files.map((f) => (
+                <FileRow key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
+              ))}
+            </div>
+          ) : (
+            <div className="dl-grid" data-view={view}>
+              {files.map((f) => (
+                <FileCard
+                  key={f.id}
+                  file={f}
+                  view="grid"
+                  isSuperAdmin={isSuperAdmin}
+                  onManage={setManageFile}
+                  onUpdated={upsertFile}
+                  onRemoved={removeFile}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {hasMore && (

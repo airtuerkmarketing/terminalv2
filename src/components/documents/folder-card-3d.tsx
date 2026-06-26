@@ -2,8 +2,12 @@
 
 import { useId, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { fileKind, type FileKind } from "@/lib/documents-constants";
+import { deleteFolder, renameFolder, setFolderVisibility } from "@/app/(public)/documents-library/actions";
+import { CreateFolderModal } from "./create-folder-modal";
+import { ContextMenu, type CtxItem } from "./file-card";
 
 /**
  * Split-layer 3D folder card (Figma redesign). The folder is two SVG layers —
@@ -25,11 +29,15 @@ export interface FolderPreviewFile {
 }
 
 export interface FolderCard3DProps {
+  /** Folder id. When omitted (e.g. the root index, which isn't in this change's
+   *  scope), the card is a plain navigation card — no context menu / rename. */
+  id?: string;
   name: string;
   href: string;
   isPublic: boolean;
   fileCount: number;
   previewFiles: FolderPreviewFile[];
+  isSuperAdmin?: boolean;
   className?: string;
 }
 
@@ -69,16 +77,55 @@ function useReducedMotion() {
 }
 
 export function FolderCard3D({
+  id,
   name,
   href,
   isPublic,
   fileCount,
   previewFiles,
+  isSuperAdmin = false,
   className,
 }: FolderCard3DProps) {
+  const router = useRouter();
   const [hovered, setHovered] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const reduced = useReducedMotion();
   const uid = useId().replace(/:/g, ""); // namespace SVG gradient ids per card
+
+  const canManage = !!id && isSuperAdmin; // folder actions need an id + admin
+  const startRename = () => { setDraft(name); setEditing(true); };
+  async function commitRename() {
+    setEditing(false);
+    const t = draft.trim();
+    if (!id || !t || t === name) { setDraft(name); return; }
+    const res = await renameFolder(id, t);
+    if (res.ok) router.refresh(); else setDraft(name); // childFolders is a server prop → refresh updates the grid
+  }
+  async function toggleVisibility() { if (!id) return; await setFolderVisibility(id, !isPublic); router.refresh(); }
+  async function doDelete() {
+    // No standalone folder-delete modal is reachable from a card (folder modals
+    // live in FolderActionsMenu on the folder's own page) — confirm natively for
+    // this destructive cascade, then soft-refresh.
+    if (!id || !window.confirm(`Ordner „${name}" und den gesamten Inhalt löschen?`)) return;
+    const res = await deleteFolder(id);
+    if (res.ok) router.refresh();
+  }
+
+  const menuItems: CtxItem[] = [
+    { kind: "item", label: "Öffnen", onClick: () => router.push(href) },
+  ];
+  if (canManage) {
+    menuItems.push(
+      { kind: "item", label: "Umbenennen", onClick: startRename },
+      { kind: "item", label: "Neuer Unterordner", onClick: () => setCreateOpen(true) },
+      { kind: "item", label: isPublic ? "Privat machen" : "Öffentlich machen", onClick: toggleVisibility },
+      { kind: "sep" },
+      { kind: "item", label: "Ordner löschen", onClick: doDelete, danger: true },
+    );
+  }
 
   const tiles = previewFiles.slice(0, 3);
   // Distinct file types → coins (max 3).
@@ -98,18 +145,11 @@ export function FolderCard3D({
   const LIFT = open ? -34 : 0;
 
   return (
-    <Link
-      href={href}
-      aria-label={`${name}, ${fileCount} ${fileCount === 1 ? "file" : "files"}`}
-      className={cn(
-        "dl-folder-card group relative flex flex-col items-center justify-start no-underline",
-        "p-4 cursor-pointer text-text-1",
-        className
-      )}
+    <div
+      className={cn("dl-cell dl-folder-cell group", className)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onFocus={() => setHovered(true)}
-      onBlur={() => setHovered(false)}
+      onContextMenu={id ? (e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); } : undefined}
     >
       {/* Private cue — Torch lock, top-right (admins only ever see private folders) */}
       {!isPublic && (
@@ -126,8 +166,10 @@ export function FolderCard3D({
         </span>
       )}
 
-      {/* Folder stage — fixed aspect so the coins/docs scale with the SVG. */}
-      <div className="relative" style={{ width: "210px", aspectRatio: "299 / 235" }}>
+      <Link href={href} className="dl-cell__hit" aria-label={`Open ${name}`} onFocus={() => setHovered(true)} onBlur={() => setHovered(false)}>
+        {/* Folder stage — fixed aspect so the coins/docs scale with the SVG. */}
+        <span className="dl-cell__visual">
+          <div className="relative" style={{ width: "150px", aspectRatio: "299 / 235" }}>
         {/* Back wall (behind the docs) */}
         <svg
           viewBox="0 0 299 235"
@@ -231,17 +273,35 @@ export function FolderCard3D({
             </g>
           ))}
         </svg>
-      </div>
+          </div>
+        </span>
+      </Link>
 
-      <h3
-        className="text-base font-semibold text-text-1 mt-3 text-center"
-        style={{ transform: open ? "translateY(2px)" : "translateY(0)", transition: tr("transform 300ms ease") }}
-      >
-        {name}
-      </h3>
-      <p className="text-sm text-text-3 text-center">
-        {fileCount} {fileCount === 1 ? "file" : "files"}
-      </p>
-    </Link>
+      {editing ? (
+        <input
+          autoFocus
+          onFocus={(e) => e.currentTarget.select()}
+          className="dl-cell__rename"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitRename();
+            else if (e.key === "Escape") { setDraft(name); setEditing(false); }
+          }}
+          onBlur={commitRename}
+          aria-label="Rename folder"
+        />
+      ) : canManage ? (
+        <button type="button" className="dl-cell__name" title={name} onClick={startRename}>
+          {name}
+        </button>
+      ) : (
+        <span className="dl-cell__name" title={name}>{name}</span>
+      )}
+      <div className="dl-cell__sub">{fileCount} {fileCount === 1 ? "Datei" : "Dateien"}</div>
+
+      {id && menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
+      {id && isSuperAdmin && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={id} />}
+    </div>
   );
 }

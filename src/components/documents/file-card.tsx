@@ -1,23 +1,13 @@
 "use client";
 
-import { fileKind, formatBytes, type FileKind } from "@/lib/documents-constants";
+import { useEffect, useRef, useState } from "react";
+import { fileKind, formatBytes } from "@/lib/documents-constants";
 import type { FileDTO } from "@/lib/documents";
+import { deleteFile, editFile } from "@/app/(public)/documents-library/actions";
 import { FlagIcon } from "@/components/ui/flag-icon";
 import { RelativeTime } from "./relative-time";
 import { FileTypeGraphic } from "./file-type-graphic";
-
-// Format monogram: shown ONCE per card (replaces the old badge + doc-icon + pill
-// trio). Self-drawn label + colour — no app logos.
-const MONO: Record<FileKind, { label: string; color: string }> = {
-  pdf:   { label: "PDF", color: "#D8352A" },
-  word:  { label: "DOC", color: "#185FA5" },
-  excel: { label: "XLS", color: "#3B6D11" },
-  ppt:   { label: "PPT", color: "#BA7517" },
-  image: { label: "IMG", color: "#7C3AED" },
-  txt:   { label: "TXT", color: "#6B7280" },
-  zip:   { label: "ZIP", color: "#6B7280" },
-  file:  { label: "FILE", color: "#6B7280" },
-};
+import { FileObject } from "./file-object";
 
 function fileHref(id: string, download = false) {
   return `/api/library/file/${id}${download ? "?download=1" : ""}`;
@@ -37,94 +27,151 @@ const EditIcon = () => (
   </svg>
 );
 
+export type CtxItem =
+  | { kind: "item"; label: string; onClick: () => void; danger?: boolean }
+  | { kind: "sep" };
+
+/** Right-click popover at the cursor; closes on outside-click / Esc / scroll. */
+export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; items: CtxItem[]; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onClose, true);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onClose, true);
+    };
+  }, [onClose]);
+  return (
+    <div ref={ref} className="dl-ctx" role="menu" style={{ left: x, top: y }}>
+      {items.map((it, i) =>
+        it.kind === "sep" ? (
+          <div key={i} className="dl-ctx-sep" />
+        ) : (
+          <button key={i} type="button" role="menuitem" className={`dl-ctx-item${it.danger ? " danger" : ""}`} onClick={() => { it.onClick(); onClose(); }}>
+            {it.label}
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
 /**
- * One file in the document grid. The SAME data renders two distinct tiles
- * depending on the active view:
- *   - "grid" → .dl-grid-tile (compact, 4/3 cover + roomy foot — unchanged from
- *     the long-standing grid card; visual diff vs. before = 0).
- *   - "card" → .dl-tile (Option A: 16/10 cover with a filetype badge top-left and
- *     an always-visible Edit overlay top-right, then a tight meta row with a
- *     one-line title and an always-visible Download button bottom-right).
- * Download is for everyone; Edit (manage modal) stays super_admin-only, matching
- * the rest of the library's management UI.
+ * One file in the document grid.
+ *   - "card" → Windows-Explorer-style free-standing cell: a typed FileObject SVG,
+ *     the name (inline-rename on click), then flag + size. No box; hover gives a
+ *     subtle bg. Whole cell opens the file; right-click = context menu. Rename /
+ *     move / delete reuse the existing handlers (editFile / FileEditModal /
+ *     deleteFile) with live grid updates via onUpdated / onRemoved.
+ *   - "grid" → compact .dl-grid-tile (unchanged).
  */
 export function FileCard({
   file,
   view,
   isSuperAdmin,
   onManage,
+  onUpdated,
+  onRemoved,
 }: {
   file: FileDTO;
   view: "grid" | "card";
   isSuperAdmin: boolean;
   onManage: (file: FileDTO) => void;
+  onUpdated: (file: FileDTO) => void;
+  onRemoved: (id: string) => void;
 }) {
   const kind = fileKind(file.extension);
   const isImage = kind === "image";
   const href = fileHref(file.id);
   const downloadHref = fileHref(file.id, true);
 
-  // ── Card view (Variant D: single format monogram, no format word / doc-icon /
-  //    duplicate badge) ───────────────────────────────────────────────────────
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(file.title);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const openFile = () => window.open(href, "_blank", "noopener,noreferrer");
+
+  const startRename = () => { setName(file.title); setEditing(true); };
+  async function commitRename() {
+    setEditing(false);
+    const t = name.trim();
+    if (!t || t === file.title) { setName(file.title); return; }
+    const res = await editFile(file.id, { title: t });
+    if (res.ok && res.file) onUpdated(res.file);
+    else setName(file.title);
+  }
+  async function doDelete() {
+    const res = await deleteFile(file.id);
+    if (res.ok) onRemoved(file.id);
+  }
+
+  // ── Card view (free-standing explorer cell) ──────────────────────────────
   if (view === "card") {
-    const mono = MONO[kind];
-    // word/file show the real extension (DOC/DOCX/…); others use the kind label.
-    const monoLabel = (kind === "word" || kind === "file") && file.extension ? file.extension.toUpperCase() : mono.label;
+    const items: CtxItem[] = [
+      { kind: "item", label: "Öffnen", onClick: openFile },
+      { kind: "item", label: "Herunterladen", onClick: () => window.open(downloadHref, "_blank", "noopener,noreferrer") },
+    ];
+    if (isSuperAdmin) {
+      items.push(
+        { kind: "item", label: "Umbenennen", onClick: startRename },
+        { kind: "item", label: "Verschieben", onClick: () => onManage(file) },
+        { kind: "sep" },
+        { kind: "item", label: "Löschen", onClick: doDelete, danger: true },
+      );
+    }
     return (
-      <div className="dl-tile">
-        {/* Stretched open-link: the whole card opens the file. The action buttons
-            sit above it (higher z-index), so clicking them never triggers open. */}
-        <a
-          className="dl-tile__open"
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Open ${file.title}`}
-        />
-        <div className="dl-tile__head">
-          {isImage ? (
-            /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
-            <img className="dl-tile__thumb" src={href} alt="" loading="lazy" decoding="async" />
-          ) : (
-            <span className="dl-mono" style={{ background: mono.color }}>{monoLabel}</span>
-          )}
-        </div>
+      <div
+        className="dl-cell"
+        onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); }}
+      >
+        <button type="button" className="dl-cell__hit" onClick={openFile} aria-label={`Open ${file.title}`}>
+          <span className="dl-cell__visual">
+            <FileObject kind={kind} imageUrl={isImage ? href : undefined} />
+          </span>
+        </button>
 
-        <div className="dl-tile__actions">
-          {isSuperAdmin && (
-            <button
-              type="button"
-              className="dl-tile__act"
-              onClick={(e) => { e.stopPropagation(); onManage(file); }}
-              aria-label={`Edit ${file.title}`}
-            >
-              <EditIcon />
-            </button>
-          )}
-          <a
-            className="dl-tile__act"
-            href={downloadHref}
+        {editing ? (
+          <input
+            autoFocus
+            onFocus={(e) => e.currentTarget.select()}
+            className="dl-cell__rename"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             onClick={(e) => e.stopPropagation()}
-            aria-label={`Download ${file.title}`}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitRename();
+              else if (e.key === "Escape") { setName(file.title); setEditing(false); }
+            }}
+            onBlur={commitRename}
+            aria-label="Rename file"
+          />
+        ) : (
+          <button
+            type="button"
+            className="dl-cell__name"
+            title={file.title}
+            onClick={(e) => { e.stopPropagation(); if (isSuperAdmin) startRename(); }}
           >
-            <DownloadIcon />
-          </a>
+            {file.title}
+          </button>
+        )}
+
+        <div className="dl-cell__sub">
+          <FlagIcon code={file.language} />
+          <span>{formatBytes(file.sizeBytes)}</span>
         </div>
 
-        <div className="dl-tile__meta">
-          <div className="dl-tile__title" title={file.title}>
-            {file.title}
-          </div>
-          <div className="dl-tile__sub">
-            <FlagIcon code={file.language} />
-            <span>{formatBytes(file.sizeBytes)}</span>
-          </div>
-        </div>
+        {menu && <ContextMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} />}
       </div>
     );
   }
 
-  // ── Grid view (compact — unchanged appearance, renamed to .dl-grid-tile) ────
+  // ── Grid view (compact — unchanged) ──────────────────────────────────────
   return (
     <div className="dl-grid-tile">
       <div className="dl-grid-tile__cover">
