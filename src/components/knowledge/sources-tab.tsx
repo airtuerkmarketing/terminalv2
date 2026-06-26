@@ -1,17 +1,34 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Database, AlertCircle, Pencil, History } from "lucide-react";
+import { Database, AlertCircle, Pencil, History, X } from "lucide-react";
 import { inferContentShape } from "@/lib/knowledge/shape";
 import { EditChunkModal } from "./edit-chunk-modal";
 import { AuditDrawer } from "./audit-drawer";
-import type { ChunkLayer, KnowledgeChunk, KnowledgeStats } from "@/lib/knowledge/types";
+import { KbFilterDropdown, type FilterOption } from "./kb-filter-dropdown";
+import {
+  AXIS_TO_KEY,
+  TAG_AXES,
+  type ChunkLayer,
+  type KnowledgeChunk,
+  type KnowledgeStats,
+  type TagAxis,
+  type VocabTerm,
+} from "@/lib/knowledge/types";
 
 const PAGE_SIZE = 25;
 
 const LAYER_LABEL: Record<ChunkLayer, string> = {
   company: "Identität",
   confluence: "Confluence",
+  brand: "Brands",
+};
+
+const AXIS_LABEL: Record<TagAxis, string> = {
+  topic: "Themen",
+  airline: "Airlines",
+  department: "Abteilungen",
+  provider: "Provider",
   brand: "Brands",
 };
 
@@ -75,18 +92,54 @@ function ChunkBody({ chunk }: { chunk: KnowledgeChunk }) {
 export function SourcesTab({
   chunks,
   stats,
+  vocab,
   initial,
+  onManageTags,
 }: {
   chunks: KnowledgeChunk[];
   stats: KnowledgeStats;
-  initial: { search: string; layers: ChunkLayer[]; sort: string };
+  vocab: VocabTerm[];
+  initial: { search: string; layers: ChunkLayer[]; sort: string; axes: Record<TagAxis, string[]> };
+  onManageTags: () => void;
 }) {
   const [search, setSearch] = useState(initial.search);
   const [layers, setLayers] = useState<Set<ChunkLayer>>(new Set(initial.layers));
   const [sort, setSort] = useState(initial.sort || "newest");
+  const [axisSel, setAxisSel] = useState<Record<TagAxis, string[]>>(initial.axes);
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<KnowledgeChunk | null>(null);
   const [auditing, setAuditing] = useState<KnowledgeChunk | null>(null);
+
+  // Per-axis dropdown options with live counts from the loaded corpus.
+  const axisOptions = useMemo(() => {
+    const out = {} as Record<TagAxis, FilterOption[]>;
+    for (const axis of TAG_AXES) {
+      const key = AXIS_TO_KEY[axis];
+      const counts = new Map<string, number>();
+      for (const c of chunks) for (const v of c.tags[key] ?? []) counts.set(v, (counts.get(v) ?? 0) + 1);
+      out[axis] = vocab
+        .filter((t) => t.axis === axis)
+        .map((t) => ({ value: t.value, label: t.labelDe, count: counts.get(t.value) ?? 0 }))
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+    }
+    return out;
+  }, [chunks, vocab]);
+
+  function setAxis(axis: TagAxis, next: string[]) {
+    setAxisSel((prev) => ({ ...prev, [axis]: next }));
+  }
+  function toggleLayer(l: ChunkLayer) {
+    setLayers((prev) => {
+      const next = new Set(prev);
+      next.has(l) ? next.delete(l) : next.add(l);
+      return next;
+    });
+  }
+  function clearAll() {
+    setLayers(new Set());
+    setAxisSel({ topic: [], airline: [], department: [], provider: [], brand: [] });
+    setSearch("");
+  }
 
   // Reflect filter state to the URL (shareable) without re-fetching.
   useEffect(() => {
@@ -96,14 +149,27 @@ export function SourcesTab({
       search ? p.set("search", search) : p.delete("search");
       layers.size ? p.set("layer", [...layers].join(",")) : p.delete("layer");
       sort !== "newest" ? p.set("sort", sort) : p.delete("sort");
+      for (const axis of TAG_AXES) {
+        axisSel[axis].length ? p.set(axis, axisSel[axis].join(",")) : p.delete(axis);
+      }
       window.history.replaceState(null, "", `?${p.toString()}`);
     }, 250);
     return () => clearTimeout(t);
-  }, [search, layers, sort]);
+  }, [search, layers, sort, axisSel]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let out = chunks.filter((c) => (layers.size === 0 || layers.has(c.layer)));
+    const axisMatch = (have: string[] | undefined, want: string[]) =>
+      want.length === 0 || (have ?? []).some((v) => want.includes(v));
+    let out = chunks.filter(
+      (c) =>
+        (layers.size === 0 || layers.has(c.layer)) &&
+        axisMatch(c.tags.topics, axisSel.topic) &&
+        axisMatch(c.tags.airlines, axisSel.airline) &&
+        axisMatch(c.tags.departments, axisSel.department) &&
+        axisMatch(c.tags.providers, axisSel.provider) &&
+        axisMatch(c.tags.brands, axisSel.brand),
+    );
     if (q) out = out.filter((c) => c.content.toLowerCase().includes(q) || c.title.toLowerCase().includes(q));
     out = [...out].sort((a, b) => {
       if (sort === "most-retrieved") return b.retrievedCount - a.retrievedCount;
@@ -111,23 +177,56 @@ export function SourcesTab({
       return sort === "oldest" ? cmp : -cmp;
     });
     return out;
-  }, [chunks, search, layers, sort]);
+  }, [chunks, search, layers, sort, axisSel]);
 
-  useEffect(() => setPage(0), [search, layers, sort]);
+  // Active-filter chips (layer + tag axes).
+  const activeChips: { label: string; value: string; remove: () => void }[] = [];
+  for (const l of layers)
+    activeChips.push({ label: "Layer", value: LAYER_LABEL[l], remove: () => toggleLayer(l) });
+  for (const axis of TAG_AXES)
+    for (const v of axisSel[axis])
+      activeChips.push({
+        label: AXIS_LABEL[axis],
+        value: vocab.find((t) => t.axis === axis && t.value === v)?.labelDe ?? v,
+        remove: () => setAxis(axis, axisSel[axis].filter((x) => x !== v)),
+      });
+
+  useEffect(() => setPage(0), [search, layers, sort, axisSel]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
-  function toggleLayer(l: ChunkLayer) {
-    setLayers((prev) => {
-      const next = new Set(prev);
-      next.has(l) ? next.delete(l) : next.add(l);
-      return next;
-    });
-  }
-
   return (
     <div>
+      <div className="kb-toolbar">
+        {TAG_AXES.map((axis) => (
+          <KbFilterDropdown
+            key={axis}
+            label={AXIS_LABEL[axis]}
+            options={axisOptions[axis]}
+            selected={axisSel[axis]}
+            onChange={(next) => setAxis(axis, next)}
+            onManage={onManageTags}
+          />
+        ))}
+      </div>
+
+      {activeChips.length > 0 && (
+        <div className="kb-chipstack">
+          <span className="kb-chipstack-label">Aktiv:</span>
+          {activeChips.map((c, i) => (
+            <button key={i} className="kb-filterchip" onClick={c.remove}>
+              <span className="kb-filterchip-axis">{c.label}</span>
+              {c.value}
+              <X size={12} aria-hidden="true" />
+            </button>
+          ))}
+          <button className="kb-chipstack-clear" onClick={clearAll}>
+            Alle löschen
+          </button>
+        </div>
+      )}
+
       <div className="kb-toolbar">
         <input
           className="kb-search"

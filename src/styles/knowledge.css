@@ -377,3 +377,16 @@
 .kb-fdrop-clear { appearance: none; background: none; border: none; cursor: pointer; font-size: var(--fs-xs); color: var(--text-2); padding: 2px 4px; }
 .kb-fdrop-clear:disabled { opacity: 0.4; cursor: default; }
 .kb-fdrop-manage { appearance: none; background: none; border: none; cursor: pointer; font-size: var(--fs-xs); color: var(--accent); font-weight: var(--weight-semibold); padding: 2px 4px; }
+
+/* ── Active-filter chip-stack ───────────────────────────────────────────── */
+.kb-chipstack { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: var(--space-3) 0 0; }
+.kb-chipstack-label { font-size: var(--fs-xs); color: var(--text-3); }
+.kb-filterchip {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: var(--fs-xs); font-weight: var(--weight-semibold);
+  background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border);
+  border-radius: 999px; padding: 3px var(--space-2) 3px var(--space-3);
+}
+.kb-filterchip:hover { filter: brightness(0.97); }
+.kb-filterchip-axis { color: var(--text-3); font-weight: var(--weight-regular); }
+.kb-chipstack-clear { appearance: none; background: none; border: none; cursor: pointer; font-size: var(--fs-xs); color: var(--text-3); padding: 2px 6px; }

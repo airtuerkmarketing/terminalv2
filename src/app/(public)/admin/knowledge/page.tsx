@@ -8,7 +8,7 @@ import {
   listSuggestions,
   listVocabulary,
 } from "@/lib/knowledge/queries";
-import { EMPTY_FILTERS, type ChunkLayer } from "@/lib/knowledge/types";
+import { EMPTY_FILTERS, type ChunkLayer, type TagAxis } from "@/lib/knowledge/types";
 import { KnowledgeApp } from "@/components/knowledge/knowledge-app";
 
 export const metadata = { title: "Wissensbasis" };
@@ -34,6 +34,15 @@ export default async function KnowledgePage({
     .split(",")
     .filter((l): l is ChunkLayer => l === "company" || l === "confluence" || l === "brand");
   const sort = typeof sp.sort === "string" ? sp.sort : "newest";
+  const parseList = (v: string | string[] | undefined) =>
+    typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const axes: Record<TagAxis, string[]> = {
+    topic: parseList(sp.topic),
+    airline: parseList(sp.airline),
+    department: parseList(sp.department),
+    provider: parseList(sp.provider),
+    brand: parseList(sp.brand),
+  };
 
   const [stats, sources, corrections, quality, vocab, suggestions] = await Promise.all([
     getKnowledgeStats(),
@@ -53,7 +62,7 @@ export default async function KnowledgePage({
       vocab={vocab}
       suggestions={suggestions}
       initialTab={tab}
-      initialSourceFilters={{ search, layers, sort }}
+      initialSourceFilters={{ search, layers, sort, axes }}
     />
   );
 }

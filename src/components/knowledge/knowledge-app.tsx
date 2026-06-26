@@ -13,6 +13,7 @@ import type {
   KnowledgeChunk,
   KnowledgeStats,
   QualityStats,
+  TagAxis,
   TagSuggestion,
   VocabTerm,
 } from "@/lib/knowledge/types";
@@ -36,7 +37,7 @@ export interface KnowledgeAppProps {
   vocab: VocabTerm[];
   suggestions: TagSuggestion[];
   initialTab: Tab;
-  initialSourceFilters: { search: string; layers: ChunkLayer[]; sort: string };
+  initialSourceFilters: { search: string; layers: ChunkLayer[]; sort: string; axes: Record<TagAxis, string[]> };
 }
 
 export function KnowledgeApp(props: KnowledgeAppProps) {
@@ -109,7 +110,15 @@ export function KnowledgeApp(props: KnowledgeAppProps) {
       </div>
 
       <div role="tabpanel">
-        {tab === "sources" && <SourcesTab chunks={chunks} stats={stats} initial={props.initialSourceFilters} />}
+        {tab === "sources" && (
+          <SourcesTab
+            chunks={chunks}
+            stats={stats}
+            vocab={vocab}
+            initial={props.initialSourceFilters}
+            onManageTags={() => go("taxonomy")}
+          />
+        )}
         {tab === "reviews" && <ReviewsTab pending={corrections.pending} history={corrections.history} />}
         {tab === "quality" && <QualityTab quality={quality} />}
         {tab === "taxonomy" && <TaxonomyTab vocab={vocab} suggestions={suggestions} />}
