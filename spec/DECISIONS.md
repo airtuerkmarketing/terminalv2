@@ -476,6 +476,20 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-072 — KI Mode-Chips + per-chip semantic glow (scoped exception to D-036)
+**Date:** 2026-06-26
+**Status:** Adopted on `feat/mode-chips-hero` (awaiting local review + merge). Frontend is backward-compatible with the live `rag-query` **v11** (which ignores the new `mode` field); the **modes only become functional after the `rag-query` v12 deploy** (gated on explicit sign-off — edge-function deploys are instantly global, no preview isolation).
+**Context:** The dashboard AI box answered every query through the full RAG pipeline. A high-demo-value, low-cost win for the 2026-08-01 story is letting a user paste raw text and have the KI transform it (polish a customer mail, translate, summarize, draft a de-escalation reply) — a "mode" overrides only the final LLM system prompt, leaving Voyage embeddings + the 410-chunk corpus untouched. The 4 example quick-chips below the box (`Was ist ein Zip-Mandat?` …) were placeholders and are dropped in favour of the mode-chips.
+**Decision:**
+1. **Mode-chips above the box:** a new `ChatMode` (`default | rewrite-mail | translate | summarize | escalation`) + `MODE_CHIPS` config (`hero-data.ts`); `<ModeChips>` renders 4 toggles above `.ai-search-box`. Arming a chip implies KI mode, swaps the textarea placeholder, and is **consumed per-send** (disarms back to `default` so chat-window follow-ups stay normal RAG). The old `<QuickChips>` + `QUICK_CHIPS` are removed.
+2. **Per-chip semantic glow — SCOPED EXCEPTION to D-036.** D-036 keeps `--accent` (Quantum Blue) as the *only* UI-chrome accent and bars green as a success colour. Here each chip + the armed box's glow carries a semantic colour: Mail polieren = green (`--success`), Übersetzen = blue (`--accent`), Kurzfassen = amber (`--warning`), Eskalation = red (`#dc2626`). These colours are **confined to the mode-chips and the box's armed glow ring** (`--glow-*` custom props); the accent stays Quantum-Blue everywhere else, so D-036 holds for the rest of the system. Approved by Buhara for demo differentiation.
+3. **`mode` threading (backward-compatible):** added to `RagQueryOptions`/`ragQueryStream` body (`rag/client.ts`) and `AiTurn` (`search/types.ts`). The browser still calls the edge fn directly (no Next API route).
+4. **Per-mode RAG bypass (variant C):** in `rag-query`, `rewrite-mail`/`translate`/`summarize` skip embed + `rag_hybrid_search` + rerank + the `query_team_directory` tool and run a focused system prompt (`buildModeSystemPrompt`, `allowTools:false`) — they operate on the user's pasted text, no corpus needed. `escalation` keeps the full pipeline + team tool and appends `ESCALATION_SUFFIX`. `default` is unchanged. Session + user-message logging still run for every mode (`ensureSessionAndLog`), so answers stay correctable. Language is implicit (the prompts say detect-input-language-and-answer-in-it; Opus 4.8 handles DE/EN/TR) — no UI toggle.
+5. **Hero rebreathe:** `.dh-greeting` row→centred column (orbit-seal on top, greeting below, `-24px` pull dropped); `.dh-page` top padding `--space-6`→`--space-12` and gap `--space-8`→`--space-10`, plus `--space-8` extra below the box, so the composer sits nearer the vertical middle with more air before `.qg-section`.
+**Verified:** `pnpm typecheck` + `next build` green. Browser (worktree dev, authed): greeting renders as a centred column, the 4 mode-chips render with the correct colour classes, the example chips are gone — layout confirmed. Interactive arm-glow not exercised in the worktree preview (a nested-worktree hydration artifact that also leaves the pre-existing KI pill inert) → confirm in main-repo local dev. Edge-fn v12 deploy + live mode behaviour pending sign-off.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

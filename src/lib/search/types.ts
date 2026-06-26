@@ -1,6 +1,8 @@
 /* Shared types for the dashboard hero search + (placeholder) AI mode.
  * Stage 1: the AI side is UI-only — the real RAG answer comes in stage 2. */
 
+import type { ChatMode } from "@/components/dashboard/hero-data";
+
 /** One search result, normalised across the four source tables. */
 export interface SearchHit {
   id: string;
@@ -55,6 +57,8 @@ export interface AiTurn {
   messageId?: number | null;
   /** true while streaming; its mere presence also marks a RAG (vs legacy) turn. */
   isStreaming?: boolean;
+  /** the armed sub-mode this turn was sent with (mode-chips); absent = normal RAG. */
+  chatMode?: ChatMode;
   /** out-of-corpus refusal — for styling/icon differentiation. */
   weissNicht?: boolean;
   feedback?: "helpful" | "not_helpful" | null;

@@ -38,6 +38,9 @@ export interface RagQueryOptions {
   question: string;
   sessionId?: string;
   conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+  /** KI sub-mode (mode-chips). "default" = normal RAG; others switch the system
+   * prompt in rag-query (v12+). Older edge fn versions ignore this field. */
+  mode?: string;
   onEvent: (e: RagStreamEvent) => void;
   signal?: AbortSignal;
 }
@@ -48,7 +51,7 @@ export async function ragQueryStream(opts: RagQueryOptions): Promise<{
   sessionId: string;
   messageId: number;
 }> {
-  const { question, sessionId, conversationHistory, onEvent, signal } = opts;
+  const { question, sessionId, conversationHistory, mode, onEvent, signal } = opts;
   const supabase = createClient();
 
   const {
@@ -70,6 +73,7 @@ export async function ragQueryStream(opts: RagQueryOptions): Promise<{
       question,
       session_id: sessionId,
       conversation_history: conversationHistory ?? [],
+      mode: mode ?? "default",
     }),
     signal,
   });

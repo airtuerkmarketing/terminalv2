@@ -13,8 +13,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-8);
-  padding-block: var(--space-6) var(--space-16);
+  gap: var(--space-16);                            /* generous air between greeting → box → Quick Grabs */
+  padding-block: var(--space-12) var(--space-16);  /* was --space-6 top — lowers the hero toward centre */
+}
+/* Extra breathing room around the AI cluster (margins add on top of the flex gap):
+   greeting → chips = 64px gap + 16px = 80px; box → Quick Grabs = 64px gap + 48px. */
+.dh-page > .ai-stack {
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-12);
 }
 
 /* ── Cloud Orbit ── */
@@ -877,8 +883,12 @@
   height: 18px;
 }
 
-/* ── Quick-Chips ── */
-.ai-search-chips {
+/* ── Mode-Chips (KI sub-modes above the box) ───────────────────────────────
+   Per-chip semantic glow (D-072) — a SCOPED exception to D-036: the accent stays
+   Quantum-Blue everywhere else; these mode colours live only on the chips and the
+   box's armed glow. Each chip carries its colour via the --glow-* custom props,
+   so the active/box rules below stay colour-agnostic. */
+.ai-mode-chips {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
@@ -886,22 +896,71 @@
   width: 100%;
   max-width: 720px;
 }
-.ai-search-chip {
-  padding: 8px 14px;
+.ai-mode-chip {
+  --glow: var(--accent);
+  --glow-ring: rgba(10, 130, 223, 0.45);
+  --glow-halo: rgba(10, 130, 223, 0.22);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 13px;
   border-radius: var(--radius-full);
   border: 1px solid var(--hairline);
   background: var(--surface);
   color: var(--text-2);
   font-family: inherit;
   font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 150ms var(--ease-smooth);
+  transition: color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth),
+    box-shadow 150ms var(--ease-smooth), background 150ms var(--ease-smooth);
 }
-.ai-search-chip:hover {
-  background: var(--surface-muted);
+.ai-mode-chip-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* Per-mode colour assignments (the box reuses the same rgba sets via [data-glow]). */
+.ai-mode-green { --glow: var(--success); --glow-ring: rgba(22, 163, 74, 0.45); --glow-halo: rgba(22, 163, 74, 0.22); }
+.ai-mode-blue  { --glow: var(--accent);  --glow-ring: rgba(10, 130, 223, 0.45); --glow-halo: rgba(10, 130, 223, 0.22); }
+.ai-mode-amber { --glow: var(--warning); --glow-ring: rgba(217, 119, 6, 0.45);  --glow-halo: rgba(217, 119, 6, 0.22); }
+.ai-mode-red   { --glow: #dc2626;        --glow-ring: rgba(220, 38, 38, 0.45);  --glow-halo: rgba(220, 38, 38, 0.22); }
+
+.ai-mode-chip:hover {
   color: var(--text-1);
-  border-color: var(--accent-border);
+  border-color: var(--glow-ring);
+}
+.ai-mode-chip.is-active {
+  color: var(--glow);
+  border-color: var(--glow);
+  box-shadow: 0 0 0 1px var(--glow-ring), 0 0 16px -3px var(--glow-halo);
+}
+.ai-mode-chip.is-active .ai-mode-chip-icon {
+  color: var(--glow);
+}
+
+/* Armed box: coloured glow ring + halo layered over the default search-box shadow.
+   [data-glow] is only present while a mode is armed, so the default box is untouched. */
+.ai-search-box[data-glow="green"] { --glow: var(--success); --glow-ring: rgba(22, 163, 74, 0.45); --glow-halo: rgba(22, 163, 74, 0.20); }
+.ai-search-box[data-glow="blue"]  { --glow: var(--accent);  --glow-ring: rgba(10, 130, 223, 0.45); --glow-halo: rgba(10, 130, 223, 0.20); }
+.ai-search-box[data-glow="amber"] { --glow: var(--warning); --glow-ring: rgba(217, 119, 6, 0.45);  --glow-halo: rgba(217, 119, 6, 0.20); }
+.ai-search-box[data-glow="red"]   { --glow: #dc2626;        --glow-ring: rgba(220, 38, 38, 0.45);  --glow-halo: rgba(220, 38, 38, 0.20); }
+.ai-search-box[data-glow] {
+  border-color: var(--glow-ring);
+  box-shadow: 0 0 0 1px var(--glow-ring), 0 0 30px -8px var(--glow-halo), var(--shadow-searchbox);
+}
+.ai-search-box[data-glow].is-focused {
+  box-shadow: 0 0 0 1px var(--glow-ring), 0 0 34px -6px var(--glow-halo), var(--shadow-searchbox-focus);
+}
+/* Send button adopts the armed mode's colour so it matches the active chip
+   (overrides the default black send; arrow stays white for contrast in both themes). */
+.ai-search-box[data-glow] .ai-search-send {
+  background: var(--glow);
+  border-color: var(--glow);
+  color: #fff;
 }
 
 /* ── Keyboard focus rings (WCAG 2.4.7) — accent outline, matching the house
@@ -910,7 +969,7 @@
 .ai-search-pill:focus-visible,
 .ai-search-send:focus-visible,
 .ai-search-model-option:focus-visible,
-.ai-search-chip:focus-visible,
+.ai-mode-chip:focus-visible,
 .ai-chat-source-chip:focus-visible,
 .ai-chat-new:focus-visible,
 .ai-chat-close:focus-visible,
@@ -935,10 +994,10 @@
    below this breakpoint (CloudOrbitHero's desktop gate), so no hide rule. ── */
 @media (max-width: 767px) {
   .ai-search-wrap,
-  .ai-search-chips {
+  .ai-mode-chips {
     max-width: none;
   }
-  .ai-search-chips {
+  .ai-mode-chips {
     justify-content: flex-start;
   }
   /* Mobile: edge-to-edge chat panel. Anchor BOTH sides (left:0 + the base

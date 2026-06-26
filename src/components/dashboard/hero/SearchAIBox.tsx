@@ -7,13 +7,14 @@ import {
   useMemo,
   useRef,
   useState,
+  type ClipboardEvent,
   type KeyboardEvent,
 } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUp, Paperclip } from "lucide-react";
 import { TerminalLogo } from "@/components/shell/TerminalLogo";
 import { ModelSelector } from "@/components/dashboard/hero/ModelSelector";
-import { QuickChips } from "@/components/dashboard/hero/QuickChips";
+import { ModeChips } from "@/components/dashboard/hero/ModeChips";
 import { SearchDropdown, ASK_AI_ID } from "@/components/dashboard/hero/SearchDropdown";
 import { AIChatWindow } from "@/components/dashboard/hero/AIChatWindow";
 import { CorrectionModal } from "@/components/dashboard/hero/CorrectionModal";
@@ -22,6 +23,8 @@ import {
   DEFAULT_MODEL_ID,
   LS_HISTORY,
   LS_MODEL,
+  MODE_CHIPS,
+  type ChatMode,
 } from "@/components/dashboard/hero-data";
 import type {
   AiSource,
@@ -70,6 +73,7 @@ export function SearchAIBox() {
   const [chatOpen, setChatOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [correctTurn, setCorrectTurn] = useState<AiTurn | null>(null);
+  const [chatMode, setChatMode] = useState<ChatMode>("default");
 
   // One browser client for the component's lifetime — used to subscribe to auth
   // state changes (clears the chat on login/logout, see effect below).
@@ -84,6 +88,9 @@ export function SearchAIBox() {
 
   const dropdownOpen =
     mode === "search" && focused && query.trim().length >= 2;
+
+  // The armed mode-chip (if any) — drives the placeholder hint + box glow color.
+  const activeChip = MODE_CHIPS.find((c) => c.id === chatMode);
 
   const flatHits = useMemo<SearchHit[]>(
     () => [
@@ -211,6 +218,17 @@ export function SearchAIBox() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [focused]);
 
+  // ── Auto-grow the textarea with its content: height tracks scrollHeight up to
+  //    the CSS max-height (220px), beyond which overflow-y:auto scrolls. Mirrors
+  //    the chat-window composer; resets back to min-height when the query clears
+  //    (e.g. after send). Hand-rolled — no dependency (minimumReleaseAge policy). ──
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [query]);
+
   const submitAi = useCallback(
     async (text: string) => {
       const qq = text.trim();
@@ -221,6 +239,11 @@ export function SearchAIBox() {
       setActiveId(null);
       setChatOpen(true);
       setQuery("");
+
+      // Consume the armed mode for THIS send, then disarm so the chip de-highlights
+      // and the next dashboard query (+ chat-window follow-ups) default to normal RAG.
+      const activeMode = chatMode;
+      if (activeMode !== "default") setChatMode("default");
 
       // History from completed prior turns (rag-query keeps the last 10).
       const conversationHistory = turnsRef.current
@@ -239,6 +262,7 @@ export function SearchAIBox() {
           model,
           answer: { text: "", quellen: [], konfidenz: "mittel", weiss_nicht: false },
           isStreaming: true,
+          chatMode: activeMode !== "default" ? activeMode : undefined,
         },
       ]);
       const patchTurn = (u: Partial<AiTurn>) =>
@@ -249,6 +273,7 @@ export function SearchAIBox() {
           question: qq,
           sessionId: sessionId ?? undefined,
           conversationHistory,
+          mode: activeMode,
           onEvent: (e) => {
             if (e.type === "session" && e.sessionId) {
               setSessionId(e.sessionId);
@@ -308,7 +333,7 @@ export function SearchAIBox() {
         }
       }
     },
-    [model, sessionId]
+    [model, sessionId, chatMode]
   );
 
   const handleFeedbackChange = useCallback(
@@ -404,25 +429,68 @@ export function SearchAIBox() {
     }
   }
 
-  function onPickChip(text: string) {
-    setQuery(text);
-    setFocused(true);
+  function onToggleMode(next: ChatMode) {
+    // Toggling a chip arms/disarms a focused KI mode. Arming implies KI mode —
+    // the utility prompts always go through rag-query, never the live search.
+    setChatMode(next);
+    if (next !== "default") {
+      setMode("ai");
+      setFocused(false);
+      setActiveId(null);
+    }
     textareaRef.current?.focus();
+  }
+
+  // Tidy paste: some source apps (Outlook / webmail / Confluence) emit a blank
+  // line after EVERY line on copy ("doubled" newlines). Detect that shape — no
+  // single \n between text — and halve it to restore the original spacing;
+  // otherwise just trim runs of 3+ newlines to one blank line. Cosmetic only
+  // (Mail polieren reformats anyway). No-op when the text is already clean.
+  function onPaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    const raw = e.clipboardData.getData("text");
+    if (!raw) return;
+    const lf = raw.replace(/\r\n?/g, "\n");
+    const doubled = !/[^\n]\n[^\n]/.test(lf) && /\n\n/.test(lf);
+    const cleaned = doubled
+      ? lf.replace(/\n+/g, (m) => "\n".repeat(Math.max(1, Math.floor(m.length / 2))))
+      : lf.replace(/\n{3,}/g, "\n\n");
+    if (cleaned === raw) return; // already clean → let the native paste happen
+    e.preventDefault();
+    const el = e.currentTarget;
+    const start = el.selectionStart ?? query.length;
+    const end = el.selectionEnd ?? query.length;
+    setQuery(query.slice(0, start) + cleaned + query.slice(end));
+    const caret = start + cleaned.length;
+    requestAnimationFrame(() => {
+      try {
+        el.setSelectionRange(caret, caret);
+      } catch {
+        /* element may have unmounted */
+      }
+    });
   }
 
   return (
     <div className="ai-stack">
+      <ModeChips active={chatMode} onToggle={onToggleMode} />
       <div className="ai-search-wrap" ref={boxRef}>
-        <div className={`ai-search-box${focused ? " is-focused" : ""}`}>
+        <div
+          className={`ai-search-box${focused ? " is-focused" : ""}`}
+          data-glow={activeChip?.glow}
+        >
           <textarea
             ref={textareaRef}
             className="ai-search-textarea"
             rows={3}
             value={query}
-            placeholder={mode === "ai" ? "Frag die KI…" : "Frag mich alles…"}
+            placeholder={
+              activeChip?.placeholder ??
+              (mode === "ai" ? "Ask the AI…" : "Ask me anything…")
+            }
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
             onKeyDown={onKeyDown}
+            onPaste={onPaste}
           />
 
           <div className="ai-search-divider" />
@@ -433,10 +501,10 @@ export function SearchAIBox() {
                 type="button"
                 className="ai-search-pill"
                 disabled
-                title="Anhänge kommen in Stufe 2"
+                title="Attachments coming in stage 2"
               >
                 <Paperclip className="ai-search-pill-icon" aria-hidden="true" />
-                <span>Anhang</span>
+                <span>Attach</span>
               </button>
               <button
                 type="button"
@@ -445,7 +513,7 @@ export function SearchAIBox() {
                 aria-pressed={mode === "ai"}
               >
                 <TerminalLogo variant="mark" title="" className="ai-search-pill-icon ai-ask-mark" />
-                <span>KI fragen</span>
+                <span>Ask AI</span>
               </button>
             </div>
 
@@ -458,7 +526,7 @@ export function SearchAIBox() {
                 className="ai-search-send"
                 disabled={!query.trim()}
                 onClick={() => submitAi(query)}
-                aria-label="Senden"
+                aria-label="Send"
               >
                 <ArrowUp className="ai-search-send-icon" aria-hidden="true" />
               </button>
@@ -478,8 +546,6 @@ export function SearchAIBox() {
           />
         )}
       </div>
-
-      <QuickChips onPick={onPickChip} />
 
       <AIChatWindow
         open={chatOpen}

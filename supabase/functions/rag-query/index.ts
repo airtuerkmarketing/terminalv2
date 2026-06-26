@@ -87,10 +87,21 @@ const CORS_HEADERS = {
 const EXPOSE_HEADERS = 'X-Session-Id, X-Message-Id, X-Weiss-Nicht'
 
 // ============ Types ============
+// KI sub-modes (mode-chips, D-072). The 3 utility modes operate on the user's
+// pasted text only, so they bypass RAG retrieval + the team-directory tool and run
+// a focused system prompt; 'default' + 'escalation' keep the full pipeline.
+type ChatMode = 'default' | 'rewrite-mail' | 'translate' | 'summarize' | 'escalation'
+const RAG_BYPASS_MODES: ReadonlySet<ChatMode> = new Set([
+  'rewrite-mail',
+  'translate',
+  'summarize',
+])
+
 interface RagQueryRequest {
   question: string
   session_id?: string
   conversation_history?: Array<{ role: 'user' | 'assistant'; content: string }>
+  mode?: ChatMode
 }
 
 interface RetrievedChunk {
@@ -113,7 +124,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = (await req.json()) as RagQueryRequest
-    const { question, session_id, conversation_history = [] } = body
+    const { question, session_id, conversation_history = [], mode = 'default' } = body
 
     if (!question || question.trim().length === 0) {
       return jsonError('Question required', 400)
@@ -140,6 +151,28 @@ Deno.serve(async (req: Request) => {
     const voyageKey = Deno.env.get('VOYAGE_API_KEY')!
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')!
 
+    // === Mode branch: RAG-bypass utility modes (rewrite-mail / translate / summarize) ===
+    // They operate purely on the user's pasted text — no corpus needed — so they skip
+    // embed/retrieval/rerank and the team-directory tool, and run a focused system prompt.
+    // Session + user-message logging still happen (history/audit + correctable message_id).
+    if (RAG_BYPASS_MODES.has(mode)) {
+      const activeSessionId = await ensureSessionAndLog(
+        supabaseService,
+        session_id,
+        user.id,
+        question,
+      )
+      return await streamClaudeResponse({
+        systemPrompt: buildModeSystemPrompt(mode),
+        messages: buildConversation(conversation_history, question),
+        anthropicKey,
+        supabaseService,
+        sessionId: activeSessionId,
+        retrievedChunks: [],
+        allowTools: false,
+      })
+    }
+
     // === Step 1: Embed question (Voyage, 5s timeout -> 503) ===
     let queryEmbedding: number[]
     try {
@@ -149,26 +182,13 @@ Deno.serve(async (req: Request) => {
       return jsonError('Embedding service unavailable, please retry', 503)
     }
 
-    // === Step 2: Get/create session (C14: BEFORE retrieval check) ===
-    let activeSessionId = session_id
-    if (!activeSessionId) {
-      const { data: newSession, error: sessionErr } = await supabaseService
-        .from('ai_chat_sessions')
-        .insert({ user_id: user.id, title: question.slice(0, 100) })
-        .select('id')
-        .single()
-      if (sessionErr || !newSession) {
-        throw new Error(`Session creation failed: ${sessionErr?.message}`)
-      }
-      activeSessionId = newSession.id
-    }
-
-    // === Step 3: Log user message (C14: BEFORE retrieval check) ===
-    await supabaseService.from('ai_chat_messages').insert({
-      session_id: activeSessionId,
-      role: 'user',
-      content: question,
-    })
+    // === Step 2+3: Get/create session + log user message (C14: BEFORE retrieval) ===
+    const activeSessionId = await ensureSessionAndLog(
+      supabaseService,
+      session_id,
+      user.id,
+      question,
+    )
 
     // === Step 4: Hybrid retrieval ===
     const { data: rawChunks, error: retrievalError } = await supabaseService.rpc(
@@ -191,7 +211,7 @@ Deno.serve(async (req: Request) => {
       console.warn(
         'UNEXPECTED: rag_hybrid_search returned 0 rows — unreachable while priority-1 context entries exist',
       )
-      return await streamWeissNichtResponse(activeSessionId!, supabaseService)
+      return await streamWeissNichtResponse(activeSessionId, supabaseService)
     }
 
     // === Step 6: Identity-reserved rerank ===
@@ -202,7 +222,10 @@ Deno.serve(async (req: Request) => {
     )
 
     // === Step 7: Build prompt + stream Claude ===
-    const systemPrompt = buildSystemPrompt(finalChunks)
+    // 'escalation' keeps the full RAG context + team tool and appends a draft-reply
+    // instruction; 'default' is the unchanged base prompt.
+    let systemPrompt = buildSystemPrompt(finalChunks)
+    if (mode === 'escalation') systemPrompt += ESCALATION_SUFFIX
     const messages = buildConversation(conversation_history, question)
 
     return await streamClaudeResponse({
@@ -210,7 +233,7 @@ Deno.serve(async (req: Request) => {
       messages,
       anthropicKey,
       supabaseService,
-      sessionId: activeSessionId!,
+      sessionId: activeSessionId,
       retrievedChunks: finalChunks,
     })
   } catch (err) {
@@ -352,6 +375,94 @@ async function rerankWithIdentity(
   return [...identityChunks, ...rerankedTop]
 }
 
+// ============ Session + user-message logging (shared by all modes) ============
+// C14: create/reuse the session and log the user message BEFORE any retrieval or
+// generation, so even a bypass/refusal answer stays correctable (valid message_id).
+async function ensureSessionAndLog(
+  supabaseService: ReturnType<typeof createClient>,
+  sessionId: string | undefined,
+  userId: string,
+  question: string,
+): Promise<string> {
+  let activeSessionId = sessionId
+  if (!activeSessionId) {
+    const { data: newSession, error: sessionErr } = await supabaseService
+      .from('ai_chat_sessions')
+      .insert({ user_id: userId, title: question.slice(0, 100) })
+      .select('id')
+      .single()
+    if (sessionErr || !newSession) {
+      throw new Error(`Session creation failed: ${sessionErr?.message}`)
+    }
+    activeSessionId = newSession.id as string
+  }
+  await supabaseService.from('ai_chat_messages').insert({
+    session_id: activeSessionId,
+    role: 'user',
+    content: question,
+  })
+  return activeSessionId
+}
+
+// ============ Mode prompts (mode-chips, D-072) ============
+// Focused system prompts for the RAG-bypass utility modes. They share the airtuerk
+// Intelligence persona but drop the retrieval/team-directory machinery — the whole
+// job is transforming the user's pasted text. Language is handled implicitly: each
+// prompt says detect-input-language-and-answer-in-it (Opus 4.8 is reliably
+// multilingual across DE/EN/TR), so no UI language toggle is needed.
+const MODE_INTRO =
+  'Du bist airtuerk Intelligence, die interne KI-Assistenz der airtuerk Service GmbH.'
+
+const REWRITE_MAIL_PROMPT = `${MODE_INTRO} Du arbeitest im **Mail-Polier-Modus**.
+
+Der Nutzer-Input ist Rohtext für eine geschäftliche E-Mail. Deine Aufgabe:
+1. Erkenne die Sprache des Inputs (Deutsch, Englisch oder Türkisch) und antworte AUSSCHLIESSLICH in dieser Sprache.
+2. Schreibe den Text in einen freundlichen, professionellen Kundenmail-Ton um — warm aber professionell, kein steifes Corporate-Deutsch, kein "Sehr geehrte Damen und Herren", wenn der Kontext informeller ist.
+3. Behalte ALLE inhaltlichen Fakten, Zahlen, Daten, Namen und Buchungsdetails exakt bei. Erfinde nichts hinzu und lass nichts Inhaltliches weg.
+4. Korrigiere Rechtschreibung, Grammatik und Zeichensetzung.
+5. Gib NUR den polierten Mail-Text aus — keine Erklärungen, kein Vorwort, keine Markdown-Überschriften, keine Quellenangaben, keine Anführungszeichen um den Text.`
+
+const TRANSLATE_PROMPT = `${MODE_INTRO} Du arbeitest im **Übersetzungs-Modus**.
+
+Der Nutzer-Input ist ein zu übersetzender Text. Deine Aufgabe:
+1. Erkenne die Ausgangssprache. Standard-Zielsprachen: ist der Input Deutsch → übersetze nach Englisch UND Türkisch (beide, klar mit Sprach-Überschrift getrennt). Ist der Input Englisch oder Türkisch → übersetze nach Deutsch. Nennt der Nutzer ausdrücklich eine Zielsprache, befolge stattdessen diese.
+2. Übersetze idiomatisch und sinngemäß, nicht wörtlich. Behalte Branchen-Fachbegriffe bei (PNR, NDC, Refund, Konti, Storno).
+3. Behalte Zahlen, Eigennamen, Daten und Buchungsdetails exakt bei.
+4. Gib NUR die Übersetzung(en) aus — keine Erklärungen, kein Vorwort, keine Quellenangaben.`
+
+const SUMMARIZE_PROMPT = `${MODE_INTRO} Du arbeitest im **Kurzfass-Modus**.
+
+Der Nutzer-Input ist ein längerer Text (E-Mail-Verlauf, Dokument, Notizen). Deine Aufgabe:
+1. Erkenne die Sprache des Inputs und antworte in dieser Sprache.
+2. Fasse den Kern in 2–5 prägnanten Punkten zusammen. Gibt es klare To-Dos oder Fristen, liste sie separat unter "Nächste Schritte".
+3. Behalte alle entscheidungsrelevanten Fakten, Zahlen, Fristen und Namen exakt bei. Erfinde nichts hinzu.
+4. Keine Einleitung wie "Hier ist die Zusammenfassung" — geh direkt in den Inhalt.`
+
+function buildModeSystemPrompt(mode: ChatMode): string {
+  switch (mode) {
+    case 'translate':
+      return TRANSLATE_PROMPT
+    case 'summarize':
+      return SUMMARIZE_PROMPT
+    case 'rewrite-mail':
+    default:
+      // Only RAG_BYPASS_MODES reach here; mail-polish is the safe fallback.
+      return REWRITE_MAIL_PROMPT
+  }
+}
+
+// Appended to the full RAG system prompt when mode === 'escalation'. Escalation
+// KEEPS retrieval + the team-directory tool (it needs real policies/contacts), so
+// it's a suffix on buildSystemPrompt rather than a standalone prompt.
+const ESCALATION_SUFFIX = `
+
+# Sondermodus: Eskalations-Antwort (für diese Anfrage aktiv)
+Der Nutzer-Input ist eine Kunden-Beschwerde oder eine eskalierte Anfrage. Zusätzlich zu allen obigen Regeln:
+- Erkenne die Sprache des Inputs und entwirf die Antwort in dieser Sprache.
+- Entwirf eine diplomatische, deeskalierende Kundenmail: zeige Verständnis, übernimm Verantwortung dort wo angebracht, und biete konkrete nächste Schritte oder eine Lösung an — ohne Schuldeingeständnisse über das Belegte hinaus.
+- Nutze die bereitgestellten Quellen und das Team-Verzeichnis, um die richtige Zuständigkeit/Eskalationsstufe und reale Kontaktwege zu nennen (beachte die Telefonnummern-Politik).
+- Gib den fertigen Antwort-Entwurf aus. Eine kurze Zeile zur empfohlenen internen Eskalation darf vorangestellt werden, klar getrennt vom eigentlichen Mail-Text.`
+
 // ============ System prompt ============
 function buildSystemPrompt(chunks: RetrievedChunk[]): string {
   const isIdentity = (c: RetrievedChunk) =>
@@ -404,7 +515,7 @@ ${facts}
 
 3. **Unsicherheit innerhalb der Wissensbasis:** Wenn die Quellen keine eindeutige Antwort enthalten (Frage ist airtuerk-bezogen, aber Details fehlen), sage explizit: "Das geht aus unseren Quellen nicht eindeutig hervor. Ich empfehle, Murat Sinim (Head of Operations) oder das Service-Team direkt anzusprechen."
 
-4. **Sprache:** Antworte auf Deutsch. Türkische/englische Fachbegriffe (Konti, PNR, Refund, NDC) in Originalsprache.
+4. **Sprache:** Antworte in der Sprache, in der die aktuelle Frage des Nutzers gestellt ist (Deutsch, Englisch oder Türkisch). Erkenne die Sprache der Frage und antworte in GENAU dieser Sprache. Die Quellen sind überwiegend auf Deutsch — übertrage die relevanten Fakten in die Antwortsprache. Fachbegriffe (Konti, PNR, Refund, NDC) bleiben in Originalsprache. AUSNAHME: Die exakt vorgegebenen Protokoll-Phrasen in Regel 7 (außerhalb der Wissensbasis) und Regel 8 (Identität) bleiben IMMER wörtlich auf Deutsch wie angegeben, unabhängig von der Frage-Sprache.
 
 5. **Struktur:** Kurze, präzise Antworten. Detaillierte Formatierungsregeln im Abschnitt „Antwort-Formatierung" unten.
 
@@ -489,6 +600,7 @@ async function streamClaudeResponse({
   supabaseService,
   sessionId,
   retrievedChunks,
+  allowTools = true,
 }: {
   systemPrompt: string
   messages: Array<{ role: 'user' | 'assistant'; content: string }>
@@ -496,6 +608,7 @@ async function streamClaudeResponse({
   supabaseService: ReturnType<typeof createClient>
   sessionId: string
   retrievedChunks: RetrievedChunk[]
+  allowTools?: boolean
 }): Promise<Response> {
   const startTime = Date.now()
 
@@ -549,7 +662,7 @@ async function streamClaudeResponse({
   // First call OUTSIDE the stream so an early API failure still returns a clean HTTP
   // 500 (and deletes the empty row) instead of a half-open stream — preserves the
   // pre-tool error semantics for the common "first call fails" case.
-  const firstRes = await callClaude(true)
+  const firstRes = await callClaude(allowTools)
   if (!firstRes.ok || !firstRes.body) {
     const detail = firstRes.body ? await firstRes.text() : 'no body'
     await supabaseService.from('ai_chat_messages').delete().eq('id', messageId)
@@ -706,7 +819,7 @@ async function streamClaudeResponse({
             }
             convo.push({ role: 'user', content: toolResults })
 
-            const offerTools = toolRounds < MAX_TOOL_ITERATIONS
+            const offerTools = allowTools && toolRounds < MAX_TOOL_ITERATIONS
             res = await callClaude(offerTools)
             if (!res.ok || !res.body) {
               const detail = res.body ? await res.text() : 'no body'

@@ -5,11 +5,11 @@
 
 .dh-greeting {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;        /* orbit-seal on top, greeting centred below it */
   align-items: center;
   justify-content: center;
-  gap: var(--space-5);                       /* 20px */
-  margin-bottom: calc(-1 * var(--space-6));  /* -24px — pull SearchAIBox closer */
+  gap: var(--space-4);           /* 16px between the seal and the title */
+  text-align: center;
 }
 
 .dh-greeting-title {

@@ -162,16 +162,16 @@ export function AIChatWindow({
             className={`ai-chat-new${confirming ? " is-confirming" : ""}`}
             onClick={clickNewChat}
             disabled={turns.length === 0}
-            title="Neuer Chat (Verlauf löschen)"
+            title="New chat (clear history)"
           >
             <Plus className="ai-chat-new-icon" aria-hidden="true" />
-            <span>{confirming ? "Wirklich löschen?" : "Neuer Chat"}</span>
+            <span>{confirming ? "Delete history?" : "New chat"}</span>
           </button>
           <button
             type="button"
             className="ai-chat-close"
             onClick={onClose}
-            aria-label="Chat schließen"
+            aria-label="Close chat"
           >
             <X className="ai-chat-close-icon" aria-hidden="true" />
           </button>
@@ -198,8 +198,8 @@ export function AIChatWindow({
       <div className={`ai-chat-input${turns.length === 0 ? " is-centered" : ""}`}>
         {turns.length === 0 && (
           <div className="ai-chat-greeting">
-            <h3 className="ai-chat-greeting-title">Wie kann ich helfen?</h3>
-            <p className="ai-chat-greeting-sub">Frag mich alles über euer Wissen.</p>
+            <h3 className="ai-chat-greeting-title">How can I help?</h3>
+            <p className="ai-chat-greeting-sub">Ask me anything about your knowledge.</p>
           </div>
         )}
         <div className="ai-chat-composer">
@@ -208,7 +208,7 @@ export function AIChatWindow({
             className="ai-chat-textarea"
             rows={1}
             value={draft}
-            placeholder="Nachfrage stellen…"
+            placeholder="Ask a follow-up…"
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKeyDown}
           />
@@ -217,7 +217,7 @@ export function AIChatWindow({
             className="ai-chat-send"
             disabled={!draft.trim()}
             onClick={send}
-            aria-label="Senden"
+            aria-label="Send"
           >
             <ArrowUp className="ai-chat-send-icon" aria-hidden="true" />
           </button>
