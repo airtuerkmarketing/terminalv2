@@ -212,10 +212,49 @@ export interface CreateTeamMemberInput {
 }
 
 export interface UpdateOwnProfilePatch {
+  /** Work / internal phone. */
   phone?: string | null;
+  /** Private phone (kept out of the public /team projection). */
+  privatePhone?: string | null;
   /** ISO date "YYYY-MM-DD", or null to clear. */
   dateOfBirth?: string | null;
   showBirthday?: boolean;
+  /** Short status line, ≤50 chars (e.g. "Happy to work"). */
+  statusLine?: string | null;
+  about?: string | null;
+  location?: string | null;
+  company?: string | null;
+  /** Portfolio / personal website (full URL or text). */
+  website?: string | null;
+  github?: string | null;
+  linkedin?: string | null;
+  instagram?: string | null;
+}
+
+/** Self-service profile, prefilled into the account form. */
+export interface OwnProfile {
+  // Read-only identity (never self-editable)
+  teamMemberId: string;
+  fullName: string | null;
+  /** The login e-mail — read-only (changing it is an auth-level operation). */
+  email: string | null;
+  role: Role;
+  position: string | null;
+  department: string | null;
+  avatarUrl: string | null;
+  // Editable
+  phone: string | null;
+  privatePhone: string | null;
+  dateOfBirth: string | null;
+  showBirthday: boolean;
+  statusLine: string | null;
+  about: string | null;
+  location: string | null;
+  company: string | null;
+  website: string | null;
+  github: string | null;
+  linkedin: string | null;
+  instagram: string | null;
 }
 
 // ── PostgREST row shapes (snake_case) + select strings ──────────────────────
@@ -677,12 +716,16 @@ export async function updateUserRole(userId: string, newRole: Role): Promise<voi
  *  - 60s rate-limit via team_members.last_invited_at (AP 1, migration
  *    20260624111148): a re-invite inside the window throws "RATE_LIMIT:<seconds>".
  *
- * Flow: auth.admin.inviteUserByEmail mints the auth user; the handle_new_user
- * trigger (migration 0030) synchronously inserts the profile with the email's
- * default role (from user_role_defaults), so we then UPDATE that row to the
- * bidirectional team_member link (migrations 0034/0035) and, only if an explicit
- * role was passed, override the role. Finally we stamp last_invited_at (so the
- * rate-limit + UI "letzte Invitation" display work). Returns the new auth id.
+ * Flow: auth.admin.inviteUserByEmail mints the auth user (the email link lands on
+ * /auth/confirm with a redirectTo, and carries full_name in user_metadata so the
+ * handle_new_user trigger fills profiles.full_name). We then set the
+ * force_password_change app_metadata flag (first-login set-password backstop —
+ * cleared by updatePasswordAction). The handle_new_user trigger (migration 0030)
+ * synchronously inserts the profile with the email's default role (from
+ * user_role_defaults), so we UPDATE that row to the bidirectional team_member link
+ * (migrations 0034/0035) and, only if an explicit role was passed, override the
+ * role. Finally we stamp last_invited_at (so the rate-limit + UI "letzte
+ * Invitation" display work). Returns the new auth id.
  */
 export async function inviteUser(input: InviteUserInput): Promise<{ userId: string }> {
   const identity = await requireAdmin();
@@ -693,15 +736,24 @@ export async function inviteUser(input: InviteUserInput): Promise<{ userId: stri
   const teamMemberId = input.teamMemberId;
   const admin = createAdminClient();
 
-  // Resolve the target: the address to invite + the rate-limit timestamp in one read.
+  // Resolve the target: the address to invite + the rate-limit timestamp + the
+  // name (seeded into user_metadata so handle_new_user fills profiles.full_name).
   const { data: tm } = await admin
     .from("team_members")
-    .select("id, email, last_invited_at")
+    .select("id, email, first_name, last_name, last_invited_at")
     .eq("id", teamMemberId)
     .maybeSingle();
-  const tmRow = tm as { id: string; email: string | null; last_invited_at: string | null } | null;
+  const tmRow = tm as {
+    id: string;
+    email: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    last_invited_at: string | null;
+  } | null;
   if (!tmRow) throw new Error("NO_TEAM_MEMBER");
   if (!tmRow.email) throw new Error("NO_EMAIL");
+  const fullName =
+    [tmRow.first_name, tmRow.last_name].filter((s) => s && s.trim()).join(" ").trim() || undefined;
 
   const email = tmRow.email.trim().toLowerCase();
   // Variante A: only corporate addresses are invitable (single source of truth in
@@ -713,10 +765,28 @@ export async function inviteUser(input: InviteUserInput): Promise<{ userId: stri
     if (secondsAgo < 60) throw new Error(`RATE_LIMIT:${Math.ceil(60 - secondsAgo)}`);
   }
 
-  const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email);
+  // full_name rides along in user_metadata so the handle_new_user trigger populates
+  // profiles.full_name on insert. We deliberately pass NO redirectTo: the invite
+  // email template builds the link from GoTrue's own {{ .SiteURL }} (→
+  // /auth/confirm), so a redirectTo here would be redundant and risks a stale
+  // NEXT_PUBLIC_SITE_URL host that isn't on the redirect allow-list.
+  const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(
+    email,
+    fullName ? { data: { full_name: fullName } } : undefined
+  );
   if (inviteErr) throw inviteErr;
   const newUserId = invited.user?.id;
   if (!newUserId) throw new Error("INVITE_FAILED");
+
+  // Force the first-login password change. This is the backstop to the explicit
+  // /auth/confirm → update-password redirect: even if the invitee navigates away,
+  // the (public) layout gate holds them at /login/update-password until they set a
+  // password (updatePasswordAction clears this flag). app_metadata is service-role
+  // only; GoTrue merges the key, leaving any other app_metadata intact.
+  const { error: flagErr } = await admin.auth.admin.updateUserById(newUserId, {
+    app_metadata: { force_password_change: true },
+  });
+  if (flagErr) throw flagErr;
 
   const profilePatch: Record<string, unknown> = {
     team_member_id: teamMemberId,
@@ -883,14 +953,17 @@ export async function createTeamMember(
  *    `team_self_update` policy from AP-1 migration 20260624111148, which only
  *    lets a user touch the row linked via profiles.team_member_id = auth.uid().
  *  - COLUMN access: enforced HERE, because that policy gates the row, not the
- *    columns. Whitelist = phone, date_of_birth, show_birthday. Everything else
- *    (first_name, last_name, position, department, email, sort_order, is_lead,
- *    joined_year, tools, tasks, auth_user_id, last_invited_at, initials,
- *    avatar_asset_id — avatars go through uploadUserAvatar) is admin-only and
- *    simply never written here.
+ *    columns. Whitelist = phone, private_phone, date_of_birth, show_birthday,
+ *    status_line, about, location, company, website, github, linkedin, instagram.
+ *    Everything else (first_name, last_name, position, department, email,
+ *    sort_order, is_lead, joined_year, tools, tasks, auth_user_id,
+ *    last_invited_at, initials, avatar_asset_id — avatars go through
+ *    updateOwnAvatar) is admin-only and simply never written here. Role + email
+ *    are deliberately NOT writable (role → escalation guard; email → auth-level).
  *
  * Throws NOT_AUTHENTICATED (anon), NOT_LINKED (no team_member link),
- * INVALID_DATE, PHONE_TOO_LONG, or UPDATE_FAILED (the RLS write was rejected).
+ * INVALID_DATE, PHONE_TOO_LONG, STATUS_TOO_LONG, VALUE_TOO_LONG, or UPDATE_FAILED
+ * (the RLS write was rejected).
  */
 export async function updateOwnProfile(patch: UpdateOwnProfilePatch): Promise<void> {
   const identity = await getIdentity();
@@ -899,10 +972,15 @@ export async function updateOwnProfile(patch: UpdateOwnProfilePatch): Promise<vo
 
   const update: Record<string, unknown> = {};
 
-  if (patch.phone !== undefined) {
-    const v = patch.phone?.trim() || null;
+  // Phones (≤50).
+  for (const [key, col] of [
+    ["phone", "phone"],
+    ["privatePhone", "private_phone"],
+  ] as const) {
+    if (patch[key] === undefined) continue;
+    const v = patch[key]?.trim() || null;
     if (v && v.length > 50) throw new Error("PHONE_TOO_LONG");
-    update.phone = v;
+    update[col] = v;
   }
 
   if (patch.dateOfBirth !== undefined) {
@@ -919,6 +997,29 @@ export async function updateOwnProfile(patch: UpdateOwnProfilePatch): Promise<vo
   }
 
   if (patch.showBirthday !== undefined) update.show_birthday = !!patch.showBirthday;
+
+  // Status line — hard 50-char cap (mirrors the DB CHECK).
+  if (patch.statusLine !== undefined) {
+    const v = patch.statusLine?.trim() || null;
+    if (v && v.length > 50) throw new Error("STATUS_TOO_LONG");
+    update.status_line = v;
+  }
+
+  // Free-text + links (column → max length).
+  for (const [key, col, max] of [
+    ["about", "about", 2000],
+    ["location", "location", 120],
+    ["company", "company", 120],
+    ["website", "website", 300],
+    ["github", "github", 300],
+    ["linkedin", "linkedin", 300],
+    ["instagram", "instagram", 300],
+  ] as const) {
+    if (patch[key] === undefined) continue;
+    const v = patch[key]?.trim() || null;
+    if (v && v.length > max) throw new Error("VALUE_TOO_LONG");
+    update[col] = v;
+  }
 
   if (Object.keys(update).length === 0) return; // nothing to do
 
@@ -939,36 +1040,120 @@ export async function updateOwnProfile(patch: UpdateOwnProfilePatch): Promise<vo
   });
 }
 
+/**
+ * Read the signed-in user's own profile (all editable fields + read-only identity)
+ * to prefill the account form. RLS: team_members is authenticated-readable, so the
+ * user reads their own row. Returns null when the account has no linked
+ * team_member yet (e.g. dev@) — the caller offers `ensureOwnTeamMember`.
+ */
+export async function getOwnProfile(): Promise<OwnProfile | null> {
+  const identity = await getIdentity();
+  if (!identity) throw new Error("NOT_AUTHENTICATED");
+  if (!identity.teamMemberId) return null;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("team_members")
+    .select(
+      "first_name, last_name, position, department, phone, private_phone, date_of_birth, " +
+        "show_birthday, status_line, about, location, company, website, github, linkedin, instagram, " +
+        "avatar:assets!team_members_avatar_asset_id_fkey(public_url)"
+    )
+    .eq("id", identity.teamMemberId)
+    .maybeSingle();
+  if (!data) return null;
+  const r = data as unknown as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === "string" ? v : null);
+
+  return {
+    teamMemberId: identity.teamMemberId,
+    fullName:
+      identity.fullName ?? composeFullName(null, { first_name: str(r.first_name), last_name: str(r.last_name), department: null, avatar_asset_id: null, avatar: null }),
+    email: identity.email,
+    role: identity.role,
+    position: str(r.position),
+    department: str(r.department),
+    avatarUrl: one(r.avatar as AssetUrlRow | AssetUrlRow[] | null)?.public_url ?? null,
+    phone: str(r.phone),
+    privatePhone: str(r.private_phone),
+    dateOfBirth: str(r.date_of_birth),
+    showBirthday: r.show_birthday === true,
+    statusLine: str(r.status_line),
+    about: str(r.about),
+    location: str(r.location),
+    company: str(r.company),
+    website: str(r.website),
+    github: str(r.github),
+    linkedin: str(r.linkedin),
+    instagram: str(r.instagram),
+  };
+}
+
+/**
+ * Ensure the signed-in user has a linked team_members row, creating + linking a
+ * minimal one if missing (the "every user gets a profile" guarantee — covers the
+ * one deliberately-unlinked account, dev@). Service-role: minting + bidirectional
+ * linking is a privileged op, but it only ever acts on the caller's own identity.
+ * Idempotent — returns the existing team_member id when already linked.
+ */
+export async function ensureOwnTeamMember(): Promise<string> {
+  const identity = await getIdentity();
+  if (!identity) throw new Error("NOT_AUTHENTICATED");
+  if (identity.teamMemberId) return identity.teamMemberId;
+
+  const admin = createAdminClient();
+  const base = identity.fullName?.trim() || identity.email?.split("@")[0] || "User";
+  const parts = base.split(/\s+/).filter(Boolean);
+  const firstName = parts[0] || "User";
+  const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
+  const initials = ((firstName[0] ?? "") + (lastName[0] ?? firstName[1] ?? "")).toUpperCase() || "U";
+
+  const { data: created, error } = await admin
+    .from("team_members")
+    .insert({
+      first_name: firstName,
+      last_name: lastName,
+      email: identity.email,
+      initials,
+      auth_user_id: identity.userId,
+    })
+    .select("id")
+    .single();
+  if (error || !created) throw new Error("PROVISION_FAILED");
+  const teamMemberId = created.id as string;
+
+  const { error: linkErr } = await admin
+    .from("profiles")
+    .update({ team_member_id: teamMemberId, updated_at: new Date().toISOString() })
+    .eq("id", identity.userId);
+  if (linkErr) throw linkErr;
+
+  await logActivity({
+    userId: identity.userId,
+    action: "provision_own_team_member",
+    resourceType: "team_member",
+    resourceId: teamMemberId,
+    metadata: {},
+  });
+  return teamMemberId;
+}
+
 // ── 8. Upload avatar (service-role storage + asset upsert) ───────────────────
 
 /**
- * Upload a user's avatar. requireAdmin. The file is validated against the avatars
- * bucket config (png/jpeg/webp, ≤ 2 MB — migration 0038), stored at the canonical
- * path `<team_member_id>/avatar.<ext>`, the matching `assets` row is upserted
- * (bucket/storage_path/public_url — unique on (bucket, storage_path)), and
- * team_members.avatar_asset_id is repointed. Throws NO_TEAM_MEMBER if the profile
- * has no team_member (avatars are keyed on it), INVALID_FILE_TYPE / FILE_TOO_LARGE
- * on a bad file. Returns the asset id + its public url (the bucket is public).
+ * Core avatar write (no auth — callers gate first). Validates against the avatars
+ * bucket config (png/jpeg/webp, ≤ 2 MB — migration 0038), stores at the canonical
+ * path `<team_member_id>/avatar.<ext>`, upserts the matching `assets` row (unique
+ * on (bucket, storage_path)), and repoints team_members.avatar_asset_id. Throws
+ * INVALID_FILE_TYPE / FILE_TOO_LARGE on a bad file. Shared by the admin upload and
+ * the self-service path so both stay byte-identical.
  */
-export async function uploadUserAvatar(
-  userId: string,
-  file: File
-): Promise<{ assetId: string; url: string }> {
-  const identity = await requireAdmin();
-
+async function putAvatar(teamMemberId: string, file: File): Promise<{ assetId: string; url: string }> {
   const ext = AVATAR_MIME_TO_EXT[file.type];
   if (!ext) throw new Error("INVALID_FILE_TYPE");
   if (file.size > AVATAR_MAX_BYTES) throw new Error("FILE_TOO_LARGE");
 
   const admin = createAdminClient();
-  const { data: prof } = await admin
-    .from("profiles")
-    .select("team_member_id")
-    .eq("id", userId)
-    .maybeSingle();
-  const teamMemberId = (prof as { team_member_id: string | null } | null)?.team_member_id ?? null;
-  if (!teamMemberId) throw new Error("NO_TEAM_MEMBER");
-
   const path = `${teamMemberId}/avatar.${ext}`;
   const { error: upErr } = await admin.storage
     .from(AVATARS_BUCKET)
@@ -1003,14 +1188,61 @@ export async function uploadUserAvatar(
     .eq("id", teamMemberId);
   if (linkErr) throw linkErr;
 
+  return { assetId, url: publicUrl };
+}
+
+/**
+ * Admin uploads another user's avatar. requireAdmin; resolves the target's
+ * team_member from their profile (NO_TEAM_MEMBER if unlinked). Returns the asset
+ * id + its public url (the bucket is public).
+ */
+export async function uploadUserAvatar(
+  userId: string,
+  file: File
+): Promise<{ assetId: string; url: string }> {
+  const identity = await requireAdmin();
+
+  const admin = createAdminClient();
+  const { data: prof } = await admin
+    .from("profiles")
+    .select("team_member_id")
+    .eq("id", userId)
+    .maybeSingle();
+  const teamMemberId = (prof as { team_member_id: string | null } | null)?.team_member_id ?? null;
+  if (!teamMemberId) throw new Error("NO_TEAM_MEMBER");
+
+  const result = await putAvatar(teamMemberId, file);
   await logActivity({
     userId: identity.userId,
     action: "upload_avatar",
     resourceType: "team_member",
     resourceId: teamMemberId,
-    metadata: { targetUserId: userId, assetId },
+    metadata: { targetUserId: userId, assetId: result.assetId },
   });
-  return { assetId, url: publicUrl };
+  return result;
+}
+
+/**
+ * Self-service avatar: a signed-in user replaces their OWN avatar. Ownership is
+ * enforced by deriving the team_member from the session (NEVER a client-supplied
+ * id), so a user can only ever touch their own avatar even though the storage
+ * write runs as service-role. Auto-provisions a team_member if the account has
+ * none yet (mirrors getOwnProfile's guarantee).
+ */
+export async function updateOwnAvatar(file: File): Promise<{ url: string }> {
+  const identity = await getIdentity();
+  if (!identity) throw new Error("NOT_AUTHENTICATED");
+  const teamMemberId = identity.teamMemberId ?? (await ensureOwnTeamMember());
+
+  const result = await putAvatar(teamMemberId, file);
+  await logActivity({
+    userId: identity.userId,
+    action: "update_own_avatar",
+    resourceType: "team_member",
+    resourceId: teamMemberId,
+    metadata: { assetId: result.assetId },
+  });
+  return { url: result.url };
 }
 
 // ── 9. Deactivate (service-role ban) ─────────────────────────────────────────
@@ -1291,6 +1523,84 @@ export async function getAllTeamMembers(
   }
 
   return { teamMembers: items, totalCount: items.length };
+}
+
+// ── 11. AI-chat history for one user (super-admin audit — RLS read) ──────────
+
+export interface ChatMessageItem {
+  id: string;
+  role: "user" | "assistant" | "system";
+  /** Verbatim text — role='user' is the question the user typed. */
+  content: string;
+  createdAt: string;
+}
+
+export interface ChatSessionItem {
+  sessionId: string;
+  title: string | null;
+  createdAt: string;
+  messages: ChatMessageItem[];
+}
+
+/**
+ * One user's AI-chat history (sessions + their user/assistant messages), newest
+ * session first. RLS-scoped: the ai_chat_sessions / ai_chat_messages SELECT
+ * policies (migration 20260623060259) read `... OR is_super_admin()`, so a
+ * super_admin reading through the request-scoped createClient() (NOT service-role)
+ * sees every user's chat — and a non-super-admin physically cannot. That makes
+ * "only super_admin sees AI-chat content" a DB-enforced guarantee, not just a UI
+ * gate. `userId` is the auth/profile id (= ai_chat_sessions.user_id); messages
+ * join via session_id (the message row has no user_id column).
+ */
+export async function getUserChatHistory(
+  userId: string,
+  opts?: { sessionLimit?: number }
+): Promise<ChatSessionItem[]> {
+  const supabase = await createClient();
+  const sessionLimit = clampLimit(opts?.sessionLimit, 25, 100);
+
+  const { data: sessions } = await supabase
+    .from("ai_chat_sessions")
+    .select("id, title, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(sessionLimit);
+  const sRows = (sessions ?? []) as { id: string; title: string | null; created_at: string }[];
+  if (sRows.length === 0) return [];
+
+  const ids = sRows.map((s) => s.id);
+  const { data: messages } = await supabase
+    .from("ai_chat_messages")
+    .select("id, session_id, role, content, created_at")
+    .in("session_id", ids)
+    .in("role", ["user", "assistant"])
+    .order("created_at", { ascending: true });
+  const mRows = (messages ?? []) as {
+    id: number;
+    session_id: string;
+    role: string;
+    content: string;
+    created_at: string;
+  }[];
+
+  const bySession = new Map<string, ChatMessageItem[]>();
+  for (const m of mRows) {
+    const arr = bySession.get(m.session_id) ?? [];
+    arr.push({
+      id: String(m.id),
+      role: m.role as ChatMessageItem["role"],
+      content: m.content,
+      createdAt: m.created_at,
+    });
+    bySession.set(m.session_id, arr);
+  }
+
+  return sRows.map((s) => ({
+    sessionId: s.id,
+    title: s.title,
+    createdAt: s.created_at,
+    messages: bySession.get(s.id) ?? [],
+  }));
 }
 
 // ── 9. Brand assignments for one team member (RLS read) ──────────────────────

@@ -90,3 +90,88 @@
 @media (prefers-reduced-motion: reduce) {
   .tm-chip, .tm-card { transition: none; }
 }
+
+/* Card is a <button> (opens the detail modal) — reset native button chrome. */
+.tm-card {
+  width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; appearance: none;
+}
+.tm-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Member detail modal (AP 4) ── */
+.tmd-backdrop {
+  position: fixed; inset: 0; z-index: 120;
+  display: grid; place-items: center; padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.45);
+  overflow-y: auto;
+}
+.tmd-modal {
+  position: relative; width: 100%; max-width: 520px;
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow-y: auto;
+  background: var(--surface-flat); border: 1px solid var(--hairline);
+  border-radius: var(--card-radius); box-shadow: var(--card-shadow);
+  padding: var(--space-5);
+}
+.tmd-modal:focus { outline: none; }
+.tmd-close {
+  position: absolute; top: var(--space-3); right: var(--space-3);
+  width: 32px; height: 32px; border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-3); display: grid; place-items: center; cursor: pointer;
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.tmd-close:hover { background: var(--surface-muted); color: var(--text-1); }
+.tmd-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.tmd-header { display: flex; gap: var(--space-4); align-items: center; padding-right: 36px; }
+.tmd-avatar {
+  width: 84px; height: 84px; flex-shrink: 0; border-radius: 50%; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: var(--fs-lg); font-weight: var(--weight-semibold);
+}
+.tmd-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.tmd-headmeta { min-width: 0; }
+.tmd-name {
+  margin: 0; display: flex; align-items: center; gap: var(--space-2);
+  font-size: var(--fs-lg); font-weight: var(--weight-semibold); color: var(--text-1);
+}
+.tmd-lead {
+  font-size: var(--fs-xs); font-weight: var(--weight-semibold); color: var(--accent);
+  background: var(--accent-soft); padding: 2px 8px; border-radius: 999px;
+}
+.tmd-sub { margin-top: 2px; font-size: var(--fs-sm); color: var(--text-3); }
+.tmd-status { margin: var(--space-2) 0 0; font-size: var(--fs-sm); color: var(--text-1); font-style: italic; }
+
+.tmd-body { margin-top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); }
+.tmd-about { margin: 0; font-size: var(--fs-sm); color: var(--text-1); line-height: var(--lh-relaxed, 1.6); white-space: pre-wrap; }
+
+.tmd-block { border-top: 1px solid var(--separator); padding-top: var(--space-3); }
+.tmd-block-title {
+  margin: 0 0 var(--space-2); font-size: var(--fs-xs); font-weight: var(--weight-semibold);
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-3);
+}
+.tmd-dl { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.tmd-row { display: grid; grid-template-columns: 120px 1fr; gap: var(--space-3); font-size: var(--fs-sm); }
+.tmd-row dt { color: var(--text-3); }
+.tmd-row dd { margin: 0; color: var(--text-1); word-break: break-word; }
+.tmd-row a { color: var(--accent); text-decoration: none; }
+.tmd-row a:hover { text-decoration: underline; }
+
+.tmd-socials { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.tmd-social {
+  font-size: var(--fs-sm); color: var(--accent); text-decoration: none;
+  border: 1px solid var(--hairline); border-radius: 999px; padding: 5px 12px;
+  transition: background-color 150ms var(--ease-smooth);
+}
+.tmd-social:hover { background: var(--accent-soft); }
+
+.tmd-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-2); }
+.tmd-chip {
+  font-size: var(--fs-xs); color: var(--text-1); background: var(--surface-muted);
+  border: 1px solid var(--hairline); border-radius: 999px; padding: 3px 10px;
+}
+
+@media (max-width: 640px) {
+  .tmd-header { flex-direction: column; text-align: center; padding-right: 0; }
+  .tmd-row { grid-template-columns: 1fr; gap: 2px; }
+}
