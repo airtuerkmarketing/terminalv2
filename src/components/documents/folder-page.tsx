@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import "@/styles/document-library.css";
-import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
+import type { ViewMode } from "@/components/ui/view-toggle";
 import { searchFilesInFolder } from "@/app/(public)/documents-library/actions";
 import type { FileDTO, FileSortKey, FolderDTO } from "@/lib/documents";
 import { Breadcrumb } from "./breadcrumb";
@@ -12,7 +12,8 @@ import { FileRow } from "./file-row";
 import { FileEditModal } from "./file-edit-modal";
 import { UploadModal } from "./upload-modal";
 import { FolderActionsMenu } from "./folder-actions-menu";
-import { FolderCard3D } from "./folder-card-3d";
+import { FolderCard3D, FolderRow } from "./folder-card-3d";
+import { LibraryToolbar } from "./library-toolbar";
 
 const PAGE_SIZE = 60;
 
@@ -157,9 +158,9 @@ export function FolderPage({
     />
   ));
 
-  // Right-hand (or full-width) area: folders + files + load-more. In card view
-  // folders and files share one explorer grid; grid/list views keep their dense
-  // file layout with the folders in an explorer grid above.
+  // Right-hand (or full-width) area: folders + files + load-more. Two views:
+  // card → folders + files in one free-standing explorer grid (folders first);
+  // list → folder rows then file rows in one .dl-list. (Grid view removed.)
   const filesArea = (
     <>
       {noFiles && !hasFolders ? (
@@ -177,7 +178,32 @@ export function FolderPage({
             )}
           </div>
         )
-      ) : view === "card" ? (
+      ) : view === "list" ? (
+        <div className="dl-list">
+          <div className="dl-list-head">
+            <span />
+            <SortTh label="Name" sortKey="name" />
+            <span>Language</span>
+            <SortTh label="Size" sortKey="size" />
+            <SortTh label="Modified" sortKey="date" />
+            <span />
+          </div>
+          {childFolders.map((f) => (
+            <FolderRow
+              key={f.id}
+              id={f.id}
+              name={f.name}
+              href={`/documents-library/${f.path}`}
+              isPublic={f.isPublic}
+              fileCount={0}
+              isSuperAdmin={isSuperAdmin}
+            />
+          ))}
+          {files.map((f) => (
+            <FileRow key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
+          ))}
+        </div>
+      ) : (
         <div className="dl-explorer-grid">
           {folderCards}
           {files.map((f) => (
@@ -192,39 +218,6 @@ export function FolderPage({
             />
           ))}
         </div>
-      ) : (
-        <>
-          {hasFolders && <div className="dl-explorer-grid" style={{ marginBottom: "var(--space-5)" }}>{folderCards}</div>}
-          {view === "list" ? (
-            <div className="dl-list">
-              <div className="dl-list-head">
-                <span />
-                <SortTh label="Name" sortKey="name" />
-                <span>Language</span>
-                <SortTh label="Size" sortKey="size" />
-                <SortTh label="Modified" sortKey="date" />
-                <span />
-              </div>
-              {files.map((f) => (
-                <FileRow key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
-              ))}
-            </div>
-          ) : (
-            <div className="dl-grid" data-view={view}>
-              {files.map((f) => (
-                <FileCard
-                  key={f.id}
-                  file={f}
-                  view="grid"
-                  isSuperAdmin={isSuperAdmin}
-                  onManage={setManageFile}
-                  onUpdated={upsertFile}
-                  onRemoved={removeFile}
-                />
-              ))}
-            </div>
-          )}
-        </>
       )}
 
       {hasMore && (
@@ -253,42 +246,18 @@ export function FolderPage({
         )}
       </header>
 
-      <div className="dl-toolbar">
-        <div className="dl-search">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-            <circle cx="11" cy="11" r="7" />
-            <path d="M21 21l-4.3-4.3" strokeLinecap="round" />
-          </svg>
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search files…"
-            aria-label="Search files in this folder"
-          />
-        </div>
-        <div className="dl-toolbar-right">
-          <select
-            className="dl-sort"
-            value={sort}
-            onChange={(e) => setSort(e.target.value as FileSortKey)}
-            aria-label="Sort by"
-          >
-            <option value="name">Name</option>
-            <option value="date">Newest</option>
-            <option value="size">Size</option>
-          </select>
-          <ViewToggle value={view} onChange={setView} storageKey="terminalv2-doclib-view" />
-          {isSuperAdmin && (
-            <button type="button" className="dl-btn primary" onClick={() => setUploadOpen(true)}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              Upload File
-            </button>
-          )}
-        </div>
-      </div>
+      <LibraryToolbar
+        searchValue={search}
+        onSearch={setSearch}
+        searchPlaceholder="Search files…"
+        sort={sort}
+        onSort={setSort}
+        view={view}
+        onView={setView}
+        viewStorageKey="terminalv2-doclib-view"
+        actionLabel={isSuperAdmin ? "Upload File" : undefined}
+        onAction={isSuperAdmin ? () => setUploadOpen(true) : undefined}
+      />
 
       {/* File area (subfolder nav moved to the DocumentsSidebar). */}
       {filesArea}

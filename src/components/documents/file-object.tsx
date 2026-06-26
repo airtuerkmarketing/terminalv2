@@ -11,15 +11,15 @@ import type { FileKind } from "@/lib/documents-constants";
  * objects on one page don't share/clobber ids.
  */
 
-const MARKER: Record<FileKind, { label: string; color: string; width: number }> = {
-  pdf:   { label: "PDF",  color: "#D8352A", width: 42 },
-  word:  { label: "DOCX", color: "#185FA5", width: 48 },
-  excel: { label: "XLS",  color: "#3B6D11", width: 42 },
-  ppt:   { label: "PPT",  color: "#BA7517", width: 42 },
-  txt:   { label: "TXT",  color: "#6B7280", width: 42 },
-  zip:   { label: "ZIP",  color: "#6B7280", width: 42 },
-  file:  { label: "FILE", color: "#6B7280", width: 46 },
-  image: { label: "IMG",  color: "#7C3AED", width: 42 },
+const MARKER: Record<FileKind, { label: string; color: string }> = {
+  pdf:   { label: "PDF",  color: "#D8352A" },
+  word:  { label: "DOCX", color: "#185FA5" },
+  excel: { label: "XLS",  color: "#3B6D11" },
+  ppt:   { label: "PPT",  color: "#BA7517" },
+  txt:   { label: "TXT",  color: "#6B7280" },
+  zip:   { label: "ZIP",  color: "#6B7280" },
+  file:  { label: "FILE", color: "#6B7280" },
+  image: { label: "IMG",  color: "#7C3AED" },
 };
 
 export function FileObject({ kind, imageUrl }: { kind: FileKind; imageUrl?: string }) {
@@ -27,7 +27,6 @@ export function FileObject({ kind, imageUrl }: { kind: FileKind; imageUrl?: stri
   const shadow = `fo-shadow-${uid}`;
   const photo = `fo-photo-${uid}`;
   const m = MARKER[kind];
-  const markerX = 20 + (m.width - 42) / -2; // keep the pill left-anchored at x=20
   const isImage = kind === "image";
 
   return (
@@ -60,22 +59,21 @@ export function FileObject({ kind, imageUrl }: { kind: FileKind; imageUrl?: stri
           <polygon points="60,114 82,90 98,114" fill="#fff" opacity="0.55" />
         </>
       ) : (
-        <g stroke="#E6E6E6" strokeWidth="4" strokeLinecap="round">
-          <line x1="24" y1="58" x2="92" y2="58" />
-          <line x1="24" y1="72" x2="92" y2="72" />
+        <g stroke="#EFEFEF" strokeWidth="4" strokeLinecap="round">
+          <line x1="24" y1="54" x2="92" y2="54" />
+          <line x1="24" y1="70" x2="92" y2="70" />
           <line x1="24" y1="86" x2="74" y2="86" />
-          <line x1="24" y1="100" x2="92" y2="100" />
         </g>
       )}
 
-      {/* Type marker pill, bottom-left. */}
-      <rect x={markerX} y="116" width={m.width} height="18" rx="5" fill={m.color} />
+      {/* Type marker pill — prominent, bottom-right. */}
+      <rect x="52" y="112" width="52" height="22" rx="6" fill={m.color} />
       <text
-        x={markerX + m.width / 2}
-        y="125"
+        x="78"
+        y="124"
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize="10"
+        fontSize="12"
         fontWeight="600"
         fontFamily="inherit"
         fill="#fff"

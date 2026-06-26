@@ -76,6 +76,70 @@ function useReducedMotion() {
   return useSyncExternalStore(subscribeRM, getRM, () => false);
 }
 
+/** Shared folder actions (rename / new subfolder / visibility / delete) + the
+ *  right-click menu and inline-rename input, used by the folder card AND the
+ *  folder row. Folder ops use existing server actions + router.refresh()
+ *  (childFolders is a server prop, so the grid/list updates without a reload).
+ *  No standalone folder-move modal is reachable from a card/row, so Move is
+ *  omitted here (it lives in FolderActionsMenu on the folder's own page). */
+function useFolderActions({ id, name, href, isPublic, isSuperAdmin }: { id?: string; name: string; href: string; isPublic: boolean; isSuperAdmin: boolean }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const canManage = !!id && isSuperAdmin;
+
+  const startRename = () => { setDraft(name); setEditing(true); };
+  async function commitRename() {
+    setEditing(false);
+    const t = draft.trim();
+    if (!id || !t || t === name) { setDraft(name); return; }
+    const res = await renameFolder(id, t);
+    if (res.ok) router.refresh(); else setDraft(name);
+  }
+  async function toggleVisibility() { if (!id) return; await setFolderVisibility(id, !isPublic); router.refresh(); }
+  async function doDelete() {
+    if (!id || !window.confirm(`Delete folder “${name}” and everything inside it?`)) return;
+    const res = await deleteFolder(id);
+    if (res.ok) router.refresh();
+  }
+
+  const menuItems: CtxItem[] = [{ kind: "item", label: "Open", onClick: () => router.push(href) }];
+  if (canManage) {
+    menuItems.push(
+      { kind: "item", label: "Rename", onClick: startRename },
+      { kind: "item", label: "New subfolder", onClick: () => setCreateOpen(true) },
+      { kind: "item", label: isPublic ? "Make private" : "Make public", onClick: toggleVisibility },
+      { kind: "sep" },
+      { kind: "item", label: "Delete folder", onClick: doDelete, danger: true },
+    );
+  }
+
+  const onContextMenu = id
+    ? (e: React.MouseEvent) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); }
+    : undefined;
+  const renameInput = (
+    <input
+      autoFocus
+      onFocus={(e) => e.currentTarget.select()}
+      className="dl-cell__rename"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => { if (e.key === "Enter") commitRename(); else if (e.key === "Escape") { setDraft(name); setEditing(false); } }}
+      onBlur={commitRename}
+      aria-label="Rename folder"
+    />
+  );
+  const portals = (
+    <>
+      {id && menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
+      {id && isSuperAdmin && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={id} />}
+    </>
+  );
+  return { canManage, editing, startRename, renameInput, onContextMenu, portals };
+}
+
 export function FolderCard3D({
   id,
   name,
@@ -86,46 +150,11 @@ export function FolderCard3D({
   isSuperAdmin = false,
   className,
 }: FolderCard3DProps) {
-  const router = useRouter();
   const [hovered, setHovered] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(name);
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
   const reduced = useReducedMotion();
   const uid = useId().replace(/:/g, ""); // namespace SVG gradient ids per card
-
-  const canManage = !!id && isSuperAdmin; // folder actions need an id + admin
-  const startRename = () => { setDraft(name); setEditing(true); };
-  async function commitRename() {
-    setEditing(false);
-    const t = draft.trim();
-    if (!id || !t || t === name) { setDraft(name); return; }
-    const res = await renameFolder(id, t);
-    if (res.ok) router.refresh(); else setDraft(name); // childFolders is a server prop → refresh updates the grid
-  }
-  async function toggleVisibility() { if (!id) return; await setFolderVisibility(id, !isPublic); router.refresh(); }
-  async function doDelete() {
-    // No standalone folder-delete modal is reachable from a card (folder modals
-    // live in FolderActionsMenu on the folder's own page) — confirm natively for
-    // this destructive cascade, then soft-refresh.
-    if (!id || !window.confirm(`Ordner „${name}" und den gesamten Inhalt löschen?`)) return;
-    const res = await deleteFolder(id);
-    if (res.ok) router.refresh();
-  }
-
-  const menuItems: CtxItem[] = [
-    { kind: "item", label: "Öffnen", onClick: () => router.push(href) },
-  ];
-  if (canManage) {
-    menuItems.push(
-      { kind: "item", label: "Umbenennen", onClick: startRename },
-      { kind: "item", label: "Neuer Unterordner", onClick: () => setCreateOpen(true) },
-      { kind: "item", label: isPublic ? "Privat machen" : "Öffentlich machen", onClick: toggleVisibility },
-      { kind: "sep" },
-      { kind: "item", label: "Ordner löschen", onClick: doDelete, danger: true },
-    );
-  }
+  const { canManage, editing, startRename, renameInput, onContextMenu, portals } =
+    useFolderActions({ id, name, href, isPublic, isSuperAdmin });
 
   const tiles = previewFiles.slice(0, 3);
   // Distinct file types → coins (max 3).
@@ -149,7 +178,7 @@ export function FolderCard3D({
       className={cn("dl-cell dl-folder-cell group", className)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onContextMenu={id ? (e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); } : undefined}
+      onContextMenu={onContextMenu}
     >
       {/* Private cue — Torch lock, top-right (admins only ever see private folders) */}
       {!isPublic && (
@@ -278,19 +307,7 @@ export function FolderCard3D({
       </Link>
 
       {editing ? (
-        <input
-          autoFocus
-          onFocus={(e) => e.currentTarget.select()}
-          className="dl-cell__rename"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commitRename();
-            else if (e.key === "Escape") { setDraft(name); setEditing(false); }
-          }}
-          onBlur={commitRename}
-          aria-label="Rename folder"
-        />
+        renameInput
       ) : canManage ? (
         <button type="button" className="dl-cell__name" title={name} onClick={startRename}>
           {name}
@@ -298,10 +315,47 @@ export function FolderCard3D({
       ) : (
         <span className="dl-cell__name" title={name}>{name}</span>
       )}
-      <div className="dl-cell__sub">{fileCount} {fileCount === 1 ? "Datei" : "Dateien"}</div>
+      <div className="dl-cell__sub">{fileCount} {fileCount === 1 ? "file" : "files"}</div>
 
-      {id && menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
-      {id && isSuperAdmin && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={id} />}
+      {portals}
+    </div>
+  );
+}
+
+/** Folder as a LIST row (Windows-Explorer list view): folder icon · name
+ *  (inline-rename) · "N files" · right-click menu. Sits on the .dl-row grid like
+ *  FileRow, with empty language/modified cells. */
+export function FolderRow({
+  id,
+  name,
+  href,
+  isPublic,
+  fileCount,
+  isSuperAdmin = false,
+}: {
+  id: string;
+  name: string;
+  href: string;
+  isPublic: boolean;
+  fileCount: number;
+  isSuperAdmin?: boolean;
+}) {
+  const { editing, renameInput, onContextMenu, portals } =
+    useFolderActions({ id, name, href, isPublic, isSuperAdmin });
+  return (
+    <div className="dl-row dl-row--folder" onContextMenu={onContextMenu}>
+      <span className="dl-row-type" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+        </svg>
+      </span>
+      {/* Name navigates on click; rename is via the right-click menu. */}
+      {editing ? renameInput : <Link className="dl-row-name" href={href} title={name}>{name}</Link>}
+      <span className="dl-row-lang" />
+      <span className="dl-row-size">{fileCount} {fileCount === 1 ? "file" : "files"}</span>
+      <span className="dl-row-modified" />
+      <span className="dl-row-actions" />
+      {portals}
     </div>
   );
 }

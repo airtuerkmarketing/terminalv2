@@ -134,6 +134,16 @@ export function FileCard({
             <FileObject kind={kind} imageUrl={isImage ? href : undefined} />
           </span>
         </button>
+        {/* Hover-only download (opens the same serving route with ?download=1). */}
+        <a
+          className="dl-cell__dl"
+          href={downloadHref}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Download ${file.title}`}
+          title="Download"
+        >
+          <DownloadIcon />
+        </a>
 
         {editing ? (
           <input

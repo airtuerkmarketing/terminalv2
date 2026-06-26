@@ -745,6 +745,12 @@
   gap: 6px;
   justify-self: end;
 }
+
+/* Folder rows (list view): a folder glyph instead of a file thumb, and the name
+   reads slightly stronger so folders separate from files. Folders are listed
+   first; the right-click menu matches the folder card. */
+.dl-row--folder .dl-row-type { color: var(--text-2); }
+.dl-row--folder .dl-row-name { font-weight: 600; }
 /* Reuse the card download + manage buttons inline (not cover-absolute), revealed
    on row hover/focus. */
 .dl-row .card-dl,
@@ -1024,6 +1030,16 @@
 /* Main content keeps its own top + side padding (the wrapper has none). */
 .dl-shell-main { flex: 1; min-width: 0; padding: var(--space-5) var(--space-6) 0; }
 
+/* Sidebar full height (desktop): align-items:stretch already sizes the sidebar to
+   the shell, so the only thing missing is shell height when the file area is
+   short. .main is a global block (height-by-content, out of scope), so we drive
+   the height from the shell itself — fill the viewport minus the 96px FAB
+   clearance (.main's padding-bottom) so the sidebar reaches the bottom without
+   forcing a scrollbar. Scoped to ≥768px, where the sidebar is actually shown. */
+@media (min-width: 768px) {
+  .dl-shell { min-height: calc(100dvh - 96px); }
+}
+
 /* Clear divider + panel tone consistent with the global sidebar (--sidebar-bg,
    --hairline edge). Internal padding (not on the wrapper) so the bg + border
    reach the top + left edge — no white frame. */
@@ -1140,6 +1156,30 @@
 /* Folder hover lift mirrors the file object (the 3D stage animates on its own). */
 .dl-folder-cell .dl-cell__visual { transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 .dl-folder-cell:hover .dl-cell__visual { transform: translateY(-4px); }
+
+/* Hover-only download button (top-right of a file cell). Ghost square, revealed
+   on cell hover/focus; stopPropagation in JSX keeps it from opening the file. */
+.dl-cell__dl {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-rest);
+  opacity: 0;
+  transition: opacity 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.dl-cell:hover .dl-cell__dl,
+.dl-cell:focus-within .dl-cell__dl,
+.dl-cell__dl:focus-visible { opacity: 1; }
+.dl-cell__dl:hover { background: rgba(120, 120, 128, 0.12); color: var(--text-1); }
 
 /* Name: a rename trigger (click) — looks like text, not a button. */
 .dl-cell__name {

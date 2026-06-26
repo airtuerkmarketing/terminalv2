@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import "@/styles/document-library.css";
-import type { RootFolderDTO } from "@/lib/documents";
+import type { FileSortKey, RootFolderDTO } from "@/lib/documents";
+import type { ViewMode } from "@/components/ui/view-toggle";
 import { CreateFolderModal } from "./create-folder-modal";
-import { FolderCard3D } from "./folder-card-3d";
+import { FolderCard3D, FolderRow } from "./folder-card-3d";
+import { LibraryToolbar } from "./library-toolbar";
 
-/** Root index: visible top-level folders as 3D animated cards, + admin "New folder". */
+/** Root index: visible top-level folders. Uses the SAME LibraryToolbar + card/
+ *  list views as a folder page (consistent look). Search/sort/view are client-
+ *  only over the already-loaded folders — no new server call. */
 export function DocumentLibraryRoot({
   folders,
   isSuperAdmin,
@@ -15,6 +19,19 @@ export function DocumentLibraryRoot({
   isSuperAdmin: boolean;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<FileSortKey>("name");
+  const [view, setView] = useState<ViewMode>("card");
+
+  const shown = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = folders.filter((f) => !q || f.name.toLowerCase().includes(q));
+    // Folders only carry a name + file count, so "Size" sorts by count and
+    // "Modified" has no folder timestamp → falls back to name.
+    return [...list].sort((a, b) =>
+      sort === "size" ? b.fileCount - a.fileCount : a.name.localeCompare(b.name)
+    );
+  }, [folders, search, sort]);
 
   return (
     <article className="document-library">
@@ -28,31 +45,66 @@ export function DocumentLibraryRoot({
         <div className="dl-head-title">
           <h1>Documents Library</h1>
         </div>
-        {isSuperAdmin && (
-          <button type="button" className="dl-btn primary" onClick={() => setCreateOpen(true)}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            New Folder
-          </button>
-        )}
       </header>
 
-      {folders.length === 0 ? (
+      <LibraryToolbar
+        searchValue={search}
+        onSearch={setSearch}
+        searchPlaceholder="Search folders…"
+        sort={sort}
+        onSort={setSort}
+        view={view}
+        onView={setView}
+        viewStorageKey="terminalv2-doclib-view"
+        actionLabel={isSuperAdmin ? "New Folder" : undefined}
+        onAction={isSuperAdmin ? () => setCreateOpen(true) : undefined}
+      />
+
+      {shown.length === 0 ? (
         <div className="dl-empty">
-          <strong>No folders yet.</strong>
-          {isSuperAdmin ? <span>Create your first folder to get started.</span> : <span>Nothing here yet.</span>}
+          {search ? (
+            <span>No folders match “{search}”.</span>
+          ) : (
+            <>
+              <strong>No folders yet.</strong>
+              {isSuperAdmin ? <span>Create your first folder to get started.</span> : <span>Nothing here yet.</span>}
+            </>
+          )}
+        </div>
+      ) : view === "list" ? (
+        <div className="dl-list">
+          <div className="dl-list-head">
+            <span />
+            <span>Name</span>
+            <span>Language</span>
+            <span>Size</span>
+            <span>Modified</span>
+            <span />
+          </div>
+          {shown.map((f) => (
+            <FolderRow
+              key={f.id}
+              id={f.id}
+              name={f.name}
+              href={`/documents-library/${f.path}`}
+              isPublic={f.isPublic}
+              fileCount={f.fileCount}
+              isSuperAdmin={isSuperAdmin}
+            />
+          ))}
         </div>
       ) : (
-        <div className="dl-folder-grid">
-          {folders.map((f) => (
+        <div className="dl-explorer-grid">
+          {shown.map((f) => (
             <FolderCard3D
               key={f.id}
+              id={f.id}
               name={f.name}
               href={`/documents-library/${f.path}`}
               isPublic={f.isPublic}
               fileCount={f.fileCount}
               previewFiles={f.previewFiles}
+              isSuperAdmin={isSuperAdmin}
             />
           ))}
         </div>
