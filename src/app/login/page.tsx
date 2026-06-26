@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import LoginForm from "./login-form";
+import AnimatedWordmark from "./animated-wordmark";
 import { AuthParticles } from "@/components/effects/auth-particles";
 
 type SearchParams = Promise<{ next?: string; error?: string }>;
@@ -29,8 +30,7 @@ export default async function LoginPage({
 
       <div className="login-card">
         <div className="login-brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logos/terminal/wordmark.svg" alt="terminal" className="login-wordmark" />
+          <AnimatedWordmark />
         </div>
 
         <h1 className="login-title">Sign in</h1>
