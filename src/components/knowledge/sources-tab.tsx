@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Database, AlertCircle, Pencil } from "lucide-react";
+import { Database, AlertCircle, Pencil, History } from "lucide-react";
 import { inferContentShape } from "@/lib/knowledge/shape";
 import { EditChunkModal } from "./edit-chunk-modal";
+import { AuditDrawer } from "./audit-drawer";
 import type { ChunkLayer, KnowledgeChunk, KnowledgeStats } from "@/lib/knowledge/types";
 
 const PAGE_SIZE = 25;
@@ -85,6 +86,7 @@ export function SourcesTab({
   const [sort, setSort] = useState(initial.sort || "newest");
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<KnowledgeChunk | null>(null);
+  const [auditing, setAuditing] = useState<KnowledgeChunk | null>(null);
 
   // Reflect filter state to the URL (shareable) without re-fetching.
   useEffect(() => {
@@ -189,6 +191,10 @@ export function SourcesTab({
                     kein Embedding
                   </span>
                 )}
+                <button className="kb-expand" style={{ marginLeft: "auto" }} onClick={() => setAuditing(c)}>
+                  <History size={12} style={{ verticalAlign: "-2px", marginRight: 3 }} />
+                  Verlauf
+                </button>
               </div>
             </article>
           ))}
@@ -208,6 +214,7 @@ export function SourcesTab({
       )}
 
       {editing && <EditChunkModal chunk={editing} onClose={() => setEditing(null)} />}
+      {auditing && <AuditDrawer chunk={auditing} onClose={() => setAuditing(null)} />}
     </div>
   );
 }

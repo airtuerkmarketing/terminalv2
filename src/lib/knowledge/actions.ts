@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin, type Identity } from "@/lib/auth";
-import type { ChunkTags, TagAxis } from "./types";
+import { getChunkEditLog } from "./queries";
+import type { ChunkEditLogEntry, ChunkTags, TagAxis } from "./types";
 
 export type ActionResult =
   | { ok: true; embedded?: boolean }
@@ -291,4 +292,17 @@ export async function reviewSuggestion(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/knowledge");
   return { ok: true };
+}
+
+// ───────────────────────── Audit drawer (client-callable read) ──────────────
+export async function loadChunkAudit(
+  chunkTable: string,
+  chunkId: string,
+): Promise<ChunkEditLogEntry[]> {
+  try {
+    await requireSuperAdmin();
+  } catch {
+    return [];
+  }
+  return getChunkEditLog(chunkTable, chunkId);
 }
