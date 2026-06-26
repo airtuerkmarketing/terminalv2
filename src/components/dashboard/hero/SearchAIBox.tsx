@@ -11,7 +11,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Paperclip } from "lucide-react";
+import { ArrowUp, Plus } from "lucide-react";
 import { TerminalLogo } from "@/components/shell/TerminalLogo";
 import { ModelSelector } from "@/components/dashboard/hero/ModelSelector";
 import { ModeChips } from "@/components/dashboard/hero/ModeChips";
@@ -59,6 +59,26 @@ function newId(): string {
   return `t_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
 }
 
+// Rounded-rect outline as an SVG path, STARTING at the top-centre and running once
+// clockwise back to it — so the glow stroke grows from near the chips. Inset 1px so
+// the 2px stroke sits on the box edge. r is the corner radius (box radius − 1).
+function topCenterRoundedRect(w: number, h: number, r: number): string {
+  const rr = Math.max(0, Math.min(r, w / 2 - 1, h / 2 - 1));
+  const cx = w / 2;
+  return [
+    `M ${cx} 1`,
+    `H ${w - 1 - rr}`,
+    `A ${rr} ${rr} 0 0 1 ${w - 1} ${1 + rr}`,
+    `V ${h - 1 - rr}`,
+    `A ${rr} ${rr} 0 0 1 ${w - 1 - rr} ${h - 1}`,
+    `H ${1 + rr}`,
+    `A ${rr} ${rr} 0 0 1 1 ${h - 1 - rr}`,
+    `V ${1 + rr}`,
+    `A ${rr} ${rr} 0 0 1 ${1 + rr} 1`,
+    `H ${cx}`,
+  ].join(" ");
+}
+
 export function SearchAIBox() {
   const router = useRouter();
 
@@ -81,7 +101,11 @@ export function SearchAIBox() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const innerBoxRef = useRef<HTMLDivElement>(null);
   const skipPersist = useRef(true);
+  // Box pixel size, tracked so the animated glow stroke can trace the exact rounded
+  // rect (width is fluid, height grows with the textarea). Visual only.
+  const [boxSize, setBoxSize] = useState({ w: 0, h: 0 });
   // Latest turns without re-creating submitAi on every streamed token; used
   // read-only to build conversation_history. All mutations use functional setTurns.
   const turnsRef = useRef(turns);
@@ -91,6 +115,19 @@ export function SearchAIBox() {
 
   // The armed mode-chip (if any) — drives the placeholder hint + box glow color.
   const activeChip = MODE_CHIPS.find((c) => c.id === chatMode);
+
+  // Track the box size for the animated glow stroke (ResizeObserver, not a render-
+  // time read — keeps the rect in sync as the box reflows). setState lives in the
+  // observer callback (an event), not the effect body.
+  useEffect(() => {
+    const el = innerBoxRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      setBoxSize({ w: el.offsetWidth, h: el.offsetHeight });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const flatHits = useMemo<SearchHit[]>(
     () => [
@@ -477,7 +514,20 @@ export function SearchAIBox() {
         <div
           className={`ai-search-box${focused ? " is-focused" : ""}`}
           data-glow={activeChip?.glow}
+          ref={innerBoxRef}
         >
+          {/* Animated glow outline — grows once around from the top when a mode
+              chip is armed. key={glow} re-runs the draw on arm / chip change; it
+              unmounts (disappears) when disarmed. Decorative (pointer-events:none). */}
+          {activeChip?.glow && boxSize.w > 0 && (
+            <svg key={activeChip.glow} className="ai-search-glow-svg" aria-hidden="true">
+              <path
+                className="ai-search-glow-stroke"
+                pathLength={100}
+                d={topCenterRoundedRect(boxSize.w, boxSize.h, 24)}
+              />
+            </svg>
+          )}
           <textarea
             ref={textareaRef}
             className="ai-search-textarea"
@@ -493,18 +543,16 @@ export function SearchAIBox() {
             onPaste={onPaste}
           />
 
-          <div className="ai-search-divider" />
-
           <div className="ai-search-toolbar">
             <div className="ai-search-toolbar-left">
               <button
                 type="button"
-                className="ai-search-pill"
+                className="ai-search-attach"
                 disabled
                 title="Attachments coming in stage 2"
+                aria-label="Attach"
               >
-                <Paperclip className="ai-search-pill-icon" aria-hidden="true" />
-                <span>Attach</span>
+                <Plus className="ai-search-attach-icon" aria-hidden="true" />
               </button>
               <button
                 type="button"
