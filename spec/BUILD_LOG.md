@@ -9,7 +9,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-26)
 
-- **HEAD:** `f30e451` (`main`, == origin/main) — **Welle A** (dashboard greeting reads the signed-in user's first name via `getIdentity`; legacy Phase-0 `/admin` placeholder → redirect to `/admin/users`). Prev: Wissensbasis filter-UX (`4515437`), airtuerk-KI `query_team_directory` (D-069), prod `rag-query` v10. **Demo:** 2026-08-01.
+- **HEAD:** `main` == origin/main — **Welle D3** (AUDIT-004 Pegasus "72 Std" + AUDIT-003 Hara Filo "telefonisch, Euro-Preis + 20 % Servicegebühr" as priority-1 `company_context`, migration `20260626093731`; `rag-query` **v11** — RERANK_INPUT_LIMIT 30→40 to relieve priority-1 crowding, D-070). Prev: Welle A (`f30e451`), Wissensbasis filter-UX (`4515437`). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
@@ -20,11 +20,11 @@ it is append-only history (do not rewrite past entries — add new ones).
   **55 pages** (all published), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **65 migrations**, highest:
-  `20260626093000_chunk_retrieval_stats_job`. Highest decision: **D-069**.
+  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **66 migrations**, highest:
+  `20260626093731_welle_d3_pegasus_harafilo_context`. Highest decision: **D-070**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
-  knowledge_base 14] + brand 43) + **37 company_context** entries (all tagged). Edge functions:
-  `embed-knowledge` (7 source modes), `rag-query` v10 (persona v2 + `query_team_directory`
+  knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
+  `embed-knowledge` (7 source modes), `rag-query` v11 (persona v2 + `query_team_directory`
   live team-roster tool-call, D-069), `notify-correction-event`,
   `tag-classify-chunks` (Haiku), + 3 confluence fns.
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
@@ -61,7 +61,10 @@ it is append-only history (do not rewrite past entries — add new ones).
   (5 search-inside dropdowns + active chip-stack + localStorage presets + company_context
   "Neuer Eintrag" + read-only "Nur-Lesen" cue on derived cards — `58000df`→`4515437`, deployed);
   Welle A (dashboard greeting first-name via `getIdentity` + legacy `/admin` placeholder →
-  `/admin/users` redirect — `f30e451`).
+  `/admin/users` redirect — `f30e451`); Welle D3 (AUDIT-004 Pegasus "72 Std" + AUDIT-003
+  Hara Filo "+20 % Servicegebühr" as priority-1 `company_context` + `rag-query` v11
+  RERANK_INPUT_LIMIT 30→40 to relieve priority-1 crowding — migration `20260626093731`,
+  D-070, live-verified).
 - **Remaining:** AP3 Phases 7–12 (per-section bulk-invite, quick-actions, density toggle,
   permissions matrix, per-user permissions, activity-log integration); RAG WS2
   (feedback+CorrectionModal finish) + WS3/WS4 (web-search) + S5 company-context UI
@@ -70,10 +73,10 @@ it is append-only history (do not rewrite past entries — add new ones).
   robustness, 4 open decisions); Out-of-Office as its own brand section (Block 5b);
   Welle A leftover: 2 non-blocking bulk-invite fixes (`use-bulk-invite.ts`, no
   enumerated spec yet) — its greeting-first-name + `/admin`→`/admin/users` redirect
-  shipped (`f30e451`); open C2 audit findings
-  AUDIT-002 (learning-loop never run) / AUDIT-003 (Hara-Filo source contradiction) /
-  AUDIT-004 (Pegasus check-in gen-error) / AUDIT-006 (frozen 2026-06-23 corpus);
-  D2 Phase-2 embed of the Selin row (ZDR-gated consistency follow-up).
+  shipped (`f30e451`); open C2 audit findings AUDIT-002 (learning-loop never run) /
+  AUDIT-006 (frozen 2026-06-23 corpus) — AUDIT-003 (Hara Filo) + AUDIT-004 (Pegasus)
+  fixed in Welle D3 (`20260626093731`, D-070); D2 + D3 Phase-2 embed backfill of the
+  3 priority-1 rows (ZDR-gated consistency follow-up, not retrieval-blocking).
 
 ---
 

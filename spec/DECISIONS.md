@@ -454,6 +454,15 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-070 — Welle D3: priority-1 audit fixes (Pegasus/Hara Filo) + rerank-input headroom
+**Date:** 2026-06-26
+**Status:** Adopted. Migration `20260626093731_welle_d3_pegasus_harafilo_context` + edge fn `rag-query` v11.
+**Context:** Two demo-visible gold-set answers were wrong — AUDIT-004 Pegasus Online-Check-in ("ab 7 Std" vs correct "72 Std") and AUDIT-003 Hara Filo Verlängerung ("selber Preis" vs correct "telefonisch, Euro-Preis + 20 % Servicegebühr"). Investigating surfaced the real constraint: `rag_hybrid_search` returns ALL active priority-1 `company_context` rows at a flat `combined_score = 1.0`, and `rerankWithIdentity` slices candidates to `RERANK_INPUT_LIMIT` by score — so with 29 priority-1 rows only ~3 operational confluence chunks reached the Voyage rerank input (the D-060 comment assumed ≤20). This crowding plausibly caused the Pegasus miss (its correct chunk squeezed out) and would worsen with each new priority-1 row.
+**Decision:** (1) Raise `RERANK_INPUT_LIMIT` 30→40 in `rag-query` (v11) so ~11 operational slots survive alongside the priority-1 rows; Voyage still returns the best `FINAL_CHUNK_LIMIT` after rerank. (2) Add two `priority=1`, category `process` `company_context` rows: Pegasus check-in (anchors "72 Std" — belt-and-suspenders given Pegasus's 2-chunk sparsity) and Hara Filo Verlängerung (states the correct value AND explicitly overrules the stale TR source "ayni fiyat üzerinden", since the wrong Confluence chunk stays retrievable — a re-embed cannot fix a wrong source). Both rows retrieve immediately via the priority arm (embedding-independent); embeddings backfill later via `embed-knowledge {context}` (ZDR-gated), not part of this change. The Confluence Hara Filo source edit remains a Buhara/Murat human track. `process` is not an identity category, so the rows enter the reranked fact pool (not the always-on identity block).
+**Verified (live, prod):** "Pegasus Online-Check-in-Fenster?" → "ab 72 Stunden bis 60 Minuten … '7 Std.' ist falsch" + operational Involatus steps cited; "Hara Filo Verlängerung?" → "telefonisch, Euro-Preis + 20 % Servicegebühr … ältere Quelle überholt" + Confluence Hara Filo details; no-regression "ETI No-Show?" → "ab 14 Tage" [Confluence: ETI Konti]. Operational confluence chunks now coexist with priority-1 context in every answer (limit-40 confirmed). company_context 37→39, priority-1 29→31; 0 console errors.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)
