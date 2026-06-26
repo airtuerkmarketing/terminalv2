@@ -291,11 +291,13 @@ function one<T>(v: T | T[] | null | undefined): T | null {
 }
 
 // ── Team Directory (/team) ──
-// team_members carries richer fields (is_lead, joined_year, tools, tasks) for a
-// future detail modal; the current directory UI uses only name/position/
-// department/initials/photo. The profile photo is an FK to assets
-// (avatar_asset_id); resolve it to a public URL via the embed. team_members is
-// public-read, so the anon client works in dev and prod.
+// The photo is an FK to assets (avatar_asset_id); resolve it to a public URL via
+// the embed. team_members is read by the cookie-bound server client behind the
+// login gate (the SELECT policy is `team_select_authenticated`, migration
+// 20260626140000). The detail fields are carried in the list payload (≤63 rows)
+// so opening a member's profile needs no extra round-trip. Private fields are
+// deliberately omitted: private_phone is never projected here, and date_of_birth
+// is surfaced (as `birthday`) only when the member opted in via show_birthday.
 export interface TeamMemberDTO {
   id: string;
   firstName: string;
@@ -305,15 +307,34 @@ export interface TeamMemberDTO {
   initials: string;
   photoUrl: string | null;
   email: string | null;
+  // Detail (AP 4) — public-safe projection.
+  statusLine: string | null;
+  about: string | null;
+  location: string | null;
+  company: string | null;
+  website: string | null;
+  github: string | null;
+  linkedin: string | null;
+  instagram: string | null;
+  /** Work phone (business contact). private_phone is NOT included. */
+  phone: string | null;
+  tools: string[];
+  tasks: string | null;
+  joinedYear: number | null;
+  isLead: boolean;
+  /** date_of_birth, but only when show_birthday is true (DSGVO opt-in); else null. */
+  birthday: string | null;
 }
 
 /** All team members, ordered by sort_order (alphabetical by last name). */
 export async function getTeamMembers(): Promise<TeamMemberDTO[]> {
-  const supabase = await createClient(); // team_members is public-read
+  const supabase = await createClient(); // RLS: authenticated read, behind the login gate
   const { data } = await supabase
     .from("team_members")
     .select(
       "id, first_name, last_name, position, department, initials, email, sort_order, " +
+        "status_line, about, location, company, website, github, linkedin, instagram, phone, " +
+        "tools, tasks, joined_year, is_lead, date_of_birth, show_birthday, " +
         "avatar:assets!team_members_avatar_asset_id_fkey(public_url)"
     )
     .order("sort_order", { ascending: true });
@@ -325,6 +346,21 @@ export async function getTeamMembers(): Promise<TeamMemberDTO[]> {
     department: string | null;
     initials: string;
     email: string | null;
+    status_line: string | null;
+    about: string | null;
+    location: string | null;
+    company: string | null;
+    website: string | null;
+    github: string | null;
+    linkedin: string | null;
+    instagram: string | null;
+    phone: string | null;
+    tools: string[] | null;
+    tasks: string | null;
+    joined_year: number | null;
+    is_lead: boolean | null;
+    date_of_birth: string | null;
+    show_birthday: boolean | null;
     avatar: { public_url: string | null } | { public_url: string | null }[] | null;
   };
   return ((data ?? []) as unknown as Row[]).map((r) => ({
@@ -336,5 +372,19 @@ export async function getTeamMembers(): Promise<TeamMemberDTO[]> {
     initials: r.initials,
     photoUrl: one(r.avatar)?.public_url ?? null,
     email: r.email,
+    statusLine: r.status_line,
+    about: r.about,
+    location: r.location,
+    company: r.company,
+    website: r.website,
+    github: r.github,
+    linkedin: r.linkedin,
+    instagram: r.instagram,
+    phone: r.phone,
+    tools: r.tools ?? [],
+    tasks: r.tasks,
+    joinedYear: r.joined_year,
+    isLead: r.is_lead ?? false,
+    birthday: r.show_birthday ? r.date_of_birth : null,
   }));
 }

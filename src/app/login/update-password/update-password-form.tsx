@@ -8,7 +8,7 @@ export default function UpdatePasswordForm({
   type,
   error: initialError,
 }: {
-  type?: "force" | "recovery";
+  type?: "force" | "recovery" | "welcome";
   error?: string;
 }) {
   const router = useRouter();

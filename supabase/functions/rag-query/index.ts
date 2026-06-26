@@ -15,8 +15,9 @@
 //   C14 session + user-log BEFORE the retrieval-empty check; weiss-nicht keeps
 //       a valid message_id + X-Weiss-Nicht header so it is correctable
 //   Identity-Reservation: 2 slots for mission/brand_voice persona anchors, the
-//       remaining 6 filled by rerank — prevents 20 priority-1 ctx rows (all @1.0)
-//       from crowding operational chunks out of the final context.
+//       remaining 6 filled by rerank. NB: priority-1 ctx rows (now ~31, all @1.0)
+//       lead the rerank candidate sort, so RERANK_INPUT_LIMIT must stay well above
+//       the priority-1 count or operational chunks get crowded out (raised to 40).
 // ====================================================================
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
@@ -35,7 +36,11 @@ const ANTHROPIC_MAX_TOKENS = 4096
 
 const RETRIEVAL_VECTOR_K = 20
 const RETRIEVAL_TRGM_K = 10
-const RERANK_INPUT_LIMIT = 30
+// Raised 30->40 (Welle D3, D-070): ~31 priority-1 company_context rows all carry
+// combined_score 1.0 and lead the candidate sort, so a cap of 30 left only ~1
+// operational confluence chunk in the rerank pool. 40 keeps ~11 operational slots;
+// Voyage still returns the best FINAL_CHUNK_LIMIT after reranking.
+const RERANK_INPUT_LIMIT = 40
 const FINAL_CHUNK_LIMIT = 8
 const RESERVED_IDENTITY_SLOTS = 2
 const IDENTITY_CATEGORIES = ['mission', 'brand_voice']

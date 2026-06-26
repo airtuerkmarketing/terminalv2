@@ -9,7 +9,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-26)
 
-- **HEAD:** `4515437` (`main`, == origin/main) — **Wissensbasis filter-UX** (search-inside dropdowns, active chip-stack, localStorage presets, company_context "Neuer Eintrag", read-only cue on derived cards; `58000df`→`4515437`). Prev: **airtuerk-KI** `query_team_directory` live tool-call (D-069), prod `rag-query` v10. **Demo:** 2026-08-01.
+- **HEAD:** `main` — **Onboarding + self-profile** (D-071: invite→`/auth/confirm`→force-password→`/account/profile` self-edit, `/team` detail modal, super-admin KI-Chat audit tab; migration `20260626140000`). Prev: Welle D3 (`20260626093731`, `rag-query` v11, D-070), Welle A (`f30e451`). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
@@ -20,11 +20,11 @@ it is append-only history (do not rewrite past entries — add new ones).
   **55 pages** (all published), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **65 migrations**, highest:
-  `20260626093000_chunk_retrieval_stats_job`. Highest decision: **D-069**.
+  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **67 migrations**, highest:
+  `20260626140000_self_service_profile_fields`. Highest decision: **D-071**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
-  knowledge_base 14] + brand 43) + **37 company_context** entries (all tagged). Edge functions:
-  `embed-knowledge` (7 source modes), `rag-query` v10 (persona v2 + `query_team_directory`
+  knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
+  `embed-knowledge` (7 source modes), `rag-query` v11 (persona v2 + `query_team_directory`
   live team-roster tool-call, D-069), `notify-correction-event`,
   `tag-classify-chunks` (Haiku), + 3 confluence fns.
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
@@ -59,18 +59,53 @@ it is append-only history (do not rewrite past entries — add new ones).
   notify + in-app pill, gold-set Qualität, Taxonomie + Haiku auto-tag; corrections-first
   editing per D-A; `cb33469`→`e7c5995`, deployed); Wissensbasis filter-UX follow-up
   (5 search-inside dropdowns + active chip-stack + localStorage presets + company_context
-  "Neuer Eintrag" + read-only "Nur-Lesen" cue on derived cards — `58000df`→`4515437`, deployed).
+  "Neuer Eintrag" + read-only "Nur-Lesen" cue on derived cards — `58000df`→`4515437`, deployed);
+  Welle A (dashboard greeting first-name via `getIdentity` + legacy `/admin` placeholder →
+  `/admin/users` redirect — `f30e451`); Welle D3 (AUDIT-004 Pegasus "72 Std" + AUDIT-003
+  Hara Filo "+20 % Servicegebühr" as priority-1 `company_context` + `rag-query` v11
+  RERANK_INPUT_LIMIT 30→40 to relieve priority-1 crowding — migration `20260626093731`,
+  D-070, live-verified).
 - **Remaining:** AP3 Phases 7–12 (per-section bulk-invite, quick-actions, density toggle,
   permissions matrix, per-user permissions, activity-log integration); RAG WS2
   (feedback+CorrectionModal finish) + WS3/WS4 (web-search) + S5 company-context UI
   + S8 email-notify resend + S9 gold-set re-run + S10 demo polish; Audit fixes
   P0a (cookie-free public-read) + P0c (proxy.ts) + P1 (APIX dynamic + RAG
   robustness, 4 open decisions); Out-of-Office as its own brand section (Block 5b);
-  2 non-blocking bulk-invite fixes (`use-bulk-invite.ts`); Welle A (greeting
-  first-name + empty-`/admin` redirect — still recon-only); open C2 audit findings
-  AUDIT-002 (learning-loop never run) / AUDIT-003 (Hara-Filo source contradiction) /
-  AUDIT-004 (Pegasus check-in gen-error) / AUDIT-006 (frozen 2026-06-23 corpus);
-  D2 Phase-2 embed of the Selin row (ZDR-gated consistency follow-up).
+  Welle A leftover: 2 non-blocking bulk-invite fixes (`use-bulk-invite.ts`, no
+  enumerated spec yet) — its greeting-first-name + `/admin`→`/admin/users` redirect
+  shipped (`f30e451`); open C2 audit findings AUDIT-002 (learning-loop never run) /
+  AUDIT-006 (frozen 2026-06-23 corpus) — AUDIT-003 (Hara Filo) + AUDIT-004 (Pegasus)
+  fixed in Welle D3 (`20260626093731`, D-070); D2 + D3 Phase-2 embed backfill of the
+  3 priority-1 rows (ZDR-gated consistency follow-up, not retrieval-blocking).
+
+---
+
+## 2026-06-26 — Onboarding + self-profile + super-admin chat audit (D-071)
+
+Merged to `main` 2026-06-26 (branch `claude/busy-ishizaka-21ca9c`). Closes the
+broken invite→onboarding gap and adds the self-service profile the demo needs.
+
+- **Auth landing:** new `/auth/confirm` route handler (`verifyOtp` token_hash flow,
+  `exchangeCodeForSession` fallback) → routes invite to `/login/update-password?type=welcome`,
+  recovery to `?type=recovery`. `inviteUser` now sets `force_password_change` + seeds
+  `full_name`. Real forgot-password (`resetPasswordForEmail`) replaces the placeholder.
+- **Self-service `/account/profile`:** real form (avatar self-upload, status line ≤50,
+  social/contact/about, birthday opt-in); Name/Role/**Login-Email read-only**. New server
+  fns `getOwnProfile`/`updateOwnAvatar`/`ensureOwnTeamMember`; `updateOwnProfile` whitelist
+  widened. "Profil" user-menu link un-stubbed.
+- **`/team` detail:** member cards now open a public-safe profile modal (no `private_phone`;
+  DoB only when `show_birthday`).
+- **Super-admin "KI-Chat" tab** in the user-detail modal — `getUserChatHistory` + `loadUserChat`
+  (super_admin-only, access logged). No migration (RLS already grants `is_super_admin()`).
+- **Migration `20260626140000_self_service_profile_fields`** — **APPLIED to prod 2026-06-26**:
+  +9 `team_members` columns + `team_select_public`→`team_select_authenticated` (additive; live
+  site unaffected — old query is column-compatible).
+- **Gates:** `tsc --noEmit` + `next build` green. **Verified end-to-end** (local dev vs migrated
+  prod DB): `/team` 63 cards + detail modal; profile form load + email read-only + save persists
+  (RLS self-write); super-admin KI-Chat tab (real Q&A + audit log). Test provision of dev@ rolled
+  back (back to 63 members, dev@ unlinked).
+- **Pending go-live (2 sign-offs):** (1) swap the Invite + Recovery email templates
+  (`spec/AUTH_EMAIL_TEMPLATES.md`) AFTER the route deploys, (2) merge to `main`.
 
 ---
 
