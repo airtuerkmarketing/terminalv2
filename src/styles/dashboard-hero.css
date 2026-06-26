@@ -803,22 +803,28 @@
   font-size: var(--fs-base);
   color: var(--text-2);
 }
-/* Rounded floating container — the composer surface. */
+/* Rounded floating composer surface — styled to match the dashboard searchbar
+   (.ai-search-box): same radius/padding/surface/shadow + grey hover & focus (the
+   Hero's deliberate non-accent focus, D-036 exception), not the blue ring. */
 .ai-chat-composer {
   display: flex;
   align-items: flex-end;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
-  background: var(--surface);
+  box-sizing: border-box;
+  padding: 15px;                                 /* match .ai-search-box */
+  background: var(--surface-flat);
   border: 1px solid var(--hairline);
-  border-radius: 20px;
+  border-radius: var(--radius-25);
   box-shadow: var(--shadow-searchbox);
   transition: border-color 150ms var(--ease-smooth),
               box-shadow 150ms var(--ease-smooth);
 }
+.ai-chat-composer:hover {
+  border-color: var(--hairline-strong);
+}
 .ai-chat-composer:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-searchbox), 0 0 0 3px var(--accent-soft);
+  border-color: var(--hairline-strong);
+  box-shadow: var(--shadow-searchbox-focus);
 }
 .ai-chat-textarea {
   flex: 1;
@@ -843,13 +849,13 @@
   color: var(--text-3);
 }
 .ai-chat-send {
-  width: 38px;
+  width: 38px;                       /* keep chat size (Dashboard send is 32px) */
   height: 38px;
   flex-shrink: 0;
-  border: 0;
+  border: 1px solid var(--hairline); /* match .ai-search-send */
   border-radius: var(--radius-full);
-  background: var(--accent);
-  color: #fff;
+  background: var(--text-1);         /* black send like the Dashboard (D-036 exc.) */
+  color: var(--bg);
   display: grid;
   place-items: center;
   cursor: pointer;
