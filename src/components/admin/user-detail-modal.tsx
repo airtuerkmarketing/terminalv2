@@ -5,8 +5,8 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { RelativeTime } from "@/components/documents/relative-time";
 import { useToast } from "@/components/ui/toast";
-import type { ActivityLogPage, Role, TeamMemberListItem } from "@/lib/users";
-import { loadUserActivity, updateUserRoleAction } from "@/app/(public)/admin/users/actions";
+import type { ActivityLogPage, ChatSessionItem, Role, TeamMemberListItem } from "@/lib/users";
+import { loadUserActivity, loadUserChat, updateUserRoleAction } from "@/app/(public)/admin/users/actions";
 import { avatarColor } from "./user-row";
 import { InviteFooter } from "./invite-footer";
 
@@ -33,9 +33,11 @@ const STATUS_LABEL: Record<TeamMemberListItem["loginStatus"], string> = {
  *
  * Two layouts by login status:
  * - not_invited (currently all 63): single-column profile + an invite hint.
- * - active / invited: "Profil" + "Aktivität" tabs; the activity tab lazy-loads
- *   the log via the loadUserActivity server action. (No member has a login yet,
- *   so this path is built for Stage 8+/demo but not visually reachable today.)
+ * - active / invited: "Profil" + "Aktivität" + "KI-Chat" tabs; the activity and
+ *   chat tabs lazy-load via the loadUserActivity / loadUserChat server actions.
+ *   The KI-Chat tab surfaces the user's verbatim AI questions — super_admin-only
+ *   (this whole panel is super_admin-gated, and loadUserChat re-checks + the
+ *   ai_chat RLS only grants is_super_admin() cross-user read).
  */
 export function UserDetailModal({
   user,
@@ -50,9 +52,11 @@ export function UserDetailModal({
   const router = useRouter();
   const { toast } = useToast();
   const isTabbed = user.loginStatus !== "not_invited";
-  const [tab, setTab] = useState<"profile" | "activity">("profile");
+  const [tab, setTab] = useState<"profile" | "activity" | "chat">("profile");
   const [activity, setActivity] = useState<ActivityLogPage | null>(null);
   const [activityError, setActivityError] = useState(false);
+  const [chat, setChat] = useState<ChatSessionItem[] | null>(null);
+  const [chatError, setChatError] = useState(false);
 
   // Role picker (Stage 7C-light). `role` is the live displayed value; `pendingRole`
   // is the in-flight select value. Editing is blocked for your own row — the
@@ -139,6 +143,24 @@ export function UserDetailModal({
   }, [tab, activity, activityError, user.profileId]);
 
   const activityLoading = tab === "activity" && activity === null && !activityError && !!user.profileId;
+
+  // Lazy-load AI-chat history when its tab opens (same pattern as activity).
+  useEffect(() => {
+    if (tab !== "chat" || chat !== null || chatError || !user.profileId) return;
+    let cancelled = false;
+    loadUserChat(user.profileId)
+      .then((res) => {
+        if (!cancelled) setChat(res);
+      })
+      .catch(() => {
+        if (!cancelled) setChatError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, chat, chatError, user.profileId]);
+
+  const chatLoading = tab === "chat" && chat === null && !chatError && !!user.profileId;
 
   if (typeof document === "undefined") return null;
 
@@ -273,6 +295,38 @@ export function UserDetailModal({
     </ul>
   );
 
+  const chatPanel = chatLoading ? (
+    <p className="uap-modal-empty">Lädt…</p>
+  ) : chatError ? (
+    <p className="uap-modal-empty">Chat-Verlauf konnte nicht geladen werden.</p>
+  ) : !chat || chat.length === 0 ? (
+    <p className="uap-modal-empty">Keine KI-Chat-Anfragen bisher</p>
+  ) : (
+    <div className="uap-chat">
+      <p className="uap-chat-note">
+        Nur für Super-Admins sichtbar. Der Zugriff wird protokolliert.
+      </p>
+      {chat.map((s) => (
+        <section key={s.sessionId} className="uap-chat-session">
+          <header className="uap-chat-session-head">
+            <span className="uap-chat-session-title">{s.title?.trim() || "Unterhaltung"}</span>
+            <span className="uap-chat-session-time">
+              <RelativeTime iso={s.createdAt} />
+            </span>
+          </header>
+          <ul className="uap-chat-turns">
+            {s.messages.map((m) => (
+              <li key={m.id} className={`uap-chat-msg uap-chat-msg--${m.role}`}>
+                <span className="uap-chat-role">{m.role === "user" ? "Frage" : "Antwort"}</span>
+                <span className="uap-chat-text">{m.content}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+
   return createPortal(
     <div className="uap-modal-backdrop" onClick={onClose}>
       <div
@@ -339,10 +393,25 @@ export function UserDetailModal({
             >
               Aktivität
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "chat"}
+              className={`uap-tab${tab === "chat" ? " is-active" : ""}`}
+              onClick={() => setTab("chat")}
+            >
+              KI-Chat
+            </button>
           </div>
         )}
 
-        <div className="uap-modal-body">{!isTabbed || tab === "profile" ? profileFields : activityPanel}</div>
+        <div className="uap-modal-body">
+          {!isTabbed || tab === "profile"
+            ? profileFields
+            : tab === "activity"
+              ? activityPanel
+              : chatPanel}
+        </div>
 
         <div className="uap-modal-footer">
           <InviteFooter user={user} />

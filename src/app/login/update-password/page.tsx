@@ -4,7 +4,7 @@ import { AuthParticles } from "@/components/effects/auth-particles";
 import UpdatePasswordForm from "./update-password-form";
 
 type SearchParams = Promise<{
-  type?: "force" | "recovery";
+  type?: "force" | "recovery" | "welcome";
   error?: string;
 }>;
 
@@ -26,12 +26,15 @@ export default async function UpdatePasswordPage({
   }
 
   const heading =
+    type === "welcome" ? "Willkommen bei terminal" :
     type === "force" ? "Bitte ändere dein Passwort" :
     type === "recovery" ? "Neues Passwort setzen" :
     "Passwort ändern";
 
   const subtitle =
-    type === "force"
+    type === "welcome"
+      ? "Lege jetzt dein persönliches Passwort fest, um dein Konto zu aktivieren."
+      : type === "force"
       ? "Aus Sicherheitsgründen musst du beim ersten Login dein Passwort ändern."
       : type === "recovery"
       ? "Setze ein neues Passwort für deinen Account."

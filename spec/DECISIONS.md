@@ -454,6 +454,20 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-070 — Invite→onboarding→self-profile + super-admin chat audit
+**Date:** 2026-06-26
+**Status:** Built on branch `claude/busy-ishizaka-21ca9c`; **pending go-live** (migration apply + email-template swap + merge). Migration `20260626140000_self_service_profile_fields`.
+**Context:** The invite flow was structurally incomplete: `inviteUser` → `inviteUserByEmail` sent a Supabase link, but there was **no `/auth/confirm` route** to turn the click into a session (the PKCE `token_hash` flow was unhandled), invited users got **no `force_password_change`**, and `/account/profile` was a stub. Forgot-password was a placeholder. Profile data lives on `team_members`, but only `phone`/`date_of_birth`/`show_birthday` were self-editable — no social/status/bio fields and no self-avatar. Super-admins could not see a user's AI-chat questions, though the `ai_chat_*` RLS already grants `is_super_admin()` cross-user read.
+**Decision:**
+1. **Auth landing (`/auth/confirm`):** a route handler outside `(public)` runs `verifyOtp({token_hash,type})` (with a `?code=`→`exchangeCodeForSession` fallback), then routes invite→`/login/update-password?type=welcome`, recovery→`?type=recovery`. The Invite + Recovery **email templates** switch to a `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=…` link (see `spec/AUTH_EMAIL_TEMPLATES.md`; apply at go-live, AFTER the route deploys). `inviteUser` sets `app_metadata.force_password_change=true` (backstop to the explicit redirect) and seeds `full_name` into user_metadata. No `redirectTo` is passed — the template owns the link host via GoTrue's own SiteURL, avoiding a stale `NEXT_PUBLIC_SITE_URL`. Real forgot-password via `resetPasswordForEmail`.
+2. **Self-service profile:** 9 new `team_members` columns (`status_line` ≤50 CHECK, `about`, `location`, `company`, `website`, `github`, `linkedin`, `instagram`, `private_phone`); reuse existing `date_of_birth`/`phone`/`show_birthday`. `updateOwnProfile` whitelist widened; new `getOwnProfile`, `updateOwnAvatar` (session-scoped, service-role storage), `ensureOwnTeamMember` (auto-provision the one unlinked account, dev@). New `/account/profile` form: Name/Role/**Login-Email read-only** (email change is auth-level, structurally excluded from the whitelist). "Profil" user-menu link un-stubbed.
+3. **Directory read tightened:** `team_select_public` (anon) → `team_select_authenticated`. The app is fully login-gated, `/team` reads via the cookie-bound server client, the AI tool reads via service-role — so anon can no longer read `private_phone`/DoB at the DB layer.
+4. **`/team` detail:** public-safe projection added to `getTeamMembers` (no `private_phone`; DoB only when `show_birthday`); member cards open a detail modal.
+5. **Super-admin AI-chat audit:** `getUserChatHistory` (RLS read, super_admin via the existing policy — **no migration**) + `loadUserChat` (`requireSuperAdmin`, logs `view_user_chat` for a DSGVO audit trail) + a "KI-Chat" tab in the user-detail modal. Super_admin-only at both the action and RLS layers; admins can never reach it.
+**Verified:** `pnpm typecheck` + `next build` green. Full browser verification (invite round-trip, profile save, `/team` detail, chat tab) pending the migration apply + deploy.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

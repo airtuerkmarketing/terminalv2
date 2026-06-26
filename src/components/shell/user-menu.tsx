@@ -86,8 +86,8 @@ export function UserMenu({
 
   const dark = useSyncExternalStore(subscribeTheme, getDark, () => false);
 
-  // The roving set excludes the disabled Profile row (aria-disabled) so keyboard
-  // users never land on an inert item.
+  // The roving set skips any aria-disabled rows so keyboard users never land on an
+  // inert item (all rows are actionable today).
   const getItems = useCallback(
     () =>
       Array.from(
@@ -261,20 +261,18 @@ export function UserMenu({
 
               <div className="um-sep" role="separator" />
 
-              {/* Profile: no route yet — rendered inert (aria-disabled) with a
-                  "coming soon" tooltip rather than removed, to keep the shape. */}
-              <button
-                type="button"
+              {/* Profile → self-service account page (AP 3). */}
+              <Link
+                href="/account/profile"
                 role="menuitem"
                 className="um-item"
-                aria-disabled="true"
-                title="Bald verfügbar"
+                onClick={() => close()}
               >
                 <span className="um-item-icon">
                   <ProfileIcon />
                 </span>
                 <span className="um-item-label">Profil</span>
-              </button>
+              </Link>
 
               <button
                 type="button"

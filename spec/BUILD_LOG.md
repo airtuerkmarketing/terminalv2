@@ -77,6 +77,32 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
+## 2026-06-26 — Onboarding + self-profile + super-admin chat audit (D-070, branch)
+
+Built on `claude/busy-ishizaka-21ca9c` — **not yet merged/deployed**. Closes the
+broken invite→onboarding gap and adds the self-service profile the demo needs.
+
+- **Auth landing:** new `/auth/confirm` route handler (`verifyOtp` token_hash flow,
+  `exchangeCodeForSession` fallback) → routes invite to `/login/update-password?type=welcome`,
+  recovery to `?type=recovery`. `inviteUser` now sets `force_password_change` + seeds
+  `full_name`. Real forgot-password (`resetPasswordForEmail`) replaces the placeholder.
+- **Self-service `/account/profile`:** real form (avatar self-upload, status line ≤50,
+  social/contact/about, birthday opt-in); Name/Role/**Login-Email read-only**. New server
+  fns `getOwnProfile`/`updateOwnAvatar`/`ensureOwnTeamMember`; `updateOwnProfile` whitelist
+  widened. "Profil" user-menu link un-stubbed.
+- **`/team` detail:** member cards now open a public-safe profile modal (no `private_phone`;
+  DoB only when `show_birthday`).
+- **Super-admin "KI-Chat" tab** in the user-detail modal — `getUserChatHistory` + `loadUserChat`
+  (super_admin-only, access logged). No migration (RLS already grants `is_super_admin()`).
+- **Migration `20260626140000_self_service_profile_fields`** (authored, **pending apply**):
+  +9 `team_members` columns + `team_select_public`→`team_select_authenticated`.
+- **Gates:** `tsc --noEmit` + `next build` green.
+- **Go-live (3 sign-offs):** (1) apply the migration to prod, (2) swap the Invite + Recovery
+  email templates (`spec/AUTH_EMAIL_TEMPLATES.md`) AFTER the route deploys, (3) merge to `main`.
+  Order matters: apply the migration BEFORE deploying (else `/team` + profile read missing columns).
+
+---
+
 ## 2026-06-26 — airtuerk-KI: live team-directory tool-call (D-069)
 
 The KI was the only consumer not wired to `team_members` (the source of truth already

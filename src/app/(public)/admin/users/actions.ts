@@ -8,11 +8,14 @@ import {
   exportUsersLog,
   getTeamMemberBrands,
   getUserActivityLog,
+  getUserChatHistory,
   inviteUser,
+  logActivity,
   updateUserRole,
   type ActivityLogPage,
   type BrandRef,
   type BulkInviteResult,
+  type ChatSessionItem,
   type Role,
 } from "@/lib/users";
 
@@ -25,6 +28,28 @@ import {
 export async function loadUserActivity(userId: string, limit?: number): Promise<ActivityLogPage> {
   await requireSuperAdmin();
   return getUserActivityLog(userId, { limit: limit ?? 20 });
+}
+
+/**
+ * Lazy-load a user's AI-chat history for the detail modal's "KI-Chat" tab.
+ * super_admin-ONLY: the requireSuperAdmin gate matches the DB-level guarantee
+ * (the ai_chat_* RLS only grants cross-user read to is_super_admin()), so a
+ * regular admin can never reach another user's chat content. The access itself is
+ * recorded in the activity log (DSGVO audit trail) since this surfaces employees'
+ * verbatim questions. `userId` is the team member's profileId (= the auth id on
+ * ai_chat_sessions.user_id) — only set for active/invited members.
+ */
+export async function loadUserChat(userId: string, sessionLimit?: number): Promise<ChatSessionItem[]> {
+  const identity = await requireSuperAdmin();
+  const history = await getUserChatHistory(userId, { sessionLimit });
+  await logActivity({
+    userId: identity.userId,
+    action: "view_user_chat",
+    resourceType: "profile",
+    resourceId: userId,
+    metadata: { targetUserId: userId, sessions: history.length },
+  });
+  return history;
 }
 
 export type UpdateRoleResult = { ok: true } | { ok: false; error: string };

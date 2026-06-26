@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthParticles } from "@/components/effects/auth-particles";
+import ForgotPasswordForm from "./forgot-password-form";
 
 export const metadata = {
   title: "Passwort vergessen — terminal",
@@ -18,10 +19,11 @@ export default function ForgotPasswordPage() {
 
         <h1 className="login-title">Passwort vergessen</h1>
         <p className="login-subtitle">
-          Diese Funktion wird gerade eingerichtet. Bitte kontaktiere kurz{" "}
-          <strong>bdemir@airtuerk.de</strong> — du bekommst dein Passwort
-          innerhalb weniger Minuten zurückgesetzt.
+          Gib deine E-Mail-Adresse ein — wir schicken dir einen Link zum
+          Zurücksetzen deines Passworts.
         </p>
+
+        <ForgotPasswordForm />
 
         <Link href="/login" className="login-link">
           ← Zurück zur Anmeldung
