@@ -25,6 +25,17 @@ const KONFIDENZ_LABEL: Record<AiKonfidenz, string> = {
   hoch: "Hohe Konfidenz",
 };
 
+/* Strip inline "[Quelle: …]" / "[Quellen: …]" / "[Kontext: …]" markers the model
+ * sometimes injects mid-prose — they clutter the answer and duplicate the sources
+ * toggle. Removes complete bracketed markers and any trailing unterminated one
+ * still arriving mid-stream, then collapses the doubled space left behind. */
+function stripInlineCitations(text: string): string {
+  return text
+    .replace(/\s*\[(?:Quellen?|Kontext)\b[^\]]*\]/gi, "")
+    .replace(/\s*\[(?:Quellen?|Kontext)\b[^\]]*$/i, "")
+    .replace(/[ \t]{2,}/g, " ");
+}
+
 export function AIAnswerBlock({
   turn,
   typewriter = false,
@@ -87,48 +98,22 @@ function AITurnAnswer({
   const { shown, done } = useTypewriterText(useTw ? answer.text : "");
   const text = useTw ? shown : answer.text;
   const finished = streaming ? false : useTw ? done : true;
+  // Hide inline "[Quelle: …]" / "[Kontext: …]" citations from the rendered prose
+  // (sources live in the toggle by the feedback buttons). DISPLAY-only strip —
+  // the raw text already drove confidence inference upstream.
+  const displayText = stripInlineCitations(text);
 
   return (
     <>
-      {streaming ? (
-        // Raw text while streaming (keeps the inline blinking caret); markdown
-        // is parsed once the answer is complete — avoids reflow churn and a
-        // detached caret while tokens arrive.
-        <p className="ai-chat-a-text">
-          {text}
+      {/* Markdown is rendered live as tokens stream in (Claude-style) so the
+          answer carries structure immediately — no raw-text-then-snap reflow.
+          A blinking caret trails the text while streaming or typewriting. */}
+      <div className="ai-chat-answer">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayText}</ReactMarkdown>
+        {(streaming || (useTw && !finished)) && (
           <span className="ai-chat-caret" aria-hidden="true" />
-        </p>
-      ) : (
-        <div className="ai-chat-answer">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
-          {useTw && !finished && (
-            <span className="ai-chat-caret" aria-hidden="true" />
-          )}
-        </div>
-      )}
-
-      {finished && answer.quellen.length > 0 && (
-        <details className="ai-chat-sources-toggle">
-          <summary aria-label={`${answer.quellen.length} Quellen anzeigen`}>
-            <BookOpen size={14} aria-hidden="true" />
-            <span className="ai-chat-sources-count">{answer.quellen.length}</span>
-          </summary>
-          <div className="ai-chat-sources-popover">
-            {answer.quellen.map((s, i) => (
-              <a
-                key={`${s.dokument_titel}-${i}`}
-                className="ai-chat-source-chip"
-                href={s.link}
-                target={s.link.startsWith("http") ? "_blank" : undefined}
-                rel={s.link.startsWith("http") ? "noreferrer" : undefined}
-                title={s.dokument_titel}
-              >
-                {s.dokument_titel}
-              </a>
-            ))}
-          </div>
-        </details>
-      )}
+        )}
+      </div>
 
       {/* Web-Search Button (Workstream 1 skeleton — full impl in WS4) */}
       {finished && !turn.isWebSearch && !turn.webSearchTriggered && isOutOfScope(answer.text) && (
@@ -163,14 +148,45 @@ function AITurnAnswer({
         </div>
       )}
 
-      {finished && turn.messageId && onCorrect && onFeedbackChange && (
-        <AnswerFeedback
-          messageId={turn.messageId}
-          currentFeedback={turn.feedback ?? null}
-          onCorrect={() => onCorrect(turn)}
-          onFeedbackChange={(fb) => onFeedbackChange(turn.id, fb)}
-          disabled={turn.isStreaming}
-        />
+      {/* Action row — feedback buttons with the sources toggle beside them. (The
+          sources badge used to float top-right of the answer and overlapped the
+          question bubble.) */}
+      {finished &&
+        (answer.quellen.length > 0 ||
+          (turn.messageId && onCorrect && onFeedbackChange)) && (
+        <div className="ai-chat-actions">
+          {turn.messageId && onCorrect && onFeedbackChange && (
+            <AnswerFeedback
+              messageId={turn.messageId}
+              currentFeedback={turn.feedback ?? null}
+              onCorrect={() => onCorrect(turn)}
+              onFeedbackChange={(fb) => onFeedbackChange(turn.id, fb)}
+              disabled={turn.isStreaming}
+            />
+          )}
+          {answer.quellen.length > 0 && (
+            <details className="ai-chat-sources-toggle">
+              <summary aria-label={`${answer.quellen.length} Quellen anzeigen`}>
+                <BookOpen size={13} aria-hidden="true" />
+                <span className="ai-chat-sources-count">{answer.quellen.length}</span>
+              </summary>
+              <div className="ai-chat-sources-popover">
+                {answer.quellen.map((s, i) => (
+                  <a
+                    key={`${s.dokument_titel}-${i}`}
+                    className="ai-chat-source-chip"
+                    href={s.link}
+                    target={s.link.startsWith("http") ? "_blank" : undefined}
+                    rel={s.link.startsWith("http") ? "noreferrer" : undefined}
+                    title={s.dokument_titel}
+                  >
+                    {s.dokument_titel}
+                  </a>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
       )}
     </>
   );

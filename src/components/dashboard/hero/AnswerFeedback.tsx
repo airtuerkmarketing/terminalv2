@@ -44,7 +44,7 @@ export function AnswerFeedback({
         aria-label="Hilfreich"
         title={currentFeedback === "helpful" ? "Als hilfreich markiert" : "Hilfreich"}
       >
-        <ThumbsUp size={16} aria-hidden="true" />
+        <ThumbsUp size={13} aria-hidden="true" />
       </button>
       <button
         type="button"
@@ -54,7 +54,7 @@ export function AnswerFeedback({
         aria-label="Nicht hilfreich"
         title={currentFeedback === "not_helpful" ? "Als nicht hilfreich markiert" : "Nicht hilfreich"}
       >
-        <ThumbsDown size={16} aria-hidden="true" />
+        <ThumbsDown size={13} aria-hidden="true" />
       </button>
       <button
         type="button"
@@ -64,7 +64,7 @@ export function AnswerFeedback({
         aria-label="Antwort korrigieren"
         title="Antwort korrigieren"
       >
-        <Edit3 size={16} aria-hidden="true" />
+        <Edit3 size={13} aria-hidden="true" />
         <span className="ai-chat-feedback-label">Korrigieren</span>
       </button>
     </div>

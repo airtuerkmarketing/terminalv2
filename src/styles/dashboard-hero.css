@@ -346,60 +346,58 @@
   font-weight: var(--weight-semibold);
 }
 
-/* ── AI chat overlay (dark blurred backdrop) ──
-   Dims + blurs the page behind the chat so the conversation owns the focus.
-   Always mounted (fades via opacity); pointer-events gate stops it eating
-   clicks while hidden. Click anywhere on it closes the chat. Sits just under
-   the panel (990) but above the shell sidebar (z 50/60); the correction modal
-   stays on top at z 1000. */
-.ai-chat-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 990;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 250ms var(--ease-smooth);
-}
-.ai-chat-overlay.is-visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* ── AI chat window (right-side sliding panel) ──
-   Slides in from the right edge on submit; reuses the house drawer pattern
-   (translateX + --ease-smooth). Sits above its backdrop (995); the correction
-   modal launched from inside stays above at z 1000. */
+/* ── AI chat — full-page conversation surface ──
+   Opens as its own page (cross-fade + a slight rise) rather than a right-side
+   drawer, so the conversation reads as a dedicated view. Opaque full-viewport
+   surface at z 995 — covers the shell; the correction modal launched from
+   inside stays above at z 1000. Closed state is faded + visibility:hidden
+   (visibility delayed one transition so it fades out instead of snapping) and
+   `inert` in the markup keeps it out of the tab order. */
 .ai-chat-window {
   position: fixed;
-  top: 0;
-  right: 0;
-  height: 100dvh;
-  width: 80vw;
-  max-width: 1600px;
+  inset: 0;
+  /* inset:0 fills the viewport exactly: it stretches to the containing block's
+     content box, so it respects the scrollbar gutter and the centered composer
+     lands on the true visual centre (100vw is ~a scrollbar-width too wide here,
+     which pushed the composer off-centre). The dashboard tree above this window
+     has no transform/filter/container-type ancestor, so the containing block is
+     the viewport; the open-state scroll-lock then removes the scrollbar too. */
   z-index: 995;
   display: flex;
   flex-direction: column;
   background: var(--surface-flat);
-  border-left: 1px solid var(--hairline);
-  box-shadow: var(--card-shadow);
-  /* +24px buffer past the panel's own width so the closed state also clears any
-     scrollbar gutter (layout width < visual width on scrollbar platforms),
-     otherwise a thin sliver peeks at the right edge in full-width mode. */
-  transform: translateX(calc(100% + 24px));
-  transition: transform 280ms var(--ease-smooth);
-  will-change: transform;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: opacity 260ms var(--ease-smooth),
+              transform 260ms var(--ease-smooth),
+              visibility 0s linear 260ms;
+  will-change: opacity, transform;
 }
 .ai-chat-window.is-open {
-  transform: translateX(0);
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity 260ms var(--ease-smooth),
+              transform 260ms var(--ease-smooth),
+              visibility 0s;
 }
-@media (max-width: 1024px) {
+/* Desktop: keep the shell sidebar visible during chat — start the surface at the
+   sidebar's right edge instead of covering it, so navigation stays usable (the
+   composer then centres within the content area, Claude-style). On mobile the
+   sidebar is an off-canvas drawer, so the chat stays full-width. Matches the
+   sidebar's collapsed width when collapsed. */
+@media (min-width: 1024px) {
   .ai-chat-window {
-    width: 90vw;
+    left: var(--sidebar-w);
+  }
+  :root[data-sidebar="collapsed"] .ai-chat-window {
+    left: var(--sidebar-w-collapsed);
   }
 }
+/* Reduced-motion handling for the window + composer is consolidated in the
+   single prefers-reduced-motion block near the end of this file (so the
+   .is-open transition can't out-specify it and animate one direction only). */
 
 .ai-chat-header {
   flex-shrink: 0;
@@ -484,18 +482,26 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-5);
+  scroll-behavior: smooth;
+  /* Generous bottom pad clears the floating composer so the last answer is
+     never hidden behind it. */
+  padding: var(--space-8) var(--space-4) 180px;
+}
+/* Centered readable column (Claude-style) — the conversation thread. */
+.ai-chat-thread {
+  width: 100%;
+  max-width: 768px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-  scroll-behavior: smooth;
+  gap: var(--space-8);
 }
 
 /* ── One Q→A turn inside the chat body ── */
 .ai-chat-turn {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 .ai-chat-q {
   align-self: flex-end;
@@ -503,15 +509,14 @@
   padding: 10px 14px;
   background: var(--accent-soft);
   color: var(--text-1);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-sm);
   font-size: var(--fs-base);
+  line-height: var(--lh-normal);
 }
+/* AI answer = plain high-contrast prose directly on the page (no card chrome). */
 .ai-chat-a {
-  position: relative;
-  background: var(--surface-flat);
-  border-radius: var(--card-radius);
-  box-shadow: var(--shadow-rest);
-  padding: var(--card-padding);
+  min-width: 0;
 }
 .ai-chat-loading {
   display: flex;
@@ -624,7 +629,8 @@
 .ai-chat-answer td {
   padding: 8px 12px;
   border-bottom: 1px solid var(--hairline);
-  color: var(--text-2);
+  /* Body-dark, not the faint --text-2 — table cells were nearly invisible. */
+  color: var(--text-1);
 }
 .ai-chat-answer tr:last-child td {
   border-bottom: none;
@@ -648,22 +654,20 @@
    Native <details>/<summary> for accessibility + mobile-friendly click toggle.
    Inline [Quelle: …] citations stay in the prose. */
 .ai-chat-sources-toggle {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 10;
+  position: relative;
 }
 .ai-chat-sources-toggle summary {
   list-style: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: 3px;
+  padding: 2px 7px;
   border-radius: var(--radius-sm);
-  background: var(--surface-muted);
+  border: 1px solid var(--hairline);
+  background: transparent;
   color: var(--text-2);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: var(--weight-semibold);
   transition: background 150ms var(--ease-smooth),
               color 150ms var(--ease-smooth);
@@ -681,7 +685,8 @@
 }
 .ai-chat-sources-popover {
   position: absolute;
-  top: calc(100% + 6px);
+  /* opens upward — the toggle now sits in the bottom action row */
+  bottom: calc(100% + 6px);
   right: 0;
   min-width: 280px;
   max-width: 360px;
@@ -739,40 +744,85 @@
   color: var(--text-2);
 }
 
-/* ── Chat follow-up input (panel footer) ── */
+/* ── Chat composer — centered floating input (Claude-style) ──
+   Horizontally centered, max-width readable column; bottom-anchored during a
+   conversation and lifted to the vertical middle when the thread is empty
+   (fresh chat / "Neuer Chat"). The centered↔bottom move is a single animatable
+   transform (no top/bottom unit-swap), so it glides smoothly. */
 .ai-chat-input {
-  flex-shrink: 0;
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-6);
+  z-index: 20;
+  width: calc(100% - 2 * var(--space-4));
+  max-width: 768px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  transform: translateX(-50%);
+  transition: transform 460ms var(--ease-smooth);
+}
+.ai-chat-input.is-centered {
+  /* Lift from the bottom anchor to the viewport's vertical centre: own-height
+     50% down, half-viewport up, then add the bottom offset back. */
+  transform: translate(-50%, calc(50% - 50dvh + var(--space-6)));
+}
+/* Fresh-chat greeting, shown above the centered composer when the thread empty. */
+.ai-chat-greeting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  text-align: center;
+  margin-bottom: var(--space-2);
+}
+.ai-chat-greeting-title {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+.ai-chat-greeting-sub {
+  margin: 0;
+  font-size: var(--fs-base);
+  color: var(--text-2);
+}
+/* Rounded floating container — the composer surface. */
+.ai-chat-composer {
   display: flex;
   align-items: flex-end;
   gap: var(--space-2);
-  padding: var(--space-4) var(--space-5);
-  border-top: 1px solid var(--separator);
-  background: var(--surface-flat);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  box-shadow: var(--shadow-searchbox);
+  transition: border-color 150ms var(--ease-smooth),
+              box-shadow 150ms var(--ease-smooth);
+}
+.ai-chat-composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-searchbox), 0 0 0 3px var(--accent-soft);
 }
 .ai-chat-textarea {
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius-md);
-  background: var(--surface-muted);
+  border: 0;
+  background: transparent;
   resize: none;
   outline: none;
   font-family: inherit;
   font-size: var(--fs-base);
   line-height: var(--lh-normal);
   color: var(--text-1);
-  padding: 10px 12px;
-  min-height: 42px;
+  padding: 9px 0;
+  min-height: 40px;
   /* ~8 rows; JS auto-grow sets height to scrollHeight, this caps it and
      overflow-y:auto scrolls beyond. */
-  max-height: 190px;
+  max-height: 200px;
   overflow-y: auto;
-  transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
-}
-.ai-chat-textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .ai-chat-textarea::placeholder {
   color: var(--text-3);
@@ -782,7 +832,7 @@
   height: 38px;
   flex-shrink: 0;
   border: 0;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   background: var(--accent);
   color: #fff;
   display: grid;
@@ -885,7 +935,11 @@
   .ai-chat-spin {
     animation: none;
   }
-  .ai-chat-window {
+  /* Window + composer snap (no fade / no glide) under reduced motion. Both the
+     base and .is-open selectors are listed so neither direction animates. */
+  .ai-chat-window,
+  .ai-chat-window.is-open,
+  .ai-chat-input {
     transition: none;
   }
   .ai-chat-caret {
@@ -941,9 +995,17 @@
   color: var(--text-3);
 }
 
+/* Bottom action row: feedback buttons + the sources toggle, side by side. */
+.ai-chat-actions {
+  margin-top: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
 /* ── AnswerFeedback (Atomic 3.5) — modeled after .ai-chat-source aesthetic ── */
 .ai-chat-feedback {
-  margin-top: var(--space-3);
   display: flex;
   gap: var(--space-2);
   align-items: center;
@@ -952,13 +1014,14 @@
 .ai-chat-feedback-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
+  gap: 3px;
+  /* ~37% smaller than the old 6px/10px·16px-icon chips (per design feedback). */
+  padding: 2px 7px;
+  font-size: 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--hairline);
   background: transparent;
   color: var(--text-2);
-  font-size: var(--fs-xs);
   cursor: pointer;
   transition: background 150ms var(--ease-smooth),
               border-color 150ms var(--ease-smooth),
