@@ -221,6 +221,7 @@ export function FolderGraphic3D({
   animate = true,
   hovered = false,
   color = "grey",
+  previewSrc = (f) => `/api/library/file/${f.id}`,
 }: {
   previewFiles?: FolderPreviewFile[];
   isPublic: boolean;
@@ -228,6 +229,9 @@ export function FolderGraphic3D({
   animate?: boolean;
   hovered?: boolean;
   color?: FolderColor;
+  /** Builds the <img> src for an image preview tile — overridable so the
+   *  Presentation Hub can point peeks at its own thumbnail serving route. */
+  previewSrc?: (f: FolderPreviewFile) => string;
 }) {
   const reduced = useReducedMotion();
   const uid = useId().replace(/:/g, ""); // namespace SVG gradient/filter ids per instance
@@ -291,7 +295,7 @@ export function FolderGraphic3D({
           >
             {f.isImage ? (
               /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
-              <img src={`/api/library/file/${f.id}`} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
+              <img src={previewSrc(f)} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
             ) : (
               /* Plain sheet (format hint removed — the old coin/badge read poorly). */
               <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-surface px-2">

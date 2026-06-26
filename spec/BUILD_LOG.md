@@ -7,9 +7,9 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## Current State (updated 2026-06-26)
+## Current State (updated 2026-06-27)
 
-- **HEAD:** `main` — **Document Library data/shell hardening** (D-074/075/076): nested open-path sidebar tree with per-level counts; subfolder file-counts + 3D peek; persistent **shared folder colour** (DB, palette in CSS); standalone folder **Move** modal; rename **redirects to the new slug** (no 404); non-empty-folder **delete guard**; **file Trash** (soft-delete, 30-day `pg_cron` purge, Trash route + bottom-of-sidebar entry); global rail auto-collapses + hides its duplicate node on library routes; full-height secondary sidebar. Migrations `20260626170000` (colour) + `20260626180000` (trash) **applied to prod** (SQL editor, sign-off given). Next: port the same construct to `/presentation-hub`. Prev: Mode-Chips + platform UI→English + gold-set removal (D-072/D-073, `febc625`); `rag-query` v12 live. **Demo:** 2026-08-01.
+- **HEAD:** `main` — **Presentation Hub folder visibility** (D-079): `presentation_folders.is_public` (default true = non-breaking) + RLS so private folders/files are admin-only; **"Make private/public"** in the folder card + on-page menus, lock cue on private cards. Migration `20260626210000` applied to prod. Prev: **Presentation Hub ported 1:1 to the Document Library construct** (D-077/078 — nested secondary sidebar tree, managed SVG colour cards + full context menu, counts, Move, rename-redirect, delete-guard, file Trash with source+thumbnail+slides purge; migrations `…190000`+`…200000`); both library nav nodes kept visible on their own route; Resources order **Presentations → Documents → Assets → Team**. **Document Library data/shell hardening** (D-074/075/076). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
@@ -20,10 +20,12 @@ it is append-only history (do not rewrite past entries — add new ones).
   **51 pages** (gold-set quiz pages removed), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **70 migrations**, highest:
-  `20260626180000_document_files_trash` (applied). `document_folders` +`color`;
-  `document_files` +`deleted_at`/`deleted_by` (Trash); daily `purge-expired-trashed-documents`
-  cron. Highest decision: **D-076**.
+  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **73 migrations**, highest:
+  `20260626210000_presentation_folder_visibility` (applied). `document_folders`/`presentation_folders`
+  +`color`; `presentation_folders` +`is_public` (private = admin-only, D-079);
+  `document_files`/`presentation_files` +`deleted_at`/`deleted_by` (Trash); daily
+  `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
+  Highest decision: **D-079**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +

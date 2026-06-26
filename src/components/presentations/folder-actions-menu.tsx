@@ -4,14 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "./modal";
 import { CreateFolderModal } from "./create-folder-modal";
-import { deleteFolder, moveFolder, renameFolder } from "@/app/(public)/presentation-hub/actions";
+import {
+  deleteFolder,
+  moveFolder,
+  renameFolder,
+  setFolderVisibility,
+} from "@/app/(public)/presentation-hub/actions";
 import type { PresentationFolderDTO } from "@/lib/presentations";
 import { invalidateMoveTargets, useMoveTargets } from "./move-targets";
 
 type ActiveModal = "create" | "rename" | "move" | "delete" | null;
 
-/** ⋮ menu for the CURRENT folder (admin). Delete requires super-admin. The hub is
- *  login-only, so there is no public/private toggle. */
+/** ⋮ menu for the CURRENT folder (admin). Delete + visibility require super-admin.
+ *  Private (D-079) = admin-only (the hub is login-only). */
 export function FolderActionsMenu({
   folder,
   isSuperAdmin,
@@ -67,6 +72,11 @@ export function FolderActionsMenu({
     setError(null);
     after(await moveFolder(folder.id, dest || null));
   }
+  async function doToggleVisibility() {
+    setMenuOpen(false);
+    const res = await setFolderVisibility(folder.id, !folder.isPublic);
+    if (res.ok) router.refresh();
+  }
   async function doDelete() {
     setBusy(true);
     setError(null);
@@ -121,6 +131,9 @@ export function FolderActionsMenu({
           </button>
           {isSuperAdmin && (
             <>
+              <button type="button" role="menuitem" onClick={doToggleVisibility}>
+                {folder.isPublic ? "Make private" : "Make public"}
+              </button>
               <div className="ph-menu-sep" />
               <button type="button" role="menuitem" className="danger" onClick={() => open("delete")}>
                 Delete folder
@@ -178,8 +191,8 @@ export function FolderActionsMenu({
       <Modal open={modal === "delete"} onClose={() => setModal(null)} title="Delete folder" width={460}>
         <div className="ph-form">
           <p className="ph-confirm-text">
-            Delete <strong>{folder.name}</strong> and <strong>everything inside it</strong> (subfolders and
-            presentations)? This can’t be undone.
+            Delete <strong>{folder.name}</strong>? A folder that still contains presentations can’t be
+            deleted — clear its files first. This can’t be undone.
           </p>
           {error && <p className="ph-error">{error}</p>}
           <div className="ph-form-actions">

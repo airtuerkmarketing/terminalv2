@@ -23,11 +23,11 @@ export default function LoginForm({
   }
 
   return (
-    <form action={onSubmit} className="login-form">
+    <form action={onSubmit} className="auth-form">
       <input type="hidden" name="next" value={next || "/"} />
 
-      <div className="login-field">
-        <label htmlFor="email" className="login-label">Email</label>
+      <div className="auth-field">
+        <label htmlFor="email" className="auth-label">E-mail</label>
         <input
           id="email"
           name="email"
@@ -35,13 +35,13 @@ export default function LoginForm({
           autoComplete="email"
           required
           disabled={isPending}
-          className="login-input"
-          placeholder="name@airtuerk.de"
+          className="auth-input"
+          placeholder="Enter your e-mail"
         />
       </div>
 
-      <div className="login-field">
-        <label htmlFor="password" className="login-label">Password</label>
+      <div className="auth-field">
+        <label htmlFor="password" className="auth-label">Password</label>
         <input
           id="password"
           name="password"
@@ -49,9 +49,20 @@ export default function LoginForm({
           autoComplete="current-password"
           required
           disabled={isPending}
-          className="login-input"
-          placeholder="••••••••"
+          className="auth-input"
+          placeholder="Enter your password"
         />
+      </div>
+
+      <div className="auth-row">
+        {/* Cosmetic — Supabase sessions persist regardless; matches the design. */}
+        <label className="auth-remember">
+          <input type="checkbox" name="remember" className="auth-checkbox" disabled={isPending} />
+          <span>Remember me</span>
+        </label>
+        <Link href="/login/forgot-password" className="auth-forgot">
+          Forgot Password
+        </Link>
       </div>
 
       {error && (
@@ -60,13 +71,9 @@ export default function LoginForm({
         </div>
       )}
 
-      <button type="submit" disabled={isPending} className="login-submit">
-        {isPending ? "Signing in..." : "Sign in"}
+      <button type="submit" disabled={isPending} className="auth-submit">
+        {isPending ? "Signing in…" : "Login"}
       </button>
-
-      <Link href="/login/forgot-password" className="login-link">
-        Forgot password?
-      </Link>
     </form>
   );
 }

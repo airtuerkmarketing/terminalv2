@@ -533,6 +533,40 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-077 — Presentation Hub: ported the Document Library construct 1:1
+**Date:** 2026-06-26
+**Status:** Adopted. Migration `20260626190000_presentation_folders_color` (additive `color`). Applied to prod via SQL editor (sign-off given).
+**Context:** The Presentation Hub was a parallel stack (own `presentations.ts`, `presentation_*` tables, `presentation-*` components) with a Quantum-tinted CSS-3D folder card, **no folder colour, no card management, and no secondary sidebar**. Buhara: make it 1:1 with the now-shipped Document Library construct (D-074/075/076).
+**Decision:** Port the whole construct into the presentation namespace, wired to the presentation actions/data:
+1. **Folder colour** (shared, admin-write) — `presentation_folders.color`, reusing the `FolderColor` enum + the CSS `.dl-folder-fx` palette.
+2. **Nested open-path sidebar tree** (`getPresentationFolderTreeForPath`) in a NEW secondary sidebar (`presentations-sidebar.tsx`) — restructured the page from centered `.main-inner` to the shared `dl-shell` layout. Bottom-pinned **Trash** (see D-078).
+3. **Folder card** = the documents SVG folder card (`PresentationFolderCard3D`) with the full context menu (Open / colour / Rename / New subfolder / Move… / Delete), dropping the Quantum tint. The shared `FolderGraphic3D` gained an optional `previewSrc` prop so peeks point at the presentation thumbnail route.
+4. **Subfolder counts + preview** (`getChildPresentationFoldersWithPreview`), **standalone Move** modal, **rename → new-slug redirect**, **non-empty-folder delete guard**.
+5. **Shell:** `/presentation-hub` added to `LIBRARY_ROUTE_PREFIXES` + the pre-paint script → auto-collapse + full-height sidebar. The global library nav node is kept VISIBLE on its own route (as a plain link, sub-list dropped) so it never disappears (applied to Documents too). Sidebar Resources order: **Presentations → Documents → Assets → Team**.
+   The presentation FILE display (thumbnails / slides / player) stays presentation-specific — only the FOLDER construct is shared.
+**Verified:** `tsc` + `next build` green; live preview — sidebar tree, managed colour cards (colour persists from DB), counts, Trash route, Move/Rename menus, both nav nodes visible, pill toolbar buttons in subfolders.
+
+---
+
+## D-078 — Presentation Hub: file Trash (soft-delete, 30-day retention)
+**Date:** 2026-06-26
+**Status:** Adopted. Migration `20260626200000_presentation_files_trash` (additive `deleted_at`/`deleted_by` + partial indexes + `purge_expired_trashed_presentations()` + daily `pg_cron`). Applied to prod via SQL editor (sign-off given).
+**Context:** Mirrors D-076 for the hub. `deletePresentation` was an immediate hard delete (row + all blobs).
+**Decision:** `deletePresentation` is now **soft** (sets `deleted_at`); all live listings filter `deleted_at IS NULL` (on top of the existing `NOT is_archived` version filter). Admin actions: **Restore**, **Delete forever**, **Empty trash**. Reserved admin-only `/presentation-hub/trash` route + Trash view + bottom-of-sidebar entry. The daily `pg_cron` purge removes **every** object a presentation owns — `storage_path` + `thumbnail_path` + each path in `slide_paths[]` (richer than the doc library's single object). Rollout-guarded reads (probe each request) so the hub renders pre-migration.
+**Verified:** `tsc` + `next build` green; columns confirmed live; Trash route + bottom-pinned sidebar entry render.
+
+---
+
+## D-079 — Presentation Hub: folder visibility (public/private)
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260626210000_presentation_folder_visibility` (additive `is_public`, default TRUE, + RLS). Applied to prod via SQL editor (sign-off given).
+**Context:** Documents support "make folder private", but the Presentation Hub was built login-only with **no `is_public` column** and RLS `USING (true)` — so the toggle had nothing to act on (the port couldn't expose it). Buhara: presentations should be able to make a folder private like Documents.
+**Decision:** Add `presentation_folders.is_public` (D-052 model). The hub stays login-only, so **private = admin-only** (vs visible to every authenticated user). RLS: `presentation_folders_select` → `is_public OR is_admin()`; `presentation_files_select` → the file's folder is public OR admin — so a private folder hides its presentations from non-admins too (the signed-URL serving route mints only AFTER this RLS-gated read). New action `setFolderVisibility` (super-admin); **"Make private / Make public"** in the folder card menu + the on-page folder menu; the lock cue on private cards reuses the shared `FolderGraphic3D`. Reads rollout-guarded (probe `is_public`).
+**Default = TRUE** (non-breaking: existing + new folders stay visible; admins opt specific ones private) — deliberately differs from `document_folders` (default private) since the hub was previously all-visible.
+**Verified:** `tsc` + `next build` green; live preview — Make private → lock cue → persists from DB → Make public → lock gone; column + RLS confirmed live.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

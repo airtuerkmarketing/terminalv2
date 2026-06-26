@@ -1,220 +1,313 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  deleteFolder,
+  renameFolder,
+  setFolderColor,
+  setFolderVisibility,
+} from "@/app/(public)/presentation-hub/actions";
+import { DEFAULT_FOLDER_COLOR, type FolderColor } from "@/lib/documents-constants";
 import type { PresentationPreviewFileDTO } from "@/lib/presentations";
-import { PresentationTypeIcon } from "./presentation-type-icon";
+// Shared 1:1 with the Document Library (D-077): same SVG folder + colour palette,
+// same context-menu primitive + confirm dialog. Only the data/actions differ.
+import { FolderGraphic3D, type FolderPreviewFile } from "@/components/documents/folder-card-3d";
+import { ContextMenu, type CtxItem } from "@/components/documents/file-card";
+import { ConfirmDialog } from "@/components/documents/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
+import { CreateFolderModal } from "./create-folder-modal";
+import { PresentationFolderMoveModal } from "./presentation-folder-move-modal";
 
-/**
- * 3D animated folder card — adapted 1:1 from documents/folder-card-3d.tsx with
- * own `ph-` token prefix (the two hubs stay decoupled). Neutral / Quantum-tinted
- * folder (NOT orange — chrome is Quantum-only). The fan-out peeks at the folder's
- * real top files: image uploads show their thumbnail via the gated serving route,
- * everything else shows the presentation type icon. The whole card is a link into
- * the folder. The overshoot hover is a documented exception to the calm-hover
- * rule, scoped to THIS component, and frozen under prefers-reduced-motion.
- *
- * Unlike the doc library there is no private/lock cue — the hub is login-only.
- */
-export interface PresentationFolderCard3DProps {
+// Solid swatch shown in the colour picker (CSS-var refs → palette single-sourced).
+const COLOR_SWATCHES: { value: FolderColor; color: string }[] = [
+  { value: "grey", color: "var(--folder-swatch-grey)" },
+  { value: "blue", color: "var(--folder-swatch-blue)" },
+  { value: "green", color: "var(--folder-swatch-green)" },
+  { value: "yellow", color: "var(--folder-swatch-yellow)" },
+];
+
+const THUMB = (f: FolderPreviewFile) => `/api/presentations/file/${f.id}?asset=thumb`;
+
+/** Map a presentation preview file to the shared FolderPreviewFile shape. */
+function toPreview(p: PresentationPreviewFileDTO): FolderPreviewFile {
+  return { id: p.id, title: p.title, extension: p.fileType, isImage: p.hasThumbnail };
+}
+
+/** Shared folder actions (rename / subfolder / move / colour / delete) + the
+ *  right-click menu and inline-rename input. The hub is login-only, so there's no
+ *  public/private cue (unlike the doc library). Mirrors useFolderActions there. */
+function useFolderActions({
+  id,
+  name,
+  href,
+  path,
+  parentId,
+  isPublic,
+  isSuperAdmin,
+  autoRename = false,
+  color,
+}: {
+  id?: string;
   name: string;
   href: string;
+  path?: string;
+  parentId?: string | null;
+  isPublic: boolean;
+  isSuperAdmin: boolean;
+  autoRename?: boolean;
+  color: FolderColor;
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
+  async function setColor(c: FolderColor) {
+    if (!id) return;
+    const res = await setFolderColor(id, c);
+    if (res.ok) router.refresh();
+  }
+
+  const [editing, setEditing] = useState(!!autoRename);
+  const [draft, setDraft] = useState(name);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const canManage = !!id && isSuperAdmin;
+
+  const startRename = () => {
+    setDraft(name);
+    setEditing(true);
+  };
+  async function commitRename() {
+    setEditing(false);
+    const t = draft.trim();
+    if (!id || !t || t === name) {
+      setDraft(name);
+      return;
+    }
+    const res = await renameFolder(id, t);
+    if (res.ok) router.refresh();
+    else setDraft(name);
+  }
+  async function toggleVisibility() {
+    if (!id) return;
+    const res = await setFolderVisibility(id, !isPublic);
+    if (res.ok) router.refresh();
+    else toast({ title: res.error, variant: "error" });
+  }
+  async function doDelete() {
+    if (!id) return;
+    setDeleting(true);
+    const res = await deleteFolder(id);
+    setDeleting(false);
+    if (res.ok) {
+      setConfirmDelete(false);
+      router.refresh();
+    } else {
+      toast({ title: res.error, variant: "error" });
+    }
+  }
+
+  const menuItems: CtxItem[] = [{ kind: "item", label: "Open", onClick: () => router.push(href) }];
+  if (canManage) {
+    menuItems.push({
+      kind: "swatches",
+      label: "Color",
+      value: color,
+      options: COLOR_SWATCHES,
+      onSelect: (v) => setColor(v as FolderColor),
+    });
+    menuItems.push(
+      { kind: "item", label: "Rename", onClick: startRename },
+      { kind: "item", label: "New subfolder", onClick: () => setCreateOpen(true) }
+    );
+    if (path) menuItems.push({ kind: "item", label: "Move…", onClick: () => setMoveOpen(true) });
+    menuItems.push(
+      { kind: "item", label: isPublic ? "Make private" : "Make public", onClick: toggleVisibility },
+      { kind: "sep" },
+      { kind: "item", label: "Delete folder", onClick: () => setConfirmDelete(true), danger: true }
+    );
+  }
+
+  const onContextMenu = id
+    ? (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setMenu({ x: e.clientX, y: e.clientY });
+      }
+    : undefined;
+  const renameInput = (
+    <input
+      autoFocus
+      onFocus={(e) => e.currentTarget.select()}
+      className="dl-cell__rename"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commitRename();
+        else if (e.key === "Escape") {
+          setDraft(name);
+          setEditing(false);
+        }
+      }}
+      onBlur={commitRename}
+      aria-label="Rename folder"
+    />
+  );
+  const portals = (
+    <>
+      {id && menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
+      {id && isSuperAdmin && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={id} />}
+      {id && path && canManage && (
+        <PresentationFolderMoveModal
+          open={moveOpen}
+          onClose={() => setMoveOpen(false)}
+          folderId={id}
+          folderPath={path}
+          parentId={parentId ?? null}
+        />
+      )}
+      {id && (
+        <ConfirmDialog
+          open={confirmDelete}
+          onClose={() => setConfirmDelete(false)}
+          onConfirm={doDelete}
+          tone="danger"
+          title="Delete this folder?"
+          message={`“${name}” will be deleted. A folder that still contains files can’t be deleted — clear its files first. This cannot be undone.`}
+          confirmLabel="Delete folder"
+          busy={deleting}
+          icon={<Trash2 size={24} aria-hidden="true" />}
+        />
+      )}
+    </>
+  );
+  return { canManage, editing, startRename, renameInput, onContextMenu, portals };
+}
+
+export interface PresentationFolderCard3DProps {
+  id?: string;
+  name: string;
+  href: string;
+  path?: string;
+  parentId?: string | null;
   fileCount: number;
   previewFiles: PresentationPreviewFileDTO[];
+  color?: FolderColor | null;
+  isPublic?: boolean;
+  isSuperAdmin?: boolean;
   className?: string;
-}
-
-const EASE = "cubic-bezier(0.34, 1.56, 0.64, 1)";
-
-// prefers-reduced-motion mirror (useSyncExternalStore — no setState-in-effect).
-function subscribeRM(cb: () => void) {
-  if (typeof window === "undefined" || !window.matchMedia) return () => {};
-  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-  mq.addEventListener("change", cb);
-  return () => mq.removeEventListener("change", cb);
-}
-function getRM() {
-  return typeof window !== "undefined" && window.matchMedia
-    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    : false;
-}
-function useReducedMotion() {
-  return useSyncExternalStore(subscribeRM, getRM, () => false);
+  autoRename?: boolean;
 }
 
 export function PresentationFolderCard3D({
+  id,
   name,
   href,
+  path,
+  parentId,
   fileCount,
   previewFiles,
+  color,
+  isPublic = true,
+  isSuperAdmin = false,
   className,
+  autoRename = false,
 }: PresentationFolderCard3DProps) {
   const [hovered, setHovered] = useState(false);
-  const reduced = useReducedMotion();
-  const tiles = previewFiles.slice(0, 3);
-  // Degrade: 0 files → folder stays closed (no fan-out); reduced-motion → static.
-  const open = hovered && tiles.length > 0 && !reduced;
-  const tr = (s: string) => (reduced ? "none" : s);
-
-  return (
-    <Link
-      href={href}
-      aria-label={`${name}, ${fileCount} ${fileCount === 1 ? "file" : "files"}`}
-      className={cn(
-        "ph-folder-card-3d group relative flex flex-col items-center justify-start no-underline",
-        "p-6 rounded-[var(--radius-xl)] cursor-pointer",
-        "bg-surface border border-hairline text-text-1",
-        "shadow-[var(--shadow-rest)] hover:shadow-[var(--shadow-hover)] hover:border-accent-border",
-        className
-      )}
-      style={{ perspective: "1000px", minHeight: "300px" }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onFocus={() => setHovered(true)}
-      onBlur={() => setHovered(false)}
-    >
-      {/* Quantum hover glow */}
-      <div
-        className="absolute inset-0 rounded-[var(--radius-xl)] pointer-events-none"
-        style={{
-          background: "radial-gradient(circle at 50% 70%, var(--accent) 0%, transparent 70%)",
-          opacity: open ? 0.08 : 0,
-          transition: tr("opacity 500ms ease"),
-        }}
-      />
-
-      {/* 3D folder stage */}
-      <div className="relative flex items-center justify-center my-2" style={{ height: "160px", width: "200px" }}>
-        {/* back panel */}
-        <div
-          className="absolute w-32 h-24 rounded-lg bg-surface-strong border border-hairline"
-          style={{
-            transformOrigin: "bottom center",
-            transform: open ? "rotateX(-15deg)" : "rotateX(0deg)",
-            transition: tr(`transform 500ms ${EASE}`),
-            zIndex: 10,
-            boxShadow: "var(--shadow-rest)",
-          }}
-        />
-        {/* tab */}
-        <div
-          className="absolute w-12 h-4 rounded-t-md bg-surface-strong border border-b-0 border-hairline"
-          style={{
-            top: "calc(50% - 48px - 12px)",
-            left: "calc(50% - 64px + 16px)",
-            transformOrigin: "bottom center",
-            transform: open ? "rotateX(-25deg) translateY(-2px)" : "rotateX(0deg)",
-            transition: tr(`transform 500ms ${EASE}`),
-            zIndex: 10,
-          }}
-        />
-
-        {/* file peek tiles */}
-        <div className="absolute" style={{ top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 20 }}>
-          {tiles.map((f, i) => (
-            <PeekTile key={f.id} file={f} index={i} open={open} reduced={reduced} />
-          ))}
-        </div>
-
-        {/* front flap (Quantum-soft tint) */}
-        <div
-          className="absolute w-32 h-24 rounded-lg border border-hairline"
-          style={{
-            top: "calc(50% - 48px + 4px)",
-            background: "var(--accent-soft)",
-            transformOrigin: "bottom center",
-            transform: open ? "rotateX(25deg) translateY(8px)" : "rotateX(0deg)",
-            transition: tr(`transform 500ms ${EASE}`),
-            zIndex: 30,
-            boxShadow: "var(--shadow-hover)",
-          }}
-        />
-        {/* shine */}
-        <div
-          className="absolute w-32 h-24 rounded-lg overflow-hidden pointer-events-none"
-          style={{
-            top: "calc(50% - 48px + 4px)",
-            background: "linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 50%)",
-            transformOrigin: "bottom center",
-            transform: open ? "rotateX(25deg) translateY(8px)" : "rotateX(0deg)",
-            transition: tr(`transform 500ms ${EASE}`),
-            zIndex: 31,
-          }}
-        />
-      </div>
-
-      <h3
-        className="text-base font-semibold text-text-1 mt-2"
-        style={{ transform: open ? "translateY(4px)" : "translateY(0)", transition: tr("transform 300ms ease") }}
-      >
-        {name}
-      </h3>
-      {fileCount > 0 && (
-        <p
-          className="text-sm text-text-3"
-          style={{ opacity: open ? 0.7 : 1, transition: tr("opacity 300ms ease") }}
-        >
-          {fileCount} {fileCount === 1 ? "file" : "files"}
-        </p>
-      )}
-    </Link>
-  );
-}
-
-function PeekTile({
-  file,
-  index,
-  open,
-  reduced,
-}: {
-  file: PresentationPreviewFileDTO;
-  index: number;
-  open: boolean;
-  reduced: boolean;
-}) {
-  const rotations = [-12, 0, 12];
-  const translations = [-55, 0, 55];
+  const folderColor = color ?? DEFAULT_FOLDER_COLOR;
+  const { canManage, editing, startRename, renameInput, onContextMenu, portals } = useFolderActions({
+    id,
+    name,
+    href,
+    path,
+    parentId,
+    isPublic,
+    isSuperAdmin,
+    autoRename,
+    color: folderColor,
+  });
 
   return (
     <div
-      className="absolute w-20 h-28 rounded-lg overflow-hidden bg-surface-strong border border-hairline pointer-events-none"
-      style={{
-        left: "-40px",
-        top: "-56px",
-        zIndex: 10 - index,
-        transform: open
-          ? `translateY(-90px) translateX(${translations[index]}px) rotate(${rotations[index]}deg) scale(1)`
-          : "translateY(0px) translateX(0px) rotate(0deg) scale(0.5)",
-        opacity: open ? 1 : 0,
-        transition: reduced ? "none" : `all 600ms ${EASE} ${index * 80}ms`,
-        boxShadow: "var(--shadow-hover)",
-      }}
+      className={cn("dl-cell dl-folder-cell group", className)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onContextMenu={onContextMenu}
     >
-      {file.hasThumbnail ? (
-        /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
-        <img
-          src={`/api/presentations/file/${file.id}?asset=thumb`}
-          alt=""
-          className="w-full h-full object-cover"
-          loading="lazy"
-          decoding="async"
-        />
+      <Link href={href} className="dl-cell__hit" aria-label={`Open ${name}`} onFocus={() => setHovered(true)} onBlur={() => setHovered(false)}>
+        <span className="dl-cell__visual">
+          <FolderGraphic3D previewFiles={previewFiles.map(toPreview)} isPublic={isPublic} hovered={hovered} color={folderColor} previewSrc={THUMB} />
+        </span>
+      </Link>
+
+      {editing ? (
+        renameInput
+      ) : canManage ? (
+        <button type="button" className="dl-cell__name" title={name} onClick={startRename}>
+          {name}
+        </button>
       ) : (
-        <div className="w-full h-full flex items-center justify-center bg-surface-muted">
-          <PresentationTypeIcon extension={file.fileType} scale={0.62} />
-        </div>
+        <span className="dl-cell__name" title={name}>{name}</span>
       )}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent)" }}
-      />
-      <p
-        className="absolute bottom-1 left-1.5 right-1.5 truncate"
-        style={{ fontSize: "10px", fontWeight: 600, color: "#fff" }}
-      >
-        {file.title}
-      </p>
+      <div className="dl-cell__sub">{fileCount} {fileCount === 1 ? "file" : "files"}</div>
+
+      {portals}
+    </div>
+  );
+}
+
+/** Folder as a LIST row (Windows-Explorer list view), mirrors the doc library. */
+export function PresentationFolderRow({
+  id,
+  name,
+  href,
+  path,
+  parentId,
+  fileCount,
+  color,
+  isPublic = true,
+  isSuperAdmin = false,
+  autoRename = false,
+}: {
+  id: string;
+  name: string;
+  href: string;
+  path?: string;
+  parentId?: string | null;
+  fileCount: number;
+  color?: FolderColor | null;
+  isPublic?: boolean;
+  isSuperAdmin?: boolean;
+  autoRename?: boolean;
+}) {
+  const folderColor = color ?? DEFAULT_FOLDER_COLOR;
+  const { editing, renameInput, onContextMenu, portals } = useFolderActions({
+    id,
+    name,
+    href,
+    path,
+    parentId,
+    isPublic,
+    isSuperAdmin,
+    autoRename,
+    color: folderColor,
+  });
+  return (
+    <div className="dl-row dl-row--folder" onContextMenu={onContextMenu}>
+      <span className="dl-row-type dl-row-type--folder" aria-hidden="true">
+        <FolderGraphic3D isPublic={isPublic} width={40} animate={false} color={folderColor} />
+      </span>
+      {editing ? renameInput : <Link className="dl-row-name" href={href} title={name}>{name}</Link>}
+      <span className="dl-row-lang" />
+      <span className="dl-row-size">{fileCount} {fileCount === 1 ? "file" : "files"}</span>
+      <span className="dl-row-modified" />
+      <span className="dl-row-actions" />
+      {portals}
     </div>
   );
 }

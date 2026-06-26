@@ -20,6 +20,9 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { LanguageCode } from "@/lib/presentations-constants";
+// Folder colour is a shared concept — reuse the Document Library enum + validator
+// (the colour VALUES live in CSS; this is only the identifier set). D-077.
+import { normalizeFolderColor, type FolderColor } from "@/lib/documents-constants";
 
 // ── DTOs (plain, client-safe shapes) ───────────────────────────────────────
 // Storage paths NEVER leave the server: the file DTO exposes `slideCount` +
@@ -32,6 +35,10 @@ export interface PresentationFolderDTO {
   slug: string;
   path: string;
   sortOrder: number;
+  /** Persisted folder colour (D-077); null = the default (grey). */
+  color: FolderColor | null;
+  /** Folder visibility (D-079). Private (false) = admin-only. Defaults true. */
+  isPublic: boolean;
 }
 
 export interface TagDTO {
@@ -82,7 +89,31 @@ export interface PresentationViewDTO {
 /** Sort options for the in-folder file list (matches the toolbar dropdown). */
 export type PresentationSortKey = "name" | "date" | "size";
 
-const FOLDER_COLS = "id, parent_id, name, slug, path, sort_order";
+const FOLDER_COLS = "id, parent_id, name, slug, path, sort_order, color, is_public";
+const FOLDER_COLS_BASE = "id, parent_id, name, slug, path, sort_order, color";
+
+/**
+ * Rollout guards (D-077/078/079), same pattern as the Document Library: a column
+ * may not be applied in a given environment yet, so reads must not hard-depend on
+ * it. `color` is already shipped, so the guard now probes the newest column —
+ * `is_public` (D-079); when absent, folders read without it and default to public.
+ */
+let _visibilityReady = false;
+async function folderCols(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
+  if (_visibilityReady) return FOLDER_COLS;
+  const { error } = await supabase.from("presentation_folders").select("is_public").limit(1);
+  if (error?.code === "42703") return FOLDER_COLS_BASE;
+  _visibilityReady = true;
+  return FOLDER_COLS;
+}
+let _trashReady = false;
+async function trashReady(supabase: Awaited<ReturnType<typeof createClient>>): Promise<boolean> {
+  if (_trashReady) return true;
+  const { error } = await supabase.from("presentation_files").select("deleted_at").limit(1);
+  if (error?.code === "42703") return false;
+  _trashReady = true;
+  return true;
+}
 // Note: slide_paths is intentionally OMITTED here (raw storage paths never reach
 // a DTO); slideCount comes from the slide_count column, hasThumbnail from
 // thumbnail_path. The serving route does its own select when it needs paths.
@@ -97,6 +128,8 @@ type FolderRow = {
   slug: string;
   path: string;
   sort_order: number;
+  color: string | null;
+  is_public: boolean | null;
 };
 type TagRow = {
   id: string;
@@ -142,6 +175,8 @@ function mapFolder(r: FolderRow): PresentationFolderDTO {
     slug: r.slug,
     path: r.path,
     sortOrder: r.sort_order,
+    color: normalizeFolderColor(r.color),
+    isPublic: r.is_public ?? true,
   };
 }
 function mapTag(r: TagRow): TagDTO {
@@ -207,7 +242,7 @@ export const getRootPresentationFolders = cache(async (): Promise<PresentationFo
   const supabase = await createClient();
   const { data } = await supabase
     .from("presentation_folders")
-    .select(FOLDER_COLS)
+    .select(await folderCols(supabase))
     .is("parent_id", null)
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
@@ -233,16 +268,22 @@ export interface RootPresentationFolderDTO extends PresentationFolderDTO {
  * fine. Preview images are served by the gated route via `<img>` (no signed URL
  * minted here — same as the doc library).
  */
-export async function getRootPresentationFoldersWithPreview(): Promise<RootPresentationFolderDTO[]> {
-  const folders = await getRootPresentationFolders();
+/** Decorate folders with their DIRECT live-file count + up to 3 preview files
+ *  (3D card fan-out). Live = non-archived AND non-trashed. RLS-scoped. Callers
+ *  pass an already-bounded list (one tree level), never the whole hub. */
+async function withPreview(folders: PresentationFolderDTO[]): Promise<RootPresentationFolderDTO[]> {
+  if (folders.length === 0) return [];
   const supabase = await createClient();
+  const liveOnly = await trashReady(supabase);
   return Promise.all(
     folders.map(async (f) => {
-      const { data, count } = await supabase
+      let pq = supabase
         .from("presentation_files")
         .select("id, title, file_type, thumbnail_path", { count: "exact" })
         .eq("folder_id", f.id)
-        .eq("is_archived", false)
+        .eq("is_archived", false);
+      if (liveOnly) pq = pq.is("deleted_at", null); // exclude trashed (D-078)
+      const { data, count } = await pq
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true })
         .limit(3);
@@ -259,6 +300,17 @@ export async function getRootPresentationFoldersWithPreview(): Promise<RootPrese
   );
 }
 
+export async function getRootPresentationFoldersWithPreview(): Promise<RootPresentationFolderDTO[]> {
+  return withPreview(await getRootPresentationFolders());
+}
+
+/** Direct child folders WITH live-file count + preview (cards on a folder page). */
+export async function getChildPresentationFoldersWithPreview(
+  parentId: string
+): Promise<RootPresentationFolderDTO[]> {
+  return withPreview(await getChildPresentationFolders(parentId));
+}
+
 /** Resolve a slug path ("sales/q3") to a folder, or null. */
 export const getPresentationFolderByPath = cache(
   async (path: string): Promise<PresentationFolderDTO | null> => {
@@ -267,10 +319,10 @@ export const getPresentationFolderByPath = cache(
     const supabase = await createClient();
     const { data } = await supabase
       .from("presentation_folders")
-      .select(FOLDER_COLS)
+      .select(await folderCols(supabase))
       .eq("path", clean)
       .maybeSingle();
-    return data ? mapFolder(data as FolderRow) : null;
+    return data ? mapFolder(data as unknown as FolderRow) : null;
   }
 );
 
@@ -278,10 +330,10 @@ export async function getPresentationFolderById(id: string): Promise<Presentatio
   const supabase = await createClient();
   const { data } = await supabase
     .from("presentation_folders")
-    .select(FOLDER_COLS)
+    .select(await folderCols(supabase))
     .eq("id", id)
     .maybeSingle();
-  return data ? mapFolder(data as FolderRow) : null;
+  return data ? mapFolder(data as unknown as FolderRow) : null;
 }
 
 /** Direct child folders (the chips on a folder page + sidebar expansion). */
@@ -289,7 +341,7 @@ export async function getChildPresentationFolders(folderId: string): Promise<Pre
   const supabase = await createClient();
   const { data } = await supabase
     .from("presentation_folders")
-    .select(FOLDER_COLS)
+    .select(await folderCols(supabase))
     .eq("parent_id", folderId)
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
@@ -301,7 +353,7 @@ export async function getAllPresentationFolders(): Promise<PresentationFolderDTO
   const supabase = await createClient();
   const { data } = await supabase
     .from("presentation_folders")
-    .select(FOLDER_COLS)
+    .select(await folderCols(supabase))
     .order("path", { ascending: true });
   return ((data as FolderRow[] | null) ?? []).map(mapFolder);
 }
@@ -315,7 +367,7 @@ export async function getPresentationBreadcrumb(path: string): Promise<Presentat
   const supabase = await createClient();
   const { data } = await supabase
     .from("presentation_folders")
-    .select(FOLDER_COLS)
+    .select(await folderCols(supabase))
     .in("path", prefixes);
   return ((data as FolderRow[] | null) ?? [])
     .map(mapFolder)
@@ -395,6 +447,7 @@ export async function getPresentationFiles(
 
   let query = supabase.from("presentation_files").select(FILE_SELECT).in("folder_id", folderIds);
   if (!opts?.includeArchived) query = query.eq("is_archived", false);
+  if (await trashReady(supabase)) query = query.is("deleted_at", null); // exclude trashed (D-078)
   if (opts?.language) query = query.eq("language", opts.language);
   if (tagFileIds) query = query.in("id", tagFileIds);
   if (q) query = query.ilike("title", `%${escapeLike(q)}%`);
@@ -453,6 +506,7 @@ export async function searchPresentationFiles(
     .select(FILE_SELECT)
     .eq("is_archived", false)
     .textSearch("search_vector", q, { type: "websearch", config: "simple" });
+  if (await trashReady(supabase)) qb = qb.is("deleted_at", null); // exclude trashed (D-078)
   if (folderIds) qb = qb.in("folder_id", folderIds);
 
   const { data } = await qb.limit(limit);
@@ -503,11 +557,13 @@ export const getPresentationTags = cache(async (): Promise<TagDTO[]> => {
  */
 export async function getFeaturedFiles(): Promise<PresentationFileDTO[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  let fq = supabase
     .from("presentation_files")
     .select(FILE_SELECT)
     .eq("is_featured", true)
-    .eq("is_archived", false)
+    .eq("is_archived", false);
+  if (await trashReady(supabase)) fq = fq.is("deleted_at", null); // exclude trashed (D-078)
+  const { data } = await fq
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
   const now = Date.now();
@@ -534,4 +590,135 @@ export async function getFileViews(
     .order("viewed_at", { ascending: false })
     .limit(limit);
   return ((data as ViewRow[] | null) ?? []).map(mapView);
+}
+
+// ── Nested sidebar tree (open-path expansion) ───────────────────────────────
+
+export interface PresentationFolderTreeNode {
+  id: string;
+  parentId: string | null;
+  name: string;
+  path: string;
+  color: FolderColor | null;
+  fileCount: number;
+  hasChildren: boolean;
+  children: PresentationFolderTreeNode[];
+}
+
+/**
+ * Folder tree for the Presentation Hub secondary sidebar, expanded along the OPEN
+ * PATH only (D-077, mirrors getFolderTreeForPath). Counts are LIVE files
+ * (non-archived, non-trashed). One folder query + one count per rendered node.
+ */
+export async function getPresentationFolderTreeForPath(
+  activePath: string | null
+): Promise<PresentationFolderTreeNode[]> {
+  const all = await getAllPresentationFolders();
+  const active = (activePath ?? "").replace(/^\/+|\/+$/g, "");
+
+  const byParent = new Map<string | null, PresentationFolderDTO[]>();
+  for (const f of all) {
+    const list = byParent.get(f.parentId);
+    if (list) list.push(f);
+    else byParent.set(f.parentId, [f]);
+  }
+  for (const list of byParent.values()) {
+    list.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+  }
+
+  const isOpen = (p: string) => !!active && (active === p || active.startsWith(`${p}/`));
+
+  const rendered: PresentationFolderDTO[] = [];
+  const collect = (parentId: string | null) => {
+    for (const f of byParent.get(parentId) ?? []) {
+      rendered.push(f);
+      if (isOpen(f.path)) collect(f.id);
+    }
+  };
+  collect(null);
+
+  const supabase = await createClient();
+  const liveOnly = await trashReady(supabase);
+  const counts = new Map<string, number>();
+  await Promise.all(
+    rendered.map(async (f) => {
+      let cq = supabase
+        .from("presentation_files")
+        .select("id", { count: "exact", head: true })
+        .eq("folder_id", f.id)
+        .eq("is_archived", false);
+      if (liveOnly) cq = cq.is("deleted_at", null);
+      const { count } = await cq;
+      counts.set(f.id, count ?? 0);
+    })
+  );
+
+  const build = (parentId: string | null): PresentationFolderTreeNode[] =>
+    (byParent.get(parentId) ?? []).map((f) => ({
+      id: f.id,
+      parentId: f.parentId,
+      name: f.name,
+      path: f.path,
+      color: f.color,
+      fileCount: counts.get(f.id) ?? 0,
+      hasChildren: (byParent.get(f.id) ?? []).length > 0,
+      children: isOpen(f.path) ? build(f.id) : [],
+    }));
+
+  return build(null);
+}
+
+// ── Trash (soft-deleted files) ──────────────────────────────────────────────
+
+export const PRESENTATION_TRASH_RETENTION_DAYS = 30;
+
+export interface TrashedPresentationFileDTO {
+  id: string;
+  title: string;
+  fileType: string;
+  sizeBytes: number;
+  folderId: string;
+  folderName: string;
+  folderPath: string;
+  deletedAt: string;
+  daysLeft: number;
+}
+
+/** All trashed presentation files, newest-deleted first, with origin folder +
+ *  days-until-purge (D-078). Admin-gated route; empty before the migration. */
+export async function getTrashedPresentationFiles(): Promise<TrashedPresentationFileDTO[]> {
+  const supabase = await createClient();
+  if (!(await trashReady(supabase))) return [];
+  const { data } = await supabase
+    .from("presentation_files")
+    .select("id, title, file_type, size_bytes, folder_id, deleted_at, presentation_folders(name, path)")
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
+  const now = Date.now();
+  return (
+    (data as
+      | {
+          id: string;
+          title: string;
+          file_type: string;
+          size_bytes: number;
+          folder_id: string;
+          deleted_at: string;
+          presentation_folders: { name: string; path: string } | null;
+        }[]
+      | null) ?? []
+  ).map((r) => {
+    const ageDays = Math.floor((now - new Date(r.deleted_at).getTime()) / 86_400_000);
+    return {
+      id: r.id,
+      title: r.title,
+      fileType: r.file_type,
+      sizeBytes: Number(r.size_bytes),
+      folderId: r.folder_id,
+      folderName: r.presentation_folders?.name ?? "—",
+      folderPath: r.presentation_folders?.path ?? "",
+      deletedAt: r.deleted_at,
+      daysLeft: Math.max(0, PRESENTATION_TRASH_RETENTION_DAYS - ageDays),
+    };
+  });
 }

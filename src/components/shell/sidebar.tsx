@@ -27,7 +27,7 @@ const SIDEBAR_KEY = "terminalv2-sidebar";
 // the global rail (a) auto-collapses to free space and (b) hides its own duplicate
 // nav node. Add a prefix here to opt another library-style page into the pattern.
 // Keep in lock-step with the same list inlined in the layout's pre-paint script.
-const LIBRARY_ROUTE_PREFIXES = ["/documents-library"];
+const LIBRARY_ROUTE_PREFIXES = ["/documents-library", "/presentation-hub"];
 function isLibraryRoute(pathname: string) {
   return LIBRARY_ROUTE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
@@ -286,10 +286,15 @@ export function Sidebar({
             <nav className="nav-section" aria-label="Resources">
               {nav.resources.map((r) => {
                 const isDocLib = r.iconKey === "document-library";
-                // The Documents page renders its own sidebar with the folder tree —
-                // hide the global duplicate while we're on it (D-074).
-                if (isDocLib && onLibraryRoute) return null;
-                const showSub = (r.children && r.children.length > 0) || (isDocLib && isAdmin);
+                // On a library page (Documents, Presentation Hub) the folder tree
+                // lives in that page's OWN secondary sidebar — so keep the global
+                // nav item VISIBLE (it never disappears) but drop its expanded
+                // folder sub-list here to avoid doubling (D-074/077).
+                const onOwnLibraryRoute =
+                  LIBRARY_ROUTE_PREFIXES.includes(r.href) &&
+                  (pathname === r.href || pathname.startsWith(`${r.href}/`));
+                const showSub =
+                  !onOwnLibraryRoute && ((r.children && r.children.length > 0) || (isDocLib && isAdmin));
                 if (!showSub) {
                   return (
                     <NavLink
