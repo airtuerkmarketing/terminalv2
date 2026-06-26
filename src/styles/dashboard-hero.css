@@ -502,17 +502,33 @@
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--separator);
 }
-.ai-chat-title {
-  margin: 0;
-  font-size: var(--fs-md);
-  font-weight: var(--weight-semibold);
-  letter-spacing: -0.01em;
-  color: var(--text-1);
-}
+/* Header middle is intentionally empty (no centered branding). */
 .ai-chat-header-actions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+/* History (placeholder) — square ghost icon button, left of New chat. */
+.ai-chat-history {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  color: var(--text-2);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.ai-chat-history:hover {
+  background: var(--surface);
+  color: var(--text-1);
+}
+.ai-chat-history-icon {
+  width: 17px;
+  height: 17px;
 }
 .ai-chat-new {
   display: inline-flex;
@@ -625,6 +641,15 @@
   width: 16px;
   height: 16px;
   animation: ai-chat-spin 0.8s linear infinite;
+}
+/* Spinning terminal mark as the "AI is thinking…" indicator. Filled (fill follows
+   currentColor) — guarded against any global stroke-only icon rule. */
+.ai-chat-loader-mark {
+  width: 22px;
+  height: 22px;
+  color: var(--text-1);
+  fill: currentColor;
+  animation: ai-chat-spin 1s linear infinite;
 }
 .ai-chat-a-text {
   margin: 0;
@@ -863,6 +888,33 @@
      50% down, half-viewport up, then add the bottom offset back. */
   transform: translate(-50%, calc(50% - 50dvh + var(--space-6)));
 }
+/* Jump-to-latest — round button floating just above the composer, shown only when
+   the user has scrolled away from the bottom. */
+.ai-chat-scroll-down {
+  position: absolute;
+  left: 50%;
+  bottom: 116px;
+  transform: translateX(-50%);
+  z-index: 25;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-1);
+  box-shadow: var(--shadow-card-hover);
+  cursor: pointer;
+  transition: background 150ms var(--ease-smooth), transform 150ms var(--ease-smooth);
+}
+.ai-chat-scroll-down:hover {
+  background: var(--surface-muted);
+}
+.ai-chat-scroll-down-icon {
+  width: 18px;
+  height: 18px;
+}
 /* Fresh-chat greeting, shown above the centered composer when the thread empty. */
 .ai-chat-greeting {
   display: flex;
@@ -888,8 +940,10 @@
    (.ai-search-box): same radius/padding/surface/shadow + grey hover & focus (the
    Hero's deliberate non-accent focus, D-036 exception), not the blue ring. */
 .ai-chat-composer {
+  /* Column like .ai-search-box: textarea on top, a foot row (Plus left / Send
+     right) below — no divider. Same radius/padding/surface/shadow + grey focus. */
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   gap: var(--space-2);
   box-sizing: border-box;
   padding: 15px;                                 /* match .ai-search-box */
@@ -908,23 +962,52 @@
   box-shadow: var(--shadow-searchbox-focus);
 }
 .ai-chat-textarea {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   box-sizing: border-box;
   border: 0;
   background: transparent;
   resize: none;
   outline: none;
   font-family: inherit;
-  font-size: var(--fs-base);
-  line-height: var(--lh-normal);
+  font-size: 16px;                  /* match .ai-search-textarea */
+  line-height: 22.4px;
   color: var(--text-1);
-  padding: 9px 0;
+  padding: 4px 4px 0;
   min-height: 40px;
   /* ~8 rows; JS auto-grow sets height to scrollHeight, this caps it and
      overflow-y:auto scrolls beyond. */
   max-height: 200px;
   overflow-y: auto;
+}
+.ai-chat-composer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+/* Square ghost attach button — identical to the start-page composer's Plus. */
+.ai-chat-attach {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.ai-chat-attach:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-1);
+}
+.ai-chat-attach:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.ai-chat-attach-icon {
+  width: 18px;
+  height: 18px;
 }
 .ai-chat-textarea::placeholder {
   color: var(--text-3);
@@ -1091,7 +1174,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ai-chat-spin {
+  .ai-chat-spin,
+  .ai-chat-loader-mark {
     animation: none;
   }
   /* Window + composer snap (no fade / no glide) under reduced motion. Both the
@@ -1161,6 +1245,24 @@
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+}
+/* Copy answer — dezenter Ghost-Button, matches the feedback-button aesthetic. */
+.ai-chat-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  font-size: 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.ai-chat-copy:hover {
+  background: var(--surface-muted);
+  color: var(--text-1);
 }
 
 /* ── AnswerFeedback (Atomic 3.5) — modeled after .ai-chat-source aesthetic ── */

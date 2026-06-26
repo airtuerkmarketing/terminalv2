@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowUp, Plus, X } from "lucide-react";
+import { ArrowUp, ChevronDown, History, Plus, X } from "lucide-react";
 import { AIAnswerBlock } from "@/components/dashboard/hero/AIAnswerBlock";
 import type { AiTurn } from "@/lib/search/types";
 
@@ -35,6 +35,7 @@ export function AIChatWindow({
 }: Props) {
   const [draft, setDraft] = useState("");
   const [confirming, setConfirming] = useState(false); // "Neuer Chat" two-step arm
+  const [showScrollDown, setShowScrollDown] = useState(false); // jump-to-latest button
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLElement>(null);
@@ -116,6 +117,25 @@ export function AIChatWindow({
     return () => ro.disconnect();
   }, [open]);
 
+  // Show the scroll-to-bottom button only when the user is away from the end.
+  // Initial check is deferred via rAF (no synchronous setState in the effect body).
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el || !open) return;
+    const onScroll = () => setShowScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 80);
+    const raf = requestAnimationFrame(onScroll);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener("scroll", onScroll);
+    };
+  }, [open, turns]);
+
+  function scrollToBottom() {
+    const el = bodyRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }
+
   function clickNewChat() {
     // Two-step: first click arms ("Wirklich löschen?"), second click confirms.
     if (!confirming) {
@@ -149,14 +169,23 @@ export function AIChatWindow({
       className={`ai-chat-window${open ? " is-open" : ""}`}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="ai-chat-title"
+      aria-label="airtuerk Intelligence"
       // `inert` while closed removes the faded-out view from the tab order and
       // a11y tree (it still cross-fades) — prevents tabbing into hidden controls.
       inert={!open}
     >
+      {/* Header: left = History + New chat, right = Close, middle intentionally empty. */}
       <header className="ai-chat-header">
-        <h2 id="ai-chat-title" className="ai-chat-title">airtuerk Intelligence</h2>
         <div className="ai-chat-header-actions">
+          {/* Placeholder — history panel later (localStorage questions → DB). */}
+          <button
+            type="button"
+            className="ai-chat-history"
+            title="History"
+            aria-label="History"
+          >
+            <History className="ai-chat-history-icon" aria-hidden="true" />
+          </button>
           <button
             type="button"
             className={`ai-chat-new${confirming ? " is-confirming" : ""}`}
@@ -167,15 +196,15 @@ export function AIChatWindow({
             <Plus className="ai-chat-new-icon" aria-hidden="true" />
             <span>{confirming ? "Delete history?" : "New chat"}</span>
           </button>
-          <button
-            type="button"
-            className="ai-chat-close"
-            onClick={onClose}
-            aria-label="Close chat"
-          >
-            <X className="ai-chat-close-icon" aria-hidden="true" />
-          </button>
         </div>
+        <button
+          type="button"
+          className="ai-chat-close"
+          onClick={onClose}
+          aria-label="Close chat"
+        >
+          <X className="ai-chat-close-icon" aria-hidden="true" />
+        </button>
       </header>
 
       <div className="ai-chat-body" ref={bodyRef}>
@@ -212,17 +241,40 @@ export function AIChatWindow({
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKeyDown}
           />
-          <button
-            type="button"
-            className="ai-chat-send"
-            disabled={!draft.trim()}
-            onClick={send}
-            aria-label="Send"
-          >
-            <ArrowUp className="ai-chat-send-icon" aria-hidden="true" />
-          </button>
+          {/* Foot row: Plus (left, square ghost) + Send (right, blue). */}
+          <div className="ai-chat-composer-foot">
+            <button
+              type="button"
+              className="ai-chat-attach"
+              disabled
+              title="Attachments coming in stage 2"
+              aria-label="Attach"
+            >
+              <Plus className="ai-chat-attach-icon" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="ai-chat-send"
+              disabled={!draft.trim()}
+              onClick={send}
+              aria-label="Send"
+            >
+              <ArrowUp className="ai-chat-send-icon" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </div>
+
+      {showScrollDown && turns.length > 0 && (
+        <button
+          type="button"
+          className="ai-chat-scroll-down"
+          onClick={scrollToBottom}
+          aria-label="Scroll to latest"
+        >
+          <ChevronDown className="ai-chat-scroll-down-icon" aria-hidden="true" />
+        </button>
+      )}
     </aside>
   );
 }

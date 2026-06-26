@@ -1,8 +1,10 @@
 "use client";
 
-import { Loader2, BookOpen } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { BookOpen, Check, Copy } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { TerminalLogo } from "@/components/shell/TerminalLogo";
 import { useTypewriterText } from "@/components/dashboard/hero/useTypewriterText";
 import { AnswerFeedback } from "@/components/dashboard/hero/AnswerFeedback";
 import type { AiKonfidenz, AiTurn } from "@/lib/search/types";
@@ -60,7 +62,8 @@ export function AIAnswerBlock({
           <p className="ai-chat-a-text">⚠️ {turn.error}</p>
         ) : showLoading ? (
           <div className="ai-chat-loading">
-            <Loader2 className="ai-chat-spin" aria-hidden="true" />
+            {/* Spinning terminal mark as the load indicator (filled, currentColor). */}
+            <TerminalLogo variant="mark" title="" className="ai-chat-loader-mark" />
             <span>AI is thinking…</span>
           </div>
         ) : (
@@ -102,6 +105,18 @@ function AITurnAnswer({
   // (sources live in the toggle by the feedback buttons). DISPLAY-only strip —
   // the raw text already drove confidence inference upstream.
   const displayText = stripInlineCitations(text);
+
+  // Copy the raw answer to the clipboard with a brief check-mark confirmation.
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current); }, []);
+  function copyAnswer() {
+    navigator.clipboard?.writeText(answer.text).then(() => {
+      setCopied(true);
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 1400);
+    });
+  }
 
   return (
     <>
@@ -151,10 +166,18 @@ function AITurnAnswer({
       {/* Action row — feedback buttons with the sources toggle beside them. (The
           sources badge used to float top-right of the answer and overlapped the
           question bubble.) */}
-      {finished &&
-        (answer.quellen.length > 0 ||
-          (turn.messageId && onCorrect && onFeedbackChange)) && (
+      {finished && (
         <div className="ai-chat-actions">
+          <button
+            type="button"
+            className="ai-chat-copy"
+            onClick={copyAnswer}
+            aria-label={copied ? "Copied" : "Copy answer"}
+            title={copied ? "Copied" : "Copy answer"}
+          >
+            {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+            <span>{copied ? "Copied" : "Copy"}</span>
+          </button>
           {turn.messageId && onCorrect && onFeedbackChange && (
             <AnswerFeedback
               messageId={turn.messageId}
