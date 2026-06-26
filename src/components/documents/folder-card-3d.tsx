@@ -55,8 +55,9 @@ const BADGE: Record<FileKind, { label: string; color: string }> = {
   file:  { label: "FILE", color: "#6B7280" },
 };
 
-// Coin centres in the front-wall viewBox (rect 35×35 @ x=39/69/98, y=161).
-const COIN_CX = [56.5, 86.5, 116.5];
+// Coin centres in the front-wall viewBox. Up to 3 format coins, then a 4th slot
+// reserved for the private-lock coin (sits right after the format coins).
+const COIN_CX = [56.5, 86.5, 116.5, 146.5];
 const COIN_CY = 178.5;
 const COIN_R = 17.5;
 
@@ -116,8 +117,10 @@ function useFolderActions({ id, name, href, isPublic, isSuperAdmin }: { id?: str
     );
   }
 
+  // stopPropagation so a folder's own menu wins over the empty-space context menu
+  // on the surrounding content area (Windows/Finder behaviour).
   const onContextMenu = id
-    ? (e: React.MouseEvent) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); }
+    ? (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setMenu({ x: e.clientX, y: e.clientY }); }
     : undefined;
   const renameInput = (
     <input
@@ -180,21 +183,6 @@ export function FolderCard3D({
       onMouseLeave={() => setHovered(false)}
       onContextMenu={onContextMenu}
     >
-      {/* Private cue — Torch lock, top-right (admins only ever see private folders) */}
-      {!isPublic && (
-        <span
-          className="absolute top-2 right-2 z-40 inline-grid place-items-center"
-          style={{ color: "var(--torch)" }}
-          aria-label="Private"
-          title="Private"
-        >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-            <rect x="5" y="11" width="14" height="9" rx="2" />
-            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-          </svg>
-        </span>
-      )}
-
       <Link href={href} className="dl-cell__hit" aria-label={`Open ${name}`} onFocus={() => setHovered(true)} onBlur={() => setHovered(false)}>
         {/* Folder stage — fixed aspect so the coins/docs scale with the SVG. */}
         <span className="dl-cell__visual">
@@ -301,6 +289,24 @@ export function FolderCard3D({
               </text>
             </g>
           ))}
+          {/* Private cue — a red lock coin in the SAME bottom row, right after the
+              format coins (replaces the old free-floating top-right lock). */}
+          {!isPublic && (
+            <g>
+              <circle cx={COIN_CX[kinds.length]} cy={COIN_CY} r={COIN_R} fill="#fff" />
+              <g
+                transform={`translate(${COIN_CX[kinds.length]}, ${COIN_CY})`}
+                fill="none"
+                stroke="var(--torch)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="-7" y="-2" width="14" height="11" rx="2.5" />
+                <path d="M-4 -2 V-5 a4 4 0 0 1 8 0 V-2" />
+              </g>
+            </g>
+          )}
         </svg>
           </div>
         </span>

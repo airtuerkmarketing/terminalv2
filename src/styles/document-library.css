@@ -94,6 +94,69 @@
   padding: 1px 7px;
 }
 
+/* Inline-rename trigger on the page title: looks like the bare h1, with a pencil
+   that fades in on hover (admins only). The input matches the h1 type scale. */
+.dl-title-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border-radius: 8px;
+  cursor: text;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition: background-color 150ms var(--ease-smooth);
+}
+.dl-title-btn:hover { background: rgba(120, 120, 128, 0.10); }
+.dl-title-pencil { color: var(--text-3); opacity: 0; transition: opacity 150ms var(--ease-smooth); }
+.dl-title-btn:hover .dl-title-pencil,
+.dl-title-btn:focus-visible .dl-title-pencil { opacity: 1; }
+.dl-title-edit {
+  font-size: clamp(20px, 2.4vw, 26px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 1px 7px;
+  margin: 0;
+  outline: none;
+  min-width: 220px;
+}
+
+/* Status pill (replaces the loud red Private badge): a calm neutral chip with a
+   lock/globe glyph. For admins it's a clickable toggle (setFolderVisibility);
+   for everyone else it's static. Private leans on a soft torch tint, not a fill. */
+.dl-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 11px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.dl-status-pill svg { flex-shrink: 0; }
+.dl-status-pill:hover:not(.is-static) {
+  background: var(--surface-muted);
+  border-color: var(--accent-border);
+  color: var(--text-1);
+}
+.dl-status-pill.is-private { color: var(--torch); border-color: var(--accent-border); }
+.dl-status-pill.is-static { cursor: default; }
+
 /* ── Chips (child folders) ──────────────────────────────────────────────── */
 .dl-chips {
   display: flex;
@@ -1126,6 +1189,124 @@
 .dl-toolbar .view-toggle-btn { color: var(--text-2); border-radius: var(--radius-full); }
 .dl-toolbar .view-toggle-btn:hover:not(.active) { background: rgba(120, 120, 128, 0.10); color: var(--text-1); }
 .dl-toolbar .view-toggle-btn.active { background: var(--surface); color: var(--text-1); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06); }
+
+/* ── Filter / Sort popover ───────────────────────────────────────────────────
+   Anchored under the trigger; full-radius panel; closes on outside-click / Esc.
+   The trigger shows an active-count dot when a type/show filter is set. */
+.dl-fsp { position: relative; }
+.dl-fsp-btn.is-active { border-color: var(--accent-border); color: var(--accent); }
+.dl-fsp-dot {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.dl-fsp-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 200;
+  width: 280px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card-hover);
+}
+.dl-fsp-group { display: flex; flex-direction: column; gap: 8px; }
+.dl-fsp-glabel { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-3); }
+.dl-fsp-sep { height: 1px; background: var(--separator); }
+.dl-fsp-sorts { display: flex; flex-direction: column; gap: 2px; }
+.dl-fsp-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-1);
+  cursor: pointer;
+  text-align: left;
+}
+.dl-fsp-opt:hover { background: rgba(120, 120, 128, 0.10); }
+.dl-fsp-opt.is-on { font-weight: 600; }
+.dl-fsp-check { display: inline-grid; place-items: center; width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; }
+.dl-fsp-dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.dl-fsp-dir:hover { background: var(--surface-muted); color: var(--text-1); }
+.dl-fsp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.dl-fsp-chip {
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  padding: 5px 11px;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.dl-fsp-chip:hover { background: var(--surface-muted); color: var(--text-1); }
+.dl-fsp-chip.is-on { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent); }
+.dl-fsp-segment { display: inline-flex; padding: 2px; gap: 2px; background: rgba(120, 120, 128, 0.12); border-radius: var(--radius-full); }
+.dl-fsp-seg {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.dl-fsp-seg:hover:not(.is-on) { color: var(--text-1); }
+.dl-fsp-seg.is-on { background: var(--surface); color: var(--text-1); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+.dl-fsp-clear {
+  border: 0;
+  background: transparent;
+  padding: 4px 8px;
+  align-self: flex-start;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+}
+.dl-fsp-clear:hover { text-decoration: underline; }
+
+/* Content area that captures the empty-space right-click menu. min-height so the
+   menu is reachable even when the folder is sparse (files/folders stopPropagation
+   their own menu, so this only fires on genuine empty space). */
+.dl-space { min-height: 40vh; }
 
 /* ── Explorer view (Windows-Explorer logic) ─────────────────────────────────
    Free-standing cells (no box): typed object on top, name, then sub-line.

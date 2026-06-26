@@ -113,21 +113,21 @@ export function FileCard({
   // ── Card view (free-standing explorer cell) ──────────────────────────────
   if (view === "card") {
     const items: CtxItem[] = [
-      { kind: "item", label: "Öffnen", onClick: openFile },
-      { kind: "item", label: "Herunterladen", onClick: () => window.open(downloadHref, "_blank", "noopener,noreferrer") },
+      { kind: "item", label: "Open", onClick: openFile },
+      { kind: "item", label: "Download", onClick: () => window.open(downloadHref, "_blank", "noopener,noreferrer") },
     ];
     if (isSuperAdmin) {
       items.push(
-        { kind: "item", label: "Umbenennen", onClick: startRename },
-        { kind: "item", label: "Verschieben", onClick: () => onManage(file) },
+        { kind: "item", label: "Rename", onClick: startRename },
+        { kind: "item", label: "Move", onClick: () => onManage(file) },
         { kind: "sep" },
-        { kind: "item", label: "Löschen", onClick: doDelete, danger: true },
+        { kind: "item", label: "Delete", onClick: doDelete, danger: true },
       );
     }
     return (
       <div
         className="dl-cell"
-        onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); }}
+        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenu({ x: e.clientX, y: e.clientY }); }}
       >
         <button type="button" className="dl-cell__hit" onClick={openFile} aria-label={`Open ${file.title}`}>
           <span className="dl-cell__visual">

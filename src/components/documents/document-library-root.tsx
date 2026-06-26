@@ -1,16 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FolderPlus } from "lucide-react";
 import "@/styles/document-library.css";
-import type { FileSortKey, RootFolderDTO } from "@/lib/documents";
+import type { RootFolderDTO } from "@/lib/documents";
 import type { ViewMode } from "@/components/ui/view-toggle";
 import { CreateFolderModal } from "./create-folder-modal";
 import { FolderCard3D, FolderRow } from "./folder-card-3d";
 import { LibraryToolbar } from "./library-toolbar";
+import { EmptySpaceContextMenu } from "./empty-space-context-menu";
+import { DEFAULT_FILTER, type LibraryFilter } from "./filter-sort-popover";
+import type { CtxItem } from "./file-card";
 
 /** Root index: visible top-level folders. Uses the SAME LibraryToolbar + card/
  *  list views as a folder page (consistent look). Search/sort/view are client-
- *  only over the already-loaded folders — no new server call. */
+ *  only over the already-loaded folders — no new server call. The Filter/Sort
+ *  popover shows sort only here (folders carry no file type / no sub-files). */
 export function DocumentLibraryRoot({
   folders,
   isSuperAdmin,
@@ -18,20 +24,28 @@ export function DocumentLibraryRoot({
   folders: RootFolderDTO[];
   isSuperAdmin: boolean;
 }) {
+  const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<FileSortKey>("name");
+  const [filter, setFilter] = useState<LibraryFilter>(DEFAULT_FILTER);
   const [view, setView] = useState<ViewMode>("card");
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = folders.filter((f) => !q || f.name.toLowerCase().includes(q));
     // Folders only carry a name + file count, so "Size" sorts by count and
-    // "Modified" has no folder timestamp → falls back to name.
-    return [...list].sort((a, b) =>
-      sort === "size" ? b.fileCount - a.fileCount : a.name.localeCompare(b.name)
+    // "Modified" has no folder timestamp → falls back to name. Direction applies.
+    const sorted = [...list].sort((a, b) =>
+      filter.sort === "size" ? a.fileCount - b.fileCount : a.name.localeCompare(b.name)
     );
-  }, [folders, search, sort]);
+    return filter.dir === "asc" ? sorted : sorted.reverse();
+  }, [folders, search, filter]);
+
+  const spaceItems: CtxItem[] = [];
+  if (isSuperAdmin) {
+    spaceItems.push({ kind: "item", label: "New folder", onClick: () => setCreateOpen(true) }, { kind: "sep" });
+  }
+  spaceItems.push({ kind: "item", label: "Refresh", onClick: () => router.refresh() });
 
   return (
     <article className="document-library">
@@ -51,64 +65,73 @@ export function DocumentLibraryRoot({
         searchValue={search}
         onSearch={setSearch}
         searchPlaceholder="Search folders…"
-        sort={sort}
-        onSort={setSort}
+        filter={filter}
+        onFilter={setFilter}
+        showFolderToggle={false}
+        showTypeFilter={false}
         view={view}
         onView={setView}
         viewStorageKey="terminalv2-doclib-view"
         actionLabel={isSuperAdmin ? "New Folder" : undefined}
+        actionIcon={isSuperAdmin ? <FolderPlus size={16} aria-hidden="true" /> : undefined}
         onAction={isSuperAdmin ? () => setCreateOpen(true) : undefined}
       />
 
-      {shown.length === 0 ? (
-        <div className="dl-empty">
-          {search ? (
-            <span>No folders match “{search}”.</span>
-          ) : (
-            <>
-              <strong>No folders yet.</strong>
-              {isSuperAdmin ? <span>Create your first folder to get started.</span> : <span>Nothing here yet.</span>}
-            </>
-          )}
-        </div>
-      ) : view === "list" ? (
-        <div className="dl-list">
-          <div className="dl-list-head">
-            <span />
-            <span>Name</span>
-            <span>Language</span>
-            <span>Size</span>
-            <span>Modified</span>
-            <span />
+      <EmptySpaceContextMenu items={spaceItems} className="dl-space">
+        {shown.length === 0 ? (
+          <div className="dl-empty">
+            {search ? (
+              <span>No folders match “{search}”.</span>
+            ) : (
+              <>
+                <strong>No folders yet.</strong>
+                {isSuperAdmin ? (
+                  <span>Create your first folder to get started.</span>
+                ) : (
+                  <span>Nothing here yet.</span>
+                )}
+              </>
+            )}
           </div>
-          {shown.map((f) => (
-            <FolderRow
-              key={f.id}
-              id={f.id}
-              name={f.name}
-              href={`/documents-library/${f.path}`}
-              isPublic={f.isPublic}
-              fileCount={f.fileCount}
-              isSuperAdmin={isSuperAdmin}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="dl-explorer-grid">
-          {shown.map((f) => (
-            <FolderCard3D
-              key={f.id}
-              id={f.id}
-              name={f.name}
-              href={`/documents-library/${f.path}`}
-              isPublic={f.isPublic}
-              fileCount={f.fileCount}
-              previewFiles={f.previewFiles}
-              isSuperAdmin={isSuperAdmin}
-            />
-          ))}
-        </div>
-      )}
+        ) : view === "list" ? (
+          <div className="dl-list">
+            <div className="dl-list-head">
+              <span />
+              <span>Name</span>
+              <span>Language</span>
+              <span>Size</span>
+              <span>Modified</span>
+              <span />
+            </div>
+            {shown.map((f) => (
+              <FolderRow
+                key={f.id}
+                id={f.id}
+                name={f.name}
+                href={`/documents-library/${f.path}`}
+                isPublic={f.isPublic}
+                fileCount={f.fileCount}
+                isSuperAdmin={isSuperAdmin}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="dl-explorer-grid">
+            {shown.map((f) => (
+              <FolderCard3D
+                key={f.id}
+                id={f.id}
+                name={f.name}
+                href={`/documents-library/${f.path}`}
+                isPublic={f.isPublic}
+                fileCount={f.fileCount}
+                previewFiles={f.previewFiles}
+                isSuperAdmin={isSuperAdmin}
+              />
+            ))}
+          </div>
+        )}
+      </EmptySpaceContextMenu>
 
       {isSuperAdmin && (
         <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={null} />
