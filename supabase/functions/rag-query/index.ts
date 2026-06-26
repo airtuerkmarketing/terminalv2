@@ -40,6 +40,40 @@ const FINAL_CHUNK_LIMIT = 8
 const RESERVED_IDENTITY_SLOTS = 2
 const IDENTITY_CATEGORIES = ['mission', 'brand_voice']
 
+// Tool-use loop: hard cap on tool-executing rounds (one extra answer turn follows),
+// so total Anthropic calls per request is bounded at MAX_TOOL_ITERATIONS + 1.
+const MAX_TOOL_ITERATIONS = 3
+const TEAM_DIRECTORY_MAX_ROWS = 200
+
+// Live team directory tool. The roster (team_members) is the single source of truth
+// for the web app (/team + /admin/users); this gives the KI live read access to it
+// so person/department/contact questions are answered from current data instead of
+// the embedded corpus (which only covers a handful of people). The executor NEVER
+// returns phone or date_of_birth (policy 9d + DSGVO), so privacy is structural.
+const TEAM_DIRECTORY_TOOL = {
+  name: 'query_team_directory',
+  description:
+    'Durchsucht das vollständige, autoritative airtuerk Team-Verzeichnis (alle ' +
+    'Mitarbeiter) LIVE aus der Datenbank. Nutze dieses Tool für JEDE Frage zu ' +
+    'Personen: wer jemand ist, Position, Abteilung, Geschäfts-E-Mail, wer in einer ' +
+    'Abteilung arbeitet, Team-Leads, Erreichbarkeit. Es ist die einzige autoritative ' +
+    'Quelle für Mitarbeiterdaten. Es enthält KEINE privaten/Handy-Nummern und KEINE ' +
+    'Geburtsdaten. Ohne Argumente liefert es den vollständigen Roster.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      search: {
+        type: 'string',
+        description: 'Name- oder E-Mail-Teilstring, z.B. "Selin" oder "demir".',
+      },
+      department: {
+        type: 'string',
+        description: 'Exakter Abteilungsname, z.B. "Vertrieb", "Service", "HR".',
+      },
+    },
+  },
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -211,6 +245,46 @@ async function embedQuery(text: string, voyageKey: string): Promise<number[]> {
   }
 }
 
+// ============ Tool executor: live team directory ============
+// Service-role read of team_members. Returns ONLY name/position/department/email/
+// is_lead — never phone or date_of_birth (policy 9d + DSGVO). Errors degrade to an
+// {error} tool_result so Claude can recover (no 500). `search` is sanitized of
+// characters that would break the PostgREST or() filter syntax.
+async function runTeamDirectoryQuery(
+  supabaseService: ReturnType<typeof createClient>,
+  input: { search?: string; department?: string },
+): Promise<{ count: number; members: unknown[] } | { error: string }> {
+  try {
+    // Filters first (FilterBuilder), then transforms (order/limit) at await time —
+    // applying .eq()/.or() after .order()/.limit() is not valid on the builder.
+    let q = supabaseService
+      .from('team_members')
+      .select('first_name, last_name, position, department, email, is_lead')
+
+    if (input?.department && input.department.trim()) {
+      q = q.eq('department', input.department.trim())
+    }
+    if (input?.search) {
+      const cleaned = input.search.replace(/[(),*%]/g, '').trim()
+      // Match EVERY whitespace-separated token across name/email (AND of per-token
+      // ORs) so a full name like "Selin Köroglu" resolves on the first call instead
+      // of returning 0 (each .or() is ANDed with the previous by PostgREST).
+      for (const tok of cleaned.split(/\s+/).filter(Boolean)) {
+        q = q.or(`first_name.ilike.%${tok}%,last_name.ilike.%${tok}%,email.ilike.%${tok}%`)
+      }
+    }
+
+    const { data, error } = await q
+      .order('department', { ascending: true })
+      .order('last_name', { ascending: true })
+      .limit(TEAM_DIRECTORY_MAX_ROWS)
+    if (error) return { error: error.message }
+    return { count: data?.length ?? 0, members: data ?? [] }
+  } catch (err) {
+    return { error: String(err) }
+  }
+}
+
 // ============ Identity-reserved rerank ============
 // 2 slots reserved for mission/brand_voice (persona anchors), the rest filled by
 // Voyage rerank over everything else. Edge cases: <2 identity -> more rerank
@@ -307,6 +381,13 @@ function buildSystemPrompt(chunks: RetrievedChunk[]): string {
 # Deine Identität (immer aktiv)
 ${identity}
 
+# Team-Verzeichnis (Live-Zugriff via Tool)
+Du hast das Tool **query_team_directory**, das den vollständigen, autoritativen airtuerk Mitarbeiter-Roster LIVE aus der Datenbank liefert (Name, Position, Abteilung, Geschäfts-E-Mail, Team-Lead). Es ist die einzige verlässliche Quelle für Mitarbeiterdaten — die untenstehenden Text-Quellen decken nur einzelne Personen ab.
+
+- Nutze das Tool bei JEDER Frage zu Personen, Abteilungen, Zuständigkeiten oder Erreichbarkeit (z.B. "Wer ist X?", "Wer arbeitet im Vertrieb?", "Wer leitet HR?", "Wie erreiche ich X?").
+- Rufe das Tool auf, BEVOR du antwortest. Schreibe keinen erklärenden Vortext vor dem Tool-Aufruf — erst Tool, dann Antwort.
+- Das Tool enthält bewusst KEINE privaten/Handy-Nummern und KEINE Geburtsdaten. Diese kannst du daher nie nennen.
+
 # Verfügbare Quellen für diese Frage
 ${facts}
 
@@ -336,11 +417,11 @@ WICHTIG: Verwende EXAKT diese Formulierung. Das Frontend erkennt sie und wird ei
 
 9. **Telefonnummern-Politik (strikt):**
 
-   a) Geschäftliche Telefonnummern aus dem airtuerk Team-Verzeichnis: NUR weitergeben wenn sie explizit in den bereitgestellten Quellen erscheinen. Format: "Die Geschäftsnummer von [Vorname] [Nachname] lautet [Nummer]."
+   a) Geschäftliche Telefonnummern: NUR weitergeben wenn sie explizit in den bereitgestellten Text-Quellen (Confluence/Kontext) erscheinen. Format: "Die Geschäftsnummer von [Vorname] [Nachname] lautet [Nummer]." Das Team-Verzeichnis-Tool enthält KEINE Telefonnummern.
 
-   b) Wenn die Geschäftsnummer NICHT in den Quellen ist (aber die Person bekannt): "Ich habe die Geschäftsnummer von [Vorname] [Nachname] nicht. Du kannst ihn/sie per Email unter [email] erreichen, falls vorhanden."
+   b) Wenn keine Geschäftsnummer vorliegt (aber die Person über query_team_directory bekannt ist): "Ich habe die Geschäftsnummer von [Vorname] [Nachname] nicht. Du kannst ihn/sie per Email unter [email aus dem Team-Verzeichnis] erreichen."
 
-   c) Wenn die Person nicht im airtuerk Team-Verzeichnis: "Diese Person ist mir im airtuerk Team-Verzeichnis nicht bekannt."
+   c) Wenn query_team_directory die Person nicht findet: "Diese Person ist mir im airtuerk Team-Verzeichnis nicht bekannt."
 
    d) Private oder Handy-Nummern: NIEMALS herausgeben, auch wenn sie technisch in den Quellen erscheinen würden. Standard-Antwort: "Private oder Handy-Nummern stehen mir nicht zur Verfügung. Bitte wende dich an die Person direkt per Email."
 
@@ -387,7 +468,15 @@ function buildConversation(
   return [...history.slice(-10), { role: 'user', content: newQuestion }]
 }
 
-// ============ Stream Claude (C1 + C4 + C5) ============
+// ============ Stream Claude with tool-use loop (C1 + C4 + C5) ============
+// Tool-use breaks the old raw-SSE passthrough: a turn may return a tool_use block
+// instead of text, and emitting Anthropic's per-turn message_stop would make the
+// client (rag/client.ts handleLine) fire 'done' prematurely. So instead of passing
+// bytes through, we PARSE each turn's SSE and RE-EMIT only text deltas as clean
+// content_block_delta events, with a single message_stop at the very end — the exact
+// shape the client + the weiss-nicht fallback already speak. Text streams live on
+// both the tool and no-tool paths; tool_use turns are intercepted, executed, and the
+// conversation continues into the next Anthropic call (bounded by MAX_TOOL_ITERATIONS).
 async function streamClaudeResponse({
   systemPrompt,
   messages,
@@ -428,83 +517,215 @@ async function streamClaudeResponse({
   }
   const messageId = msgRow.id as number
 
-  // C1: NO temperature, NO thinking, NO output_config.effort.
-  const claudeRes = await fetch(ANTHROPIC_URL, {
-    method: 'POST',
-    headers: {
-      'x-api-key': anthropicKey,
-      'anthropic-version': ANTHROPIC_VERSION,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: ANTHROPIC_MAX_TOKENS,
-      system: systemPrompt,
-      messages,
-      stream: true,
-    }),
-  })
+  // Conversation grows across tool turns (string content from the caller; block-array
+  // content for assistant tool_use turns + user tool_result turns).
+  const convo: Array<{ role: 'user' | 'assistant'; content: unknown }> = [...messages]
 
-  if (!claudeRes.ok || !claudeRes.body) {
-    const detail = claudeRes.body ? await claudeRes.text() : 'no body'
-    // Clean up the empty row before failing.
+  // C1: NO temperature, NO thinking, NO output_config.effort. Tools offered until the
+  // round cap; the final (capped) turn omits them so Claude must answer with text.
+  const callClaude = (offerTools: boolean) =>
+    fetch(ANTHROPIC_URL, {
+      method: 'POST',
+      headers: {
+        'x-api-key': anthropicKey,
+        'anthropic-version': ANTHROPIC_VERSION,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: ANTHROPIC_MAX_TOKENS,
+        system: systemPrompt,
+        messages: convo,
+        stream: true,
+        ...(offerTools ? { tools: [TEAM_DIRECTORY_TOOL] } : {}),
+      }),
+    })
+
+  // First call OUTSIDE the stream so an early API failure still returns a clean HTTP
+  // 500 (and deletes the empty row) instead of a half-open stream — preserves the
+  // pre-tool error semantics for the common "first call fails" case.
+  const firstRes = await callClaude(true)
+  if (!firstRes.ok || !firstRes.body) {
+    const detail = firstRes.body ? await firstRes.text() : 'no body'
     await supabaseService.from('ai_chat_messages').delete().eq('id', messageId)
-    throw new Error(`Claude API error ${claudeRes.status}: ${detail}`)
+    throw new Error(`Claude API error ${firstRes.status}: ${detail}`)
   }
 
   let fullText = ''
   let tokensIn = 0
   let tokensOut = 0
+  const toolCallsLog: Array<Record<string, unknown>> = []
+  const enc = new TextEncoder()
+
+  type TurnBlock =
+    | { type: 'text'; text: string }
+    | { type: 'tool_use'; id: string; name: string; input: unknown }
 
   const stream = new ReadableStream({
     async start(controller) {
-      const reader = claudeRes.body!.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      // Server-side accumulation only — client gets the raw bytes untouched.
-      const processLine = (line: string) => {
-        if (!line.startsWith('data: ')) return
-        const payload = line.slice(6).trim()
-        if (!payload || payload === '[DONE]') return
-        try {
-          const event = JSON.parse(payload)
-          if (event.type === 'content_block_delta' && event.delta?.text) {
-            fullText += event.delta.text
-          } else if (event.type === 'message_start' && event.message?.usage) {
-            tokensIn = event.message.usage.input_tokens ?? 0
-          } else if (event.type === 'message_delta' && event.usage?.output_tokens) {
-            tokensOut = event.usage.output_tokens
-          }
-        } catch {
-          /* partial JSON across chunk boundary — ignore, server-side only */
-        }
+      const emitText = (t: string) => {
+        if (!t) return
+        fullText += t
+        controller.enqueue(
+          enc.encode(
+            `data: ${JSON.stringify({ type: 'content_block_delta', delta: { text: t } })}\n\n`,
+          ),
+        )
       }
 
-      try {
+      // Read one Anthropic turn fully: re-emit text to the client, buffer tool_use
+      // blocks, return the turn's stop_reason + reconstructed content blocks.
+      const readTurn = async (
+        res: Response,
+      ): Promise<{ stopReason: string | null; blocks: TurnBlock[] }> => {
+        const reader = res.body!.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let stopReason: string | null = null
+        const blocks: TurnBlock[] = []
+        const toolUses: Record<number, { id: string; name: string; jsonBuf: string }> = {}
+        let curText: { index: number; text: string } | null = null
+
+        const handle = (line: string) => {
+          if (!line.startsWith('data: ')) return
+          const payload = line.slice(6).trim()
+          if (!payload || payload === '[DONE]') return
+          let evt: {
+            type?: string
+            index?: number
+            message?: { usage?: { input_tokens?: number } }
+            content_block?: { type?: string; id?: string; name?: string }
+            delta?: { type?: string; text?: string; partial_json?: string; stop_reason?: string }
+            usage?: { output_tokens?: number }
+          }
+          try {
+            evt = JSON.parse(payload)
+          } catch {
+            return // partial JSON across chunk boundary
+          }
+          switch (evt.type) {
+            case 'message_start':
+              tokensIn += evt.message?.usage?.input_tokens ?? 0
+              break
+            case 'content_block_start':
+              if (evt.content_block?.type === 'tool_use') {
+                toolUses[evt.index!] = {
+                  id: evt.content_block.id ?? '',
+                  name: evt.content_block.name ?? '',
+                  jsonBuf: '',
+                }
+              } else if (evt.content_block?.type === 'text') {
+                curText = { index: evt.index!, text: '' }
+              }
+              break
+            case 'content_block_delta':
+              if (evt.delta?.type === 'input_json_delta') {
+                const tu = toolUses[evt.index!]
+                if (tu) tu.jsonBuf += evt.delta.partial_json ?? ''
+              } else if (typeof evt.delta?.text === 'string') {
+                emitText(evt.delta.text)
+                if (curText && curText.index === evt.index) curText.text += evt.delta.text
+              }
+              break
+            case 'content_block_stop': {
+              const tu = toolUses[evt.index!]
+              if (tu) {
+                let parsed: unknown = {}
+                try {
+                  parsed = tu.jsonBuf ? JSON.parse(tu.jsonBuf) : {}
+                } catch {
+                  parsed = {}
+                }
+                blocks.push({ type: 'tool_use', id: tu.id, name: tu.name, input: parsed })
+              } else if (curText && curText.index === evt.index) {
+                if (curText.text) blocks.push({ type: 'text', text: curText.text })
+                curText = null
+              }
+              break
+            }
+            case 'message_delta':
+              if (evt.delta?.stop_reason) stopReason = evt.delta.stop_reason
+              tokensOut += evt.usage?.output_tokens ?? 0
+              break
+            // message_stop is per-turn; we emit our own single message_stop at the end.
+          }
+        }
+
         while (true) {
           const { done, value } = await reader.read()
           if (done) {
-            // Flush any multi-byte char straddling the final boundary + parse residue.
             buffer += decoder.decode()
-            if (buffer) for (const line of buffer.split('\n')) processLine(line)
+            if (buffer) for (const line of buffer.split('\n')) handle(line)
             break
           }
-
-          // Pass Anthropic SSE through to the client untouched.
-          controller.enqueue(value)
-
-          // Accumulate server-side for persistence (buffered across reads).
           buffer += decoder.decode(value, { stream: true })
           const lines = buffer.split('\n')
           buffer = lines.pop() ?? ''
-          for (const line of lines) processLine(line)
+          for (const line of lines) handle(line)
         }
+        return { stopReason, blocks }
+      }
+
+      try {
+        let res = firstRes
+        let toolRounds = 0
+        while (true) {
+          const { stopReason, blocks } = await readTurn(res)
+
+          if (stopReason === 'tool_use' && toolRounds < MAX_TOOL_ITERATIONS) {
+            toolRounds++
+            // Replay the assistant tool_use turn into the conversation verbatim.
+            convo.push({ role: 'assistant', content: blocks })
+
+            const toolResults: Array<{ type: string; tool_use_id: string; content: string }> = []
+            for (const b of blocks) {
+              if (b.type !== 'tool_use') continue
+              const result =
+                b.name === 'query_team_directory'
+                  ? await runTeamDirectoryQuery(
+                      supabaseService,
+                      (b.input ?? {}) as { search?: string; department?: string },
+                    )
+                  : { error: `Unknown tool: ${b.name}` }
+              toolCallsLog.push({
+                tool: b.name,
+                input: b.input ?? {},
+                row_count: 'count' in result ? result.count : null,
+                ...('error' in result ? { error: result.error } : {}),
+              })
+              toolResults.push({
+                type: 'tool_result',
+                tool_use_id: b.id,
+                content: JSON.stringify(result),
+              })
+            }
+            convo.push({ role: 'user', content: toolResults })
+
+            const offerTools = toolRounds < MAX_TOOL_ITERATIONS
+            res = await callClaude(offerTools)
+            if (!res.ok || !res.body) {
+              const detail = res.body ? await res.text() : 'no body'
+              throw new Error(`Claude API error ${res.status}: ${detail}`)
+            }
+            continue
+          }
+          break // final answer reached
+        }
+
+        controller.enqueue(enc.encode('data: {"type":"message_stop"}\n\n'))
       } catch (err) {
-        // Stream error after partial content: keep what we have (updated in finally).
-        console.error('stream read error (partial content kept):', err)
+        // Keep whatever text already streamed; emit message_stop so the client
+        // unhangs even on a mid-loop failure.
+        console.error('tool-loop stream error (partial content kept):', err)
+        try {
+          controller.enqueue(enc.encode('data: {"type":"message_stop"}\n\n'))
+        } catch {
+          /* controller already closed */
+        }
       } finally {
-        // C4: persist content + tokens whether complete or partial.
+        // C4: persist content + tokens + tool-call observability (whether complete or
+        // partial). retrieved_chunks keeps the RAG sources and appends a synthetic
+        // team_directory entry recording the tool invocations.
         await supabaseService
           .from('ai_chat_messages')
           .update({
@@ -512,6 +733,31 @@ async function streamClaudeResponse({
             tokens_in: tokensIn,
             tokens_out: tokensOut,
             latency_ms: Date.now() - startTime,
+            retrieved_chunks: [
+              ...retrievedChunks.map((c) => ({
+                source: c.source,
+                source_id: c.source_id,
+                metadata: c.metadata,
+                combined_score: c.combined_score,
+                rerank_score: c.rerank_score,
+              })),
+              ...(toolCallsLog.length
+                ? [
+                    {
+                      source: 'team_directory',
+                      source_id: 'tool',
+                      // title/source_type so the client source-chip (ragToAiSource)
+                      // renders "airtuerk Team-Verzeichnis"; calls = observability.
+                      metadata: {
+                        title: 'airtuerk Team-Verzeichnis',
+                        source_type: 'team_directory',
+                        calls: toolCallsLog,
+                      },
+                      combined_score: 1,
+                    },
+                  ]
+                : []),
+            ],
           })
           .eq('id', messageId)
         controller.close()

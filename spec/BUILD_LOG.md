@@ -21,10 +21,11 @@ it is append-only history (do not rewrite past entries — add new ones).
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
   `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **65 migrations**, highest:
-  `20260626093000_chunk_retrieval_stats_job`. Highest decision: **D-068**.
+  `20260626093000_chunk_retrieval_stats_job`. Highest decision: **D-069**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **37 company_context** entries (all tagged). Edge functions:
-  `embed-knowledge` (7 source modes), `rag-query` v8 (persona v2), `notify-correction-event`,
+  `embed-knowledge` (7 source modes), `rag-query` v10 (persona v2 + `query_team_directory`
+  live team-roster tool-call, D-069), `notify-correction-event`,
   `tag-classify-chunks` (Haiku), + 3 confluence fns.
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
 - **Data counts (2026-06-26):** team_members **63**, profiles **4 (all super_admin,
@@ -68,6 +69,23 @@ it is append-only history (do not rewrite past entries — add new ones).
   AUDIT-002 (learning-loop never run) / AUDIT-003 (Hara-Filo source contradiction) /
   AUDIT-004 (Pegasus check-in gen-error) / AUDIT-006 (frozen 2026-06-23 corpus);
   D2 Phase-2 embed of the Selin row (ZDR-gated consistency follow-up).
+
+---
+
+## 2026-06-26 — airtuerk-KI: live team-directory tool-call (D-069)
+
+The KI was the only consumer not wired to `team_members` (the source of truth already
+shared by `/team` + `/admin/users`); its retrieval (`rag_hybrid_search`) scanned only the
+embedded corpus, so 60 of 63 staff were invisible and the Claude call had no tools.
+`supabase/functions/rag-query/index.ts` (edge-only, no migration) now has the Anthropic
+tool **`query_team_directory`** reading `team_members` LIVE via service-role (returns
+name/position/department/email/is_lead — never `phone`/`date_of_birth`).
+`streamClaudeResponse` rewritten into a tool-use loop (cap 3) with in-stream SSE
+interception → re-emits only text deltas + one final `message_stop` (preserves the client
+contract on both tool + no-tool paths). Deployed **prod `rag-query` v10 ACTIVE**; live-tested
+(person-not-in-corpus / dept-aggregate / privacy-refusal / ops-regression / admin-edit→AI-
+reflection), edge logs 200. Reconciliation note: `user ⊆ team_member` (63 vs 4 is correct;
+`dev@airtuerk.de` is the only user without a team_member — the intentional preview account).
 
 ---
 

@@ -445,6 +445,15 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-069 — airtuerk-KI: live team-directory via tool-call (not embeddings)
+**Date:** 2026-06-26
+**Status:** Adopted. No migration (edge-function-only: `rag-query` v10).
+**Context:** The KI only knew people who happened to appear in the embedded corpus (`company_context`/`confluence_chunks`/`brand_chunks`) — 60 of 63 `team_members` were invisible (e.g. Selin Köroglu had 0 corpus hits) — while `team_members` is already the single source of truth for `/team` (`getTeamMembers`) + `/admin/users` (`getAllTeamMembers`). `rag_hybrid_search` never touched it and the Claude call carried no `tools`.
+**Decision:** Give `rag-query` an Anthropic tool **`query_team_directory`** (`search`/`department`, both optional) that reads `team_members` LIVE via the service-role client. Chosen over context-injection (W) and a re-embedded `team_directory` layer (Y) because the roster changes often (no re-embedding) and aggregate queries ("wer ist im Vertrieb?", "wer leitet HR?") retrieve poorly from embeddings. The executor returns only `first/last/position/department/email/is_lead` — **never** `phone`/`date_of_birth` (privacy is structural, policy 9d). `streamClaudeResponse` became a tool-use loop (cap 3 rounds) with in-stream SSE interception: only text deltas + one final `message_stop` are re-emitted (the client `rag/client.ts` fires `done` on the first `message_stop`, so raw passthrough is impossible). `search` is tokenized (AND-of-per-token-ORs) so a full name resolves in one call. Tool calls are logged into `ai_chat_messages.retrieved_chunks` as a `team_directory` entry.
+**Verified:** prod `rag-query` v10; person-not-in-corpus, dept-aggregate (16 Service), privacy-refusal, ops-regression (no tool call), and edit→reflection (admin edit to `team_members` seen instantly + treated as authoritative over the stale corpus) all pass; edge logs 200, no errors.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)
