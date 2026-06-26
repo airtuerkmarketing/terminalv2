@@ -324,3 +324,56 @@
 .kb-audit-text b { color: var(--text-1); font-weight: var(--weight-semibold); }
 .kb-audit-src { font-size: var(--fs-xs); color: var(--accent); margin-top: 4px; }
 .kb-audit-empty { font-size: var(--fs-sm); color: var(--text-3); padding: var(--space-2) 0; }
+
+/* ── Per-axis filter dropdown ───────────────────────────────────────────── */
+.kb-fdrop { position: relative; display: inline-block; }
+.kb-fdrop-btn {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: var(--fs-sm); font-weight: var(--weight-semibold); color: var(--text-1);
+  background: var(--surface-flat); border: 1px solid var(--hairline);
+  border-radius: var(--radius-md); padding: var(--space-2) var(--space-3);
+}
+.kb-fdrop-btn:hover { background: var(--surface-muted); }
+.kb-fdrop-btn.is-active { border-color: var(--accent-border); color: var(--accent); background: var(--accent-soft); }
+.kb-fdrop-badge {
+  font-size: 10px; font-weight: var(--weight-semibold); border-radius: 999px;
+  padding: 1px 6px; background: var(--surface-muted); color: var(--text-3);
+}
+.kb-fdrop-badge.is-active { background: var(--accent); color: #fff; }
+.kb-fdrop-menu {
+  position: absolute; z-index: 50; top: calc(100% + 4px); left: 0; width: 280px;
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card-hover); display: flex; flex-direction: column; overflow: hidden;
+}
+.kb-fdrop-search {
+  display: flex; align-items: center; gap: 8px; padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--separator); color: var(--text-3);
+}
+.kb-fdrop-search input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: var(--fs-sm); color: var(--text-1); padding: 2px 0;
+}
+.kb-fdrop-search-count { font-size: var(--fs-xs); color: var(--text-3); }
+.kb-fdrop-list { max-height: 260px; overflow-y: auto; padding: 4px 0; }
+.kb-fdrop-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; cursor: pointer;
+  padding: 6px var(--space-3); font-size: var(--fs-sm); color: var(--text-1);
+  background: none; border: none; text-align: left;
+}
+.kb-fdrop-row:hover { background: var(--surface-muted); }
+.kb-fdrop-check {
+  width: 16px; height: 16px; flex: none; border-radius: 4px;
+  border: 1.5px solid var(--hairline-strong);
+  display: inline-flex; align-items: center; justify-content: center; color: #fff;
+}
+.kb-fdrop-check.is-on { background: var(--accent); border-color: var(--accent); }
+.kb-fdrop-row-label { flex: 1; }
+.kb-fdrop-row-count { font-size: var(--fs-xs); color: var(--text-3); font-variant-numeric: tabular-nums; }
+.kb-fdrop-empty { font-size: var(--fs-sm); color: var(--text-3); padding: var(--space-3); text-align: center; }
+.kb-fdrop-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: var(--space-2) var(--space-3); border-top: 1px solid var(--separator);
+}
+.kb-fdrop-clear { appearance: none; background: none; border: none; cursor: pointer; font-size: var(--fs-xs); color: var(--text-2); padding: 2px 4px; }
+.kb-fdrop-clear:disabled { opacity: 0.4; cursor: default; }
+.kb-fdrop-manage { appearance: none; background: none; border: none; cursor: pointer; font-size: var(--fs-xs); color: var(--accent); font-weight: var(--weight-semibold); padding: 2px 4px; }
