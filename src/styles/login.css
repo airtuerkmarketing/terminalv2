@@ -57,37 +57,83 @@
 /* D5: the wordmark is a near-black transparent mark — invert it on dark. */
 :root[data-theme="ios18-dark"] .login-wordmark { filter: invert(1); }
 
-/* ── Animated wordmark (inlined SVG, main login page) ─────────────────────
-   The icon chevrons line-draw then fill; the "terminal" letters rise in just
-   after. Colour follows the theme token (no invert filter needed — currentColor
-   resolves to --text-1, which already flips in dark). */
-.login-wordmark-anim {
-  height: 44px;
-  width: auto;
-  display: block;
-  max-width: 100%;
-  color: var(--text-1);
-  /* The icon group scales 10% past its own box; don't clip the slight overflow. */
-  overflow: visible;
+/* ─────────────────────────────────────────────────────────────────────────
+   Split-panel login (OneLogin-style): a grey brand panel (faint chevron
+   watermark + animated mark + "terminal" CSS-text logo) beside the white form
+   panel, floating on the shared <AuthParticles> backdrop. Theme-aware via the
+   token system; the sibling auth pages keep the .login-card layout above.
+   ───────────────────────────────────────────────────────────────────────── */
+.auth-split {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  max-width: 920px;
+  min-height: 560px;
+  background: var(--surface-strong);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-20);
+  box-shadow: var(--shadow-hover);
+  overflow: hidden;
 }
 
-/* Letters: start filled-but-hidden, rise + fade in as the icon finishes drawing. */
-.login-wordmark-anim .wm-text {
-  fill: currentColor;
+/* ── Brand panel ───────────────────────────────────────────────────────── */
+.auth-brand {
+  position: relative;
+  flex: 0 0 44%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+/* Large faint chevron watermark, bleeding past the panel edges. */
+.auth-brand-watermark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150%;
+  height: auto;
+  transform: translate(-50%, -50%);
+  color: var(--text-1);
+  opacity: 0.05;
+  pointer-events: none;
+}
+.auth-mark-static polygon { fill: currentColor; }
+
+.auth-brand-lockup {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* "terminal" CSS-text logo (Inter — the app's only face). Rises in just after
+   the icon finishes drawing. */
+.auth-logo-text {
+  display: inline-block;
+  font-weight: var(--weight-bold, 700);
+  font-size: 44px;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--text-1);
   opacity: 0;
   transform: translateY(6px);
   animation: wmTextRise 650ms var(--ease-smooth, ease) 950ms forwards;
 }
 
-/* Icon: 10% larger, scaled in place about its own centre (no layout shift). */
-.login-wordmark-anim .wm-icon {
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scale(1.1);
+/* Animated chevron mark: draw the outline, then fill (1.6s easeInOutCubic). */
+.auth-logo-icon {
+  height: 56px;
+  width: auto;
+  display: block;
+  color: var(--text-1);
+  overflow: visible;
 }
-
-/* Icon chevrons: draw the outline, then fill. Slower + smoother (easeInOutCubic). */
-.login-wordmark-anim .wm-icon polygon {
+.auth-logo-icon polygon {
   fill: transparent;
   stroke: currentColor;
   stroke-width: 2;
@@ -97,9 +143,9 @@
   stroke-dashoffset: 200;
   animation: wmIconDraw 1600ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
 }
-.login-wordmark-anim .wm-icon polygon:nth-child(1) { animation-delay: 0ms; }
-.login-wordmark-anim .wm-icon polygon:nth-child(2) { animation-delay: 150ms; }
-.login-wordmark-anim .wm-icon polygon:nth-child(3) { animation-delay: 300ms; }
+.auth-logo-icon polygon:nth-child(1) { animation-delay: 0ms; }
+.auth-logo-icon polygon:nth-child(2) { animation-delay: 150ms; }
+.auth-logo-icon polygon:nth-child(3) { animation-delay: 300ms; }
 
 @keyframes wmIconDraw {
   0%   { stroke-dashoffset: 200; fill: transparent; stroke: currentColor; }
@@ -111,19 +157,189 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Respect reduced-motion: show the final, fully-rendered lockup immediately. */
+/* ── Form panel ────────────────────────────────────────────────────────── */
+.auth-form-panel {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-5);
+  padding: var(--space-10);
+  background: var(--surface-strong);
+}
+
+.auth-heading {
+  margin: 0;
+  font-size: 32px;
+  font-weight: var(--weight-bold, 700);
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.auth-label {
+  font-size: 14px;
+  font-weight: var(--weight-medium);
+  color: var(--text-1);
+}
+
+.auth-input {
+  padding: 13px 18px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  font-size: 15px;
+  color: var(--text-1);
+  transition: border-color 150ms var(--ease-smooth), background 150ms var(--ease-smooth);
+}
+.auth-input::placeholder { color: var(--text-3); }
+.auth-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface-strong);
+}
+.auth-input:disabled { opacity: 0.6; cursor: not-allowed; }
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover,
+.auth-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-1);
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-muted) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.auth-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.auth-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+}
+.auth-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--jet);
+  cursor: pointer;
+}
+
+.auth-forgot {
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-1);
+  text-decoration: none;
+}
+.auth-forgot:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.auth-submit {
+  padding: 14px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--jet);
+  color: #fff;
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: background 150ms var(--ease-smooth), transform 150ms var(--ease-smooth);
+}
+.auth-submit:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--jet) 85%, white);
+  transform: translateY(-1px);
+}
+.auth-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Divider */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+}
+.auth-divider span {
+  font-size: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+/* OneLogin SSO button — decorative (no SSO backend; surfaces a toast). */
+.auth-sso {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface-strong);
+  cursor: pointer;
+  transition: background 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth);
+}
+.auth-sso:hover { background: var(--surface-muted); }
+.auth-sso-logo {
+  font-family: "Gilroy", "Montserrat", "Century Gothic", var(--font), sans-serif;
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--text-1);
+}
+
+.auth-footer {
+  margin: var(--space-2) 0 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: var(--weight-medium);
+  color: var(--text-3);
+}
+
+/* Dark: --jet is near-invisible on a dark card — invert the CTA to white. */
+:root[data-theme="ios18-dark"] .auth-submit { background: #fff; color: var(--bg); }
+:root[data-theme="ios18-dark"] .auth-submit:hover:not(:disabled) {
+  background: color-mix(in srgb, #fff 88%, black);
+}
+
+/* Respect reduced-motion: show the final lockup immediately. */
 @media (prefers-reduced-motion: reduce) {
-  .login-wordmark-anim .wm-text {
-    opacity: 1;
-    transform: none;
-    animation: none;
-  }
-  .login-wordmark-anim .wm-icon polygon {
+  .auth-logo-text { opacity: 1; transform: none; animation: none; }
+  .auth-logo-icon polygon {
     fill: currentColor;
     stroke: transparent;
     stroke-dashoffset: 0;
     animation: none;
   }
+}
+
+/* Stack the panels on narrow viewports. */
+@media (max-width: 860px) {
+  .auth-split { flex-direction: column; max-width: 460px; min-height: 0; }
+  .auth-brand { flex: none; min-height: 150px; padding: var(--space-6); }
+  .auth-brand-icon { height: 44px; }
+  .auth-logo-text { font-size: 34px; }
+  .auth-form-panel { padding: var(--space-8) var(--space-6); }
+  .auth-heading { font-size: 26px; }
 }
 
 /* Titles */
@@ -289,7 +505,6 @@
 /* Responsive */
 @media (max-width: 480px) {
   .login-card { padding: var(--space-8) var(--space-6); }
-  .login-wordmark,
-  .login-wordmark-anim { height: 38px; }
+  .login-wordmark { height: 38px; }
   .login-title { font-size: 22px; }
 }
