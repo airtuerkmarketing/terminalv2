@@ -9,20 +9,23 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-26)
 
-- **HEAD:** `dbd67fd` (`main`, == origin/main). **Demo:** 2026-08-01.
+- **HEAD:** `e7c5995` (`main`, == origin/main) — **Wissensbasis** `/admin/knowledge` shipped + deployed (Vercel READY, `dpl_4aFWaHbH`). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
-- **Database:** 28 tables + the `profiles_v` view (RAG foundation added 6:
+- **Database:** 32 tables + the `profiles_v` view (RAG foundation added 6:
   `company_context`, `confluence_chunks`, `brand_chunks`, `ai_chat_sessions`,
-  `ai_chat_messages`, `ai_corrections`). **55 pages** (all published), **15 brands**,
+  `ai_chat_messages`, `ai_corrections`; Wissensbasis added 4: `tag_vocabulary`,
+  `tag_suggestions`, `chunk_edit_log`, `chunk_retrieval_stats` + `company_context.tags`).
+  **55 pages** (all published), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` installed. **62 migrations**, highest:
-  `20260625182736_company_context_selin_disambiguation`. Highest decision: **D-064**.
+  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **65 migrations**, highest:
+  `20260626093000_chunk_retrieval_stats_job`. Highest decision: **D-068**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
-  knowledge_base 14] + brand 43) + **37 company_context** entries. Edge functions:
-  `embed-knowledge` (7 source modes), `rag-query` v6 (persona v2, + 3 confluence fns).
+  knowledge_base 14] + brand 43) + **37 company_context** entries (all tagged). Edge functions:
+  `embed-knowledge` (7 source modes), `rag-query` v8 (persona v2), `notify-correction-event`,
+  `tag-classify-chunks` (Haiku), + 3 confluence fns.
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
 - **Data counts (2026-06-26):** team_members **63**, profiles **4 (all super_admin,
   0 admin/user)**, active auth users **4**, assets **718**, blocks **43**,
@@ -49,7 +52,11 @@ it is append-only history (do not rewrite past entries — add new ones).
   + error/404/loading boundaries + this doc-sync); Welle C korpus-hygiene (C1
   Confluence-stragglers audit, C2 full RAG-corpus audit → `AUDIT-KORPUS-2026-06-26.md`);
   Welle D audit-fixes (D1 RAG secret-purge + `SECRET_PAGE_DENYLIST` guard `e58aeea`;
-  D2 Selin disambiguation `dbd67fd`); Voyage ZDR-Opt-Out activated 2026-06-26.
+  D2 Selin disambiguation `dbd67fd`); Voyage ZDR-Opt-Out activated 2026-06-26;
+  **Wissensbasis `/admin/knowledge`** (D-065..068 — 4-tab super_admin surface over the
+  RAG corpus: Quellen/provenance, correction review-loop with `embed-knowledge` + Resend
+  notify + in-app pill, gold-set Qualität, Taxonomie + Haiku auto-tag; corrections-first
+  editing per D-A; `cb33469`→`e7c5995`, deployed).
 - **Remaining:** AP3 Phases 7–12 (per-section bulk-invite, quick-actions, density toggle,
   permissions matrix, per-user permissions, activity-log integration); RAG WS2
   (feedback+CorrectionModal finish) + WS3/WS4 (web-search) + S5 company-context UI
@@ -61,6 +68,31 @@ it is append-only history (do not rewrite past entries — add new ones).
   AUDIT-002 (learning-loop never run) / AUDIT-003 (Hara-Filo source contradiction) /
   AUDIT-004 (Pegasus check-in gen-error) / AUDIT-006 (frozen 2026-06-23 corpus);
   D2 Phase-2 embed of the Selin row (ZDR-gated consistency follow-up).
+
+---
+
+## 2026-06-26 — Wissensbasis (`/admin/knowledge`) — Lernende-KI Admin-Surface
+
+4-tab super_admin page over the RAG corpus (D-065..068), `cb33469`→`e7c5995` (12 commits),
+merged to `main` + deployed (Vercel READY). 3 migrations (`20260625190000` foundation +
+`20260626090000` vocab-seed + `20260626093000` retrieval-stats `pg_cron`); 2 new edge fns
+(`notify-correction-event`, `tag-classify-chunks`). **0 new security advisors.**
+- **Quellen:** unified read of the 3 stores; content-shape render (heuristic, no stored col);
+  "Abgerufen ×N" (retrieval, not citation); company_context edit-modal + audit drawer.
+- **Reviews:** approve / edit&approve / reject → `embed-knowledge('corrections')` (K-6, no
+  manual insert) → durable chunk; in-app `ReviewNotifier` pill + Resend email (submitter +
+  Selin/Murat); submit-confirmation toast.
+- **Qualität:** gold-set 92.9% + per-set bars + failure cluster + hand-rolled SVG sparkline.
+- **Taxonomie:** `tag_vocabulary` CRUD + AI-suggestion queue; Haiku initial run 37/37 + 27 suggestions.
+- **Editing model (D-A):** only `company_context` editable (durable in-place re-embed);
+  confluence/brand are regenerable caches → read-only.
+- **Demo dry-run (throwaway data, deleted after):** approve → chunk 609 → `rag-query` retrieved
+  it **rank 3/8 (rerank 0.957)**, answer "7.7%" + Korrektur-citation → **no boost needed**.
+  Real email send OK (HTTP 200, Resend `614de2ba…`). State restored: 1 pending (Pegasus) + 0
+  correction-chunks. (Closes AUDIT-002 learning-loop-never-run.)
+- **Open (post-demo polish, not blockers):** submitter "my corrections" view; dynamic reviewer
+  recipients (vs hardcoded Selin/Murat); reviews-list realtime (currently 45s poll + click);
+  Resend-fail monitoring; modal focus-trap; orphan-cleanup for deleted chunks.
 
 ---
 

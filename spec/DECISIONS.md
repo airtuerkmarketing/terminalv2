@@ -415,6 +415,34 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 **Verified:** typecheck + build green; all 4 pages SSR HTTP 200 with section-id order matching the DB child slugs (incl. Antalya's singular `logo`); two-col DOM + `<h2>` direct-child preserved; sidebar anchors resolve; `airtuerk-apix` + `internal-branding` fallback render unchanged.
 **Follow-up 2026-06-25 (chore, no new D-number):** title-rename `14c0b86` applied on top; sidebar (DB `pages.title`) + in-page `<h2>` (TSX `brand-data`/`brand-page`) kept in sync per the D-064 architecture; Antalya angeglichen, anchor-slugs URL-stable.
 
+## D-065 — Wissensbasis (`/admin/knowledge`) admin surface + corrections-first editing
+**Date:** 2026-06-26
+**Status:** Adopted. Merged to `main` `e7c5995`, deployed (Vercel READY). Migration `20260625190000_knowledge_base_foundation`.
+**Context:** The RAG corpus (37 `company_context` + 363 `confluence_chunks` + 43 `brand_chunks`) had no human surface — chunks stayed invisible until they mis-rendered in a chat. The "Lernende KI" demo needs a place to see provenance, review user corrections, and watch quality. An advisor cross-check (vs live DB) corrected the original plan's memory-based numbers and one architectural assumption.
+**Decision:** Super_admin page at `src/app/(public)/admin/knowledge/` (mirrors `/admin/users`: `(public)` group, `notFound()` gate; nav link in the user-menu). One page, four tabs — **Quellen / Reviews / Qualität / Taxonomie**. iOS-18 glass + Quantum-Blue, `.kb-` prefix, all KPIs computed live (never hardcoded). **Editing model = corrections-first (D-A):** only `company_context` is directly editable (its handler re-embeds the row in place → durable); `confluence`/`brand`/`knowledge_base` chunks are **regenerable caches** (`embed-knowledge` re-chunks from `confluence_raw`/blocks/MD via `upsert onConflict=content_hash`, so a direct chunk edit is clobbered on the next re-embed) and are therefore **read-only** — derived-content fixes flow through the Reviews loop. Reviewer gate = super_admin (prod has 0 admin accounts; Selin/Murat get email, not yet UI access).
+**Verified:** typecheck+build green; renders against prod DB (KPIs 443/1-pending/92.9%/vor-2T, 4 tabs, 0 console errors); anon → 307 `/login`; "Abgerufen ×N" not "Zitiert" (B-3); grep confirms 0 hardcoded counts; `get_advisors(security)` 0 new findings.
+
+## D-066 — Tag model: 5 axes, jsonb+GIN, vocabulary tables, Haiku classifier
+**Date:** 2026-06-26
+**Status:** Adopted. Migrations `20260625190000` (tables) + `20260626090000_seed_tag_vocabulary` (43-term seed). Edge fn `tag-classify-chunks` v1.
+**Context:** The corpus needed faceted organisation (which brand/airline/topic a chunk concerns) for the admin filter view — without polluting retrieval.
+**Decision:** Five tag axes — **topic / airline / department / provider / brand**. Assignments live as a `tags jsonb` column (+GIN) on `company_context` (the editable layer; held off confluence/brand pending source-side tagging — idea-4, post-V1). Vocabulary is a DB table `tag_vocabulary` (D-B, single source of truth, Tab-4 CRUD), with AI proposals routed to `tag_suggestions` for super_admin review (never auto-added). `tag-classify-chunks` (Claude **Haiku 4.5**) classifies only into the approved vocabulary (hallucination-guarded — invalid values dropped, genuinely-new ones → suggestions). **Tags do NOT affect retrieval** (admin-view organisation only). RLS via `is_super_admin()`; service-role writes bypass.
+**Verified:** initial run 37/37 company_context tagged, 27 suggestions, 0 errors; sample quality sound (e.g. "Antwort-Tonalität" → brands:[airtuerk-service], topics:[support,faq], departments:[service]).
+
+## D-067 — Correction review loop: approve → embed-knowledge('corrections'), Resend notify
+**Date:** 2026-06-26
+**Status:** Adopted. `src/lib/knowledge/actions.ts`, `reviews-tab.tsx`, `review-notifier.tsx`; edge fn `notify-correction-event` v2.
+**Context:** The submission side (`AnswerFeedback` "Korrigieren" + `CorrectionModal` → `submitCorrection`) already existed; the review/approve half did not.
+**Decision:** Reviews tab: pending inbox (diff old-vs-proposed side-by-side) with **Übernehmen / Bearbeiten & übernehmen / Ablehnen**. Approve = set `ai_corrections.status` + `final_content` + reviewer fields, then invoke `embed-knowledge('corrections')` — **never a manual chunk insert (K-6)**; the edge fn materialises the durable `confluence_chunks` row (`source_type='correction'`) and writes back `applied_to_chunk_id` (idempotent via `applied_to_chunk_id IS NULL`; double-approve guarded by `.eq('status','pending')`). Notifications: in-app `ReviewNotifier` pill+toast (super_admin, 45s poll of pending count) + transactional Resend emails via `notify-correction-event` (submitted → Selin+Murat; approved/edited/rejected → submitter; sender `terminal@airtuerk.online`; best-effort, never blocks the loop). A submit-confirmation toast was added to `CorrectionModal`.
+**Verified (live dry-run, throwaway data, then deleted):** approve → new chunk 609 (embedding present) → `rag-query` on the exact question retrieved it at **rank 3/8, rerank 0.957**, answer contained "7.7%" with `[Quelle: Korrektur]` citation — **no retrieval boost needed**. Real email send confirmed (HTTP 200, Resend id `614de2ba-eaed-4c9e-9a6c-2508a569a7ab`). Demo state restored: 1 pending (Pegasus) + 0 correction-chunks.
+
+## D-068 — Retrieval-stats rollup, content-shape heuristic, audit trail
+**Date:** 2026-06-26
+**Status:** Adopted. Migrations `20260625190000` (`chunk_edit_log`) + `20260626093000_chunk_retrieval_stats_job` (`pg_cron`).
+**Context:** The page needed honest provenance ("how often is this chunk used?") and a change history, without storing drift-prone derived columns.
+**Decision:** (1) **`chunk_retrieval_stats`** — a nightly (`pg_cron` 03:15) full-refresh rollup exploding `ai_chat_messages.retrieved_chunks` into per-chunk counts keyed by the namespaced `(source, source_id)`; surfaced as **"Abgerufen ×N"** (retrieval, not citation — B-3). Function is `SECURITY DEFINER` with `EXECUTE` revoked from anon/authenticated. (2) **Content-shape** (quote/table/bullets/prose) is a render-time heuristic (`shape.ts`), **no stored column** to drift (idea-3). (3) **`chunk_edit_log`** audit trail (reason + before/after diff + correction link), shown in a right-slide audit drawer. (4) Corpus unified at the query layer (`listChunks`), not a DB view (idea-2 honoured at the function boundary).
+**Verified:** initial rollup populated 150 rows (context 37 / confluence 101 / brand 12, max ×100); cron job active; 0 new security advisors (REVOKE held; pg_cron in `cron` schema).
+
 ---
 
 ## Anti-decisions (explicitly NOT doing)
