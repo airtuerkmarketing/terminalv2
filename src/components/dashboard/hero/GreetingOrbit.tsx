@@ -7,12 +7,13 @@ import { NavIcon } from "@/components/shell/icons";
  * core = airtuerk "at" glyph; satellites = Holidays, atBeds, Service, Center
  * (Service + Center share the "at" glyph — that's the real brand mark). */
 
-// Static fallback greeting for now. TODO: later swap for the logged-in user's
-// name (profile lookup — an auth/DB step, not part of this stage). Kept as a
-// single const so that future change is a one-liner.
-const GREETING_NAME = "Kollege";
+// The greeting name comes from the signed-in user's profile, resolved by the "/"
+// server component (getIdentity) and passed in — this stays presentational.
+// Anon or unnamed users (e.g. dev@ with no linked team_member) fall back to "Kollege".
+const FALLBACK_NAME = "Kollege";
 
-export function GreetingOrbit() {
+export function GreetingOrbit({ name }: { name?: string | null }) {
+  const greetingName = name?.trim() || FALLBACK_NAME;
   return (
     <div className="dh-greeting">
       <div className="orbit-seal" aria-hidden="true">
@@ -34,7 +35,7 @@ export function GreetingOrbit() {
           <NavIcon name="airtuerk-service" />
         </div>
       </div>
-      <h1 className="dh-greeting-title">Was steht an, {GREETING_NAME}?</h1>
+      <h1 className="dh-greeting-title">Was steht an, {greetingName}?</h1>
     </div>
   );
 }
