@@ -9,7 +9,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-26)
 
-- **HEAD:** `4515437` (`main`, == origin/main) — **Wissensbasis filter-UX** (search-inside dropdowns, active chip-stack, localStorage presets, company_context "Neuer Eintrag", read-only cue on derived cards; `58000df`→`4515437`). Prev: **airtuerk-KI** `query_team_directory` live tool-call (D-069), prod `rag-query` v10. **Demo:** 2026-08-01.
+- **HEAD:** `f30e451` (`main`, == origin/main) — **Welle A** (dashboard greeting reads the signed-in user's first name via `getIdentity`; legacy Phase-0 `/admin` placeholder → redirect to `/admin/users`). Prev: Wissensbasis filter-UX (`4515437`), airtuerk-KI `query_team_directory` (D-069), prod `rag-query` v10. **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
@@ -59,15 +59,18 @@ it is append-only history (do not rewrite past entries — add new ones).
   notify + in-app pill, gold-set Qualität, Taxonomie + Haiku auto-tag; corrections-first
   editing per D-A; `cb33469`→`e7c5995`, deployed); Wissensbasis filter-UX follow-up
   (5 search-inside dropdowns + active chip-stack + localStorage presets + company_context
-  "Neuer Eintrag" + read-only "Nur-Lesen" cue on derived cards — `58000df`→`4515437`, deployed).
+  "Neuer Eintrag" + read-only "Nur-Lesen" cue on derived cards — `58000df`→`4515437`, deployed);
+  Welle A (dashboard greeting first-name via `getIdentity` + legacy `/admin` placeholder →
+  `/admin/users` redirect — `f30e451`).
 - **Remaining:** AP3 Phases 7–12 (per-section bulk-invite, quick-actions, density toggle,
   permissions matrix, per-user permissions, activity-log integration); RAG WS2
   (feedback+CorrectionModal finish) + WS3/WS4 (web-search) + S5 company-context UI
   + S8 email-notify resend + S9 gold-set re-run + S10 demo polish; Audit fixes
   P0a (cookie-free public-read) + P0c (proxy.ts) + P1 (APIX dynamic + RAG
   robustness, 4 open decisions); Out-of-Office as its own brand section (Block 5b);
-  2 non-blocking bulk-invite fixes (`use-bulk-invite.ts`); Welle A (greeting
-  first-name + empty-`/admin` redirect — still recon-only); open C2 audit findings
+  Welle A leftover: 2 non-blocking bulk-invite fixes (`use-bulk-invite.ts`, no
+  enumerated spec yet) — its greeting-first-name + `/admin`→`/admin/users` redirect
+  shipped (`f30e451`); open C2 audit findings
   AUDIT-002 (learning-loop never run) / AUDIT-003 (Hara-Filo source contradiction) /
   AUDIT-004 (Pegasus check-in gen-error) / AUDIT-006 (frozen 2026-06-23 corpus);
   D2 Phase-2 embed of the Selin row (ZDR-gated consistency follow-up).
