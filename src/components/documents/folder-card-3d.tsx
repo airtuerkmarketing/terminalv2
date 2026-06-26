@@ -4,7 +4,6 @@ import { useId, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { fileKind, type FileKind } from "@/lib/documents-constants";
 import { Trash2 } from "lucide-react";
 import { deleteFolder, renameFolder, setFolderVisibility } from "@/app/(public)/documents-library/actions";
 import { CreateFolderModal } from "./create-folder-modal";
@@ -47,25 +46,60 @@ export interface FolderCard3DProps {
 
 const EASE = "cubic-bezier(0.34, 1.56, 0.64, 1)";
 
-// Self-drawn format badges (kürzel + colour) — never the Adobe/MS logos.
-const BADGE: Record<FileKind, { label: string; color: string }> = {
-  pdf:   { label: "PDF", color: "#D8352A" },
-  word:  { label: "DOC", color: "#185FA5" },
-  excel: { label: "XLS", color: "#3B6D11" },
-  ppt:   { label: "PPT", color: "#BA7517" },
-  image: { label: "IMG", color: "#7C3AED" },
-  txt:   { label: "TXT", color: "#6B7280" },
-  zip:   { label: "ZIP", color: "#6B7280" },
-  file:  { label: "FILE", color: "#6B7280" },
+// ── Folder colour variants ─────────────────────────────────────────────────
+// Same SVG geometry; only the two wall gradients + the stroke change. back wall =
+// stop0→stop1 (paint0, deeper), front wall = stop0→stop1 (paint1, lighter). Values
+// taken from the delivered Figma SVGs (grey/blue/green/yellow).
+export type FolderColor = "grey" | "blue" | "green" | "yellow";
+const FOLDER_COLORS: Record<FolderColor, { backFrom: string; backTo: string; frontFrom: string; frontTo: string; stroke: string }> = {
+  grey:   { backFrom: "#4C4C4C", backTo: "#676767", frontFrom: "#616161", frontTo: "#666666", stroke: "#B0B0B0" },
+  blue:   { backFrom: "#C0DFFF", backTo: "#006EE2", frontFrom: "#DBEFFF", frontTo: "#9AD3FF", stroke: "#0A82DF" },
+  green:  { backFrom: "#50DD57", backTo: "#196903", frontFrom: "#7CFC96", frontTo: "#47B767", stroke: "#0ADF38" },
+  yellow: { backFrom: "#FFEC2D", backTo: "#A76B0B", frontFrom: "#FFFB7E", frontTo: "#EEB85C", stroke: "#DF9C0A" },
 };
+// Solid swatch shown in the context menu per colour.
+const COLOR_SWATCHES: { value: FolderColor; color: string }[] = [
+  { value: "grey", color: "#6E6E6E" },
+  { value: "blue", color: "#0A82DF" },
+  { value: "green", color: "#2FB344" },
+  { value: "yellow", color: "#E0A100" },
+];
 
-// Coin centres in the front-wall viewBox. Format coins are grouped at the LEFT
-// (up to 3); the private-lock coin sits on its own at the RIGHT edge of the same
-// bottom row, with a clear gap from the format cluster.
-const COIN_CX = [56.5, 86.5, 116.5];
-const LOCK_CX = 252.5;
-const COIN_CY = 178.5;
-const COIN_R = 17.5;
+// ── Per-folder colour persistence ───────────────────────────────────────────
+// Colour is client-only for now (localStorage). Once a DB column folder.color
+// exists (Buhara), replace the localStorage read/write with the DB value — the UI
+// stays identical (FolderColor + FOLDER_COLORS + the context-menu swatches).
+const colorKey = (id: string) => `terminal_folder_color:${id}`;
+const colorListeners = new Set<() => void>();
+function readFolderColor(id?: string): FolderColor {
+  if (!id || typeof window === "undefined") return "grey";
+  const v = window.localStorage.getItem(colorKey(id));
+  return v === "blue" || v === "green" || v === "yellow" || v === "grey" ? v : "grey";
+}
+function writeFolderColor(id: string, color: FolderColor) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(colorKey(id), color);
+  colorListeners.forEach((l) => l()); // notify same-tab subscribers
+}
+function subscribeFolderColor(cb: () => void) {
+  colorListeners.add(cb);
+  if (typeof window !== "undefined") window.addEventListener("storage", cb);
+  return () => {
+    colorListeners.delete(cb);
+    if (typeof window !== "undefined") window.removeEventListener("storage", cb);
+  };
+}
+/** SSR-safe per-folder colour (server snapshot = "grey", hydrates to the stored
+ *  value), mirroring the RadialKit localStorage-position pattern. */
+function useFolderColor(id?: string) {
+  const color = useSyncExternalStore(
+    subscribeFolderColor,
+    () => readFolderColor(id),
+    () => "grey" as FolderColor
+  );
+  const setColor = (c: FolderColor) => { if (id) writeFolderColor(id, c); };
+  return { color, setColor };
+}
 
 // prefers-reduced-motion mirror (useSyncExternalStore — no setState-in-effect).
 function subscribeRM(cb: () => void) {
@@ -89,7 +123,7 @@ function useReducedMotion() {
  *  (childFolders is a server prop, so the grid/list updates without a reload).
  *  No standalone folder-move modal is reachable from a card/row, so Move is
  *  omitted here (it lives in FolderActionsMenu on the folder's own page). */
-function useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename = false }: { id?: string; name: string; href: string; isPublic: boolean; isSuperAdmin: boolean; autoRename?: boolean }) {
+function useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename = false, color, setColor }: { id?: string; name: string; href: string; isPublic: boolean; isSuperAdmin: boolean; autoRename?: boolean; color: FolderColor; setColor: (c: FolderColor) => void }) {
   const router = useRouter();
   // Freshly-created folders mount straight into rename mode (autoRename) — set as
   // the initial state so no setState-in-effect is needed; the instance persists
@@ -120,6 +154,16 @@ function useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename =
   }
 
   const menuItems: CtxItem[] = [{ kind: "item", label: "Open", onClick: () => router.push(href) }];
+  if (id) {
+    // Colour is a per-user view preference (localStorage) — offered for any folder.
+    menuItems.push({
+      kind: "swatches",
+      label: "Color",
+      value: color,
+      options: COLOR_SWATCHES,
+      onSelect: (v) => setColor(v as FolderColor),
+    });
+  }
   if (canManage) {
     menuItems.push(
       { kind: "item", label: "Rename", onClick: startRename },
@@ -179,24 +223,20 @@ export function FolderGraphic3D({
   width = 150,
   animate = true,
   hovered = false,
+  color = "grey",
 }: {
   previewFiles?: FolderPreviewFile[];
   isPublic: boolean;
   width?: number;
   animate?: boolean;
   hovered?: boolean;
+  color?: FolderColor;
 }) {
   const reduced = useReducedMotion();
-  const uid = useId().replace(/:/g, ""); // namespace SVG gradient ids per instance
+  const uid = useId().replace(/:/g, ""); // namespace SVG gradient/filter ids per instance
+  const c = FOLDER_COLORS[color] ?? FOLDER_COLORS.grey;
 
   const tiles = previewFiles.slice(0, 3);
-  // Distinct file types → coins (max 3).
-  const kinds: FileKind[] = [];
-  for (const f of previewFiles) {
-    const k = fileKind(f.extension);
-    if (!kinds.includes(k)) kinds.push(k);
-    if (kinds.length === 3) break;
-  }
   // Degrade: not animating / 0 files / reduced-motion → folder stays closed.
   const open = animate && hovered && tiles.length > 0 && !reduced;
   const tr = (s: string) => (reduced || !animate ? "none" : s);
@@ -223,13 +263,15 @@ export function FolderGraphic3D({
       >
         <defs>
           <linearGradient id={`bw-${uid}`} x1="274.301" y1="93" x2="18.3008" y2="93" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#4C4C4C" />
-            <stop offset="1" stopColor="#676767" />
+            <stop stopColor={c.backFrom} />
+            <stop offset="1" stopColor={c.backTo} />
           </linearGradient>
         </defs>
         <path
           d="M251.301 175H41.3008C28.5982 175 18.3008 164.703 18.3008 152V34C18.3008 21.2975 28.5982 11 41.3008 11H251.301C264.003 11 274.301 21.2974 274.301 34V152C274.301 164.703 264.003 175 251.301 175Z"
           fill={`url(#bw-${uid})`}
+          stroke={c.stroke}
+          strokeWidth="1"
         />
       </svg>
 
@@ -255,15 +297,11 @@ export function FolderGraphic3D({
               /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
               <img src={`/api/library/file/${f.id}`} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
             ) : (
+              /* Plain sheet (format hint removed — the old coin/badge read poorly). */
               <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-surface px-2">
-                <span
-                  className="inline-grid place-items-center rounded text-[8px] font-bold text-white"
-                  style={{ width: 22, height: 14, background: BADGE[fileKind(f.extension)].color }}
-                >
-                  {BADGE[fileKind(f.extension)].label}
-                </span>
                 <span className="w-full h-1 rounded bg-hairline" />
                 <span className="w-3/4 h-1 rounded bg-hairline" />
+                <span className="w-1/2 h-1 rounded bg-hairline" />
               </div>
             )}
           </div>
@@ -283,48 +321,30 @@ export function FolderGraphic3D({
       >
         <defs>
           <linearGradient id={`fw-${uid}`} x1="149.301" y1="29" x2="149.301" y2="215" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#616161" />
-            <stop offset="1" stopColor="#666666" />
+            <stop stopColor={c.frontFrom} />
+            <stop offset="1" stopColor={c.frontTo} />
           </linearGradient>
+          {/* Lock badge's own soft shadow (Figma): dy3.24 blur6.47 #111826 @ 6%. */}
+          <filter id={`lk-${uid}`} x="-30%" y="-30%" width="160%" height="180%">
+            <feDropShadow dx="0" dy="3.24" stdDeviation="3.235" floodColor="#111826" floodOpacity="0.06" />
+          </filter>
         </defs>
         <path
           d="M18.3008 192V48C18.3008 37.5066 26.8074 29 37.3008 29H117.713C126.299 29 134.746 31.1679 142.272 35.3026L164.83 47.6974C172.355 51.8321 180.803 54 189.389 54H257.301C270.003 54 280.301 64.2975 280.301 77V192C280.301 204.703 270.003 215 257.301 215H41.3008C28.5982 215 18.3008 204.703 18.3008 192Z"
           fill={`url(#fw-${uid})`}
-          stroke="#B0B0B0"
+          stroke={c.stroke}
           strokeWidth="1"
         />
-        {kinds.map((k, i) => (
-          <g key={k}>
-            <circle cx={COIN_CX[i]} cy={COIN_CY} r={COIN_R} fill="#fff" />
-            <text
-              x={COIN_CX[i]}
-              y={COIN_CY}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fontSize="9"
-              fontWeight="700"
-              fontFamily="inherit"
-              fill={BADGE[k].color}
-            >
-              {BADGE[k].label}
-            </text>
-          </g>
-        ))}
-        {/* Private cue — a red lock coin at the RIGHT edge of the bottom row, set
-            apart from the left-grouped format coins. */}
+        {/* Private cue — prominent lock badge bottom-right (Lockedicon.svg, 1:1
+            geometry at native 24, scaled into place). Only when private. */}
         {!isPublic && (
-          <g>
-            <circle cx={LOCK_CX} cy={COIN_CY} r={COIN_R} fill="#fff" />
-            <g
-              transform={`translate(${LOCK_CX}, ${COIN_CY})`}
-              fill="none"
-              stroke="var(--torch)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="-7" y="-2" width="14" height="11" rx="2.5" />
-              <path d="M-4 -2 V-5 a4 4 0 0 1 8 0 V-2" />
+          <g filter={`url(#lk-${uid})`}>
+            <g transform="translate(216 154) scale(2.0417)">
+              <rect x="0.405" y="0.405" width="23.19" height="23.19" rx="9.7" fill="#FFCDCD" stroke="#FFA0A0" strokeWidth="0.81" />
+              <g fill="none" stroke="#ED1C24" strokeWidth="1.62" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="7" y="10.5" width="10" height="8" rx="1.8" />
+                <path d="M9 10.5V8a3 3 0 0 1 6 0v2.5" />
+              </g>
             </g>
           </g>
         )}
@@ -345,8 +365,9 @@ export function FolderCard3D({
   autoRename = false,
 }: FolderCard3DProps) {
   const [hovered, setHovered] = useState(false);
+  const { color, setColor } = useFolderColor(id);
   const { canManage, editing, startRename, renameInput, onContextMenu, portals } =
-    useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename });
+    useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename, color, setColor });
 
   return (
     <div
@@ -358,7 +379,7 @@ export function FolderCard3D({
       <Link href={href} className="dl-cell__hit" aria-label={`Open ${name}`} onFocus={() => setHovered(true)} onBlur={() => setHovered(false)}>
         {/* Folder stage — fixed aspect so the coins/docs scale with the SVG. */}
         <span className="dl-cell__visual">
-          <FolderGraphic3D previewFiles={previewFiles} isPublic={isPublic} hovered={hovered} />
+          <FolderGraphic3D previewFiles={previewFiles} isPublic={isPublic} hovered={hovered} color={color} />
         </span>
       </Link>
 
@@ -398,13 +419,14 @@ export function FolderRow({
   isSuperAdmin?: boolean;
   autoRename?: boolean;
 }) {
+  const { color, setColor } = useFolderColor(id);
   const { editing, renameInput, onContextMenu, portals } =
-    useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename });
+    useFolderActions({ id, name, href, isPublic, isSuperAdmin, autoRename, color, setColor });
   return (
     <div className="dl-row dl-row--folder" onContextMenu={onContextMenu}>
       <span className="dl-row-type dl-row-type--folder" aria-hidden="true">
         {/* Same 3D folder visual as the card, shrunk to the row (static, no fan). */}
-        <FolderGraphic3D isPublic={isPublic} width={40} animate={false} />
+        <FolderGraphic3D isPublic={isPublic} width={40} animate={false} color={color} />
       </span>
       {/* Name navigates on click; rename is via the right-click menu. */}
       {editing ? renameInput : <Link className="dl-row-name" href={href} title={name}>{name}</Link>}

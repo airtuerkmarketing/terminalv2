@@ -859,6 +859,7 @@
   object-fit: cover;
   border-radius: var(--radius-sm);
   border: 1px solid var(--hairline);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
 }
 
 .dl-row-name {
@@ -1455,6 +1456,15 @@ textarea.dl-input { min-height: 64px; }
 /* Hover lift on the visual (files + folders; the 3D folder stage also animates). */
 .dl-cell:hover .dl-cell__visual { transform: translateY(-4px); }
 
+/* Default rest shadow on every free-standing object — file graphics + image
+   thumbnails (Figma "Elevation 01": 0 4 15 / #000 6%). The 3D folder carries its
+   own layered depth shadow already. Hover lifts it a touch stronger. This is a
+   shadow, not motion, so it stays under prefers-reduced-motion. */
+.dl-ftg-shadow { filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.06)); transition: filter 220ms var(--ease-smooth); }
+.dl-cell__thumb { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); transition: box-shadow 220ms var(--ease-smooth); }
+.dl-cell:hover .dl-ftg-shadow { filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.10)); }
+.dl-cell:hover .dl-cell__thumb { box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10); }
+
 /* Hover-only download button (top-right of a file cell). Ghost square, revealed
    on cell hover/focus; stopPropagation in JSX keeps it from opening the file. */
 .dl-cell__dl {
@@ -1539,6 +1549,22 @@ textarea.dl-input { min-height: 64px; }
 .dl-ctx-item:hover { background: rgba(120, 120, 128, 0.10); }
 .dl-ctx-item.danger { color: var(--torch); }
 .dl-ctx-sep { height: 1px; background: var(--separator); margin: 4px 6px; }
+
+/* Colour swatch row inside the context menu (folder colour picker). */
+.dl-ctx-swatches { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; }
+.dl-ctx-swatch-label { font-size: var(--fs-sm); color: var(--text-1); }
+.dl-ctx-swatch-row { display: inline-flex; gap: 6px; }
+.dl-ctx-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 120ms var(--ease-smooth), box-shadow 120ms var(--ease-smooth);
+}
+.dl-ctx-swatch:hover { transform: scale(1.12); }
+.dl-ctx-swatch.is-on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {
   .dl-cell__visual, .dl-cell:hover .dl-cell__visual { transition: none; transform: none; }

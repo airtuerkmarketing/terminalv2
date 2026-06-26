@@ -28,7 +28,14 @@ const EditIcon = () => (
 
 export type CtxItem =
   | { kind: "item"; label: string; onClick: () => void; danger?: boolean }
-  | { kind: "sep" };
+  | { kind: "sep" }
+  | {
+      kind: "swatches";
+      label: string;
+      value: string;
+      options: { value: string; color: string }[];
+      onSelect: (v: string) => void;
+    };
 
 /** Right-click popover at the cursor; closes on outside-click / Esc / scroll. */
 export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; items: CtxItem[]; onClose: () => void }) {
@@ -50,6 +57,23 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
       {items.map((it, i) =>
         it.kind === "sep" ? (
           <div key={i} className="dl-ctx-sep" />
+        ) : it.kind === "swatches" ? (
+          <div key={i} className="dl-ctx-swatches">
+            <span className="dl-ctx-swatch-label">{it.label}</span>
+            <div className="dl-ctx-swatch-row">
+              {it.options.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  className={`dl-ctx-swatch${o.value === it.value ? " is-on" : ""}`}
+                  style={{ background: o.color }}
+                  aria-label={o.value}
+                  aria-pressed={o.value === it.value}
+                  onClick={() => { it.onSelect(o.value); onClose(); }}
+                />
+              ))}
+            </div>
+          </div>
         ) : (
           <button key={i} type="button" role="menuitem" className={`dl-ctx-item${it.danger ? " danger" : ""}`} onClick={() => { it.onClick(); onClose(); }}>
             {it.label}

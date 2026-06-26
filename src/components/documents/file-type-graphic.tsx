@@ -60,7 +60,7 @@ export function FileTypeGraphic({
 
   if (scale === 1) {
     return (
-      <div aria-hidden className={cn("size-fit", className)}>
+      <div aria-hidden className={cn("size-fit dl-ftg-shadow", className)}>
         {inner}
       </div>
     );
@@ -69,7 +69,7 @@ export function FileTypeGraphic({
   return (
     <div
       aria-hidden
-      className={cn("relative", className)}
+      className={cn("relative dl-ftg-shadow", className)}
       style={{ width: NAT_W * scale, height: NAT_H * scale }}
     >
       <div style={{ position: "absolute", top: 0, left: 0, transform: `scale(${scale})`, transformOrigin: "top left" }}>
