@@ -37,6 +37,8 @@ export interface PresentationFolderDTO {
   sortOrder: number;
   /** Persisted folder colour (D-077); null = the default (grey). */
   color: FolderColor | null;
+  /** Folder visibility (D-079). Private (false) = admin-only. Defaults true. */
+  isPublic: boolean;
 }
 
 export interface TagDTO {
@@ -87,21 +89,21 @@ export interface PresentationViewDTO {
 /** Sort options for the in-folder file list (matches the toolbar dropdown). */
 export type PresentationSortKey = "name" | "date" | "size";
 
-const FOLDER_COLS = "id, parent_id, name, slug, path, sort_order, color";
-const FOLDER_COLS_BASE = "id, parent_id, name, slug, path, sort_order";
+const FOLDER_COLS = "id, parent_id, name, slug, path, sort_order, color, is_public";
+const FOLDER_COLS_BASE = "id, parent_id, name, slug, path, sort_order, color";
 
 /**
- * Rollout guards (D-077/078), same pattern as the Document Library: the `color`
- * (folders) and `deleted_at` (files) columns may not be applied in a given
- * environment yet, so reads must not hard-depend on them. Probe once (cache only
- * the positive result) and adapt the select / filter.
+ * Rollout guards (D-077/078/079), same pattern as the Document Library: a column
+ * may not be applied in a given environment yet, so reads must not hard-depend on
+ * it. `color` is already shipped, so the guard now probes the newest column —
+ * `is_public` (D-079); when absent, folders read without it and default to public.
  */
-let _folderColorReady = false;
+let _visibilityReady = false;
 async function folderCols(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
-  if (_folderColorReady) return FOLDER_COLS;
-  const { error } = await supabase.from("presentation_folders").select("color").limit(1);
+  if (_visibilityReady) return FOLDER_COLS;
+  const { error } = await supabase.from("presentation_folders").select("is_public").limit(1);
   if (error?.code === "42703") return FOLDER_COLS_BASE;
-  _folderColorReady = true;
+  _visibilityReady = true;
   return FOLDER_COLS;
 }
 let _trashReady = false;
@@ -127,6 +129,7 @@ type FolderRow = {
   path: string;
   sort_order: number;
   color: string | null;
+  is_public: boolean | null;
 };
 type TagRow = {
   id: string;
@@ -173,6 +176,7 @@ function mapFolder(r: FolderRow): PresentationFolderDTO {
     path: r.path,
     sortOrder: r.sort_order,
     color: normalizeFolderColor(r.color),
+    isPublic: r.is_public ?? true,
   };
 }
 function mapTag(r: TagRow): TagDTO {

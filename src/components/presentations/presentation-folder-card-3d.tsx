@@ -9,6 +9,7 @@ import {
   deleteFolder,
   renameFolder,
   setFolderColor,
+  setFolderVisibility,
 } from "@/app/(public)/presentation-hub/actions";
 import { DEFAULT_FOLDER_COLOR, type FolderColor } from "@/lib/documents-constants";
 import type { PresentationPreviewFileDTO } from "@/lib/presentations";
@@ -45,6 +46,7 @@ function useFolderActions({
   href,
   path,
   parentId,
+  isPublic,
   isSuperAdmin,
   autoRename = false,
   color,
@@ -54,6 +56,7 @@ function useFolderActions({
   href: string;
   path?: string;
   parentId?: string | null;
+  isPublic: boolean;
   isSuperAdmin: boolean;
   autoRename?: boolean;
   color: FolderColor;
@@ -90,6 +93,12 @@ function useFolderActions({
     if (res.ok) router.refresh();
     else setDraft(name);
   }
+  async function toggleVisibility() {
+    if (!id) return;
+    const res = await setFolderVisibility(id, !isPublic);
+    if (res.ok) router.refresh();
+    else toast({ title: res.error, variant: "error" });
+  }
   async function doDelete() {
     if (!id) return;
     setDeleting(true);
@@ -118,6 +127,7 @@ function useFolderActions({
     );
     if (path) menuItems.push({ kind: "item", label: "Move…", onClick: () => setMoveOpen(true) });
     menuItems.push(
+      { kind: "item", label: isPublic ? "Make private" : "Make public", onClick: toggleVisibility },
       { kind: "sep" },
       { kind: "item", label: "Delete folder", onClick: () => setConfirmDelete(true), danger: true }
     );
@@ -188,6 +198,7 @@ export interface PresentationFolderCard3DProps {
   fileCount: number;
   previewFiles: PresentationPreviewFileDTO[];
   color?: FolderColor | null;
+  isPublic?: boolean;
   isSuperAdmin?: boolean;
   className?: string;
   autoRename?: boolean;
@@ -202,6 +213,7 @@ export function PresentationFolderCard3D({
   fileCount,
   previewFiles,
   color,
+  isPublic = true,
   isSuperAdmin = false,
   className,
   autoRename = false,
@@ -214,6 +226,7 @@ export function PresentationFolderCard3D({
     href,
     path,
     parentId,
+    isPublic,
     isSuperAdmin,
     autoRename,
     color: folderColor,
@@ -228,7 +241,7 @@ export function PresentationFolderCard3D({
     >
       <Link href={href} className="dl-cell__hit" aria-label={`Open ${name}`} onFocus={() => setHovered(true)} onBlur={() => setHovered(false)}>
         <span className="dl-cell__visual">
-          <FolderGraphic3D previewFiles={previewFiles.map(toPreview)} isPublic hovered={hovered} color={folderColor} previewSrc={THUMB} />
+          <FolderGraphic3D previewFiles={previewFiles.map(toPreview)} isPublic={isPublic} hovered={hovered} color={folderColor} previewSrc={THUMB} />
         </span>
       </Link>
 
@@ -257,6 +270,7 @@ export function PresentationFolderRow({
   parentId,
   fileCount,
   color,
+  isPublic = true,
   isSuperAdmin = false,
   autoRename = false,
 }: {
@@ -267,6 +281,7 @@ export function PresentationFolderRow({
   parentId?: string | null;
   fileCount: number;
   color?: FolderColor | null;
+  isPublic?: boolean;
   isSuperAdmin?: boolean;
   autoRename?: boolean;
 }) {
@@ -277,6 +292,7 @@ export function PresentationFolderRow({
     href,
     path,
     parentId,
+    isPublic,
     isSuperAdmin,
     autoRename,
     color: folderColor,
@@ -284,7 +300,7 @@ export function PresentationFolderRow({
   return (
     <div className="dl-row dl-row--folder" onContextMenu={onContextMenu}>
       <span className="dl-row-type dl-row-type--folder" aria-hidden="true">
-        <FolderGraphic3D isPublic width={40} animate={false} color={folderColor} />
+        <FolderGraphic3D isPublic={isPublic} width={40} animate={false} color={folderColor} />
       </span>
       {editing ? renameInput : <Link className="dl-row-name" href={href} title={name}>{name}</Link>}
       <span className="dl-row-lang" />

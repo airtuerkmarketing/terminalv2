@@ -120,6 +120,7 @@ export function PresentationHubRoot({
                 parentId={f.parentId}
                 fileCount={f.fileCount}
                 color={f.color}
+                isPublic={f.isPublic}
                 isSuperAdmin={isSuperAdmin}
                 autoRename={f.id === pendingRenameId}
               />
@@ -138,6 +139,7 @@ export function PresentationHubRoot({
                 fileCount={f.fileCount}
                 previewFiles={f.previewFiles}
                 color={f.color}
+                isPublic={f.isPublic}
                 isSuperAdmin={isSuperAdmin}
                 autoRename={f.id === pendingRenameId}
               />

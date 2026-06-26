@@ -265,6 +265,27 @@ export async function setFolderColor(
   return { ok: true };
 }
 
+/**
+ * Toggle a folder's visibility (D-079). Super-admin only (structural, like the
+ * Document Library). Private (is_public=false) = admin-only; the RLS SELECT
+ * policies hide private folders + their files from non-admin viewers.
+ */
+export async function setFolderVisibility(folderId: string, isPublic: boolean): Promise<ActionResult> {
+  try {
+    await requireSuperAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("presentation_folders")
+    .update({ is_public: isPublic })
+    .eq("id", folderId);
+  if (error) return { ok: false, error: toMessage(error, "folder") };
+  revalidateStructure();
+  return { ok: true };
+}
+
 export async function moveFolder(folderId: string, newParentId: string | null): Promise<ActionResult> {
   try {
     await requireAdmin();

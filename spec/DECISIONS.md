@@ -557,6 +557,16 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-079 — Presentation Hub: folder visibility (public/private)
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260626210000_presentation_folder_visibility` (additive `is_public`, default TRUE, + RLS). Applied to prod via SQL editor (sign-off given).
+**Context:** Documents support "make folder private", but the Presentation Hub was built login-only with **no `is_public` column** and RLS `USING (true)` — so the toggle had nothing to act on (the port couldn't expose it). Buhara: presentations should be able to make a folder private like Documents.
+**Decision:** Add `presentation_folders.is_public` (D-052 model). The hub stays login-only, so **private = admin-only** (vs visible to every authenticated user). RLS: `presentation_folders_select` → `is_public OR is_admin()`; `presentation_files_select` → the file's folder is public OR admin — so a private folder hides its presentations from non-admins too (the signed-URL serving route mints only AFTER this RLS-gated read). New action `setFolderVisibility` (super-admin); **"Make private / Make public"** in the folder card menu + the on-page folder menu; the lock cue on private cards reuses the shared `FolderGraphic3D`. Reads rollout-guarded (probe `is_public`).
+**Default = TRUE** (non-breaking: existing + new folders stay visible; admins opt specific ones private) — deliberately differs from `document_folders` (default private) since the hub was previously all-visible.
+**Verified:** `tsc` + `next build` green; live preview — Make private → lock cue → persists from DB → Make public → lock gone; column + RLS confirmed live.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)
