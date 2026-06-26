@@ -492,7 +492,7 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ## D-073 — Platform UI → English (chrome only) + AI answers in input language + remove gold-set quiz
 **Date:** 2026-06-26
-**Status:** Adopted; merged to `main` (`febc625`, fast-forward over Emirkan's `74450e3`). Frontend auto-deploys via Vercel. **Pending prod actions (gated on sign-off):** `rag-query` v12 deploy + migration `20260626160000` apply.
+**Status:** Adopted + fully shipped 2026-06-26: merged to `main` (FF over Emirkan's `74450e3`), Vercel deployed (live English UI confirmed), `rag-query` **v12 deployed**, migration `20260626160000` **applied** (4 `/gold-set*` pages removed → 51 pages; 84 `gold_set_answers` rows kept).
 **Context:** The platform mixed German + English UI. Buhara: make the whole UI English now, real translations later; the AI must answer in the user's own language (TR question → TR answer), not forced German; brand copy + generated content stay German. Separately, the Gold-Set validation quiz (3 review pages + index) had finished collecting data and is no longer needed.
 **Decision:**
 1. **UI chrome → English** across app routes, auth/login, admin (users + knowledge), documents, shell, `/team`, and dashboard. Done via a multi-agent sweep (translate → adversarial verify) that touched only user-facing chrome and left logic strings, enum/union VALUES, route params, role/status discriminants, CSS classes, comments, and brand/content German. **Content stays in its language:** out-of-office & email-signature templates, AI demo data, brand copy, language endonyms (`Türkçe`).

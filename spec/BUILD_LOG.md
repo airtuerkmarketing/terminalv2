@@ -9,7 +9,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-26)
 
-- **HEAD:** `main` (`febc625`) — **Mode-Chips + platform UI→English + gold-set quiz removed** (D-072/D-073: AI mode-chips with per-mode RAG bypass + per-chip glow, whole-UI English, AI answers in the user's input language, `"Alright {name}, what are we fixing today?"` greeting). **Deploy-pending (gated on sign-off):** `rag-query` v12 + migration `20260626160000`. Prev: Onboarding + self-profile (D-071, `20260626140000`). **Demo:** 2026-08-01.
+- **HEAD:** `main` (`febc625`) — **Mode-Chips + platform UI→English + gold-set quiz removed** (D-072/D-073: AI mode-chips with per-mode RAG bypass + per-chip glow, whole-UI English, AI answers in the user's input language, `"Alright {name}, what are we fixing today?"` greeting). **Shipped:** `rag-query` v12 live + migration `20260626160000` applied (gold-set quiz removed). Prev: Onboarding + self-profile (D-071, `20260626140000`). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
@@ -17,15 +17,15 @@ it is append-only history (do not rewrite past entries — add new ones).
   `company_context`, `confluence_chunks`, `brand_chunks`, `ai_chat_sessions`,
   `ai_chat_messages`, `ai_corrections`; Wissensbasis added 4: `tag_vocabulary`,
   `tag_suggestions`, `chunk_edit_log`, `chunk_retrieval_stats` + `company_context.tags`).
-  **55 pages** (51 once the pending gold-set migration applies), **15 brands**,
+  **51 pages** (gold-set quiz pages removed), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
   `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **68 migrations**, highest:
-  `20260626160000_remove_gold_set_quiz_pages` (apply pending). Highest decision: **D-073**.
+  `20260626160000_remove_gold_set_quiz_pages` (applied). Highest decision: **D-073**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
-  `embed-knowledge` (7 source modes), `rag-query` v11 live — v12 staged (mode-chips
-  RAG-bypass + input-language answers, D-072/D-073, deploy pending), `notify-correction-event`,
+  `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
+  input-language answers, D-072/D-073), `notify-correction-event`,
   `tag-classify-chunks` (Haiku), + 3 confluence fns.
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
 - **Data counts (2026-06-26):** team_members **63**, profiles **4 (all super_admin,
