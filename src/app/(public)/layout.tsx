@@ -19,12 +19,13 @@ const IBE_SLUG = "ibe-product-suite";
 /** Resources section — hardcoded routes per ARCHITECTURE.md §3 / §5. Document
  *  Library is an EXPANDABLE node whose children are the visible top-level folders
  *  (built in getNav, RLS-scoped); the rest stay flat leaves. */
+// Sidebar Resources order: Presentations → Documents → Assets → Team.
 const RESOURCES_BEFORE: NavLeaf[] = [
-  { label: "Assets", href: "/asset-library", iconKey: "asset-library" },
+  { label: "Presentations", href: "/presentation-hub", iconKey: "presentation-hub" },
 ];
 const RESOURCES_AFTER: NavLeaf[] = [
+  { label: "Assets", href: "/asset-library", iconKey: "asset-library" },
   { label: "Team", href: "/team", iconKey: "team" },
-  { label: "Presentations", href: "/presentation-hub", iconKey: "presentation-hub" },
 ];
 
 /**
@@ -140,7 +141,7 @@ async function getNav(): Promise<SidebarNav> {
 // Also pre-paint-collapses the global rail on library routes (own secondary
 // sidebar) so there's no expand→collapse flash on a hard load. Keep the prefix
 // list in lock-step with LIBRARY_ROUTE_PREFIXES in shell/sidebar.tsx.
-const PREFS_SCRIPT = `(function(){try{var d=document.documentElement;var t=localStorage.getItem('terminalv2-theme');if(t==='ios18-light'||t==='ios18-dark')d.dataset.theme=t;var s=localStorage.getItem('terminalv2-sidebar');if(s==='expanded'||s==='collapsed')d.dataset.sidebar=s;var p=location.pathname;if(p==='/documents-library'||p.indexOf('/documents-library/')===0)d.dataset.sidebar='collapsed';}catch(e){}})();`;
+const PREFS_SCRIPT = `(function(){try{var d=document.documentElement;var t=localStorage.getItem('terminalv2-theme');if(t==='ios18-light'||t==='ios18-dark')d.dataset.theme=t;var s=localStorage.getItem('terminalv2-sidebar');if(s==='expanded'||s==='collapsed')d.dataset.sidebar=s;var p=location.pathname;if(p==='/documents-library'||p.indexOf('/documents-library/')===0||p==='/presentation-hub'||p.indexOf('/presentation-hub/')===0)d.dataset.sidebar='collapsed';}catch(e){}})();`;
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);

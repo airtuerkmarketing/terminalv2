@@ -178,8 +178,8 @@ export function FolderActionsMenu({
       <Modal open={modal === "delete"} onClose={() => setModal(null)} title="Delete folder" width={460}>
         <div className="ph-form">
           <p className="ph-confirm-text">
-            Delete <strong>{folder.name}</strong> and <strong>everything inside it</strong> (subfolders and
-            presentations)? This can’t be undone.
+            Delete <strong>{folder.name}</strong>? A folder that still contains presentations can’t be
+            deleted — clear its files first. This can’t be undone.
           </p>
           {error && <p className="ph-error">{error}</p>}
           <div className="ph-form-actions">

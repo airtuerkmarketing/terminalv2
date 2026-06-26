@@ -24,6 +24,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateImageThumbnail } from "@/lib/presentations-thumbnail";
 import { getIdentity, requireAdmin, requireSuperAdmin, type Identity } from "@/lib/documents";
+import { normalizeFolderColor, type FolderColor } from "@/lib/documents-constants";
 import {
   getAllPresentationFolders,
   getPresentationFileById,
@@ -46,7 +47,7 @@ import {
   type LanguageCode,
 } from "@/lib/presentations-constants";
 
-export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
+export type ActionResult = { ok: true; id?: string; path?: string } | { ok: false; error: string };
 /** File mutations return the affected row so the client can update in place (no F5). */
 export type FileResult = { ok: true; file?: PresentationFileDTO } | { ok: false; error: string };
 export type ViewResult = { ok: true; viewId?: string } | { ok: false; error: string };
@@ -225,9 +226,39 @@ export async function renameFolder(folderId: string, name: string): Promise<Acti
   if (!trimmed || !slug) return { ok: false, error: "Please enter a valid folder name." };
 
   const admin = createAdminClient();
-  const { error } = await admin
+  // Return the NEW path: renaming changes the slug → the path trigger rewrites it
+  // (and every descendant's), so a caller on this folder's page must redirect or
+  // it 404s (D-077, mirrors the Document Library).
+  const { data, error } = await admin
     .from("presentation_folders")
     .update({ name: trimmed, slug })
+    .eq("id", folderId)
+    .select("path")
+    .single();
+  if (error) return { ok: false, error: toMessage(error, "folder") };
+  revalidateStructure();
+  return { ok: true, path: data?.path as string | undefined };
+}
+
+/**
+ * Persist a folder's colour (D-077). Admin-gated; shared folder property. `null`
+ * clears to the default (grey). Validated against the DB CHECK; values live in CSS.
+ */
+export async function setFolderColor(
+  folderId: string,
+  color: FolderColor | null
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  const normalized = color === null ? null : normalizeFolderColor(color);
+  if (color !== null && normalized === null) return { ok: false, error: "That colour isn't allowed." };
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("presentation_folders")
+    .update({ color: normalized })
     .eq("id", folderId);
   if (error) return { ok: false, error: toMessage(error, "folder") };
   revalidateStructure();
@@ -284,6 +315,18 @@ export async function deleteFolder(folderId: string): Promise<ActionResult> {
   const folderRows = (folders as { id: string; path: string }[] | null) ?? [];
   const folderIds = folderRows.map((f) => f.id);
   if (!folderIds.includes(folderId)) return { ok: false, error: "Folder not found." };
+
+  // Refuse to delete a non-empty folder (D-078): the user must clear its files
+  // first. Count ANY file rows in the subtree (live, archived or trashed) —
+  // deleting the folder would orphan them.
+  const { count: fileCount, error: cntErr } = await admin
+    .from("presentation_files")
+    .select("id", { count: "exact", head: true })
+    .in("folder_id", folderIds);
+  if (cntErr) return { ok: false, error: toMessage(cntErr, "folder") };
+  if ((fileCount ?? 0) > 0) {
+    return { ok: false, error: "This folder isn't empty. Delete the files inside it first." };
+  }
 
   // Files in the subtree (capture storage paths before deleting rows).
   const { data: files, error: filesErr } = await admin
@@ -561,12 +604,38 @@ export async function replacePresentation(fileId: string, formData: FormData): P
   return { ok: true, file: (await getPresentationFileById(newId)) ?? undefined };
 }
 
+/**
+ * Delete a presentation → Trash (D-078). Soft delete: set deleted_at so it leaves
+ * every normal listing/count but survives 30 days (restorable). All blobs stay.
+ * Pre-migration fallback: if the column doesn't exist yet, legacy hard delete.
+ */
 export async function deletePresentation(fileId: string): Promise<ActionResult> {
+  let id: Identity;
   try {
-    await requireAdmin();
+    id = await requireAdmin();
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("presentation_files")
+    .update({ deleted_at: new Date().toISOString(), deleted_by: id.userId })
+    .eq("id", fileId);
+  if (error) {
+    if (error.code === "42703") {
+      const res = await hardDeletePresentation(fileId);
+      if (res.ok) revalidateFiles();
+      return res;
+    }
+    return { ok: false, error: toMessage(error, "file") };
+  }
+  revalidateFiles();
+  revalidateStructure(); // folder file-counts (sidebar tree + cards) change
+  return { ok: true, id: fileId };
+}
+
+/** The real removal: drop the row + every blob (source + thumbnail + slides). */
+async function hardDeletePresentation(fileId: string): Promise<ActionResult> {
   const admin = createAdminClient();
   const { data: existing, error: getErr } = await admin
     .from("presentation_files")
@@ -575,16 +644,75 @@ export async function deletePresentation(fileId: string): Promise<ActionResult> 
     .maybeSingle();
   if (getErr) return { ok: false, error: toMessage(getErr, "file") };
   if (!existing) return { ok: true, id: fileId };
-
   const { error: delErr } = await admin.from("presentation_files").delete().eq("id", fileId);
   if (delErr) return { ok: false, error: toMessage(delErr, "file") };
-
   const paths = collectStoragePaths([
     existing as { storage_path: string | null; thumbnail_path: string | null; slide_paths: string[] | null },
   ]);
   if (paths.length > 0) await admin.storage.from(BUCKET).remove(paths);
-  revalidateFiles();
   return { ok: true, id: fileId };
+}
+
+/** Restore a trashed presentation (clear deleted_at) — back to its folder. */
+export async function restorePresentation(fileId: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("presentation_files")
+    .update({ deleted_at: null, deleted_by: null })
+    .eq("id", fileId);
+  if (error) return { ok: false, error: toMessage(error, "file") };
+  revalidateFiles();
+  revalidateStructure();
+  return { ok: true, id: fileId };
+}
+
+/** Permanently delete one trashed presentation (row + all blobs). */
+export async function deletePresentationPermanently(fileId: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  const res = await hardDeletePresentation(fileId);
+  if (res.ok) {
+    revalidateFiles();
+    revalidateStructure();
+  }
+  return res;
+}
+
+/** Permanently delete EVERY trashed presentation (rows + all blobs). Admin-gated. */
+export async function emptyPresentationTrash(): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("presentation_files")
+    .select("storage_path, thumbnail_path, slide_paths")
+    .not("deleted_at", "is", null);
+  if (error) {
+    if (error.code === "42703") return { ok: true }; // not migrated yet → nothing to empty
+    return { ok: false, error: toMessage(error, "file") };
+  }
+  const rows =
+    (data as { storage_path: string | null; thumbnail_path: string | null; slide_paths: string[] | null }[] | null) ??
+    [];
+  if (rows.length === 0) return { ok: true };
+  const { error: delErr } = await admin.from("presentation_files").delete().not("deleted_at", "is", null);
+  if (delErr) return { ok: false, error: toMessage(delErr, "file") };
+  const paths = collectStoragePaths(rows);
+  if (paths.length > 0) await admin.storage.from(BUCKET).remove(paths);
+  revalidateFiles();
+  revalidateStructure();
+  return { ok: true };
 }
 
 export async function togglePresentationFeatured(

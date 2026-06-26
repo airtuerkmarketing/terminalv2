@@ -1,18 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Pencil, Plus, Upload } from "lucide-react";
 import "@/styles/presentation-hub.css";
-import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
-import TreeNodeTooltip, { type TreeNode } from "@/components/ui/tree-node-tooltip";
-import { listPresentationFilesInFolder } from "@/app/(public)/presentation-hub/actions";
-import type { PresentationFileDTO, PresentationFolderDTO, PresentationSortKey } from "@/lib/presentations";
+import "@/styles/document-library.css";
+import type { ViewMode } from "@/components/ui/view-toggle";
+import { LibraryToolbar } from "@/components/documents/library-toolbar";
+import { DEFAULT_FILTER, type LibraryFilter } from "@/components/documents/filter-sort-popover";
+import {
+  createFolder,
+  listPresentationFilesInFolder,
+  renameFolder,
+} from "@/app/(public)/presentation-hub/actions";
+import type {
+  PresentationFileDTO,
+  PresentationFolderDTO,
+  PresentationSortKey,
+  RootPresentationFolderDTO,
+} from "@/lib/presentations";
+import { nextFolderName } from "@/components/documents/folder-page";
 import { PresentationBreadcrumb } from "./presentation-breadcrumb";
 import { PresentationCard } from "./presentation-card";
 import { PresentationFileRow } from "./presentation-file-row";
 import { PresentationFileManageModal } from "./presentation-file-manage-modal";
 import { UploadModal } from "./upload-modal";
 import { FolderActionsMenu } from "./folder-actions-menu";
+import { PresentationFolderCard3D, PresentationFolderRow } from "./presentation-folder-card-3d";
 
 const PAGE_SIZE = 60;
 
@@ -26,20 +40,28 @@ export function PresentationFolderPage({
 }: {
   folder: PresentationFolderDTO;
   trail: PresentationFolderDTO[];
-  childFolders: PresentationFolderDTO[];
+  childFolders: RootPresentationFolderDTO[];
   initialFiles: PresentationFileDTO[];
   initialHasMore: boolean;
   isSuperAdmin: boolean;
 }) {
+  const router = useRouter();
   const [files, setFiles] = useState<PresentationFileDTO[]>(initialFiles);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<ViewMode>("card");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [sort, setSort] = useState<PresentationSortKey>("name");
+  const [filter, setFilter] = useState<LibraryFilter>(DEFAULT_FILTER);
   const [manageFile, setManageFile] = useState<PresentationFileDTO | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [pendingRenameId, setPendingRenameId] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  // Inline rename of the folder title (mirrors the doc library); redirects to the
+  // new slug so the page doesn't 404 (D-077).
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(folder.name);
 
   const reqId = useRef(0);
   const firstRun = useRef(true);
@@ -70,14 +92,14 @@ export function PresentationFolderPage({
       firstRun.current = false;
       return;
     }
-    fetchReplace(debouncedSearch, sort);
-  }, [debouncedSearch, sort, fetchReplace]);
+    fetchReplace(debouncedSearch, filter.sort);
+  }, [debouncedSearch, filter.sort, fetchReplace]);
 
-  const isFiltered = debouncedSearch !== "" || sort !== "name";
+  const isFiltered = debouncedSearch !== "" || filter.sort !== "name";
 
   const upsertFile = (f: PresentationFileDTO) => {
     if (isFiltered) {
-      fetchReplace(debouncedSearch, sort);
+      fetchReplace(debouncedSearch, filter.sort);
       return;
     }
     setFiles((prev) => {
@@ -90,7 +112,7 @@ export function PresentationFolderPage({
   };
   const removeFile = (id: string) => {
     if (isFiltered) {
-      fetchReplace(debouncedSearch, sort);
+      fetchReplace(debouncedSearch, filter.sort);
       return;
     }
     setFiles((prev) => prev.filter((x) => x.id !== id));
@@ -101,7 +123,7 @@ export function PresentationFolderPage({
     setLoading(true);
     const res = await listPresentationFilesInFolder(folder.id, {
       q: debouncedSearch,
-      sort,
+      sort: filter.sort,
       offset: files.length,
       limit: PAGE_SIZE,
     });
@@ -111,24 +133,134 @@ export function PresentationFolderPage({
     setLoading(false);
   }
 
-  const noFiles = files.length === 0;
+  const startTitleRename = () => {
+    setTitleDraft(folder.name);
+    setEditingTitle(true);
+  };
+  async function commitTitle() {
+    setEditingTitle(false);
+    const t = titleDraft.trim();
+    if (!t || t === folder.name) {
+      setTitleDraft(folder.name);
+      return;
+    }
+    const res = await renameFolder(folder.id, t);
+    if (res.ok) {
+      if (res.path && res.path !== folder.path) router.replace(`/presentation-hub/${res.path}`);
+      else router.refresh();
+    } else setTitleDraft(folder.name);
+  }
+
+  async function createSubfolder() {
+    setCreateError(null);
+    const res = await createFolder(folder.id, nextFolderName(childFolders.map((f) => f.name)));
+    if (!res.ok) {
+      setCreateError(res.error ?? "Couldn’t create the folder.");
+      return;
+    }
+    setPendingRenameId(res.id ?? null);
+    router.refresh();
+  }
+
+  // Direction is a client layer over the loaded page (matches the doc library).
+  const orderedFiles = filter.dir === "asc" ? files : [...files].reverse();
+  const noFiles = orderedFiles.length === 0;
   const hasSubfolders = childFolders.length > 0;
 
-  // List-view column header: a sort button (active column gets a chevron).
-  const SortTh = ({ label, sortKey }: { label: string; sortKey: PresentationSortKey }) => (
-    <button
-      type="button"
-      className={`ph-sort-th${sort === sortKey ? " active" : ""}`}
-      aria-pressed={sort === sortKey}
-      onClick={() => setSort(sortKey)}
-    >
-      {label}
-      {sort === sortKey && <ChevronDown size={14} aria-hidden="true" />}
-    </button>
-  );
+  return (
+    <article className="document-library">
+      <PresentationBreadcrumb trail={trail} />
 
-  const filesArea = (
-    <>
+      <header className="dl-head">
+        <div className="dl-head-title">
+          {editingTitle ? (
+            <input
+              className="dl-title-edit"
+              autoFocus
+              onFocus={(e) => e.currentTarget.select()}
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitTitle();
+                else if (e.key === "Escape") {
+                  setTitleDraft(folder.name);
+                  setEditingTitle(false);
+                }
+              }}
+              onBlur={commitTitle}
+              aria-label="Rename folder"
+            />
+          ) : isSuperAdmin ? (
+            <h1 className="dl-title-h1">
+              <button type="button" className="dl-title-btn" onClick={startTitleRename} title="Rename folder">
+                {folder.name}
+                <Pencil className="dl-title-pencil" size={16} aria-hidden="true" />
+              </button>
+            </h1>
+          ) : (
+            <h1>{folder.name}</h1>
+          )}
+        </div>
+        {isSuperAdmin && <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />}
+      </header>
+
+      <LibraryToolbar
+        searchValue={search}
+        onSearch={setSearch}
+        searchPlaceholder="Search presentations…"
+        filter={filter}
+        onFilter={setFilter}
+        showFolderToggle={false}
+        showTypeFilter={false}
+        view={view}
+        onView={setView}
+        viewStorageKey="terminalv2-prezhub-view"
+        secondaryLabel={isSuperAdmin ? "New subfolder" : undefined}
+        secondaryIcon={isSuperAdmin ? <Plus size={16} aria-hidden="true" /> : undefined}
+        onSecondary={isSuperAdmin ? createSubfolder : undefined}
+        actionLabel={isSuperAdmin ? "Upload" : undefined}
+        actionIcon={isSuperAdmin ? <Upload size={16} aria-hidden="true" /> : undefined}
+        onAction={isSuperAdmin ? () => setUploadOpen(true) : undefined}
+      />
+
+      {createError && <p className="dl-error">{createError}</p>}
+
+      {/* Folders first (managed cards), then the presentation file area. */}
+      {hasSubfolders && (
+        <div className="dl-explorer-grid" style={{ marginBottom: "var(--space-5)" }}>
+          {view === "list"
+            ? childFolders.map((f) => (
+                <PresentationFolderRow
+                  key={f.id}
+                  id={f.id}
+                  name={f.name}
+                  href={`/presentation-hub/${f.path}`}
+                  path={f.path}
+                  parentId={f.parentId}
+                  fileCount={f.fileCount}
+                  color={f.color}
+                  isSuperAdmin={isSuperAdmin}
+                  autoRename={f.id === pendingRenameId}
+                />
+              ))
+            : childFolders.map((f) => (
+                <PresentationFolderCard3D
+                  key={f.id}
+                  id={f.id}
+                  name={f.name}
+                  href={`/presentation-hub/${f.path}`}
+                  path={f.path}
+                  parentId={f.parentId}
+                  fileCount={f.fileCount}
+                  previewFiles={f.previewFiles}
+                  color={f.color}
+                  isSuperAdmin={isSuperAdmin}
+                  autoRename={f.id === pendingRenameId}
+                />
+              ))}
+        </div>
+      )}
+
       {noFiles ? (
         debouncedSearch ? (
           <div className="ph-empty">
@@ -143,122 +275,35 @@ export function PresentationFolderPage({
               <span>Nothing here yet.</span>
             )}
           </div>
-        ) : (
-          <div className="ph-empty">
-            <span>No presentations in this folder — open a subfolder on the left.</span>
-          </div>
-        )
+        ) : null
       ) : view === "list" ? (
         <div className="ph-list">
           <div className="ph-list-head">
             <span />
-            <SortTh label="Name" sortKey="name" />
+            <span>Name</span>
             <span>Language</span>
-            <SortTh label="Size" sortKey="size" />
-            <SortTh label="Modified" sortKey="date" />
+            <span>Size</span>
+            <span>Modified</span>
             <span />
           </div>
-          {files.map((f) => (
+          {orderedFiles.map((f) => (
             <PresentationFileRow key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
           ))}
         </div>
       ) : (
         <div className="ph-grid" data-view={view}>
-          {files.map((f) => (
-            <PresentationCard
-              key={f.id}
-              file={f}
-              view={view === "grid" ? "grid" : "card"}
-              isSuperAdmin={isSuperAdmin}
-              onManage={setManageFile}
-            />
+          {orderedFiles.map((f) => (
+            <PresentationCard key={f.id} file={f} view="card" isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
           ))}
         </div>
       )}
 
       {hasMore && (
-        <div className="ph-loadmore">
-          <button type="button" className="ph-btn ghost" onClick={loadMore} disabled={loading}>
+        <div className="dl-loadmore">
+          <button type="button" className="dl-btn ghost" onClick={loadMore} disabled={loading}>
             {loading ? "Loading…" : "Load more"}
           </button>
         </div>
-      )}
-    </>
-  );
-
-  const treePanel = (
-    <aside className="ph-tree-panel" aria-label="Subfolders">
-      <div className="ph-tree-head">Folders</div>
-      {childFolders.map((f) => {
-        const node: TreeNode = {
-          id: f.id,
-          name: f.name,
-          tooltip: f.name,
-          type: "folder",
-          href: `/presentation-hub/${f.path}`,
-        };
-        return <TreeNodeTooltip key={f.id} node={node} />;
-      })}
-    </aside>
-  );
-
-  return (
-    <article className="ph-hub">
-      <PresentationBreadcrumb trail={trail} />
-
-      <header className="ph-head">
-        <div className="ph-head-title">
-          <h1>{folder.name}</h1>
-        </div>
-        {isSuperAdmin && <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />}
-      </header>
-
-      <div className="ph-toolbar">
-        <div className="ph-search">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-            <circle cx="11" cy="11" r="7" />
-            <path d="M21 21l-4.3-4.3" strokeLinecap="round" />
-          </svg>
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search presentations…"
-            aria-label="Search presentations in this folder"
-          />
-        </div>
-        <div className="ph-toolbar-right">
-          <select
-            className="ph-sort"
-            value={sort}
-            onChange={(e) => setSort(e.target.value as PresentationSortKey)}
-            aria-label="Sort by"
-          >
-            <option value="name">Name</option>
-            <option value="date">Newest</option>
-            <option value="size">Size</option>
-          </select>
-          <ViewToggle value={view} onChange={setView} storageKey="terminalv2-prezhub-view" />
-          {isSuperAdmin && (
-            <button type="button" className="ph-btn primary" onClick={() => setUploadOpen(true)}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              Upload
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Below the search bar: subfolder tree (≈15%) + presentation area (rest)
-          when this folder has subfolders; otherwise full width. */}
-      {hasSubfolders ? (
-        <div className="ph-split">
-          {treePanel}
-          <div className="ph-split-main">{filesArea}</div>
-        </div>
-      ) : (
-        filesArea
       )}
 
       {isSuperAdmin && (
