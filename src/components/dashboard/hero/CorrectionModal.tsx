@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Send, Loader2 } from "lucide-react";
 import { submitCorrection } from "@/lib/rag/client";
+import { useToast } from "@/components/ui/toast";
 
 interface CorrectionModalProps {
   isOpen: boolean;
@@ -53,6 +54,7 @@ export function CorrectionModal({
   const [userReference, setUserReference] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
@@ -87,6 +89,12 @@ export function CorrectionModal({
         proposedCorrection: proposedCorrection.trim(),
         correctionType,
         userReference: userReference.trim() || undefined,
+      });
+      toast({
+        title: "Korrektur eingereicht",
+        description:
+          "Murat oder Selin reviewt deinen Vorschlag — du bekommst eine Email, sobald entschieden wurde.",
+        variant: "success",
       });
       onSubmitted();
     } catch (err) {
