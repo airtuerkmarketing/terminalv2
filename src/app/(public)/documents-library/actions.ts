@@ -39,6 +39,13 @@ import {
   slugify,
   type FolderColor,
 } from "@/lib/documents-constants";
+import { getAllTeamMembers, logActivity } from "@/lib/users";
+import {
+  notifyFolderAccess,
+  type AccessMember,
+  type FolderAccessResult,
+  type SaveAccessResult,
+} from "@/lib/folder-access";
 
 export type ActionResult = { ok: true; id?: string; path?: string } | { ok: false; error: string };
 /** File mutations return the affected row so the client can update in place (no F5). */
@@ -87,6 +94,8 @@ function toMessage(e: unknown, ctx: "folder" | "file" | "generic" = "generic"): 
       : "That item already exists.";
   if (err?.code === "23503") return "That destination no longer exists.";
   if (err?.code === "23514") return "That value isn't allowed.";
+  if (err?.code === "42P01" || err?.code === "PGRST205" || /schema cache/i.test(msg))
+    return "Folder permissions aren’t set up yet — apply the latest migration and try again.";
   return "Something went wrong. Please try again.";
 }
 
@@ -217,6 +226,106 @@ export async function setFolderVisibility(folderId: string, isPublic: boolean): 
   if (error) return { ok: false, error: toMessage(error, "folder") };
   revalidateStructure();
   return { ok: true };
+}
+
+// ── Folder access / per-user permissions (D-080) ─────────────────────────────
+//
+// A super_admin grants individual people read access to a (typically private)
+// folder. Access is keyed off team_members (the 63-person directory) so it can
+// be granted to people not yet invited; the grant activates on their first login
+// (RLS resolves auth.uid() → team_member via the profiles bridge). Granted users
+// are READ-ONLY (the write policies stay admin-only) — they can open/download but
+// not change anything. Both reads + writes here are super_admin-gated and go
+// through the service-role client (the modal that calls them is super_admin-only).
+
+/** The team directory + which members already have access to this folder. */
+export async function getFolderAccess(folderId: string): Promise<FolderAccessResult> {
+  try {
+    await requireSuperAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  if (!UUID_RE.test(folderId)) return { ok: false, error: "That folder no longer exists." };
+
+  const { teamMembers } = await getAllTeamMembers();
+  const members: AccessMember[] = teamMembers.map((m) => ({
+    teamMemberId: m.teamMemberId,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    initials: m.initials,
+    department: m.department,
+    avatarUrl: m.avatarUrl,
+    email: m.email,
+    hasAccount: m.profileId != null,
+  }));
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("document_folder_permissions")
+    .select("team_member_id")
+    .eq("folder_id", folderId);
+  if (error) return { ok: false, error: toMessage(error) };
+  const grantedIds = (data ?? []).map((r) => r.team_member_id as string);
+  return { ok: true, data: { members, grantedIds } };
+}
+
+/**
+ * Replace a folder's access list with `teamMemberIds` (the modal's current
+ * selection). Diffs against the existing grants, inserts the additions, deletes
+ * the removals, audit-logs the change, and emails each newly-added person
+ * (fire-and-forget). Revalidates the tree so the grantee sees it immediately.
+ */
+export async function saveFolderAccess(
+  folderId: string,
+  teamMemberIds: string[]
+): Promise<SaveAccessResult> {
+  let id: Identity;
+  try {
+    id = await requireSuperAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  if (!UUID_RE.test(folderId)) return { ok: false, error: "That folder no longer exists." };
+  const wanted = Array.from(new Set((teamMemberIds ?? []).filter((t) => UUID_RE.test(t))));
+
+  const admin = createAdminClient();
+  const { data: cur, error: curErr } = await admin
+    .from("document_folder_permissions")
+    .select("team_member_id")
+    .eq("folder_id", folderId);
+  if (curErr) return { ok: false, error: toMessage(curErr) };
+
+  const current = new Set((cur ?? []).map((r) => r.team_member_id as string));
+  const toAdd = wanted.filter((t) => !current.has(t));
+  const toRemove = [...current].filter((t) => !wanted.includes(t));
+
+  if (toAdd.length) {
+    const { error } = await admin.from("document_folder_permissions").insert(
+      toAdd.map((tm) => ({ folder_id: folderId, team_member_id: tm, granted_by: id.userId }))
+    );
+    if (error) return { ok: false, error: toMessage(error) };
+  }
+  if (toRemove.length) {
+    const { error } = await admin
+      .from("document_folder_permissions")
+      .delete()
+      .eq("folder_id", folderId)
+      .in("team_member_id", toRemove);
+    if (error) return { ok: false, error: toMessage(error) };
+  }
+
+  if (toAdd.length || toRemove.length) {
+    await logActivity({
+      userId: id.userId,
+      action: "folder_access_changed",
+      resourceType: "document_folder",
+      resourceId: folderId,
+      metadata: { added: toAdd, removed: toRemove },
+    });
+    await notifyFolderAccess("document", folderId, toAdd);
+    revalidateStructure(); // a grantee must see the folder/tree appear immediately
+  }
+  return { ok: true, added: toAdd.length, removed: toRemove.length };
 }
 
 /**

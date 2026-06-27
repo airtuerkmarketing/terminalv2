@@ -9,28 +9,32 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-27)
 
-- **HEAD:** `main` — **Presentation Hub folder visibility** (D-079): `presentation_folders.is_public` (default true = non-breaking) + RLS so private folders/files are admin-only; **"Make private/public"** in the folder card + on-page menus, lock cue on private cards. Migration `20260626210000` applied to prod. Prev: **Presentation Hub ported 1:1 to the Document Library construct** (D-077/078 — nested secondary sidebar tree, managed SVG colour cards + full context menu, counts, Move, rename-redirect, delete-guard, file Trash with source+thumbnail+slides purge; migrations `…190000`+`…200000`); both library nav nodes kept visible on their own route; Resources order **Presentations → Documents → Assets → Team**. **Document Library data/shell hardening** (D-074/075/076). **Demo:** 2026-08-01.
+- **HEAD:** `feat/folder-permissions` — **Per-user folder permissions** (D-080): a super_admin grants individual people read access to a private folder in the Document Library and/or Presentation Hub via **"Manage access…"** in all four folder menus (a searchable team-directory picker). Grants key off `team_members` (so people not yet invited can be granted; auto-activates on first login), cascade **downward** only (a subfolder grant never leaks the parent's content; ancestors show in the tree but no content), and are **read-only** (write policies stay admin-only). New grant tables `document_folder_permissions`/`presentation_folder_permissions` + SECURITY DEFINER `current_team_member_id()`/`can_access_*`/`can_see_*` helpers + widened SELECT policies; new email edge function `notify-folder-access` (Resend). Migration `20260627090000_folder_permissions` — **prod apply + edge-fn deploy pending sign-off**. Prev: **Presentation Hub folder visibility** (D-079): `presentation_folders.is_public` (default true = non-breaking) + RLS so private folders/files are admin-only; **"Make private/public"** in the folder card + on-page menus, lock cue on private cards. Migration `20260626210000` applied to prod. Prev: **Presentation Hub ported 1:1 to the Document Library construct** (D-077/078 — nested secondary sidebar tree, managed SVG colour cards + full context menu, counts, Move, rename-redirect, delete-guard, file Trash with source+thumbnail+slides purge; migrations `…190000`+`…200000`); both library nav nodes kept visible on their own route; Resources order **Presentations → Documents → Assets → Team**. **Document Library data/shell hardening** (D-074/075/076). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
   (Webflow/`terminal.airtuerk.de` retired).
-- **Database:** 32 tables + the `profiles_v` view (RAG foundation added 6:
+- **Database:** 34 tables + the `profiles_v` view (D-080 added 2:
+  `document_folder_permissions`, `presentation_folder_permissions`; RAG foundation added 6:
   `company_context`, `confluence_chunks`, `brand_chunks`, `ai_chat_sessions`,
   `ai_chat_messages`, `ai_corrections`; Wissensbasis added 4: `tag_vocabulary`,
   `tag_suggestions`, `chunk_edit_log`, `chunk_retrieval_stats` + `company_context.tags`).
   **51 pages** (gold-set quiz pages removed), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **73 migrations**, highest:
-  `20260626210000_presentation_folder_visibility` (applied). `document_folders`/`presentation_folders`
+  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **74 migrations**, highest:
+  `20260627090000_folder_permissions` (file added; **prod apply pending sign-off**).
+  Prev applied: `20260626210000_presentation_folder_visibility`. `document_folders`/`presentation_folders`
   +`color`; `presentation_folders` +`is_public` (private = admin-only, D-079);
   `document_files`/`presentation_files` +`deleted_at`/`deleted_by` (Trash); daily
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
-  Highest decision: **D-079**.
+  Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
+  + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
+  Highest decision: **D-080**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
   input-language answers, D-072/D-073), `notify-correction-event`,
-  `tag-classify-chunks` (Haiku), + 3 confluence fns.
+  `notify-folder-access` (D-080, deploy pending), `tag-classify-chunks` (Haiku), + 3 confluence fns.
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
 - **Data counts (2026-06-26):** team_members **63**, profiles **4 (all super_admin,
   0 admin/user)**, active auth users **4**, assets **718**, blocks **43**,
