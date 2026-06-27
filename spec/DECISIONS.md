@@ -582,6 +582,184 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-081 — Reconcile schema_migrations ledger drift
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260627100000_drift_repair_register_missing_migrations` (registry-only backfill) + 34 file renames. Schema-side NoOp.
+**Context:** The 2026-06-27 Phase-B health check (`spec/HEALTH_CHECK_2026-06-27.md`) found `supabase/migrations/` out of parity with the live `supabase_migrations.schema_migrations` registry in three ways: (1) **5 migrations** (D-074/076/077/078/079 schema parts — document/presentation folder colour, file Trash, presentation visibility) were applied via `execute_sql` to prod but never recorded — live schema correct, registry empty; (2) **30 legacy `00NN_*.sql`** files were registered under timestamp versions (CLI-converted at first apply), so `supabase migration list` showed false pending/remote-only; (3) **4 timestamp-mismatched** files (repo picked a round timestamp, the ledger kept the real apply-time): `knowledge_base_foundation` (190000→200810), `seed_tag_vocabulary` (090000→040925), `chunk_retrieval_stats_job` (093000→041454), `self_service_profile_fields` (140000→110208). Only kb_foundation was in the original reconcile plan; the other 3 were surfaced by an md5 of the sorted version set.
+**Decision:**
+  - (1) backfill the 5 versions into `schema_migrations` (`created_by='drift-repair-2026-06-27'`) via `execute_sql` plus an explicit self-registration row for `20260627100000` — **not** `apply_migration`, which would auto-assign a now-timestamp and re-introduce a 1-file drift. The migration file body stays at the 5 backfill rows so the CLI runner records `20260627100000` itself on a fresh `db reset` (no duplicate-key conflict).
+  - (2)+(3) rename all 34 files to their registered `<timestamp>_<name>.sql`. Two keep their numeric prefix in the registered `name` (`0017`, `0033`) → double-prefixed filenames.
+**Result:** repo files 74→75, ledger 69→75; md5 of the sorted version set is identical on both sides (`8b62c4b2…`); `comm` empty both ways. Schema unchanged.
+**Future guardrail (strengthens D-056):** every `execute_sql` **DDL** change must ship a companion migration **in the same commit**, registered through the migration system (`apply_migration`/`db push`), so file↔ledger parity holds. Recorded in `CLAUDE.md`.
+**Reversibility:** `DELETE FROM supabase_migrations.schema_migrations WHERE created_by='drift-repair-2026-06-27'` + `git revert` the rename commit. Schema-side: nothing to roll back.
+**Verified:** Phase A pre-verify (5 unregistered = 0 rows; 8 schema markers true; 30 ledger names matched; kb version confirmed) + Phase C post-verify (6 rows inserted, total = 75, version-set hash parity).
+
+---
+
+## D-082 — Phase-B hardening: drop gold_set open-INSERT + privatize documents bucket
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260627110000_harden_gold_set_and_documents_bucket` (applied + registered).
+**Context:** Two zero-risk findings from the 2026-06-27 health check (`spec/HEALTH_CHECK_2026-06-27.md`): (1) `gold_set_answers` kept an open-INSERT RLS policy (`WITH CHECK (true)` for anon+authenticated) after the quiz UI was removed (`20260626160000`) — a spam vector with no caller; (2) the `documents` storage bucket was `public=true` with 0 objects (the Document Library uses the private `library` bucket) — a latent world-read.
+**Decision:** drop `gold_set_answers_insert_public` (the SELECT policy `gold_set_answers_select_auth` stays, so admin reads are unaffected) and set `documents` bucket `public=false`. Applied via `execute_sql` + an explicit `schema_migrations` row at version `20260627110000` (pinned after the D-081 reconcile; `apply_migration` would auto-stamp ~06:50 and mis-order it before 09:00).
+**Result:** ledger 75→76; repo↔registry version-set hash parity preserved.
+**Reversibility:** re-`CREATE POLICY` / set the bucket `public=true` again (both noted in the migration header).
+**Verified:** post-apply — insert policy gone, select policy kept, `documents.public=false`, ledger=76, version-set hash parity.
+
+---
+
+## D-083 — FK covering indexes (26)
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260627120000_fk_covering_indexes` (applied + registered).
+**Context:** The performance advisor flagged 26 foreign keys without a covering index (`spec/HEALTH_CHECK_2026-06-27.md` §6) — referenced-row delete/update scans the child table and FK joins are slower.
+**Decision:** add `CREATE INDEX IF NOT EXISTS <table>_<col>_idx` for all 26 (additive, idempotent, brief lock on small tables). Version pinned to `20260627120000` so it sorts **after** `folder_permissions` (090000) — two FKs are on `document_/presentation_folder_permissions`, which that migration creates; `apply_migration`'s ~07:00 auto-stamp would have ordered this before those tables exist and broken a fresh `db reset`.
+**Verified:** post-apply unindexed-FK count 26→0; repo↔ledger version-set hash parity.
+
+---
+
+## D-084 — RLS initplan fix (8 policies)
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260627130000_rls_initplan_fix` (applied + registered).
+**Context:** 8 per-user RLS policies (on `ai_chat_sessions`, `ai_chat_messages`, `ai_corrections`, `team_members`) called bare `auth.uid()`, re-evaluated per row (`auth_rls_initplan`, §5) — the policies added after the earlier `20260621161007_rls_auth_uid_initplan_fix`.
+**Decision:** `ALTER POLICY` each to wrap `auth.uid()` → `(select auth.uid())` (InitPlan, evaluated once per query). `ALTER` edits the expression in place — no DROP/CREATE window, role/command/permissive and the rest of each predicate preserved.
+**Verified:** post-apply initplan count 8→0; the 8 policies' definitions otherwise unchanged.
+
+---
+
+## D-085 — Lock handle_new_user() EXECUTE
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260627140000_lock_handle_new_user_execute` (applied + registered).
+**Context:** `handle_new_user()` (SECURITY DEFINER trigger fn, `AFTER INSERT ON auth.users`) carried a PUBLIC EXECUTE grant → callable by anon/authenticated via RPC (§7). It is never RPC-called; the trigger runs it as owner regardless of caller grants.
+**Decision:** `REVOKE EXECUTE … FROM anon, authenticated, public`. Signup is unaffected (the trigger mechanism does not consult EXECUTE). The other SECDEF helpers (`is_admin`/`is_super_admin`/`get_profile_role`/`current_team_member_id`/`can_*_folder`) ARE invoked by RLS as the authenticated role and KEEP EXECUTE — handled post-demo via `spec/SECDEF_REVOKE_TEST_PLAN.md`.
+**Reversibility:** `grant execute on function public.handle_new_user() to authenticated, anon, public;`
+**Verified:** post-apply grants = `{postgres, service_role}` only; `on_auth_user_created` trigger still on `auth.users`.
+
+---
+
+## D-086 — RAG edge-function warm-up (pg_cron + pg_net)
+**Date:** 2026-06-27 (batch versioned `20260628`)
+**Status:** Adopted. Migration `20260628100000_rag_warmup_cron_setup` (applied + registered).
+**Context:** `rag-query` cold-starts at ~7.9s on the first question after ~5-min idle (`LATENCY_PROBE_2026-06-27.md`). Demo-critical first impression.
+**Decision:** pg_cron job `warmup-rag-query` runs every 4 min and POSTs `{warmup:true}` (no `question`) to `rag-query` via `pg_net`; the function returns an early **400** before embed/retrieve/LLM/session — warming the Deno isolate with **zero side effects and zero cost**. Chosen over Vercel Cron: self-contained in Supabase (no plan dependency, no new route/env, **no edge-function redeploy** — lowest risk to the demo-critical function). `*/4` gives margin under the ~5-min cold threshold. Anon (publishable) key redacted in the committed file; live job uses the real key.
+**Verified:** `cron.job` shows `warmup-rag-query` active (`*/4`); `net.http_post` returns a request id; the `{warmup:true}` ping returns 400 in ~0.2s.
+**Reversibility:** `select cron.unschedule('warmup-rag-query');` (optionally drop `pg_net`).
+
+---
+
+## D-087 — rag-knowledge bucket writes → admin-only
+**Date:** 2026-06-27 (batch versioned `20260628`)
+**Status:** Adopted. Migration `20260628110000_tighten_rag_knowledge_writes` (applied + registered).
+**Context:** Health-check §8 — any `authenticated` user could INSERT/UPDATE/DELETE in the private `rag-knowledge` bucket. Read is intended for all staff; writes should be admin-only.
+**Decision:** drop `rag_knowledge_auth_{insert,update,delete}` (bucket_id-only) and recreate as `rag_knowledge_{insert,update,delete}_admin` gated on `public.is_admin()`. `rag_knowledge_auth_select` (read) unchanged. Controlled-timestamp pattern (D-081).
+**Verified:** the 4 live policies are now select (authenticated) + insert/update/delete (admin).
+
+---
+
+## D-089 — Revoke SECDEF anon/PUBLIC execute (scoped to 5 of 8 helpers)
+**Date:** 2026-06-27 (batch versioned `20260628`)
+**Status:** Adopted. Migration `20260628120000_revoke_secdef_anon_public` (applied + registered).
+**Context:** `spec/SECDEF_REVOKE_TEST_PLAN.md` proposed revoking anon/PUBLIC EXECUTE on 8 RLS helpers. A pre-flight `pg_policies` check found that **3 of them are referenced by the `{public}` policies** `document_folders_select` / `document_files_select`, which serve `is_public` Document-Library folders/files to **anonymous** visitors by design (`src/lib/documents.ts`). Revoking anon EXECUTE on those would make every anon library read raise `permission denied for function …`. The doc's admin/super/auth-only test matrix would not have caught this.
+**Decision:** revoke anon/PUBLIC EXECUTE on the **5** helpers referenced only by `{authenticated}` policies (`is_super_admin`, `get_profile_role`, `current_team_member_id`, `can_access_presentation_folder`, `can_see_presentation_folder`); **keep** anon EXECUTE on the **3** the public library needs (`is_admin`, `can_access_document_folder`, `can_see_document_folder`). `authenticated` keeps EXECUTE on all. `handle_new_user` already locked (D-085).
+**Verified (real anon role via PostgREST, not simulation):** grant matrix = anon false on the 5 / true on the 3 / authenticated true on all 8; anon `GET document_folders` → 200 with 2 rows (public library intact); anon `GET presentation_folders` → 200/0 rows (graceful); anon `rpc/is_super_admin` → 401 (locked); anon `rpc/is_admin` → 200 (kept). No app `.rpc()` calls any of the 8.
+**Reversibility:** `grant execute on function public.<fn> to anon, public;`
+**Future:** the 3 kept helpers stay anon-callable as long as the Document Library has an anonymous public face; revisit if that face is removed.
+
+---
+
+## D-090 — ARCHITECTURE.md re-consolidation (targeted)
+**Date:** 2026-06-27
+**Status:** Adopted (docs-only).
+**Context:** `spec/ARCHITECTURE.md` was a 2026-06-22 snapshot: a 22-table count, "highest migration `20260622193003`", `00NN_` filenames (renamed in D-081), and no mention of the RAG/Wissensbasis/folder-permission tables.
+**Decision:** targeted edits (not a rewrite — preserve the D-022 consolidation principle): table count 22→34 + the missing table groups (RAG, Wissensbasis, folder permissions); highest migration → `20260628120000` (82 total); a note that `00NN_` are legacy labels (D-081); and a new **§16 "Hardening sprint 2026-06-27/28"** summarizing D-081–D-090 with live counts.
+**Verified:** counts re-queried live (34 tables, 167 functions, 88 policies, 165 indexes, 82 migrations, 9 extensions, 4 cron jobs).
+
+---
+
+## D-091 — Repo drift triage: revert React Compiler WIP + fix pnpm sharp build-approval
+**Date:** 2026-06-28 (W1 prep)
+**Status:** Adopted.
+**Context:** The working tree carried uncommitted drift (flagged in the D-086–090 batch): **(a)** an inert, incomplete **React Compiler** experiment — `react-compiler-runtime` + `babel-plugin-react-compiler` (package.json/lockfile) + a new `babel.config.js` (`presets:[next/babel]`, `plugins:[babel-plugin-react-compiler]`). Next 16 runs Turbopack (which ignores `babel.config.js`), `next.config.ts` has no `experimental.reactCompiler`, and no committed code imports `react-compiler-runtime` → the compiler never ran. **(b)** `pnpm install` exited 1 (`ERR_PNPM_IGNORED_BUILDS` for `sharp`) and wrote a placeholder `allowBuilds: sharp: set this to true or false` into `pnpm-workspace.yaml` — pnpm 11 demanding an explicit build-script decision. **(b), not the React Compiler, was the real "pnpm install fails".**
+**Decision:**
+  - **Revert** the React Compiler WIP (restore committed `package.json`/`pnpm-lock.yaml`, delete `babel.config.js`) — inert, incomplete, uncommitted. If React Compiler is wanted, add it the Next-16 way: `experimental.reactCompiler: true` in `next.config.ts` (+ the two packages), NOT a `babel.config.js` (which disables Turbopack). Flagged for a deliberate decision.
+  - **Fix** `pnpm-workspace.yaml`: `allowBuilds: sharp: false` (matching the existing `unrs-resolver: false`; sharp ships prebuilt binaries and is already in `ignoredBuiltDependencies`). `pnpm install` now exits 0 and the tree stays clean.
+**Verified:** `pnpm install` exit 0 ("Already up to date", supply-chain policy passes), tree clean except the intended `sharp: false`; `tsc --noEmit` exit 0; `next build` green. Vercel build unaffected (sharp prebuilt + `serverExternalPackages`).
+
+---
+
+## D-095 — Co-locate Vercel functions with Supabase (fra1), not getUser→getSession
+**Date:** 2026-06-28 (W2)
+**Status:** Adopted. `vercel.json` `regions: ["fra1"]`.
+**Context:** D-094 attributed authed-SSR TTFB (~0.67s) to `auth.getUser()`; the W2 plan was a `getUser→getSession` swap. **Premise recon overrode it:** Vercel `serverlessFunctionRegion` was the default **`iad1` (US East)** while Supabase is **`eu-central-1` (Frankfurt)** → every Supabase call from a function is a transatlantic round-trip (~80–100ms). The folder-tree makes ~4, the signed-URL route 2; `getUser` is just one. Also `getIdentity()` feeds both read-only render AND `requireAdmin`/`requireSuperAdmin`, so it can't be blanket-switched without weakening admin-revocation checks. Full audit: `spec/AUTH_STRATEGY_AUDIT_2026-06-28.md`.
+**Decision:** co-locate functions with Supabase via `vercel.json` `regions: ["fra1"]`. Zero app-code, zero security risk, reversible — speeds up every authed route + signed-URL serving at once. The `getSession` swap was **not pursued** (saves ~15ms once co-located, at the cost of `requireAdmin` revocation safety); `getUser` stays everywhere incl. the proxy boundary.
+**Verified (prod, before→after):** folder-tree TTFB p50 0.67s→**0.27s** (−60%) / p95 0.90s→**0.38s** (−58%); signed-URL TTFB p50 0.48s→**0.30s** (−37%) / p95 0.87s→**0.44s** (−49%). Preview was Vercel-SSO-protected → verified on prod with revert as the net.
+**Reversibility:** delete `vercel.json` (or set region back) + redeploy.
+
+---
+
+## D-099 — RAG eval harness first; "priority-1 crowding / rerank-limit" theory refuted
+**Date:** 2026-06-28 (W3)
+**Status:** Adopted (harness shipped). Fixes ranked but **not yet applied** — pending sign-off + measured A/B. Next D-number: D-100.
+**Context:** W3 opened "RAG Quality" with the recon's headline lever = priority-1 crowding, fixable by raising `RERANK_INPUT_LIMIT` (the D-070 direction). There was **no automated eval** — "92.9%" was one human pass on 2026-06-22; `getQualityStats()` reads the `bewertung` column, never the pipeline. So we built the harness *first* (`scripts/rag-eval.ts`: replay 84 gold questions through the live `rag-query`, LLM-judge vs the 2026-06-22 reference, direction-aware: regression/fixed/correct/still_wrong; captures + deletes the prod sessions it creates).
+**Premise recon overrode the plan (telemetry > assumption):** baseline = **77.4% strict (65/84), 15 regressions, worst on the operational FAQ set (64%)** — not 92.9%. But the assumed fix is **refuted**: candidate sets are only ~67 chunks, the `RERANK_INPUT_LIMIT=40` cut already reaches them, and simulating "rerank ALL vs top-40" changed the final-6 in **0** tested cases. Answer-level telemetry shows the live system **had topical context and still refused** (ETI Stornierung; Er Car cited the priority-1 "+20% Servicegebühr" pin instead of the chunk with the ADB/IST numbers). Real causes: (1) ~29 pinned priority-1 rows at `combined_score=1.0` — mostly generic `service_offering`/`team_structure` — win topical rerank slots over the specific operational chunk; (2) over-conservative refusal on topical-but-not-exact context; (3) single-chunk recall gaps (AurumTours/CIZGI); (4) a few content errors (Pegasus PNR, Murat's title).
+**Decision:** ship the harness as the durable quality **gate** (do not change RAG behaviour without a before/after run). Do **not** raise `RERANK_INPUT_LIMIT` (measured no effect). Ranked candidate fixes in `spec/RAG_EVAL_BASELINE_2026-06-28.md`: **F1** demote `service_offering`+`team_structure` (~19 rows) priority-1→2 (reversible, highest-leverage, measurable) → **F4** embed the 3 NULL-embedding context rows + **F5** content fixes (safe) → then evaluate **F2** refusal-tuning / **F3** recall-lift with care (hallucination/redeploy risk). Each applied only after sign-off + a measured harness delta.
+**Reversibility:** harness is read-only-ish (self-cleans prod sessions); no schema change in this entry. F1 reverts via one `UPDATE company_context SET priority=1 …`.
+**Note:** D-096–D-098 exist as W2 build-log/commit identifiers (not DECISIONS entries); W3 starts at D-099 to avoid the collision.
+
+---
+
+## D-100 — RAG fix experiments: F1 neutral (reverted), F4 kept, F2 not shipped; secret-refusal confound found
+**Date:** 2026-06-28 (W3)
+**Status:** Adopted (negative result + discovery). F1 reverted; F4 kept; F2 deferred to a product decision; denylist-aware harness is the recommended next step.
+**Context:** D-099 baseline (77.4% strict). Buhara approved applying F1 (demote priority-1) + F2 (refusal tuning), measured before/after via the harness.
+**What the harness measured:** **F1** (demote `service_offering`+`team_structure`, priority-1 31→12) = **76.2% (64/84)** — statistically unchanged, the *same* questions fail. Confirms the D-099 finding that crowding is not the lever. → **F1 REVERTED** (no benefit; unvalidated downside on company/identity questions absent from the gold set). **F4** (embed the 3 NULL `company_context` rows via `embed-knowledge {source:'context',force:true}`) = **kept** (completes the deferred D-070 Phase-2 backfill; harmless, reproducible).
+**Discovery (changes the number):** ~5 "regressions" are the system **correctly refusing deliberately-purged secret data** — IBAN/credit-card/password/PayPal questions map to the `SECRET_PAGE_DENYLIST` page `444009709` (D1 security audit). The judge doesn't know the denylist, so it scores correct security refusals as failures. With those + ~2 judge-strict cases excluded, **genuine quality ≈ 84% (~71/84)**.
+**Decision on F2 (refusal tuning) — NOT shipped:** premise overridden by evidence. (1) The genuine remaining fails are **retrieval-granularity** (the specific operational chunk isn't surfaced into the final-8), not over-refusal — loosening refusal would make Claude guess → hallucinate. (2) ~5 refusals are **correct security behaviour**; a global refusal-loosen risks answering/hallucinating around purged passwords/cards/IBANs before a CEO/CFO demo. F2 left as an explicit product decision, not an autonomous change.
+**Recommended next (all measurable via the harness):** (a) **denylist-aware harness** — mark secret-data gold questions `expected_refusal` so the number reflects genuine quality + never penalises correct security; add company/identity questions to enable validating F1-style changes; (b) **F3 retrieval granularity** (re-chunk single-chunk supplier pages / raise `RETRIEVAL_VECTOR_K`); (c) **validated content corrections** (D-070 pattern, needs human fact sign-off: Pegasus PNR 6-stellig not `Axxx`; Y360 Euro not TL; Mavi Gök DE=DE/AYT, TR=rest).
+**Net prod change:** F1 reverted (none), F4 embeddings backfilled (data, regenerable). No schema/migration. Full detail: `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
+**Reversibility:** F4 is idempotent re-embed; F1 already restored to priority-1=31.
+
+---
+
+## D-101 — Operational runbook for the demo
+**Date:** 2026-06-28 (W3)
+**Status:** Adopted. `spec/RUNBOOK.md` created.
+**Context:** A keyword scan of all 28 spec docs (W3 recon) confirmed **no operational/incident/rollback runbook existed** — only point-in-time audits (HEALTH_CHECK, latency probes). A solo dev running a live CEO/CFO demo needs a "something broke, what do I do" playbook.
+**Decision:** author `spec/RUNBOOK.md` — quick facts (IDs/URLs/regions/latency budget), a tiered pre-demo checklist (T–1week/day/hour), demo-critical-flow→dependency map, a symptom→diagnose→fix incident playbook (AI down, signed-URL 500, login fail, page 500), rollback procedures (Vercel promote-previous, edge-fn redeploy, migration/data revert, embedding regen), and a known-good baseline. Includes the live action items surfaced this sprint (reset the 6 seeded temp passwords, decide Emirkan's role, email-template swap, E2E CI secrets).
+**Reversibility:** doc only.
+
+---
+
+## D-102 — W3 final-health pass + derived-doc reconcile
+**Date:** 2026-06-28 (W3)
+**Status:** Adopted. **🟢 GO for the 2026-08-01 demo, zero blockers.** `spec/HEALTH_CHECK_2026-06-28.md`.
+**Context:** Close the W3 batch (D-099–D-101) with a live re-snapshot + ledger-parity re-verify + the derived-doc reconcile the W3 recon flagged (ARCHITECTURE §16 topped at D-090; §1 header "22 tables"/§4 "55 pages" stale; index/policy/function counts disagreed across docs).
+**Verified live (Supabase MCP):** 34 tables + 1 view, **163 functions** (docs said 167), 88 RLS policies, 165 indexes, 82 migrations (ledger hash `6355f130…`, repo↔registry **exact**, 0 W3 migrations), 9 buckets, 4 cron (warmup succeeding), 10 auth users, profiles 10 (4 super_admin/5 admin/1 user). Advisors: security 0 ERROR/16 WARN by-design, performance 0 ERROR.
+**Decision:** record the GO; reconcile derived docs in the same pass — ARCHITECTURE §16 extended to D-091–D-102 + functions 167→163, §1 "22 tables"→34, §4 "55 pages"→51, highest decision→D-102; BUILD_LOG Current State refreshed. Remaining items are owner-action (temp passwords, Emirkan role, email templates, E2E CI secrets) or post-demo RAG levers — none demo-blocking.
+**Reversibility:** doc only.
+
+---
+
+## D-103 — Denylist-aware eval harness → genuine quality measured at 82.1%
+**Date:** 2026-06-28 (W3)
+**Status:** Adopted. `scripts/rag-eval.ts` updated; full re-run recorded.
+**Context:** D-100 found ~5 "regressions" were the system correctly refusing deliberately-purged secret data, and *estimated* genuine quality ≈ 84%. The harness needed to measure that, not estimate it, to be a trustworthy gate.
+**Decision:** add a **security exception** to the judge — when the gold reference is/points-to a genuine secret (full IBAN, credit-card number, account password), a correct decline scores PASS as a new `secure_refusal` category; disclosing or fabricating the value is FAIL. Scoped to real credentials only (normal contacts/facts grade normally). Also added a `--frage N,M` filter for targeted replays (F3 aid).
+**Measured (full 84, judge=claude-sonnet-4-6):** **genuine 82.1% (69/84)** — 62 correct, **4 secure_refusal** (the IBAN/card/password questions), 3 fixed, 11 regression, 3 still_wrong, 1 uncertain. Exception correctly scoped (4 genuine secrets flipped; PayPal "ask Selin" #23 correctly stayed a regression). Supersedes the D-100 ~84% estimate.
+**Finding:** the 14 genuine gaps are **~9 retrieval-granularity** (fact exists, not surfaced → false refusal: ETI/Er Car/CIZGI/Hara Filo/AurumTours/WEGO/Portal-Widerruf/Pegasus-WCH/PayPal), **~4 content errors** (Pegasus PNR, ETI label, Mavi Gök, Kaution), **1 refusal-phrasing** (Lufthansa). Confirms: the lever is **F3 retrieval granularity** + validated content corrections, NOT crowding/refusal-tuning. Detail: `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
+**Reversibility:** harness code only (self-cleans prod sessions); no schema/data change.
+
+---
+
+## D-104 — F3 retrieval breadth: genuine RAG quality 82.1% → 86.9%
+**Date:** 2026-06-28 (W3)
+**Status:** Adopted. `rag-query` redeployed (v13), measured + kept.
+**Context:** D-103 measured genuine quality at 82.1% with ~9 retrieval-granularity misses (the fact exists but isn't surfaced into the final-8). An offline token-matched experiment showed widening retrieval + the rerank window recovers the "retrieved-but-cut" subset (Hara Filo, CIZGI), but not true recall misses (Er Car, AurumTours, where the chunk isn't retrieved at all). **This corrected the D-100 "rerank-limit refuted" finding** — that rested on unreliable keyword matching; with exact tokens, widening the window does help.
+**Decision:** raise `rag-query` constants `RETRIEVAL_VECTOR_K` 20→60, `RETRIEVAL_TRGM_K` 10→30, `RERANK_INPUT_LIMIT` 40→80 so the Voyage reranker sees ~all candidates instead of only the ~9 operational chunks that survived below the ~31 pinned priority-1 rows. Deploy + measure-after + revert-if-worse.
+**Measured (full 84):** **genuine 86.9% (73/84)**, up from 82.1% (+4.8 pts); regressions 11→8; **5 recoveries** (Hara Filo, CIZGI, ETI Stornierung, Pegasus WCH, Mavi Gök); no broad regressions (one borderline judge-variance flip, TUIfly). Latency p50 +0.3s. **Kept.**
+**Remaining (10):** 2 recall misses (Er Car/AurumTours → re-chunk, post-demo); ~6 content/granularity incl. the one hallucination (#28 Mietwagen-Kaution asserts a security deposit) → validated content corrections (D-070 pattern, needs fact sign-off); 1 phrasing (Lufthansa).
+**Reversibility:** revert the 3 constants in `supabase/functions/rag-query/index.ts` + redeploy (prior = v12). Detail: `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

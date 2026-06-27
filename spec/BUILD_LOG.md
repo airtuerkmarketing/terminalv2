@@ -9,10 +9,11 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-27)
 
-- **HEAD:** `feat/folder-permissions` — **Per-user folder permissions** (D-080): a super_admin grants individual people read access to a private folder in the Document Library and/or Presentation Hub via **"Manage access…"** in all four folder menus (a searchable team-directory picker). Grants key off `team_members` (so people not yet invited can be granted; auto-activates on first login), cascade **downward** only (a subfolder grant never leaks the parent's content; ancestors show in the tree but no content), and are **read-only** (write policies stay admin-only). New grant tables `document_folder_permissions`/`presentation_folder_permissions` + SECURITY DEFINER `current_team_member_id()`/`can_access_*`/`can_see_*` helpers + widened SELECT policies; new email edge function `notify-folder-access` (Resend). Migration `20260627090000_folder_permissions` — **prod apply + edge-fn deploy pending sign-off**. Prev: **Presentation Hub folder visibility** (D-079): `presentation_folders.is_public` (default true = non-breaking) + RLS so private folders/files are admin-only; **"Make private/public"** in the folder card + on-page menus, lock cue on private cards. Migration `20260626210000` applied to prod. Prev: **Presentation Hub ported 1:1 to the Document Library construct** (D-077/078 — nested secondary sidebar tree, managed SVG colour cards + full context menu, counts, Move, rename-redirect, delete-guard, file Trash with source+thumbnail+slides purge; migrations `…190000`+`…200000`); both library nav nodes kept visible on their own route; Resources order **Presentations → Documents → Assets → Team**. **Document Library data/shell hardening** (D-074/075/076). **Demo:** 2026-08-01.
+- **HEAD:** `feat/folder-permissions` — **Per-user folder permissions** (D-080): a super_admin grants individual people read access to a private folder in the Document Library and/or Presentation Hub via **"Manage access…"** in all four folder menus (a searchable team-directory picker). Grants key off `team_members` (so people not yet invited can be granted; auto-activates on first login), cascade **downward** only (a subfolder grant never leaks the parent's content; ancestors show in the tree but no content), and are **read-only** (write policies stay admin-only). New grant tables `document_folder_permissions`/`presentation_folder_permissions` + SECURITY DEFINER `current_team_member_id()`/`can_access_*`/`can_see_*` helpers + widened SELECT policies; new email edge function `notify-folder-access` (Resend). Migration `20260627090000_folder_permissions` — **applied + edge-fn `notify-folder-access` deployed**. Prev: **Presentation Hub folder visibility** (D-079): `presentation_folders.is_public` (default true = non-breaking) + RLS so private folders/files are admin-only; **"Make private/public"** in the folder card + on-page menus, lock cue on private cards. Migration `20260626210000` applied to prod. Prev: **Presentation Hub ported 1:1 to the Document Library construct** (D-077/078 — nested secondary sidebar tree, managed SVG colour cards + full context menu, counts, Move, rename-redirect, delete-guard, file Trash with source+thumbnail+slides purge; migrations `…190000`+`…200000`); both library nav nodes kept visible on their own route; Resources order **Presentations → Documents → Assets → Team**. **Document Library data/shell hardening** (D-074/075/076). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
-  (Webflow/`terminal.airtuerk.de` retired).
+  (Webflow/`terminal.airtuerk.de` retired). Serverless functions in **fra1**
+  (co-located with Supabase eu-central-1 — D-095).
 - **Database:** 34 tables + the `profiles_v` view (D-080 added 2:
   `document_folder_permissions`, `presentation_folder_permissions`; RAG foundation added 6:
   `company_context`, `confluence_chunks`, `brand_chunks`, `ai_chat_sessions`,
@@ -21,28 +22,46 @@ it is append-only history (do not rewrite past entries — add new ones).
   **51 pages** (gold-set quiz pages removed), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **74 migrations**, highest:
-  `20260627090000_folder_permissions` (file added; **prod apply pending sign-off**).
+  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` + `pg_net` installed. **82 migrations** (file↔registry
+  ledger reconciled to exact parity, D-081–D-089), highest:
+  `20260628120000_revoke_secdef_anon_public` (D-089); `20260627090000_folder_permissions` applied + registered. **4 cron jobs** (+`warmup-rag-query` `*/4`, D-086).
   Prev applied: `20260626210000_presentation_folder_visibility`. `document_folders`/`presentation_folders`
   +`color`; `presentation_folders` +`is_public` (private = admin-only, D-079);
   `document_files`/`presentation_files` +`deleted_at`/`deleted_by` (Trash); daily
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-080**.
+  Highest decision: **D-104**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
-  `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
-  input-language answers, D-072/D-073), `notify-correction-event`,
-  `notify-folder-access` (D-080, deploy pending), `tag-classify-chunks` (Haiku), + 3 confluence fns.
+  `embed-knowledge` (7 source modes), `rag-query` **v13** live (mode-chips RAG-bypass +
+  input-language answers D-072/D-073; F3 retrieval breadth VECTOR_K/TRGM_K/RERANK 60/30/80, D-104),
+  `notify-correction-event`,
+  `notify-folder-access` (D-080, deployed), `tag-classify-chunks` (Haiku), + 3 confluence fns.
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
-- **Data counts (2026-06-26):** team_members **63**, profiles **4 (all super_admin,
-  0 admin/user)**, active auth users **4**, assets **718**, blocks **43**,
-  gold_set_answers **84** (92.9% accuracy baseline), ai_chat_sessions **62** /
-  messages **230**, ai_corrections **1**.
-- **⚠️ V1 blocker:** prod `profiles` has only **4 rows (all super_admin, 0 admin/0
-  user)** — the Stage-8 nine-key-user seed (`684d67f`) never reached prod; must be
-  re-run before the 2026-08-01 demo (details in the 2026-06-25 finding below).
+  **RAG eval harness** (`scripts/rag-eval.ts`, D-099): replays the 84 gold questions
+  through live `rag-query` + LLM-judges vs the 2026-06-22 reference (direction-aware,
+  self-cleans prod sessions). Baseline **77.4% strict (65/84), 15 regressions** — the
+  cited 92.9% was a one-day human pass, not live quality. Root cause is NOT rerank-limit
+  crowding (refuted by telemetry). **D-100 measured the fixes:** F1 (demote priority-1
+  31→12) = neutral (76.2%), REVERTED; F4 (embed 3 NULL context rows) kept; F2 refusal-tuning
+  NOT shipped (wrong + risky lever). **D-103 made the harness denylist-aware** (correct
+  refusal of purged IBAN/cards/passwords = `secure_refusal` PASS) → genuine 82.1%; **D-104
+  F3 retrieval breadth** (`rag-query` v13: VECTOR_K/TRGM_K/RERANK 60/30/80) → **genuine
+  86.9% (73/84)**, 5 recoveries, no broad regressions. Remaining 10: 2 recall misses
+  (re-chunk), ~6 content (need fact sign-off), 1 phrasing. See `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
+- **Data counts (2026-06-28):** team_members **63**, profiles **10** (4 super_admin:
+  Buhara/Ahmet/Ümit/dev@; 5 admin: Hakan/Murat/Oruc/Selin/Tim; 1 user: Emirkan), 9 linked,
+  active auth users **10**, assets **718**, blocks **43**, gold_set_answers **84**
+  (92.9% = one-day human pass 2026-06-22; **live harness = 86.9% genuine** after F3,
+  D-099→D-104), ai_chat_sessions **62** / messages **230**, ai_corrections **1**.
+- **✅ V1 blocker RESOLVED (2026-06-28):** the Stage-8 nine-key-user seed
+  (`scripts/seed-key-users.ts`) was run on **prod** — 6 created (Ümit + the 5 admins),
+  3 already existed, 0 failures, **no emails sent** (email_confirm:true). Prod now has all
+  three roles → role-gated demo views work. **⚠️ FLAG:** Emirkan Erkara is `role=user`
+  (account predates the seed; seed doesn't set roles) — onboarding intended super_admin;
+  Buhara's call (D-055 super-admin-only). New accounts share a printed temp password (not
+  stored) → reset/distribute before demo.
 - **Auth/roles:** `super_admin | admin | user`; RLS via `is_admin()` /
   `is_super_admin()` / `get_profile_role()`; profile role-changes are
   super-admin-only (D-055).
@@ -85,6 +104,153 @@ it is append-only history (do not rewrite past entries — add new ones).
   AUDIT-006 (frozen 2026-06-23 corpus) — AUDIT-003 (Hara Filo) + AUDIT-004 (Pegasus)
   fixed in Welle D3 (`20260626093731`, D-070); D2 + D3 Phase-2 embed backfill of the
   3 priority-1 rows (ZDR-gated consistency follow-up, not retrieval-blocking).
+
+---
+
+## 2026-06-28 (W3) — RAG eval + V1 seed + runbook + final-health + denylist-aware + F3 (D-099–D-104)
+
+Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
+`spec/RAG_EVAL_BASELINE_2026-06-28.md`.
+
+- **D-099** (DECISIONS): **eval-harness-first** RAG quality. New `scripts/rag-eval.ts`
+  replays the 84 `gold_set_answers` questions through the **live** `rag-query`
+  (Voyage embed → `rag_hybrid_search` → rerank → Opus 4.8), LLM-judges each answer vs
+  the 2026-06-22 reference (direction-aware: regression/fixed/correct/still_wrong), and
+  self-cleans the prod sessions it creates. Auth via `TEST_USER_*` (D-096 convention).
+- **Baseline:** **77.4% strict (65/84), 15 regressions**, worst on the operational FAQ
+  set (ai_test_3, 64%). The cited "92.9%" was a single human pass on 2026-06-22, not
+  live quality.
+- **Premise recon overrode the plan:** the assumed lever (priority-1 crowding fixable
+  by raising `RERANK_INPUT_LIMIT`) is **refuted by telemetry** — candidate sets are
+  ~67 chunks, the limit-40 cut already reaches them, and "rerank all vs top-40" changed
+  the final-6 in **0** tested cases. Real causes: ~29 pinned priority-1 rows (mostly
+  generic `service_offering`/`team_structure`) win topical rerank slots over the specific
+  operational chunk; over-conservative refusal; single-chunk recall gaps; a few content
+  errors. Ranked fixes (F1 demote priority-1 rows → F4/F5 safe → F2/F3 careful) each
+  applied only after a measured before/after harness run.
+- **D-100** (DECISIONS): measured the approved fixes. **F1** (demote priority-1 31→12) =
+  **76.2%, statistically unchanged** → **REVERTED**. **F4** (embed 3 NULL context rows) =
+  **kept** (deferred D-070 backfill). **F2** refusal-tuning = **NOT shipped** (genuine fails
+  are retrieval-granularity not over-refusal; loosening risks hallucination). **Discovery:**
+  ~5 "regressions" are correct refusals of purged secret data (`SECRET_PAGE_DENYLIST` page
+  444009709) → **genuine quality ≈ 84%**, not 76%. Recommended next: denylist-aware harness
+  → F3 retrieval granularity → validated content corrections (D-070 pattern). Net prod change:
+  F1 reverted, F4 embeddings backfilled (no schema/migration).
+- **V1 blocker fix** (not a DECISIONS entry — executes the existing Stage-8 plan): ran
+  `scripts/seed-key-users.ts` on **prod**. 6 auth users created (Ümit + admins
+  Oruc/Selin/Tim/Hakan/Murat), 3 existed, 0 failures, no emails. Prod profiles **4→10**
+  (4 super_admin / 5 admin / 1 user) — all role-gated demo paths now exercisable.
+  ⚠️ Emirkan = `user` (predates seed) — role decision deferred to Buhara (D-055).
+- **D-101** (DECISIONS): authored `spec/RUNBOOK.md` — the operational/incident playbook
+  that didn't exist (W3 recon confirmed: 28 spec docs, 0 runbooks). Pre-demo checklist
+  (T–1 week/day/hour), demo-flow→dependency map, symptom→fix incident playbook (AI down /
+  signed-URL 500 / login fail / page 500), rollback procedures (Vercel promote-previous,
+  edge-fn redeploy, migration/data revert), known-good baseline. Surfaces the open action
+  items: reset 6 seeded temp passwords, decide Emirkan role, email-template swap, E2E CI secrets.
+- **D-102** (DECISIONS): W3 final-health — **🟢 GO, zero blockers** (`spec/HEALTH_CHECK_2026-06-28.md`).
+  Live re-snapshot (34 tables/1 view, 163 functions, 88 policies, 165 indexes, 82 migrations,
+  9 buckets, 4 cron, 10 auth/profiles) + ledger parity re-verified (repo↔registry exact,
+  `6355f130…`, 0 W3 migrations) + advisors 0 ERROR. Reconciled derived docs: ARCHITECTURE §16
+  extended D-091–D-102 + functions 167→163, §1 "22 tables"→34, §4 "55 pages"→51.
+- **D-103** (DECISIONS): made the eval harness **denylist-aware** — a correct decline of
+  deliberately-purged secret data (IBAN/card/password) now scores `secure_refusal` PASS, not
+  a false regression; added `--frage` filter. Full re-run: **genuine quality 82.1% (69/84)**
+  (4 secure_refusals correctly identified; supersedes the ~84% estimate). The 14 real gaps =
+  ~9 retrieval-granularity + ~4 content errors + 1 phrasing → next is **F3** + content fixes.
+- **D-104** (DECISIONS): **F3 retrieval breadth** — `rag-query` v13 (`RETRIEVAL_VECTOR_K`
+  20→60, `TRGM_K` 10→30, `RERANK_INPUT_LIMIT` 40→80) so the reranker sees ~all candidates.
+  Offline-validated, deployed, measured: **genuine 82.1%→86.9% (73/84)**, +4.8 pts, 5
+  recoveries (Hara Filo/CIZGI/ETI/Pegasus-WCH/Mavi Gök), no broad regressions, +0.3s p50.
+  Kept (reversible). Remaining 10: 2 recall misses (re-chunk post-demo), ~6 content (need
+  fact sign-off, incl. #28 Kaution hallucination), 1 phrasing.
+
+---
+
+## 2026-06-28 (W2) — Demo polish D-095–D-098
+
+Autonomous, zero migrations (ledger unchanged 82/`6355f130`). See `spec/SHIPPED_2026-06-28_W2.md`.
+
+- **D-095** (DECISIONS): premise recon overrode the `getUser→getSession` plan — the authed-SSR
+  floor was the **Vercel function region** (`iad1`/US vs Supabase `eu-central-1`/EU), not getUser.
+  Fixed via `vercel.json regions:["fra1"]` co-location. Prod: folder-tree TTFB p50 0.67→**0.27s**
+  (−60%), signed-URL p50 0.48→**0.30s** (−37%). getSession not pursued (marginal once co-located,
+  weakens `requireAdmin`). `spec/AUTH_STRATEGY_AUDIT_2026-06-28.md`.
+- **D-096** Playwright E2E smoke scaffold — 5 demo flows (login, library, file-open, AI question,
+  logout) **all green vs prod**; stable locators (no test-ids); storageState auth; CI workflow
+  (`.github/workflows/e2e.yml`). `pnpm e2e`. Buhara: set CI secrets.
+- **D-097** bundle analysis — `@next/bundle-analyzer` is Turbopack-incompatible; heavy deps
+  (d3/leaflet) already off the demo path → no change. `spec/BUNDLE_ANALYSIS_2026-06-28.md`.
+- **D-098** UX state audit — demo path already graceful (loading/error/empty/404/AI-error); one
+  fix: `app/admin/loading.tsx` (was a blank cold-paint). `spec/UX_STATE_AUDIT_2026-06-28.md`.
+
+---
+
+## 2026-06-28 (W1) — Demo-prep triage D-091–D-094
+
+Autonomous, zero migrations (ledger unchanged 82, hash `6355f130…`). See
+`spec/SHIPPED_2026-06-28_W1.md`.
+
+- **D-091** repo drift: reverted an inert React Compiler WIP (`babel.config.js` + 2 packages —
+  Turbopack ignores it, no `next.config` wiring, nothing imports it); fixed pnpm 11's `sharp`
+  build-approval (`pnpm-workspace.yaml` `allowBuilds: sharp: false`) — the actual `pnpm install`
+  failure. install/tsc/build green.
+- **D-092** RAG cron warm-up **verified 🟢** via telemetry (cron history + `net._http_response`:
+  pings reach rag-query → 400 every 4 min). No disable-cold-test (would risk cooling the demo fn).
+- **D-093** signed-URL **analyzed, no change**: the 2 Supabase calls are dependent (read→sign), so
+  parallelize/SQL-function don't apply and edge only trims cold-start; latency is inherent +
+  partly client-RTT + acceptable. Post-demo lever = edge-cached signing. `spec/SIGNED_URL_OPTIMIZATION_2026-06-28.md`.
+- **D-094** authed folder-tree probe 🟡 (via constructed `@supabase/ssr` cookie, no Playwright):
+  TTFB p50 0.67s / p95 0.90s; EXPLAIN shows the folder query is 0.1ms — cost is auth-SSR overhead,
+  not folder logic. `spec/LATENCY_PROBE_FOLDER_TREE_2026-06-28.md`.
+
+---
+
+## 2026-06-28 — Hardening sprint D-086–D-090
+
+Second autonomous batch after D-081–D-085 (same day, versioned `20260628`). All prod-verified;
+ledger 79→82, repo↔registry md5 parity maintained.
+
+- **D-086** RAG warm-up: pg_cron `warmup-rag-query` (`*/4`) + pg_net POSTs `{warmup:true}` →
+  early-400, warms the isolate (no embed/LLM/session). Dodges the ~7.9s cold-start.
+- **D-087** `rag-knowledge` bucket writes → admin-only (read unchanged).
+- **D-088** authed-path latency probe (measurement): signed-URL ~0.48s p50 (watch-item);
+  folder-tree login-gated → `LATENCY_PROBE_AUTHED_2026-06-27.md`.
+- **D-089** revoke anon/PUBLIC EXECUTE on **5 of 8** RLS helpers; **kept 3** (`is_admin`,
+  `can_access/see_document_folder`) that the `{public}` Document-Library policies need to serve
+  `is_public` files to anon — the blanket 8-revoke in the plan would have 500'd every anon
+  library read. Verified via real anon PostgREST.
+- **D-090** `ARCHITECTURE.md` targeted re-consolidation (counts, highest migration, §16).
+- Also (not a migration): Auth `db_max_pool_size` absolute 10 → percent 60 (Management API).
+
+---
+
+## 2026-06-27 — Phase B health check (GO) + ledger reconcile (D-081)
+
+Pre-demo system-wide health audit + migration-ledger reconciliation. Read-only audit
+report in `spec/HEALTH_CHECK_2026-06-27.md`; **verdict GO** for 2026-08-01 (no blockers;
+34/34 public tables RLS-covered, `typecheck`+`build` green, 8/8 edge fns byte-identical to
+repo, 3 cron jobs healthy, public-route latency strong).
+
+- **Ledger reconcile (D-081):** `supabase/migrations/` brought to exact parity with the live
+  `schema_migrations` registry — backfilled the 5 unregistered migrations (D-074/076/077/078/079
+  schema parts, applied via `execute_sql`, never recorded) via
+  `20260627100000_drift_repair_register_missing_migrations`; renamed 30 legacy `00NN_*` + 4
+  timestamp-mismatched files (kb_foundation + seed_tag_vocabulary, chunk_retrieval_stats_job,
+  self_service_profile_fields — the last 3 missed by the plan, caught by a version-set md5).
+  Repo 74→75, ledger 69→75, hash parity both sides. Prod write = registry INSERT only (schema
+  NoOp, reversible via `DELETE … WHERE created_by='drift-repair-2026-06-27'`).
+- **Hardening done same day (D-082, `20260627110000`):** dropped the `gold_set_answers`
+  open-INSERT policy (spam vector; quiz UI already gone) + privatized the unused public
+  `documents` bucket (0 objects).
+- **Perf + security batch done same day (D-083/084/085, `…120000`/`…130000`/`…140000`):**
+  26 FK covering indexes (advisor 26→0); 8 RLS policies wrapped `auth.uid()`→`(select
+  auth.uid())` via ALTER POLICY (initplan 8→0); revoked `handle_new_user()` EXECUTE from
+  anon/authenticated/PUBLIC (trigger fn — signup unaffected, `on_auth_user_created` intact).
+- **Debt deferred to post-demo (documented, non-blocking):** the remaining SECDEF helper
+  REVOKEs (`SECDEF_REVOKE_TEST_PLAN.md` — need the role-simulation test matrix),
+  `rag-knowledge` write→admin, Auth db-connections→percentage (dashboard).
+- **Guardrail (CLAUDE.md, strengthens D-056):** every `execute_sql` DDL change ships a companion
+  migration in the same commit, registered through the migration system.
 
 ---
 

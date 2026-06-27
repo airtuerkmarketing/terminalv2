@@ -34,13 +34,17 @@ const ANTHROPIC_VERSION = '2023-06-01'
 const ANTHROPIC_MODEL = 'claude-opus-4-8'
 const ANTHROPIC_MAX_TOKENS = 4096
 
-const RETRIEVAL_VECTOR_K = 20
-const RETRIEVAL_TRGM_K = 10
-// Raised 30->40 (Welle D3, D-070): ~31 priority-1 company_context rows all carry
-// combined_score 1.0 and lead the candidate sort, so a cap of 30 left only ~1
-// operational confluence chunk in the rerank pool. 40 keeps ~11 operational slots;
-// Voyage still returns the best FINAL_CHUNK_LIMIT after reranking.
-const RERANK_INPUT_LIMIT = 40
+const RETRIEVAL_VECTOR_K = 60
+const RETRIEVAL_TRGM_K = 30
+// Raised 30->40 (Welle D3, D-070), then 40->80 (F3, D-104). The ~31 priority-1
+// company_context rows all carry combined_score 1.0 and lead the candidate sort; at 40
+// only ~9 operational confluence chunks reached the reranker, starving specific lookups
+// (e.g. supplier contacts) that sit just below the priority-1 block. Widening the net
+// (VECTOR_K/TRGM_K 20/10->60/30) + the rerank window (40->80) lets the Voyage reranker
+// see ~all candidates and surface the specific operational chunk; offline-validated to
+// recover real misses (Hara Filo / CIZGI) — D-103 RAG_EVAL_BASELINE. Rerank cost of
+// ~100 vs ~67 docs is negligible (rerank-2.5 handles 1000+).
+const RERANK_INPUT_LIMIT = 80
 const FINAL_CHUNK_LIMIT = 8
 const RESERVED_IDENTITY_SLOTS = 2
 const IDENTITY_CATEGORIES = ['mission', 'brand_voice']

@@ -4,7 +4,7 @@ This document is the **canonical system design** for terminalv2. Every
 decision below is locked. Changes require a new entry in `DECISIONS.md` and
 an update here.
 
-**Last consolidated:** 2026-06-22 (User Panel + Presentation Hub; reconciled against migrations through `20260622193003`)
+**Last consolidated:** 2026-06-22 (User Panel + Presentation Hub). **Partial refresh 2026-06-27/28** — schema counts, the migration ledger, and the new §16 (Hardening sprint, D-081–D-090) are current; some older prose below still cites the pre-D-081 `00NN_` migration labels — those files were renamed to their registered timestamp versions in D-081 (see `DECISIONS.md` D-081), so treat `00NN` as a legacy identifier.
 
 ---
 
@@ -37,7 +37,7 @@ deploy together to Vercel as one unit.
                 │  Supabase project: terminalv2   (Frankfurt)          │
                 │  ┌──────────────────┬──────────────────────────────┐ │
                 │  │  Postgres        │  Storage — 9 buckets:        │ │
-                │  │  (22 tables      │  public: images, documents,  │ │
+                │  │  (34 tables      │  public: images, documents,  │ │
                 │  │   + profiles_v)  │    videos, fonts, avatars    │ │
                 │  │  • brands (15)   │  private: library,           │ │
                 │  │  • pages (55)    │    presentations,            │ │
@@ -131,7 +131,7 @@ Deleted entirely in Phase 3.5:
 
 ---
 
-## 4. Site structure (55 pages — as of 2026-06-22)
+## 4. Site structure (51 pages — gold-set quiz pages removed, D-073)
 
 ### Group A — Brand sections (collapsible parents, 7 brands)
 
@@ -282,7 +282,7 @@ A "new block type" PR touches these five files plus a migration if needed.
 
 ## 7. Database schema
 
-### Tables (22 base tables + 1 view, as of 2026-06-22)
+### Tables (34 base tables + 1 view, as of 2026-06-27)
 
 The schema has grown well past the original 10. Current `public` tables, by area:
 
@@ -296,6 +296,12 @@ The schema has grown well past the original 10. Current `public` tables, by area
   `presentation_tags`, `presentation_file_tags`, `presentation_views`.
 - **Intelligence layer (0025–0029):** `confluence_raw`, `confluence_attachments`,
   `confluence_comments`, `gold_set_answers`.
+- **RAG / airtuerk-KI (D-058–070):** `company_context`, `confluence_chunks`,
+  `brand_chunks`, `ai_chat_sessions`, `ai_chat_messages`, `ai_corrections`.
+- **Wissensbasis (D-065–068):** `tag_vocabulary`, `tag_suggestions`, `chunk_edit_log`,
+  `chunk_retrieval_stats`.
+- **Folder permissions (D-080):** `document_folder_permissions`,
+  `presentation_folder_permissions`.
 
 Schema entry points:
 - `0001_initial_schema.sql` — initial 9 tables + 1 junction
@@ -306,7 +312,10 @@ Schema entry points:
 - `0033` — Presentation Hub tables
 - timestamped `20260621*`/`20260622*` — User Panel (profiles↔team_members link,
   `user_activity_log`, `profiles_v`, avatars bucket, RLS recursion / search_path fixes).
-  Highest applied migration: `20260622193003_profiles_update_own_use_helper.sql`.
+  Highest applied migration (as of 2026-06-27): `20260628120000_revoke_secdef_anon_public`
+  — **82 migrations**, repo ↔ `schema_migrations` at exact parity (D-081). The `00NN_`
+  labels above are the legacy identifiers; those files now carry their registered
+  timestamp versions (renamed in D-081).
 
 ### `brands` (Phase 3.5 schema)
 
@@ -513,3 +522,43 @@ has since been removed — D-056.)
 - Real-time collaborative editing
 - Public API
 - Multi-tenant / white-label
+
+---
+
+## 16. Hardening sprint (2026-06-27 → 28, W0–W3)
+
+A multi-batch sprint following the Phase-B health check (`HEALTH_CHECK_2026-06-27.md`). Live
+snapshot **verified via Supabase MCP 2026-06-28 (D-102):** **34 tables + 1 view, 163 functions,
+88 RLS policies, 165 indexes, 82 migrations (ledger hash `6355f130…`, repo↔registry exact),
+9 extensions, 4 cron jobs, 9 storage buckets, 10 auth users, profiles 10 (4 super_admin /
+5 admin / 1 user)**. Advisors: security 0 ERROR / 16 WARN (by-design), performance 0 ERROR.
+Highest decision: **D-104**. RAG genuine quality **86.9%** (D-104, harness-measured).
+
+| D | Change | Effect |
+|---|---|---|
+| D-081 | Migration-ledger reconcile (34 renames + 5 backfill + repair migration) | repo ↔ `schema_migrations` exact parity (md5-verified) |
+| D-082 | Drop `gold_set_answers` open-INSERT policy + privatize the empty public `documents` bucket | security WARN ↓ |
+| D-083 | 26 FK covering indexes | advisor unindexed-FK 26 → 0 |
+| D-084 | Wrap `auth.uid()` → `(select auth.uid())` in 8 RLS policies (ALTER POLICY, in place) | advisor initplan 8 → 0 |
+| D-085 | Revoke `handle_new_user()` EXECUTE from anon/authenticated/PUBLIC | trigger fn locked; signup intact |
+| D-086 | `rag-query` warm-up via pg_cron + pg_net (`warmup-rag-query`, `*/4`) | dodges the ~7.9s cold-start |
+| D-087 | `rag-knowledge` bucket writes → admin-only | read unchanged |
+| D-088 | Authenticated-path latency probe (measurement) | signed-URL ~0.48s p50 → resolved by D-095 |
+| D-089 | Revoke anon/PUBLIC EXECUTE on 5 RLS helpers; **keep 3** for the public Document Library | anon attack surface ↓; verified via real anon REST |
+| D-090 | ARCHITECTURE re-consolidation (targeted) | counts + refs current |
+| D-091–094 (W1) | Repo-drift fix (sharp/React-Compiler); cron-warm verify; signed-URL + folder-tree latency analysis | `SHIPPED_2026-06-28_W1.md` |
+| D-095–098 (W2) | **fra1 region co-location** (folder-tree TTFB −60%, signed-URL −37%); Playwright E2E; bundle analysis; UX-state audit | `SHIPPED_2026-06-28_W2.md` |
+| D-099–100 (W3) | **RAG eval harness** (`scripts/rag-eval.ts`); measured fixes — F1 demote neutral→reverted, F4 embed-backfill, F2 not shipped; the strict number is inflated by correct secret-data refusals | `RAG_EVAL_BASELINE_2026-06-28.md` |
+| D-101 (W3) | Operational/demo-day **runbook** | `RUNBOOK.md` |
+| D-102 (W3) | Final-health: live-count re-snapshot + ledger-parity re-verify + this reconcile | `HEALTH_CHECK_2026-06-28.md` |
+| D-103 (W3) | **Denylist-aware harness** (`secure_refusal` for correct secret-data declines) → **genuine quality measured 82.1% (69/84)**; 14 real gaps = ~9 retrieval-granularity + ~4 content + 1 phrasing | `RAG_EVAL_BASELINE_2026-06-28.md` |
+| D-104 (W3) | **F3 retrieval breadth** (`rag-query` v13: VECTOR_K/TRGM_K/RERANK 60/30/80) → **genuine 86.9% (73/84)**, +4.8 pts, 5 recoveries, no broad regressions. Remaining: 2 recall misses (re-chunk) + ~6 content + 1 phrasing | `RAG_EVAL_BASELINE_2026-06-28.md` |
+
+Also (not migrations): Auth `db_max_pool_size` switched absolute 10 → percent 60 via the
+Management API (W0); **V1 blocker resolved** — the Stage-8 key-user seed run on prod, profiles 4→10 (W3).
+
+**Open (post-demo):** the 3 helpers kept anon-executable (`is_admin`,
+`can_access_document_folder`, `can_see_document_folder`) stay as long as the Document Library
+keeps its anonymous public face; RAG genuine-quality levers (denylist-aware harness → F3
+retrieval granularity → validated content corrections); decide Emirkan's role (`user`→?);
+reset the 6 seeded temp passwords; email-template swap (D-071); E2E CI repo secrets.
