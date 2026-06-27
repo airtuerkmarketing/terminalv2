@@ -1,0 +1,4 @@
+# Scoped shadcn/21st.dev vendor target for Duty Free.
+# Components land here via `npx shadcn add <registry-url>` resolved through the
+# repo-root components.json (aliases.ui = @/components/duty-free/ui).
+# This keeps vendored primitives isolated from the hand-rolled @/components/ui.

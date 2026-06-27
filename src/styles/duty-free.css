@@ -1,0 +1,46 @@
+/* Duty Free — scoped stylesheet (B0.5 scaffold)
+ *
+ * Scope: imported only by the Duty Free route + the dev lab harness. Holds the
+ * Duty-Free-local tokens and primitives. It deliberately does NOT touch
+ * globals.css or the global `@theme` block — the iOS 18 tokens (--bg, --accent,
+ * --hairline, --text-*) come from theme.css; here we only re-alias them under a
+ * --df-* namespace and add the sharp-corner / mono-label treatment that is
+ * unique to Duty Free (master-plan Q4).
+ *
+ * shadcn's components.json points "tailwind.css" here, so any cssVars the CLI
+ * injects land in this scoped file rather than globals.css (master-plan V3-1).
+ *
+ * CORRECTION (B0.5): --df-accent binds to var(--accent), NOT var(--quantum).
+ * --accent is the token that flips #0A82DF (light) -> #0A9EFF (dark); raw
+ * --quantum stays #0A82DF in both modes. The plan's §6 comment had these
+ * swapped, so binding to --accent is what actually delivers the intended
+ * light/dark flip.
+ *
+ * NOTE: DM Mono is deferred to B2 and will be loaded via next/font/google (the
+ * repo has no @font-face / /public/fonts pattern — it self-hosts Inter through
+ * next/font). Until then .df-label falls back to the system mono stack.
+ */
+
+.df-page {
+  --df-accent: var(--accent);
+  --df-accent-soft: var(--accent-soft);
+  --df-accent-border: var(--accent-border);
+  --df-hairline: var(--hairline);
+  --df-radius: 0px;
+}
+
+.df-label {
+  font-family: var(--font-df-mono, ui-monospace, "DM Mono", SFMono-Regular, Menlo, monospace);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: var(--fs-xs, 11px);
+}
+
+.df-glass {
+  /* Themed glass: derive from the active --surface token so it tracks
+     light/dark, instead of a hardcoded light-only rgba. */
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--df-hairline);
+}
