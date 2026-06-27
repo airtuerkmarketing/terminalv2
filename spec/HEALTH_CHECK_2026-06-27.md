@@ -232,7 +232,7 @@ The rest (SMTP/magic-link, OAuth, JWT expiry, rate limits) needs the Supabase **
 | 2 | Doc-refresh (BUILD_LOG, SOURCE_INVENTORY, DECISIONS D-NNN, CLAUDE.md guardrail) | now | this report + reconcile plan |
 | 3 | `REVOKE` SECDEF execute from `anon`/`PUBLIC` + lock `handle_new_user` + drop `gold_set_answers` public-INSERT policy | post-demo | `SECDEF_REVOKE_TEST_PLAN.md` |
 | 4 | Single FK-index migration (26) + 8 RLS-initplan rewrites | post-demo | TBD draft |
-| 5 | `documents` bucket → private/remove; tighten `rag-knowledge` writes to admin | post-demo | `SECDEF_REVOKE_TEST_PLAN.md` §related |
+| 5 | ✅ **Done** — `documents` bucket→private + `gold_set_answers` open-INSERT dropped (D-082); `rag-knowledge` write→admin still post-demo | 2026-06-27 | `DECISIONS.md` D-082 |
 | 6 | Auth DB connections → percentage (dashboard); authenticated-path latency probe | post-demo | manual + scripted |
 
 ---

@@ -596,6 +596,17 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-082 — Phase-B hardening: drop gold_set open-INSERT + privatize documents bucket
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260627110000_harden_gold_set_and_documents_bucket` (applied + registered).
+**Context:** Two zero-risk findings from the 2026-06-27 health check (`spec/HEALTH_CHECK_2026-06-27.md`): (1) `gold_set_answers` kept an open-INSERT RLS policy (`WITH CHECK (true)` for anon+authenticated) after the quiz UI was removed (`20260626160000`) — a spam vector with no caller; (2) the `documents` storage bucket was `public=true` with 0 objects (the Document Library uses the private `library` bucket) — a latent world-read.
+**Decision:** drop `gold_set_answers_insert_public` (the SELECT policy `gold_set_answers_select_auth` stays, so admin reads are unaffected) and set `documents` bucket `public=false`. Applied via `execute_sql` + an explicit `schema_migrations` row at version `20260627110000` (pinned after the D-081 reconcile; `apply_migration` would auto-stamp ~06:50 and mis-order it before 09:00).
+**Result:** ledger 75→76; repo↔registry version-set hash parity preserved.
+**Reversibility:** re-`CREATE POLICY` / set the bucket `public=true` again (both noted in the migration header).
+**Verified:** post-apply — insert policy gone, select policy kept, `documents.public=false`, ledger=76, version-set hash parity.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

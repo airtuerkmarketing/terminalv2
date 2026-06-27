@@ -34,12 +34,15 @@ Specifically:
   A change that adds a migration but leaves counts/ranges stale is incomplete.
 - Update the highest `D-NNN` and the highest migration number everywhere they appear
   (README migration table, ARCHITECTURE §7/§8/§10, BUILD_LOG Current State).
-- A direct `execute_sql` **schema/DDL** change must ship a companion migration **in the
-  same commit**, registered through the migration system (`apply_migration`/`db push`, not
-  raw `execute_sql`), so `supabase/migrations/` stays in exact parity with the
-  `schema_migrations` registry. Ledger drift here is what D-081 had to repair — don't
-  recreate it. A data-only `execute_sql` change still needs a follow-up reproducibility
-  migration (see D-056).
+- Any schema/DDL change must ship a committed migration file **in the same commit** AND be
+  registered in `supabase_migrations.schema_migrations` under a **matching version** — via
+  `apply_migration`/`db push`, or (as the D-081 drift-repair + D-082 hardening did) via
+  `execute_sql` plus an explicit registry row at a controlled version (the MCP
+  `apply_migration` auto-timestamps, which can mis-order or drift). `supabase/migrations/`
+  must stay in exact parity with the registry — verify by **hashing the sorted version set,
+  not by counting** (counts can match while the sets differ). Ledger drift is what D-081 had
+  to repair — don't recreate it. A data-only `execute_sql` change still needs a follow-up
+  reproducibility migration (see D-056).
 
 ## Workflow notes
 

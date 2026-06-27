@@ -21,16 +21,16 @@ it is append-only history (do not rewrite past entries — add new ones).
   **51 pages** (gold-set quiz pages removed), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **75 migrations** (file↔registry
-  ledger reconciled to exact parity, D-081), highest:
-  `20260627100000_drift_repair_register_missing_migrations`; `20260627090000_folder_permissions` applied + registered.
+  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **76 migrations** (file↔registry
+  ledger reconciled to exact parity, D-081/D-082), highest:
+  `20260627110000_harden_gold_set_and_documents_bucket` (D-082); `20260627090000_folder_permissions` applied + registered.
   Prev applied: `20260626210000_presentation_folder_visibility`. `document_folders`/`presentation_folders`
   +`color`; `presentation_folders` +`is_public` (private = admin-only, D-079);
   `document_files`/`presentation_files` +`deleted_at`/`deleted_by` (Trash); daily
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-081**.
+  Highest decision: **D-082**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
@@ -104,10 +104,12 @@ repo, 3 cron jobs healthy, public-route latency strong).
   self_service_profile_fields — the last 3 missed by the plan, caught by a version-set md5).
   Repo 74→75, ledger 69→75, hash parity both sides. Prod write = registry INSERT only (schema
   NoOp, reversible via `DELETE … WHERE created_by='drift-repair-2026-06-27'`).
+- **Hardening done same day (D-082, `20260627110000`):** dropped the `gold_set_answers`
+  open-INSERT policy (spam vector; quiz UI already gone) + privatized the unused public
+  `documents` bucket (0 objects).
 - **Debt deferred to post-demo (documented, non-blocking):** SECDEF helper REVOKE from
   anon/PUBLIC (`SECDEF_REVOKE_TEST_PLAN.md`), 26 FK indexes, 8 RLS-initplan rewrites,
-  `documents` bucket public→private, `rag-knowledge` write tighten, `gold_set_answers`
-  open-INSERT drop, Auth db-connections→percentage.
+  `rag-knowledge` write→admin, Auth db-connections→percentage.
 - **Guardrail (CLAUDE.md, strengthens D-056):** every `execute_sql` DDL change ships a companion
   migration in the same commit, registered through the migration system.
 
