@@ -15,6 +15,64 @@
   padding: var(--card-padding, 24px);
 }
 
+/* ── Modal presentation (opened from the user menu) ──
+   Same contract as the Settings modal (usm-overlay/usm-panel): portaled to
+   <body>, dark overlay behind, Escape/backdrop/X close. The .acp-card stays the
+   panel; .acp-modal only sizes/centers it and anchors the close button. The
+   overlay is the scroll container so a tall form scrolls within the viewport.
+   Backdrop is a touch darker than the Settings modal (0.55 vs 0.4). */
+.acp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.55);
+  /* Flex + margin:auto on the panel centers it when it fits and lets a tall form
+     scroll from the top (auto margins collapse to 0 when there's no free space —
+     avoids the grid/place-items:center top-clipping trap). */
+  display: flex;
+  overflow-y: auto;
+  padding: var(--space-5, 24px) var(--space-4, 18px);
+}
+.acp-modal {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+  margin: auto;
+}
+.acp-modal-close {
+  position: absolute;
+  top: var(--space-4, 18px);
+  right: var(--space-4, 18px);
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius-sm, 10px);
+  background: var(--surface-muted);
+  color: var(--text-3);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+.acp-modal-close:hover {
+  color: var(--text-1);
+  background: var(--surface-strong, var(--surface-muted));
+}
+.acp-modal-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.acp-modal-close svg {
+  width: 18px;
+  height: 18px;
+}
+@media (max-width: 640px) {
+  .acp-overlay {
+    padding: var(--space-3, 14px);
+  }
+}
+
 /* ── Header ── */
 .acp-header {
   display: flex;

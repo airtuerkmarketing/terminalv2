@@ -9,7 +9,11 @@ button.user-block {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  width: 100%;
+  /* width:auto (NOT 100%) so the column flex's align-items:stretch sizes the
+     button to the inner content width PLUS its negative horizontal margins
+     (shell.css full-bleed break-out) — a fixed 100% ignores those margins and
+     leaves the block shifted left + cut short on the right. */
+  width: auto;
   border: 1px solid transparent;
   transition: background-color 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth);
 }

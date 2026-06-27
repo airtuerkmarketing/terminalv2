@@ -9,7 +9,15 @@ import { activateOwnProfileAction } from "./actions";
  * deliberately-unlinked account, dev@). One click provisions + links a profile so
  * the editable form can render.
  */
-export default function ActivateProfile({ name }: { name: string }) {
+export default function ActivateProfile({
+  name,
+  onActivated,
+}: {
+  name: string;
+  /** Modal use: called after a successful activation instead of router.refresh
+   *  (the modal lives over another route, so it re-hydrates itself). */
+  onActivated?: () => void;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +43,7 @@ export default function ActivateProfile({ name }: { name: string }) {
           start(async () => {
             const r = await activateOwnProfileAction();
             if (!r.ok) setError(r.error);
+            else if (onActivated) onActivated();
             else router.refresh();
           });
         }}
