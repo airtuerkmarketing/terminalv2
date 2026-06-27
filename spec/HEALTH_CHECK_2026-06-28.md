@@ -37,10 +37,10 @@ ledger parity, and reconciles the derived docs. Supersedes the day-counts in
 ## Demo-readiness state
 - 🟢 Ledger parity, advisors, cron, region (fra1), latency budget (D-095), E2E (5 flows), profiles/roles, runbook.
 - 🟡 Owner action items (tracked in `RUNBOOK.md` §1): reset the 6 seeded temp passwords; decide Emirkan's role (`user`→super_admin?); email-template swap (D-071); E2E CI repo secrets.
-- 🟡 RAG genuine quality ≈ 84% — graceful failure mode (says "ask X" not hallucinate). Improvement levers (denylist-aware harness → F3 → validated content corrections) are post-decision, not demo-blocking.
+- 🟡 RAG genuine quality **82.1% measured** (D-103 denylist-aware harness) — graceful failure mode (says "ask X" not hallucinate). 14 real gaps (~9 retrieval / ~4 content / 1 phrasing). Improvement levers (F3 retrieval granularity → validated content corrections) are post-decision, not demo-blocking.
 
 ## Recommended order (post-demo / when ready)
-1. Denylist-aware harness (honest RAG number + add company/identity questions).
-2. F3 retrieval granularity for the genuine operational-lookup misses.
+1. ✅ Denylist-aware harness (D-103, genuine 82.1%). Remaining: add company/identity questions to the gold set.
+2. **F3 retrieval granularity** for the ~9 genuine operational-lookup misses (next up).
 3. Validated content corrections (Pegasus PNR / Y360 / Mavi Gök) — needs fact sign-off.
 4. The kept-anon SECDEF helpers — revisit only if the Document Library loses its public face.

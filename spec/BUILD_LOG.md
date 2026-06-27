@@ -31,7 +31,7 @@ it is append-only history (do not rewrite past entries — add new ones).
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-102**.
+  Highest decision: **D-103**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
@@ -44,14 +44,16 @@ it is append-only history (do not rewrite past entries — add new ones).
   cited 92.9% was a one-day human pass, not live quality. Root cause is NOT rerank-limit
   crowding (refuted by telemetry). **D-100 measured the fixes:** F1 (demote priority-1
   31→12) = neutral (76.2%), REVERTED; F4 (embed 3 NULL context rows) kept; F2 refusal-tuning
-  NOT shipped (wrong + risky lever). **~5 "regressions" are correct security refusals**
-  (purged IBAN/cards/passwords) → **genuine quality ≈ 84%**. Next: denylist-aware harness
-  + F3 retrieval granularity + validated content fixes. See `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
+  NOT shipped (wrong + risky lever). **D-103 made the harness denylist-aware** (correct
+  refusal of purged IBAN/cards/passwords = `secure_refusal` PASS) → **genuine quality
+  measured 82.1% (69/84)**. The 14 real gaps are ~9 retrieval-granularity + ~4 content
+  errors + 1 phrasing. Next: **F3 retrieval granularity** + validated content corrections.
+  See `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
 - **Data counts (2026-06-28):** team_members **63**, profiles **10** (4 super_admin:
   Buhara/Ahmet/Ümit/dev@; 5 admin: Hakan/Murat/Oruc/Selin/Tim; 1 user: Emirkan), 9 linked,
   active auth users **10**, assets **718**, blocks **43**, gold_set_answers **84**
-  (92.9% = one-day human pass 2026-06-22; **live harness = 77.4% strict / ~84% genuine**,
-  D-099/D-100), ai_chat_sessions **62** / messages **230**, ai_corrections **1**.
+  (92.9% = one-day human pass 2026-06-22; **live harness = 77.4% strict / 82.1% genuine
+  measured**, D-099/D-103), ai_chat_sessions **62** / messages **230**, ai_corrections **1**.
 - **✅ V1 blocker RESOLVED (2026-06-28):** the Stage-8 nine-key-user seed
   (`scripts/seed-key-users.ts`) was run on **prod** — 6 created (Ümit + the 5 admins),
   3 already existed, 0 failures, **no emails sent** (email_confirm:true). Prod now has all
@@ -104,7 +106,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## 2026-06-28 (W3) — RAG eval harness + measured fixes + V1 seed + runbook + final-health (D-099–D-102)
+## 2026-06-28 (W3) — RAG eval harness + measured fixes + V1 seed + runbook + final-health + denylist-aware (D-099–D-103)
 
 Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
 `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
@@ -149,6 +151,11 @@ Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
   9 buckets, 4 cron, 10 auth/profiles) + ledger parity re-verified (repo↔registry exact,
   `6355f130…`, 0 W3 migrations) + advisors 0 ERROR. Reconciled derived docs: ARCHITECTURE §16
   extended D-091–D-102 + functions 167→163, §1 "22 tables"→34, §4 "55 pages"→51.
+- **D-103** (DECISIONS): made the eval harness **denylist-aware** — a correct decline of
+  deliberately-purged secret data (IBAN/card/password) now scores `secure_refusal` PASS, not
+  a false regression; added `--frage` filter. Full re-run: **genuine quality 82.1% (69/84)**
+  (4 secure_refusals correctly identified; supersedes the ~84% estimate). The 14 real gaps =
+  ~9 retrieval-granularity + ~4 content errors + 1 phrasing → next is **F3** + content fixes.
 
 ---
 

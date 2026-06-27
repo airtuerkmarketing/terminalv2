@@ -146,9 +146,37 @@ cases (TUIfly #21 gives a *richer* operator-routing answer missing the exact
 **Net prod change from D-100:** F1 reverted (no net), F4 embeddings backfilled (data,
 reproducible via the command above). No schema/migration change.
 
-## Open harness enhancements (post-baseline)
-- **Denylist-aware judging** (see D-100) — the highest-value next step; makes the number trustworthy.
-- Split the judge's `regression` into `refusal-regression` (objective) vs `content-nuance` (subjective).
-- A `--frage` filter to replay specific questions without the full 84.
-- Add company/identity questions to the gold set (currently operational-only).
-- Wire into CI behind a pass-rate floor once the genuine number stabilises.
+## D-103 — Denylist-aware harness (the honest number)
+
+Implemented the security exception in the judge: a correct decline of deliberately-purged
+secret data (full IBAN / credit-card / password) scores **PASS** as `secure_refusal` instead
+of a false regression. Added a `--frage N,M` filter. Re-ran the full 84.
+
+**Measured genuine pass rate: 82.1% (69/84)** (was 76.2% strict; supersedes the ~84% D-100
+estimate). Breakdown: 62 correct · **4 secure_refusal** (ai_test_3 #4/#5 IBAN, #7 Ryanair pw,
+#8 card) · 3 fixed · **11 regression** · 3 still_wrong · 1 uncertain. The exception is
+correctly **scoped** — it fired only on the 4 genuine-secret refs, not on operational
+questions, and #23 (PayPal "ask Selin" — not a secret) correctly stayed a regression.
+
+**The real backlog (14 genuine gaps, no security confound):**
+- **Retrieval-granularity (~9)** — the specific operational fact exists in the corpus but
+  isn't surfaced into the final-8, so the system falsely refuses: ETI Stornierung (#1),
+  Pegasus Medical/WCH (#5), WEGO Direktkunden-Storno (#26), Hara Filo contact (#14), Er Car
+  ADB/IST (#17), CIZGI email (#21), Portal-Tagesstorno Widerrufsrecht (#6), AurumTours
+  (#17 — a true recall miss, chunk not retrieved at all), PayPal→Selin (#23). → **F3**.
+- **Content errors (~4)** — fact in the corpus is wrong/stale: Pegasus PNR `Axxx` vs
+  6-stellig (#4), ETI email mislabel (#7), Mavi Gök DE/TR routing (#22), Mietwagen-Kaution
+  (#28). → **validated content corrections** (D-070 pattern, needs fact sign-off).
+- **Refusal-phrasing (1)** — Lufthansa storno (#27) used the wrong "out-of-scope" phrase
+  instead of "no information". Minor prompt nuance.
+
+This confirms the D-100 diagnosis with the honest number: the gap is **retrieval, not
+crowding and not over-refusal**. Next: **F3** retrieval granularity, then the content
+corrections. F2 refusal-tuning stays unnecessary (the false refusals are downstream of
+retrieval — fix retrieval and they resolve).
+
+## Open harness enhancements (post-D-103)
+- Add company/identity questions to the gold set (currently operational-only) so priority-1
+  / persona changes can be validated (F1 couldn't be, this sprint).
+- Split `regression` into `refusal-regression` vs `content-nuance` to auto-route fixes.
+- Wire into CI behind an 82% genuine-pass-rate floor once F3 + content corrections land.

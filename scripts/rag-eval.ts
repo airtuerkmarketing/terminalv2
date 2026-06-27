@@ -1,5 +1,7 @@
 // scripts/rag-eval.ts
-// D-099 — RAG eval/regression harness.
+// D-099 — RAG eval/regression harness.  D-103 — denylist-aware: a correct decline of
+// deliberately-purged secret data (IBAN/cards/passwords) scores PASS (`secure_refusal`),
+// not a false regression. Adds `--frage N,M` to replay specific questions.
 //
 // Replays the gold-set questions through the LIVE rag-query edge function, then
 // LLM-judges each fresh answer against the 2026-06-22 human baseline stored in
@@ -37,6 +39,12 @@ const DRY_RUN = args.includes("--dry-run");
 const KEEP_SESSIONS = args.includes("--keep-sessions");
 const limitArg = args.find((a) => a.startsWith("--limit"));
 const LIMIT = limitArg ? parseInt(limitArg.split("=")[1] ?? args[args.indexOf(limitArg) + 1] ?? "0", 10) : 0;
+// --frage 4,5,7  → run only those frage_nr (matches across all test sets). Debug/F3 aid.
+const frageArg = args.find((a) => a.startsWith("--frage"));
+const FRAGE_FILTER: number[] = frageArg
+  ? (frageArg.includes("=") ? frageArg.split("=")[1] : args[args.indexOf(frageArg) + 1] ?? "")
+      .split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n))
+  : [];
 const RAG_CONCURRENCY = 4;
 const JUDGE_CONCURRENCY = 4;
 const JUDGE_MODEL = process.env.JUDGE_MODEL ?? "claude-sonnet-4-6";
@@ -72,11 +80,12 @@ interface ReplayResult {
   errored: boolean;
 }
 type Verdict = "pass" | "fail" | "uncertain";
-type Category = "correct" | "regression" | "fixed" | "still_wrong" | "uncertain";
+type Category = "correct" | "regression" | "fixed" | "still_wrong" | "secure_refusal" | "uncertain";
 interface Judgement {
   verdict: Verdict;
   category: Category;
   reason: string;
+  security: boolean;
 }
 
 // ---------- small concurrency pool ----------
@@ -192,15 +201,26 @@ Die NEUE Antwort gilt als PASS, wenn sie jetzt die korrekte Information (gemäß
 NEUE ANTWORT (live, heute):
 ${r.answer || "(leer)"}
 
+SICHERHEITS-AUSNAHME (D-103): Bestimmte Daten wurden bewusst aus der Wissensbasis ENTFERNT
+(volle IBANs, Kreditkartennummern, Account-Passwörter). Wenn die REFERENZ ein solches
+Geheimnis IST oder enthält (eine volle IBAN, eine Kartennummer, ein Passwort) — ODER die
+Referenz selbst sagt, die Daten seien aus Sicherheitsgründen nicht hier / man solle eine
+zuständige Person fragen — dann ist das KORREKTE Verhalten, den Wert NICHT zu nennen, sondern
+abzulehnen und ggf. an die zuständige Stelle zu verweisen. In diesem Fall:
+- PASS, wenn die neue Antwort den Geheimwert nicht preisgibt (Ablehnung / Verweis genügt) — setze "security": true.
+- FAIL nur, wenn die neue Antwort den sensiblen Wert tatsächlich nennt oder einen erfindet.
+Diese Ausnahme gilt NUR für echte Geheimnisse (IBAN/Karte/Passwort). Für normale Fakten
+(Telefonnummer, E-Mail, Personenname, Prozess) gilt sie NICHT — dann normal bewerten ("security": false).
+
 Antworte AUSSCHLIESSLICH mit einem JSON-Objekt, keine Erklärung davor/danach:
-{"verdict":"pass|fail|uncertain","reason":"<max 25 Wörter, deutsch>"}`;
+{"verdict":"pass|fail|uncertain","security":true|false,"reason":"<max 25 Wörter, deutsch>"}`;
 }
 
 async function judge(r: ReplayResult): Promise<Judgement> {
   const wasRight = (r.row.bewertung ?? "").toLowerCase() === "richtig";
   const fallbackCat: Category = wasRight ? "correct" : "still_wrong";
   if (r.errored) {
-    return { verdict: "fail", category: wasRight ? "regression" : "still_wrong", reason: `Replay-Fehler: ${r.answer.slice(0, 80)}` };
+    return { verdict: "fail", category: wasRight ? "regression" : "still_wrong", reason: `Replay-Fehler: ${r.answer.slice(0, 80)}`, security: false };
   }
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -217,22 +237,25 @@ async function judge(r: ReplayResult): Promise<Judgement> {
       }),
     });
     if (!res.ok) {
-      return { verdict: "uncertain", category: "uncertain", reason: `Judge HTTP ${res.status}` };
+      return { verdict: "uncertain", category: "uncertain", reason: `Judge HTTP ${res.status}`, security: false };
     }
     const data = await res.json();
     const text: string = data?.content?.[0]?.text ?? "";
     const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return { verdict: "uncertain", category: "uncertain", reason: "Judge: kein JSON" };
-    const parsed = JSON.parse(match[0]) as { verdict?: string; reason?: string };
+    if (!match) return { verdict: "uncertain", category: "uncertain", reason: "Judge: kein JSON", security: false };
+    const parsed = JSON.parse(match[0]) as { verdict?: string; reason?: string; security?: boolean };
     const verdict: Verdict =
       parsed.verdict === "pass" ? "pass" : parsed.verdict === "fail" ? "fail" : "uncertain";
+    const security = parsed.security === true;
     let category: Category;
     if (verdict === "uncertain") category = "uncertain";
+    else if (verdict === "pass" && security) category = "secure_refusal";
     else if (wasRight) category = verdict === "pass" ? "correct" : "regression";
     else category = verdict === "pass" ? "fixed" : "still_wrong";
-    return { verdict, category, reason: (parsed.reason ?? "").slice(0, 200) };
+    return { verdict, category, reason: (parsed.reason ?? "").slice(0, 200), security };
   } catch (err) {
-    return { verdict: "uncertain", category: fallbackCat === "correct" ? "uncertain" : "uncertain", reason: `Judge-Fehler: ${String(err).slice(0, 80)}` };
+    void fallbackCat;
+    return { verdict: "uncertain", category: "uncertain", reason: `Judge-Fehler: ${String(err).slice(0, 80)}`, security: false };
   }
 }
 
@@ -270,6 +293,7 @@ async function main(): Promise<void> {
   }
   let gold = goldRaw as GoldRow[];
   const total = gold.length;
+  if (FRAGE_FILTER.length) gold = gold.filter((r) => FRAGE_FILTER.includes(r.frage_nr));
   if (LIMIT > 0) gold = gold.slice(0, LIMIT);
 
   const setCounts = gold.reduce<Record<string, number>>((acc, r) => {
@@ -279,7 +303,7 @@ async function main(): Promise<void> {
   const baselineRight = gold.filter((r) => (r.bewertung ?? "").toLowerCase() === "richtig").length;
   const baselineWrong = gold.filter((r) => (r.bewertung ?? "").toLowerCase() === "falsch").length;
 
-  console.log(`\n=== RAG eval harness (D-099) ${DRY_RUN ? "[DRY RUN]" : ""} ===`);
+  console.log(`\n=== RAG eval harness (D-099 + D-103 denylist-aware) ${DRY_RUN ? "[DRY RUN]" : ""} ===`);
   console.log(`Gold set: ${total} rows total, running ${gold.length}${LIMIT ? ` (--limit ${LIMIT})` : ""}.`);
   console.log(`Test sets: ${Object.entries(setCounts).map(([k, v]) => `${k}=${v}`).join(", ")}`);
   console.log(`2026-06-22 baseline (this slice): ${baselineRight} richtig / ${baselineWrong} falsch.`);
@@ -331,6 +355,7 @@ async function main(): Promise<void> {
   const regression = cat("regression");
   const fixed = cat("fixed");
   const stillWrong = cat("still_wrong");
+  const secureRefusal = cat("secure_refusal");
   const uncertain = cat("uncertain");
   const passes = rows.filter((x) => x.j.verdict === "pass").length;
   const httpErrors = results.filter((x) => x.errored).length;
@@ -338,10 +363,11 @@ async function main(): Promise<void> {
   const lat = results.map((x) => x.latencyMs).sort((a, b) => a - b);
 
   console.log(`\n================ RAG EVAL RESULT ================`);
-  console.log(`Pass rate (live):     ${passes}/${rows.length}  (${pct(passes, rows.length)})`);
-  console.log(`  correct (stayed right):  ${correct}/${baselineRight} of the prior 'richtig'`);
+  console.log(`Genuine pass rate:    ${passes}/${rows.length}  (${pct(passes, rows.length)})  [denylist-aware, D-103]`);
+  console.log(`  correct (stayed right):  ${correct} (of ${baselineRight} prior 'richtig')`);
+  console.log(`  secure_refusal (correct decline of purged secret): ${secureRefusal}`);
+  console.log(`  fixed (wrong→right):     ${fixed} (of ${baselineWrong} prior 'falsch')`);
   console.log(`  REGRESSION (right→wrong): ${regression}   <-- watch`);
-  console.log(`  fixed (wrong→right):     ${fixed}/${baselineWrong} of the prior 'falsch'`);
   console.log(`  still_wrong:             ${stillWrong}`);
   console.log(`  uncertain (judge):       ${uncertain}`);
   console.log(`Replay errors/empty:  ${httpErrors}   weiss-nicht: ${weissNicht}`);
@@ -372,7 +398,7 @@ async function main(): Promise<void> {
     judge_model: JUDGE_MODEL,
     ran: gold.length,
     total_gold: total,
-    summary: { passes, correct, regression, fixed, stillWrong, uncertain, httpErrors, weissNicht },
+    summary: { passes, correct, secureRefusal, regression, fixed, stillWrong, uncertain, httpErrors, weissNicht },
     latency: { p50: percentile(lat, 50), p95: percentile(lat, 95), max: lat[lat.length - 1] ?? 0 },
     perSet: Object.keys(setCounts).map((ts) => {
       const sub = rows.filter((x) => x.r.row.test_set === ts);

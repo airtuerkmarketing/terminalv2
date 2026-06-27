@@ -738,6 +738,17 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-103 — Denylist-aware eval harness → genuine quality measured at 82.1%
+**Date:** 2026-06-28 (W3)
+**Status:** Adopted. `scripts/rag-eval.ts` updated; full re-run recorded.
+**Context:** D-100 found ~5 "regressions" were the system correctly refusing deliberately-purged secret data, and *estimated* genuine quality ≈ 84%. The harness needed to measure that, not estimate it, to be a trustworthy gate.
+**Decision:** add a **security exception** to the judge — when the gold reference is/points-to a genuine secret (full IBAN, credit-card number, account password), a correct decline scores PASS as a new `secure_refusal` category; disclosing or fabricating the value is FAIL. Scoped to real credentials only (normal contacts/facts grade normally). Also added a `--frage N,M` filter for targeted replays (F3 aid).
+**Measured (full 84, judge=claude-sonnet-4-6):** **genuine 82.1% (69/84)** — 62 correct, **4 secure_refusal** (the IBAN/card/password questions), 3 fixed, 11 regression, 3 still_wrong, 1 uncertain. Exception correctly scoped (4 genuine secrets flipped; PayPal "ask Selin" #23 correctly stayed a regression). Supersedes the D-100 ~84% estimate.
+**Finding:** the 14 genuine gaps are **~9 retrieval-granularity** (fact exists, not surfaced → false refusal: ETI/Er Car/CIZGI/Hara Filo/AurumTours/WEGO/Portal-Widerruf/Pegasus-WCH/PayPal), **~4 content errors** (Pegasus PNR, ETI label, Mavi Gök, Kaution), **1 refusal-phrasing** (Lufthansa). Confirms: the lever is **F3 retrieval granularity** + validated content corrections, NOT crowding/refusal-tuning. Detail: `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
+**Reversibility:** harness code only (self-cleans prod sessions); no schema/data change.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)
