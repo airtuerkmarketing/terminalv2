@@ -16,7 +16,7 @@ Tenekeci (CEO) + Ahmet Özbek (CFO). Written 2026-06-28. Keep concrete — this 
 | Prod URL | https://www.airtuerk.dev (login: `/login`) |
 | Hosting | Vercel project `terminalv2` (`prj_hUiCkTyZSxVbxoHAvRpUjlnFQAKr`), team `airtuerk-service-gmbhs-projects`, functions in **fra1** |
 | Database | Supabase `terminalv2` (`zkydrymygjrscjbhusxp`, eu-central-1, Postgres 17) |
-| Edge fns | 8 ACTIVE — `rag-query` v12, `embed-knowledge` v12, `notify-correction-event` v2, `notify-folder-access` v1, `tag-classify-chunks` v1, 3× confluence |
+| Edge fns | 8 ACTIVE — `rag-query` **v13** (F3 breadth, D-104), `embed-knowledge` v12, `notify-correction-event` v2, `notify-folder-access` v1, `tag-classify-chunks` v1, 3× confluence |
 | Cron | 4 active — `warmup-rag-query` `*/4`, `refresh-chunk-retrieval-stats` `15 3`, `purge-expired-trashed-{documents,presentations}` `30/45 3` |
 | Test account | `dev@airtuerk.de` (super_admin) — creds in `CLAUDE.local.md` |
 | Latency budget (p50, post-fra1 D-095) | login ≈ 0.21s · folder-tree TTFB ≈ 0.27s · signed-URL ≈ 0.30s · **RAG warm TTFB ≈ 3–5s** (cold ≈ 8s) |
@@ -122,5 +122,5 @@ Tenekeci (CEO) + Ahmet Özbek (CFO). Written 2026-06-28. Keep concrete — this 
 - Ledger: 82 migrations, hash `6355f130c92519af0bc106d9938939ae`, highest `20260628120000`.
 - Advisors: security 0 ERROR / 16 WARN (all by-design), performance 0 ERROR.
 - Profiles: 10 (4 super_admin / 5 admin / 1 user), 10 auth users.
-- RAG: corpus ~406 chunks; genuine answer quality ≈ 84% (harness `scripts/rag-eval.ts`).
-- Highest decision: D-101.
+- RAG: corpus ~406 chunks; genuine answer quality **86.9%** after F3 (harness `scripts/rag-eval.ts`, D-104).
+- Highest decision: D-104.

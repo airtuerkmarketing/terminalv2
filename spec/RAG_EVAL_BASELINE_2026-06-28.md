@@ -175,6 +175,34 @@ crowding and not over-refusal**. Next: **F3** retrieval granularity, then the co
 corrections. F2 refusal-tuning stays unnecessary (the false refusals are downstream of
 retrieval — fix retrieval and they resolve).
 
+## D-104 — F3 retrieval breadth (deployed, measured) → 86.9%
+
+Offline experiment first (token-matched, no deploy): raising retrieval breadth + the rerank
+window recovers "retrieved-but-cut" misses (Hara Filo, CIZGI) but **not** true recall misses
+(Er Car, AurumTours — the chunk isn't retrieved even at m60/t30). *This corrected the D-100
+"rerank-limit refuted" call* — that was based on unreliable keyword matching; with exact
+tokens, widening the rerank window **does** recover some.
+
+**Deployed** (`rag-query` v13): `RETRIEVAL_VECTOR_K` 20→60, `RETRIEVAL_TRGM_K` 10→30,
+`RERANK_INPUT_LIMIT` 40→80. Lets the Voyage reranker see ~all candidates and surface the
+specific operational chunk instead of it being cut below the ~31 pinned priority-1 rows.
+
+**Measured (full 84): genuine 86.9% (73/84)** — up from 82.1% (+4.8 pts). 65 correct,
+4 secure_refusal, 4 fixed, **8 regression** (was 11), 2 still_wrong, 1 uncertain. **5 real
+recoveries** (Hara Filo, CIZGI, ETI Stornierung, Pegasus WCH, Mavi Gök), **no broad
+regressions** (the one new flag, TUIfly #21, is the known borderline richer-answer case —
+judge variance). Latency p50 5.2s→5.5s (+0.3s, acceptable). **Kept** (reversible: revert the
+3 constants + redeploy).
+
+**Remaining 10 gaps after F3:**
+- **2 recall misses** (chunk not retrieved even at m60/t30): Er Car ADB/IST (#17),
+  AurumTours (#17 t3). → re-chunk/re-embed those supplier pages (post-demo).
+- **~6 content/granularity** (need fact sign-off or re-chunk): Pegasus PNR `Axxx` (#4),
+  ETI email label (#7), Mietwagen-Kaution **(#28 — the one hallucination: asserts a security
+  deposit; priority content fix)**, WEGO storno (#26), Portal Widerruf (#6), PayPal→Selin (#23),
+  TUIfly direct email (#21). → validated content corrections (D-070 pattern).
+- **1 phrasing**: Lufthansa (#27) uses the out-of-scope phrase instead of "no information".
+
 ## Open harness enhancements (post-D-103)
 - Add company/identity questions to the gold set (currently operational-only) so priority-1
   / persona changes can be validated (F1 couldn't be, this sprint).

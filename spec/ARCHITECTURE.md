@@ -532,7 +532,7 @@ snapshot **verified via Supabase MCP 2026-06-28 (D-102):** **34 tables + 1 view,
 88 RLS policies, 165 indexes, 82 migrations (ledger hash `6355f130…`, repo↔registry exact),
 9 extensions, 4 cron jobs, 9 storage buckets, 10 auth users, profiles 10 (4 super_admin /
 5 admin / 1 user)**. Advisors: security 0 ERROR / 16 WARN (by-design), performance 0 ERROR.
-Highest decision: **D-103**.
+Highest decision: **D-104**. RAG genuine quality **86.9%** (D-104, harness-measured).
 
 | D | Change | Effect |
 |---|---|---|
@@ -552,6 +552,7 @@ Highest decision: **D-103**.
 | D-101 (W3) | Operational/demo-day **runbook** | `RUNBOOK.md` |
 | D-102 (W3) | Final-health: live-count re-snapshot + ledger-parity re-verify + this reconcile | `HEALTH_CHECK_2026-06-28.md` |
 | D-103 (W3) | **Denylist-aware harness** (`secure_refusal` for correct secret-data declines) → **genuine quality measured 82.1% (69/84)**; 14 real gaps = ~9 retrieval-granularity + ~4 content + 1 phrasing | `RAG_EVAL_BASELINE_2026-06-28.md` |
+| D-104 (W3) | **F3 retrieval breadth** (`rag-query` v13: VECTOR_K/TRGM_K/RERANK 60/30/80) → **genuine 86.9% (73/84)**, +4.8 pts, 5 recoveries, no broad regressions. Remaining: 2 recall misses (re-chunk) + ~6 content + 1 phrasing | `RAG_EVAL_BASELINE_2026-06-28.md` |
 
 Also (not migrations): Auth `db_max_pool_size` switched absolute 10 → percent 60 via the
 Management API (W0); **V1 blocker resolved** — the Stage-8 key-user seed run on prod, profiles 4→10 (W3).

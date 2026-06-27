@@ -31,11 +31,12 @@ it is append-only history (do not rewrite past entries — add new ones).
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-103**.
+  Highest decision: **D-104**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
-  `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
-  input-language answers, D-072/D-073), `notify-correction-event`,
+  `embed-knowledge` (7 source modes), `rag-query` **v13** live (mode-chips RAG-bypass +
+  input-language answers D-072/D-073; F3 retrieval breadth VECTOR_K/TRGM_K/RERANK 60/30/80, D-104),
+  `notify-correction-event`,
   `notify-folder-access` (D-080, deployed), `tag-classify-chunks` (Haiku), + 3 confluence fns.
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
   **RAG eval harness** (`scripts/rag-eval.ts`, D-099): replays the 84 gold questions
@@ -45,15 +46,15 @@ it is append-only history (do not rewrite past entries — add new ones).
   crowding (refuted by telemetry). **D-100 measured the fixes:** F1 (demote priority-1
   31→12) = neutral (76.2%), REVERTED; F4 (embed 3 NULL context rows) kept; F2 refusal-tuning
   NOT shipped (wrong + risky lever). **D-103 made the harness denylist-aware** (correct
-  refusal of purged IBAN/cards/passwords = `secure_refusal` PASS) → **genuine quality
-  measured 82.1% (69/84)**. The 14 real gaps are ~9 retrieval-granularity + ~4 content
-  errors + 1 phrasing. Next: **F3 retrieval granularity** + validated content corrections.
-  See `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
+  refusal of purged IBAN/cards/passwords = `secure_refusal` PASS) → genuine 82.1%; **D-104
+  F3 retrieval breadth** (`rag-query` v13: VECTOR_K/TRGM_K/RERANK 60/30/80) → **genuine
+  86.9% (73/84)**, 5 recoveries, no broad regressions. Remaining 10: 2 recall misses
+  (re-chunk), ~6 content (need fact sign-off), 1 phrasing. See `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
 - **Data counts (2026-06-28):** team_members **63**, profiles **10** (4 super_admin:
   Buhara/Ahmet/Ümit/dev@; 5 admin: Hakan/Murat/Oruc/Selin/Tim; 1 user: Emirkan), 9 linked,
   active auth users **10**, assets **718**, blocks **43**, gold_set_answers **84**
-  (92.9% = one-day human pass 2026-06-22; **live harness = 77.4% strict / 82.1% genuine
-  measured**, D-099/D-103), ai_chat_sessions **62** / messages **230**, ai_corrections **1**.
+  (92.9% = one-day human pass 2026-06-22; **live harness = 86.9% genuine** after F3,
+  D-099→D-104), ai_chat_sessions **62** / messages **230**, ai_corrections **1**.
 - **✅ V1 blocker RESOLVED (2026-06-28):** the Stage-8 nine-key-user seed
   (`scripts/seed-key-users.ts`) was run on **prod** — 6 created (Ümit + the 5 admins),
   3 already existed, 0 failures, **no emails sent** (email_confirm:true). Prod now has all
@@ -106,7 +107,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## 2026-06-28 (W3) — RAG eval harness + measured fixes + V1 seed + runbook + final-health + denylist-aware (D-099–D-103)
+## 2026-06-28 (W3) — RAG eval + V1 seed + runbook + final-health + denylist-aware + F3 (D-099–D-104)
 
 Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
 `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
@@ -156,6 +157,12 @@ Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
   a false regression; added `--frage` filter. Full re-run: **genuine quality 82.1% (69/84)**
   (4 secure_refusals correctly identified; supersedes the ~84% estimate). The 14 real gaps =
   ~9 retrieval-granularity + ~4 content errors + 1 phrasing → next is **F3** + content fixes.
+- **D-104** (DECISIONS): **F3 retrieval breadth** — `rag-query` v13 (`RETRIEVAL_VECTOR_K`
+  20→60, `TRGM_K` 10→30, `RERANK_INPUT_LIMIT` 40→80) so the reranker sees ~all candidates.
+  Offline-validated, deployed, measured: **genuine 82.1%→86.9% (73/84)**, +4.8 pts, 5
+  recoveries (Hara Filo/CIZGI/ETI/Pegasus-WCH/Mavi Gök), no broad regressions, +0.3s p50.
+  Kept (reversible). Remaining 10: 2 recall misses (re-chunk post-demo), ~6 content (need
+  fact sign-off, incl. #28 Kaution hallucination), 1 phrasing.
 
 ---
 

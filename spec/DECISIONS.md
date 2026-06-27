@@ -749,6 +749,17 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-104 — F3 retrieval breadth: genuine RAG quality 82.1% → 86.9%
+**Date:** 2026-06-28 (W3)
+**Status:** Adopted. `rag-query` redeployed (v13), measured + kept.
+**Context:** D-103 measured genuine quality at 82.1% with ~9 retrieval-granularity misses (the fact exists but isn't surfaced into the final-8). An offline token-matched experiment showed widening retrieval + the rerank window recovers the "retrieved-but-cut" subset (Hara Filo, CIZGI), but not true recall misses (Er Car, AurumTours, where the chunk isn't retrieved at all). **This corrected the D-100 "rerank-limit refuted" finding** — that rested on unreliable keyword matching; with exact tokens, widening the window does help.
+**Decision:** raise `rag-query` constants `RETRIEVAL_VECTOR_K` 20→60, `RETRIEVAL_TRGM_K` 10→30, `RERANK_INPUT_LIMIT` 40→80 so the Voyage reranker sees ~all candidates instead of only the ~9 operational chunks that survived below the ~31 pinned priority-1 rows. Deploy + measure-after + revert-if-worse.
+**Measured (full 84):** **genuine 86.9% (73/84)**, up from 82.1% (+4.8 pts); regressions 11→8; **5 recoveries** (Hara Filo, CIZGI, ETI Stornierung, Pegasus WCH, Mavi Gök); no broad regressions (one borderline judge-variance flip, TUIfly). Latency p50 +0.3s. **Kept.**
+**Remaining (10):** 2 recall misses (Er Car/AurumTours → re-chunk, post-demo); ~6 content/granularity incl. the one hallucination (#28 Mietwagen-Kaution asserts a security deposit) → validated content corrections (D-070 pattern, needs fact sign-off); 1 phrasing (Lufthansa).
+**Reversibility:** revert the 3 constants in `supabase/functions/rag-query/index.ts` + redeploy (prior = v12). Detail: `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)
