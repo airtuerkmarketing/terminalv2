@@ -635,6 +635,16 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-086 — RAG edge-function warm-up (pg_cron + pg_net)
+**Date:** 2026-06-27 (batch versioned `20260628`)
+**Status:** Adopted. Migration `20260628100000_rag_warmup_cron_setup` (applied + registered).
+**Context:** `rag-query` cold-starts at ~7.9s on the first question after ~5-min idle (`LATENCY_PROBE_2026-06-27.md`). Demo-critical first impression.
+**Decision:** pg_cron job `warmup-rag-query` runs every 4 min and POSTs `{warmup:true}` (no `question`) to `rag-query` via `pg_net`; the function returns an early **400** before embed/retrieve/LLM/session — warming the Deno isolate with **zero side effects and zero cost**. Chosen over Vercel Cron: self-contained in Supabase (no plan dependency, no new route/env, **no edge-function redeploy** — lowest risk to the demo-critical function). `*/4` gives margin under the ~5-min cold threshold. Anon (publishable) key redacted in the committed file; live job uses the real key.
+**Verified:** `cron.job` shows `warmup-rag-query` active (`*/4`); `net.http_post` returns a request id; the `{warmup:true}` ping returns 400 in ~0.2s.
+**Reversibility:** `select cron.unschedule('warmup-rag-query');` (optionally drop `pg_net`).
+
+---
+
 ## D-087 — rag-knowledge bucket writes → admin-only
 **Date:** 2026-06-27 (batch versioned `20260628`)
 **Status:** Adopted. Migration `20260628110000_tighten_rag_knowledge_writes` (applied + registered).

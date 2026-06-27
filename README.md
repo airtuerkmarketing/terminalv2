@@ -53,7 +53,7 @@ See `spec/BUILD_LOG.md` for full progress.
 
 ## Supabase migrations
 
-> **81 migrations**, in exact parity with the live `schema_migrations` registry. In the
+> **82 migrations**, in exact parity with the live `schema_migrations` registry. In the
 > 2026-06-27 ledger reconcile (**D-081**) the legacy `00NN_*` files were renamed to their
 > registered `<timestamp>_<name>.sql` versions — the `00NN_` labels below are kept as
 > readable identifiers; see `supabase/migrations/` for the actual (timestamped) filenames.
@@ -83,6 +83,7 @@ See `spec/BUILD_LOG.md` for full progress.
 | `20260627120000_fk_covering_indexes.sql` | 26 covering indexes for previously-unindexed foreign keys (D-083) |
 | `20260627130000_rls_initplan_fix.sql` | Wrap `auth.uid()`→`(select auth.uid())` in 8 per-user RLS policies (D-084) |
 | `20260627140000_lock_handle_new_user_execute.sql` | Revoke EXECUTE on `handle_new_user()` from anon/authenticated/PUBLIC (D-085) |
+| `20260628100000_rag_warmup_cron_setup.sql` | pg_cron+pg_net warm-up: ping `rag-query` every 4 min to dodge cold-start (D-086) |
 | `20260628110000_tighten_rag_knowledge_writes.sql` | `rag-knowledge` bucket writes → admin-only; read unchanged (D-087) |
 | `20260628120000_revoke_secdef_anon_public.sql` | Revoke anon/PUBLIC EXECUTE on 5 RLS helpers (3 kept for the public Document Library) (D-089) |
 
