@@ -13,15 +13,28 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-16);                            /* generous air between greeting → box → Quick Grabs */
-  padding-block: var(--space-12) var(--space-16);  /* was --space-6 top — lowers the hero toward centre */
+  gap: var(--space-16);  /* air between the centred hero block → Quick Grabs */
+  padding-bottom: var(--space-16);
 }
-/* Margins add on top of the flex gap. greeting → chips is tightened to a snug
-   ~32px (64px gap − 32px) for a more connected rhythm; box → Quick Grabs stays
-   64px gap + 48px. */
-.dh-page > .ai-stack {
-  margin-top: calc(var(--space-8) - var(--space-16));  /* → 32px greeting↔chips */
-  margin-bottom: var(--space-12);
+/* Hero (greeting + chips + search box) = the first screen, vertically centred so
+   the group sits in the optical middle with natural whitespace above. greeting →
+   chips/box keeps the snug ~32px rhythm via this gap. */
+.dh-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);  /* ~32px greeting ↔ chips */
+  width: 100%;
+}
+@media (min-width: 1024px) {
+  /* Desktop hides the topbar (shell.css), so only .main-inner's top padding sits
+     above the hero. Fill the viewport minus that padding and centre. min-height
+     (not height) → on short viewports the hero grows top-aligned instead of
+     clipping; Quick Grabs always follows in normal flow below. */
+  .dh-hero {
+    min-height: calc(100dvh - 2 * var(--space-5));
+    justify-content: center;
+  }
 }
 
 /* ── Cloud Orbit ── */
