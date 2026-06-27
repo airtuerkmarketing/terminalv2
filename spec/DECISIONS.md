@@ -607,6 +607,34 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-083 — FK covering indexes (26)
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260627120000_fk_covering_indexes` (applied + registered).
+**Context:** The performance advisor flagged 26 foreign keys without a covering index (`spec/HEALTH_CHECK_2026-06-27.md` §6) — referenced-row delete/update scans the child table and FK joins are slower.
+**Decision:** add `CREATE INDEX IF NOT EXISTS <table>_<col>_idx` for all 26 (additive, idempotent, brief lock on small tables). Version pinned to `20260627120000` so it sorts **after** `folder_permissions` (090000) — two FKs are on `document_/presentation_folder_permissions`, which that migration creates; `apply_migration`'s ~07:00 auto-stamp would have ordered this before those tables exist and broken a fresh `db reset`.
+**Verified:** post-apply unindexed-FK count 26→0; repo↔ledger version-set hash parity.
+
+---
+
+## D-084 — RLS initplan fix (8 policies)
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260627130000_rls_initplan_fix` (applied + registered).
+**Context:** 8 per-user RLS policies (on `ai_chat_sessions`, `ai_chat_messages`, `ai_corrections`, `team_members`) called bare `auth.uid()`, re-evaluated per row (`auth_rls_initplan`, §5) — the policies added after the earlier `20260621161007_rls_auth_uid_initplan_fix`.
+**Decision:** `ALTER POLICY` each to wrap `auth.uid()` → `(select auth.uid())` (InitPlan, evaluated once per query). `ALTER` edits the expression in place — no DROP/CREATE window, role/command/permissive and the rest of each predicate preserved.
+**Verified:** post-apply initplan count 8→0; the 8 policies' definitions otherwise unchanged.
+
+---
+
+## D-085 — Lock handle_new_user() EXECUTE
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260627140000_lock_handle_new_user_execute` (applied + registered).
+**Context:** `handle_new_user()` (SECURITY DEFINER trigger fn, `AFTER INSERT ON auth.users`) carried a PUBLIC EXECUTE grant → callable by anon/authenticated via RPC (§7). It is never RPC-called; the trigger runs it as owner regardless of caller grants.
+**Decision:** `REVOKE EXECUTE … FROM anon, authenticated, public`. Signup is unaffected (the trigger mechanism does not consult EXECUTE). The other SECDEF helpers (`is_admin`/`is_super_admin`/`get_profile_role`/`current_team_member_id`/`can_*_folder`) ARE invoked by RLS as the authenticated role and KEEP EXECUTE — handled post-demo via `spec/SECDEF_REVOKE_TEST_PLAN.md`.
+**Reversibility:** `grant execute on function public.handle_new_user() to authenticated, anon, public;`
+**Verified:** post-apply grants = `{postgres, service_role}` only; `on_auth_user_created` trigger still on `auth.users`.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

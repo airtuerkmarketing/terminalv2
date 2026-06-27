@@ -21,16 +21,16 @@ it is append-only history (do not rewrite past entries — add new ones).
   **51 pages** (gold-set quiz pages removed), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **76 migrations** (file↔registry
-  ledger reconciled to exact parity, D-081/D-082), highest:
-  `20260627110000_harden_gold_set_and_documents_bucket` (D-082); `20260627090000_folder_permissions` applied + registered.
+  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **79 migrations** (file↔registry
+  ledger reconciled to exact parity, D-081–D-085), highest:
+  `20260627140000_lock_handle_new_user_execute` (D-085); `20260627090000_folder_permissions` applied + registered.
   Prev applied: `20260626210000_presentation_folder_visibility`. `document_folders`/`presentation_folders`
   +`color`; `presentation_folders` +`is_public` (private = admin-only, D-079);
   `document_files`/`presentation_files` +`deleted_at`/`deleted_by` (Trash); daily
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-082**.
+  Highest decision: **D-085**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
@@ -107,9 +107,13 @@ repo, 3 cron jobs healthy, public-route latency strong).
 - **Hardening done same day (D-082, `20260627110000`):** dropped the `gold_set_answers`
   open-INSERT policy (spam vector; quiz UI already gone) + privatized the unused public
   `documents` bucket (0 objects).
-- **Debt deferred to post-demo (documented, non-blocking):** SECDEF helper REVOKE from
-  anon/PUBLIC (`SECDEF_REVOKE_TEST_PLAN.md`), 26 FK indexes, 8 RLS-initplan rewrites,
-  `rag-knowledge` write→admin, Auth db-connections→percentage.
+- **Perf + security batch done same day (D-083/084/085, `…120000`/`…130000`/`…140000`):**
+  26 FK covering indexes (advisor 26→0); 8 RLS policies wrapped `auth.uid()`→`(select
+  auth.uid())` via ALTER POLICY (initplan 8→0); revoked `handle_new_user()` EXECUTE from
+  anon/authenticated/PUBLIC (trigger fn — signup unaffected, `on_auth_user_created` intact).
+- **Debt deferred to post-demo (documented, non-blocking):** the remaining SECDEF helper
+  REVOKEs (`SECDEF_REVOKE_TEST_PLAN.md` — need the role-simulation test matrix),
+  `rag-knowledge` write→admin, Auth db-connections→percentage (dashboard).
 - **Guardrail (CLAUDE.md, strengthens D-056):** every `execute_sql` DDL change ships a companion
   migration in the same commit, registered through the migration system.
 

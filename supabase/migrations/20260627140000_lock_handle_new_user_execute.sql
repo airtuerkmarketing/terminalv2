@@ -1,0 +1,22 @@
+-- ============================================================================
+-- 20260627140000_lock_handle_new_user_execute.sql
+-- ============================================================================
+-- D-085 — Security: revoke EXECUTE on handle_new_user() from anon/authenticated/PUBLIC.
+--
+-- handle_new_user() is a SECURITY DEFINER trigger function (AFTER INSERT ON
+-- auth.users). The trigger mechanism runs it as the function owner and does NOT
+-- consult the caller's EXECUTE grant, so removing the public RPC surface is
+-- harmless to signup. This clears the anon/authenticated_security_definer_function_executable
+-- advisor findings for this function (spec/HEALTH_CHECK_2026-06-27.md §7).
+--
+-- The OTHER SECDEF helpers (is_admin / is_super_admin / get_profile_role /
+-- current_team_member_id / can_*_folder) are invoked BY RLS policies as the
+-- authenticated role and MUST keep EXECUTE — those are handled separately, with a
+-- test matrix, in spec/SECDEF_REVOKE_TEST_PLAN.md (post-demo).
+--
+-- Applied via execute_sql + an explicit schema_migrations row at version
+-- 20260627140000. Reversible: grant execute on function public.handle_new_user()
+-- to authenticated, anon, public;
+-- ============================================================================
+
+revoke execute on function public.handle_new_user() from anon, authenticated, public;
