@@ -30,7 +30,7 @@ it is append-only history (do not rewrite past entries — add new ones).
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-090**.
+  Highest decision: **D-091**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
@@ -86,6 +86,26 @@ it is append-only history (do not rewrite past entries — add new ones).
   AUDIT-006 (frozen 2026-06-23 corpus) — AUDIT-003 (Hara Filo) + AUDIT-004 (Pegasus)
   fixed in Welle D3 (`20260626093731`, D-070); D2 + D3 Phase-2 embed backfill of the
   3 priority-1 rows (ZDR-gated consistency follow-up, not retrieval-blocking).
+
+---
+
+## 2026-06-28 (W1) — Demo-prep triage D-091–D-094
+
+Autonomous, zero migrations (ledger unchanged 82, hash `6355f130…`). See
+`spec/SHIPPED_2026-06-28_W1.md`.
+
+- **D-091** repo drift: reverted an inert React Compiler WIP (`babel.config.js` + 2 packages —
+  Turbopack ignores it, no `next.config` wiring, nothing imports it); fixed pnpm 11's `sharp`
+  build-approval (`pnpm-workspace.yaml` `allowBuilds: sharp: false`) — the actual `pnpm install`
+  failure. install/tsc/build green.
+- **D-092** RAG cron warm-up **verified 🟢** via telemetry (cron history + `net._http_response`:
+  pings reach rag-query → 400 every 4 min). No disable-cold-test (would risk cooling the demo fn).
+- **D-093** signed-URL **analyzed, no change**: the 2 Supabase calls are dependent (read→sign), so
+  parallelize/SQL-function don't apply and edge only trims cold-start; latency is inherent +
+  partly client-RTT + acceptable. Post-demo lever = edge-cached signing. `spec/SIGNED_URL_OPTIMIZATION_2026-06-28.md`.
+- **D-094** authed folder-tree probe 🟡 (via constructed `@supabase/ssr` cookie, no Playwright):
+  TTFB p50 0.67s / p95 0.90s; EXPLAIN shows the folder query is 0.1ms — cost is auth-SSR overhead,
+  not folder logic. `spec/LATENCY_PROBE_FOLDER_TREE_2026-06-28.md`.
 
 ---
 
