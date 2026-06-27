@@ -12,7 +12,7 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "@/components/duty-free",
+    "components": "@/components/duty-free/ui",
     "ui": "@/components/duty-free/ui",
     "utils": "@/lib/utils",
     "lib": "@/lib",
