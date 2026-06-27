@@ -46,13 +46,13 @@ html { scrollbar-gutter: stable; }
    hidden) so the user block always sticks to the bottom and is never clipped. */
 /* Panel: flush on the left (square corners), rounded 20px on the right only —
    the sidebar sits attached to the viewport's left edge. */
-.sidebar-inner { background-color: var(--sidebar-bg); border: 1px solid var(--hairline); border-radius: 0 var(--sidebar-panel-radius) var(--sidebar-panel-radius) 0; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-rest); overflow: hidden; }
+.sidebar-inner { background-color: var(--sidebar-bg); border: 1px solid var(--hairline); border-radius: 0 var(--sidebar-panel-radius) var(--sidebar-panel-radius) 0; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-3); box-shadow: var(--shadow-rest); overflow: hidden; }
 
-.sidebar-top { flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.sidebar-top { flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 /* The scroll zone breaks out of the inner's right padding so its scrollbar sits
    flush against the panel's right edge (cleaner than a floating, inset bar); the
    matching padding-right keeps the nav items themselves inset exactly as before. */
-.sidebar-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: var(--space-4); margin-right: calc(-1 * var(--space-3)); padding-right: var(--space-3); }
+.sidebar-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: var(--space-2); margin-right: calc(-1 * var(--space-3)); padding-right: var(--space-3); }
 /* Subtle scrollbar: thin, light thumb, transparent track, NO end arrow buttons.
    The standard scrollbar-width/color and the ::-webkit-scrollbar pseudo are
    mutually exclusive — on a WebKit/Chromium engine, setting scrollbar-width
@@ -73,7 +73,7 @@ html { scrollbar-gutter: stable; }
 :root[data-theme="ios18-dark"] .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(235, 235, 245, 0.22); }
 :root[data-theme="ios18-dark"] .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(235, 235, 245, 0.35); }
 
-.brand-mark { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--radius-md); }
+.brand-mark { position: relative; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--radius-md); }
 /* terminal SVG logo (TerminalLogo, single source of truth): wordmark when
    expanded, glyph mark when collapsed. Both paint with currentColor, so they
    inherit the rail's text colour and need no per-theme invert hack. */
@@ -86,8 +86,9 @@ html { scrollbar-gutter: stable; }
 .collapse-btn svg { width: 14px; height: 14px; transition: transform 250ms var(--ease-smooth); }
 
 .nav-section { display: flex; flex-direction: column; gap: 2px; }
-/* Slightly larger gap between groups (Dashboard | Brands | IBE/APIX | Resources). */
-.nav-divider { height: 1px; background: var(--separator); margin: var(--space-3); }
+/* Tight dividers between groups (Dashboard | Brands | IBE/APIX | Resources):
+   little vertical air, horizontal inset kept. */
+.nav-divider { height: 1px; background: var(--separator); margin: 6px var(--space-3); }
 
 /* border is 1px transparent on every item so the active state can add a hairline
    border without nudging the layout (no width/height reflow between states). */
@@ -170,7 +171,10 @@ html { scrollbar-gutter: stable; }
 
 /* ════ DESKTOP (≥ 1024px / lg): fixed, collapsible sidebar ════ */
 @media (min-width: 1024px) {
-  .layout { display: grid; grid-template-columns: var(--sidebar-w) 1fr; transition: grid-template-columns 300ms var(--ease-smooth); }
+  /* Smooth collapse/expand: the grid track width glides (reduced-motion freezes it
+     below). Only fires on toggle — the pre-paint script sets the initial value
+     before paint, so first render doesn't animate (no flash). */
+  .layout { display: grid; grid-template-columns: var(--sidebar-w) 1fr; transition: grid-template-columns 280ms var(--ease-smooth); }
   :root[data-sidebar="collapsed"] .layout { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
 
   .sidebar { position: sticky; top: 0; height: 100vh; width: auto; padding: 0; transform: none; z-index: auto; transition: none; }
@@ -198,23 +202,38 @@ html { scrollbar-gutter: stable; }
      space-2 v / user-block space-3 v all match the expanded values.) */
   :root[data-sidebar="collapsed"] .sidebar { padding: 0; }
   :root[data-sidebar="collapsed"] .sidebar-inner { padding: var(--space-4) var(--space-2); }
-  /* Collapsed rail (48px content): stack the icon badge over the collapse
-     toggle so neither gets cramped side-by-side. */
-  :root[data-sidebar="collapsed"] .brand-mark { flex-direction: column; justify-content: center; gap: var(--space-2); padding: var(--space-2); }
+  /* Collapsed rail header: show ONLY the logo mark; the collapse toggle is an
+     overlay that fades in on hover (or keyboard focus) and, when shown, replaces
+     the mark — click expands. The mark fades out so the swap reads cleanly. */
+  :root[data-sidebar="collapsed"] .brand-mark { flex-direction: row; justify-content: center; gap: 0; padding: var(--space-2); }
   :root[data-sidebar="collapsed"] .brand-logo-link { flex: 0; justify-content: center; }
   :root[data-sidebar="collapsed"] .brand-logo-wordmark { display: none; }
-  :root[data-sidebar="collapsed"] .brand-logo-icon { display: block; }
-  :root[data-sidebar="collapsed"] .collapse-btn { margin-left: 0; }
+  :root[data-sidebar="collapsed"] .brand-logo-icon { display: block; transition: opacity 150ms var(--ease-smooth); }
+  /* Toggle = absolute overlay over the whole header. opacity:0 (NOT display:none)
+     keeps it keyboard-focusable; pointer-events:none at rest so the logo link
+     stays clickable until hover/focus reveals the toggle. */
+  :root[data-sidebar="collapsed"] .collapse-btn {
+    position: absolute; inset: 0; width: 100%; height: 100%; margin: 0;
+    border-radius: var(--radius-md);
+    opacity: 0; pointer-events: none;
+    transition: opacity 150ms var(--ease-smooth);
+  }
+  :root[data-sidebar="collapsed"] .brand-mark:hover .brand-logo-icon { opacity: 0; }
+  :root[data-sidebar="collapsed"] .brand-mark:hover .collapse-btn,
+  :root[data-sidebar="collapsed"] .collapse-btn:focus-visible {
+    opacity: 1; pointer-events: auto; background: rgba(120, 120, 128, 0.10);
+  }
   :root[data-sidebar="collapsed"] .collapse-btn svg { transform: rotate(180deg); }
   /* Squared 40×40 hover/active centered on the rail. min-height:40 (base) keeps
      the item height identical to expanded; width:40 + margin auto centers it. */
   :root[data-sidebar="collapsed"] .nav-item { justify-content: center; gap: 0; width: 40px; margin-inline: auto; padding: 8px 0; }
   :root[data-sidebar="collapsed"] .nav-item .text { flex: 0; width: 0; opacity: 0; }
   :root[data-sidebar="collapsed"] .nav-item .chevron { display: none; }
-  /* White-on-white active square needs a touch more shadow to read at 64px. */
-  :root[data-sidebar="collapsed"] .nav-item.active { box-shadow: 0 1px 3px rgba(0,0,0,0.10); }
-  :root[data-theme="ios18-dark"][data-sidebar="collapsed"] .nav-item.active { box-shadow: 0 1px 3px rgba(0,0,0,0.55); }
-  :root[data-sidebar="collapsed"] .nav-divider { margin: var(--space-3) var(--space-2); }
+  /* Active item on the rail: a dezent accent bar on the left edge + a touch more
+     shadow so the white square reads at 64px. */
+  :root[data-sidebar="collapsed"] .nav-item.active { box-shadow: inset 2px 0 0 var(--accent), 0 1px 3px rgba(0,0,0,0.10); }
+  :root[data-theme="ios18-dark"][data-sidebar="collapsed"] .nav-item.active { box-shadow: inset 2px 0 0 var(--accent), 0 1px 3px rgba(0,0,0,0.55); }
+  :root[data-sidebar="collapsed"] .nav-divider { margin: 6px var(--space-2); }
   :root[data-sidebar="collapsed"] .nav-sub { display: none; }
   /* Collapsed rail uses a tighter (space-2) inner padding, so drop the scroll
      zone's right break-out — otherwise it would overshoot the narrower panel. */

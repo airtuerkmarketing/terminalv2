@@ -178,6 +178,7 @@ export function Sidebar({
             aria-expanded={open}
             aria-controls={subnavId}
             aria-current={open ? "page" : undefined}
+            title={collapsed ? b.label : undefined}
             onClick={closeDrawer}
           >
             <span className="icon">
@@ -207,6 +208,7 @@ export function Sidebar({
         item={b}
         active={isActive(pathname, b.href, false)}
         onNavigate={closeDrawer}
+        collapsed={collapsed}
       />
     );
   }
@@ -254,6 +256,7 @@ export function Sidebar({
                 item={nav.dashboard}
                 active={isActive(pathname, nav.dashboard.href, true)}
                 onNavigate={closeDrawer}
+                collapsed={collapsed}
               />
             </nav>
           </div>
@@ -302,6 +305,7 @@ export function Sidebar({
                       item={r}
                       active={isActive(pathname, r.href, false)}
                       onNavigate={closeDrawer}
+                      collapsed={collapsed}
                     />
                   );
                 }
@@ -316,6 +320,7 @@ export function Sidebar({
                       aria-expanded={open}
                       aria-controls={subnavId}
                       aria-current={open ? "page" : undefined}
+                      title={collapsed ? r.label : undefined}
                       onClick={closeDrawer}
                     >
                       <span className="icon">
@@ -401,16 +406,22 @@ function NavLink({
   item,
   active,
   onNavigate,
+  collapsed = false,
 }: {
   item: NavLeaf;
   active: boolean;
   onNavigate: () => void;
+  /** Collapsed rail → native title acts as the icon tooltip (a styled ::after is
+   *  clipped by the sidebar's overflow:hidden scroll). Labels are visible when
+   *  expanded, so no title there. */
+  collapsed?: boolean;
 }) {
   return (
     <Link
       href={item.href}
       className={`nav-item${active ? " active" : ""}`}
       aria-current={active ? "page" : undefined}
+      title={collapsed ? item.label : undefined}
       onClick={onNavigate}
     >
       <span className="icon">
