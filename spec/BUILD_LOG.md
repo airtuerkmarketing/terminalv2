@@ -47,13 +47,18 @@ it is append-only history (do not rewrite past entries — add new ones).
   NOT shipped (wrong + risky lever). **~5 "regressions" are correct security refusals**
   (purged IBAN/cards/passwords) → **genuine quality ≈ 84%**. Next: denylist-aware harness
   + F3 retrieval granularity + validated content fixes. See `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
-- **Data counts (2026-06-26):** team_members **63**, profiles **4 (all super_admin,
-  0 admin/user)**, active auth users **4**, assets **718**, blocks **43**,
-  gold_set_answers **84** (92.9% = one-day human pass 2026-06-22; **live harness =
-  77.4% strict**, D-099), ai_chat_sessions **62** / messages **230**, ai_corrections **1**.
-- **⚠️ V1 blocker:** prod `profiles` has only **4 rows (all super_admin, 0 admin/0
-  user)** — the Stage-8 nine-key-user seed (`684d67f`) never reached prod; must be
-  re-run before the 2026-08-01 demo (details in the 2026-06-25 finding below).
+- **Data counts (2026-06-28):** team_members **63**, profiles **10** (4 super_admin:
+  Buhara/Ahmet/Ümit/dev@; 5 admin: Hakan/Murat/Oruc/Selin/Tim; 1 user: Emirkan), 9 linked,
+  active auth users **10**, assets **718**, blocks **43**, gold_set_answers **84**
+  (92.9% = one-day human pass 2026-06-22; **live harness = 77.4% strict / ~84% genuine**,
+  D-099/D-100), ai_chat_sessions **62** / messages **230**, ai_corrections **1**.
+- **✅ V1 blocker RESOLVED (2026-06-28):** the Stage-8 nine-key-user seed
+  (`scripts/seed-key-users.ts`) was run on **prod** — 6 created (Ümit + the 5 admins),
+  3 already existed, 0 failures, **no emails sent** (email_confirm:true). Prod now has all
+  three roles → role-gated demo views work. **⚠️ FLAG:** Emirkan Erkara is `role=user`
+  (account predates the seed; seed doesn't set roles) — onboarding intended super_admin;
+  Buhara's call (D-055 super-admin-only). New accounts share a printed temp password (not
+  stored) → reset/distribute before demo.
 - **Auth/roles:** `super_admin | admin | user`; RLS via `is_admin()` /
   `is_super_admin()` / `get_profile_role()`; profile role-changes are
   super-admin-only (D-055).
@@ -128,6 +133,11 @@ Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
   444009709) → **genuine quality ≈ 84%**, not 76%. Recommended next: denylist-aware harness
   → F3 retrieval granularity → validated content corrections (D-070 pattern). Net prod change:
   F1 reverted, F4 embeddings backfilled (no schema/migration).
+- **V1 blocker fix** (not a DECISIONS entry — executes the existing Stage-8 plan): ran
+  `scripts/seed-key-users.ts` on **prod**. 6 auth users created (Ümit + admins
+  Oruc/Selin/Tim/Hakan/Murat), 3 existed, 0 failures, no emails. Prod profiles **4→10**
+  (4 super_admin / 5 admin / 1 user) — all role-gated demo paths now exercisable.
+  ⚠️ Emirkan = `user` (predates seed) — role decision deferred to Buhara (D-055).
 
 ---
 
