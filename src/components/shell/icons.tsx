@@ -7,6 +7,7 @@ import {
   LogOut,
   Presentation,
   Settings,
+  Sparkles,
   User,
   UserCog,
   Users,
@@ -39,6 +40,8 @@ export function NavIcon({ name }: { name: string }) {
   switch (name) {
     case "dashboard":
       return <LayoutDashboard aria-hidden />;
+    case "duty-free":
+      return <Sparkles aria-hidden />;
     case "airtuerk-service":
       // FALLBACK (pre-favicon) — restore by uncommenting:
       // return (

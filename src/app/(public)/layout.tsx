@@ -19,13 +19,15 @@ const IBE_SLUG = "ibe-product-suite";
 /** Resources section — hardcoded routes per ARCHITECTURE.md §3 / §5. Document
  *  Library is an EXPANDABLE node whose children are the visible top-level folders
  *  (built in getNav, RLS-scoped); the rest stay flat leaves. */
-// Sidebar Resources order: Presentations → Documents → Assets → Team.
+// Sidebar Resources order: Presentations → Documents → Assets → Duty Free.
 const RESOURCES_BEFORE: NavLeaf[] = [
   { label: "Presentations", href: "/presentation-hub", iconKey: "presentation-hub" },
 ];
 const RESOURCES_AFTER: NavLeaf[] = [
   { label: "Assets", href: "/asset-library", iconKey: "asset-library" },
-  { label: "Team", href: "/team", iconKey: "team" },
+  // "Duty Free" supersedes the standalone "Team" entry — the crew now lives inside
+  // the Duty Free Crew object, and /team 308-redirects here (next.config.ts).
+  { label: "Duty Free", href: "/duty-free", iconKey: "duty-free" },
 ];
 
 /**
