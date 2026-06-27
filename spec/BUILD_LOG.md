@@ -21,15 +21,16 @@ it is append-only history (do not rewrite past entries — add new ones).
   **51 pages** (gold-set quiz pages removed), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **74 migrations**, highest:
-  `20260627090000_folder_permissions` (file added; **prod apply pending sign-off**).
+  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` installed. **75 migrations** (file↔registry
+  ledger reconciled to exact parity, D-081), highest:
+  `20260627100000_drift_repair_register_missing_migrations`; `20260627090000_folder_permissions` applied + registered.
   Prev applied: `20260626210000_presentation_folder_visibility`. `document_folders`/`presentation_folders`
   +`color`; `presentation_folders` +`is_public` (private = admin-only, D-079);
   `document_files`/`presentation_files` +`deleted_at`/`deleted_by` (Trash); daily
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-080**.
+  Highest decision: **D-081**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
@@ -85,6 +86,30 @@ it is append-only history (do not rewrite past entries — add new ones).
   AUDIT-006 (frozen 2026-06-23 corpus) — AUDIT-003 (Hara Filo) + AUDIT-004 (Pegasus)
   fixed in Welle D3 (`20260626093731`, D-070); D2 + D3 Phase-2 embed backfill of the
   3 priority-1 rows (ZDR-gated consistency follow-up, not retrieval-blocking).
+
+---
+
+## 2026-06-27 — Phase B health check (GO) + ledger reconcile (D-081)
+
+Pre-demo system-wide health audit + migration-ledger reconciliation. Read-only audit
+report in `spec/HEALTH_CHECK_2026-06-27.md`; **verdict GO** for 2026-08-01 (no blockers;
+34/34 public tables RLS-covered, `typecheck`+`build` green, 8/8 edge fns byte-identical to
+repo, 3 cron jobs healthy, public-route latency strong).
+
+- **Ledger reconcile (D-081):** `supabase/migrations/` brought to exact parity with the live
+  `schema_migrations` registry — backfilled the 5 unregistered migrations (D-074/076/077/078/079
+  schema parts, applied via `execute_sql`, never recorded) via
+  `20260627100000_drift_repair_register_missing_migrations`; renamed 30 legacy `00NN_*` + 4
+  timestamp-mismatched files (kb_foundation + seed_tag_vocabulary, chunk_retrieval_stats_job,
+  self_service_profile_fields — the last 3 missed by the plan, caught by a version-set md5).
+  Repo 74→75, ledger 69→75, hash parity both sides. Prod write = registry INSERT only (schema
+  NoOp, reversible via `DELETE … WHERE created_by='drift-repair-2026-06-27'`).
+- **Debt deferred to post-demo (documented, non-blocking):** SECDEF helper REVOKE from
+  anon/PUBLIC (`SECDEF_REVOKE_TEST_PLAN.md`), 26 FK indexes, 8 RLS-initplan rewrites,
+  `documents` bucket public→private, `rag-knowledge` write tighten, `gold_set_answers`
+  open-INSERT drop, Auth db-connections→percentage.
+- **Guardrail (CLAUDE.md, strengthens D-056):** every `execute_sql` DDL change ships a companion
+  migration in the same commit, registered through the migration system.
 
 ---
 

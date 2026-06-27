@@ -38,7 +38,7 @@ See `spec/BUILD_LOG.md` for full progress.
 | File | Purpose |
 |---|---|
 | `ARCHITECTURE.md` | System design, schema, block taxonomy, routing, brand hierarchy |
-| `DECISIONS.md` | Locked design decisions (D-001 through D-080) |
+| `DECISIONS.md` | Locked design decisions (D-001 through D-081) |
 | `DESIGN_SYSTEM.md` | iOS 18 Liquid Glass design language |
 | `EMBEDS_INVENTORY.md` | Webflow embeds preserved for Phase 6 |
 | `SOURCE_INVENTORY.md` | Full inventory of the Webflow zip |
@@ -52,6 +52,11 @@ See `spec/BUILD_LOG.md` for full progress.
 | `spec/mockups/` | Design reference HTML mockups |
 
 ## Supabase migrations
+
+> **75 migrations**, in exact parity with the live `schema_migrations` registry. In the
+> 2026-06-27 ledger reconcile (**D-081**) the legacy `00NN_*` files were renamed to their
+> registered `<timestamp>_<name>.sql` versions — the `00NN_` labels below are kept as
+> readable identifiers; see `supabase/migrations/` for the actual (timestamped) filenames.
 
 | File | Purpose |
 |---|---|
@@ -73,6 +78,7 @@ See `spec/BUILD_LOG.md` for full progress.
 | `20260621*`–`20260622*` (10 migrations) | User Panel: profiles↔team_members link, `user_activity_log`, `profiles_v` view, avatars bucket, RLS recursion / search_path fixes |
 | `20260623*`–`20260626*` | RAG/Wissensbasis foundation + retrieval, Document Library & Presentation Hub folder colour/Trash/visibility (D-074–079) |
 | `20260627090000_folder_permissions.sql` | Per-user folder grants: `document_folder_permissions`/`presentation_folder_permissions` + `current_team_member_id()`/`can_access_*`/`can_see_*` helpers + widened SELECT policies (D-080) |
+| `20260627100000_drift_repair_register_missing_migrations.sql` | Ledger reconcile: backfill the 5 unregistered migrations + register self; pairs with 34 file renames (D-081) |
 
 ## Design system
 

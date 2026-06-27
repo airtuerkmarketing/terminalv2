@@ -44,7 +44,7 @@ Three distinct problems:
 
 **Note:** `20260627090000_folder_permissions` IS registered and fully applied — `can_*_folder` functions exist on prod, both `*_folder_permissions` tables exist, RLS policies in place.
 
-**Decision:** reconcile now (full system-wide, not demo-gated). See `LEDGER_RECONCILE_PLAN_2026-06-27.md` for the verify-then-backfill approach: drift-repair INSERT for the 5 + 30 `git mv` renames + kb rename. Schema-side NoOp, reversible.
+**Decision:** ✅ **Reconciled 2026-06-27 (D-081).** Backfilled the 5 unregistered versions + renamed 34 files (30 legacy `00NN` + 4 timestamp-mismatched — a version-set hash caught 3 the plan had missed). Repo ↔ registry now byte-identical (75/75, md5 parity). Schema untouched, reversible. See `DECISIONS.md` D-081.
 
 ---
 
@@ -228,7 +228,7 @@ The rest (SMTP/magic-link, OAuth, JWT expiry, rate limits) needs the Supabase **
 
 | Order | Item | When | Reference |
 |---|---|---|---|
-| 1 | Reconcile migration ledger (5 INSERT + 30 `00NN`→timestamp + kb rename) | now | `LEDGER_RECONCILE_PLAN_2026-06-27.md` |
+| 1 | ✅ **Done** — reconcile migration ledger (5 INSERT + 34 file renames) | 2026-06-27 | `DECISIONS.md` D-081 |
 | 2 | Doc-refresh (BUILD_LOG, SOURCE_INVENTORY, DECISIONS D-NNN, CLAUDE.md guardrail) | now | this report + reconcile plan |
 | 3 | `REVOKE` SECDEF execute from `anon`/`PUBLIC` + lock `handle_new_user` + drop `gold_set_answers` public-INSERT policy | post-demo | `SECDEF_REVOKE_TEST_PLAN.md` |
 | 4 | Single FK-index migration (26) + 8 RLS-initplan rewrites | post-demo | TBD draft |

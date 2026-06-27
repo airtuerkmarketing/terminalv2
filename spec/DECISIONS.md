@@ -582,6 +582,20 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-081 — Reconcile schema_migrations ledger drift
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260627100000_drift_repair_register_missing_migrations` (registry-only backfill) + 34 file renames. Schema-side NoOp.
+**Context:** The 2026-06-27 Phase-B health check (`spec/HEALTH_CHECK_2026-06-27.md`) found `supabase/migrations/` out of parity with the live `supabase_migrations.schema_migrations` registry in three ways: (1) **5 migrations** (D-074/076/077/078/079 schema parts — document/presentation folder colour, file Trash, presentation visibility) were applied via `execute_sql` to prod but never recorded — live schema correct, registry empty; (2) **30 legacy `00NN_*.sql`** files were registered under timestamp versions (CLI-converted at first apply), so `supabase migration list` showed false pending/remote-only; (3) **4 timestamp-mismatched** files (repo picked a round timestamp, the ledger kept the real apply-time): `knowledge_base_foundation` (190000→200810), `seed_tag_vocabulary` (090000→040925), `chunk_retrieval_stats_job` (093000→041454), `self_service_profile_fields` (140000→110208). Only kb_foundation was in the original reconcile plan; the other 3 were surfaced by an md5 of the sorted version set.
+**Decision:**
+  - (1) backfill the 5 versions into `schema_migrations` (`created_by='drift-repair-2026-06-27'`) via `execute_sql` plus an explicit self-registration row for `20260627100000` — **not** `apply_migration`, which would auto-assign a now-timestamp and re-introduce a 1-file drift. The migration file body stays at the 5 backfill rows so the CLI runner records `20260627100000` itself on a fresh `db reset` (no duplicate-key conflict).
+  - (2)+(3) rename all 34 files to their registered `<timestamp>_<name>.sql`. Two keep their numeric prefix in the registered `name` (`0017`, `0033`) → double-prefixed filenames.
+**Result:** repo files 74→75, ledger 69→75; md5 of the sorted version set is identical on both sides (`8b62c4b2…`); `comm` empty both ways. Schema unchanged.
+**Future guardrail (strengthens D-056):** every `execute_sql` **DDL** change must ship a companion migration **in the same commit**, registered through the migration system (`apply_migration`/`db push`), so file↔ledger parity holds. Recorded in `CLAUDE.md`.
+**Reversibility:** `DELETE FROM supabase_migrations.schema_migrations WHERE created_by='drift-repair-2026-06-27'` + `git revert` the rename commit. Schema-side: nothing to roll back.
+**Verified:** Phase A pre-verify (5 unregistered = 0 rows; 8 schema markers true; 30 ledger names matched; kb version confirmed) + Phase C post-verify (6 rows inserted, total = 75, version-set hash parity).
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

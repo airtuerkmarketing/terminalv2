@@ -34,8 +34,12 @@ Specifically:
   A change that adds a migration but leaves counts/ranges stale is incomplete.
 - Update the highest `D-NNN` and the highest migration number everywhere they appear
   (README migration table, ARCHITECTURE §7/§8/§10, BUILD_LOG Current State).
-- A direct `execute_sql` data change still needs a follow-up reproducibility migration
-  (see D-056).
+- A direct `execute_sql` **schema/DDL** change must ship a companion migration **in the
+  same commit**, registered through the migration system (`apply_migration`/`db push`, not
+  raw `execute_sql`), so `supabase/migrations/` stays in exact parity with the
+  `schema_migrations` registry. Ledger drift here is what D-081 had to repair — don't
+  recreate it. A data-only `execute_sql` change still needs a follow-up reproducibility
+  migration (see D-056).
 
 ## Workflow notes
 
