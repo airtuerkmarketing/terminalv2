@@ -73,6 +73,12 @@
   align-items: center;
   gap: 10px;
 }
+/* Right cluster of the folder header: access avatar group + the ⋮ actions menu. */
+.dl-head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .dl-head-title h1 {
   font-size: clamp(20px, 2.4vw, 26px);
   font-weight: 700;
