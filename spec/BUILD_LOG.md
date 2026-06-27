@@ -12,7 +12,8 @@ it is append-only history (do not rewrite past entries — add new ones).
 - **HEAD:** `feat/folder-permissions` — **Per-user folder permissions** (D-080): a super_admin grants individual people read access to a private folder in the Document Library and/or Presentation Hub via **"Manage access…"** in all four folder menus (a searchable team-directory picker). Grants key off `team_members` (so people not yet invited can be granted; auto-activates on first login), cascade **downward** only (a subfolder grant never leaks the parent's content; ancestors show in the tree but no content), and are **read-only** (write policies stay admin-only). New grant tables `document_folder_permissions`/`presentation_folder_permissions` + SECURITY DEFINER `current_team_member_id()`/`can_access_*`/`can_see_*` helpers + widened SELECT policies; new email edge function `notify-folder-access` (Resend). Migration `20260627090000_folder_permissions` — **applied + edge-fn `notify-folder-access` deployed**. Prev: **Presentation Hub folder visibility** (D-079): `presentation_folders.is_public` (default true = non-breaking) + RLS so private folders/files are admin-only; **"Make private/public"** in the folder card + on-page menus, lock cue on private cards. Migration `20260626210000` applied to prod. Prev: **Presentation Hub ported 1:1 to the Document Library construct** (D-077/078 — nested secondary sidebar tree, managed SVG colour cards + full context menu, counts, Move, rename-redirect, delete-guard, file Trash with source+thumbnail+slides purge; migrations `…190000`+`…200000`); both library nav nodes kept visible on their own route; Resources order **Presentations → Documents → Assets → Team**. **Document Library data/shell hardening** (D-074/075/076). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
-  (Webflow/`terminal.airtuerk.de` retired).
+  (Webflow/`terminal.airtuerk.de` retired). Serverless functions in **fra1**
+  (co-located with Supabase eu-central-1 — D-095).
 - **Database:** 34 tables + the `profiles_v` view (D-080 added 2:
   `document_folder_permissions`, `presentation_folder_permissions`; RAG foundation added 6:
   `company_context`, `confluence_chunks`, `brand_chunks`, `ai_chat_sessions`,
@@ -30,7 +31,7 @@ it is append-only history (do not rewrite past entries — add new ones).
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-091**.
+  Highest decision: **D-095**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
@@ -86,6 +87,25 @@ it is append-only history (do not rewrite past entries — add new ones).
   AUDIT-006 (frozen 2026-06-23 corpus) — AUDIT-003 (Hara Filo) + AUDIT-004 (Pegasus)
   fixed in Welle D3 (`20260626093731`, D-070); D2 + D3 Phase-2 embed backfill of the
   3 priority-1 rows (ZDR-gated consistency follow-up, not retrieval-blocking).
+
+---
+
+## 2026-06-28 (W2) — Demo polish D-095–D-098
+
+Autonomous, zero migrations (ledger unchanged 82/`6355f130`). See `spec/SHIPPED_2026-06-28_W2.md`.
+
+- **D-095** (DECISIONS): premise recon overrode the `getUser→getSession` plan — the authed-SSR
+  floor was the **Vercel function region** (`iad1`/US vs Supabase `eu-central-1`/EU), not getUser.
+  Fixed via `vercel.json regions:["fra1"]` co-location. Prod: folder-tree TTFB p50 0.67→**0.27s**
+  (−60%), signed-URL p50 0.48→**0.30s** (−37%). getSession not pursued (marginal once co-located,
+  weakens `requireAdmin`). `spec/AUTH_STRATEGY_AUDIT_2026-06-28.md`.
+- **D-096** Playwright E2E smoke scaffold — 5 demo flows (login, library, file-open, AI question,
+  logout) **all green vs prod**; stable locators (no test-ids); storageState auth; CI workflow
+  (`.github/workflows/e2e.yml`). `pnpm e2e`. Buhara: set CI secrets.
+- **D-097** bundle analysis — `@next/bundle-analyzer` is Turbopack-incompatible; heavy deps
+  (d3/leaflet) already off the demo path → no change. `spec/BUNDLE_ANALYSIS_2026-06-28.md`.
+- **D-098** UX state audit — demo path already graceful (loading/error/empty/404/AI-error); one
+  fix: `app/admin/loading.tsx` (was a blank cold-paint). `spec/UX_STATE_AUDIT_2026-06-28.md`.
 
 ---
 
