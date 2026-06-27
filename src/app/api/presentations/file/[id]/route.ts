@@ -37,6 +37,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     .from("presentation_files")
     .select("id, title, file_type, storage_path, thumbnail_path, slide_paths")
     .eq("id", id)
+    .is("deleted_at", null) // trashed files aren't servable via a direct URL (D-078)
     .maybeSingle();
   if (!file) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

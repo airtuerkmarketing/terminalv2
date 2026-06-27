@@ -31,11 +31,15 @@ const COLOR_SWATCHES: { value: FolderColor; color: string }[] = [
   { value: "yellow", color: "var(--folder-swatch-yellow)" },
 ];
 
-const THUMB = (f: FolderPreviewFile) => `/api/presentations/file/${f.id}?asset=thumb`;
+// Peek image tiles from the SOURCE (served inline) — like the file card; no
+// dependency on the (Stufe-3) thumbnail pipeline. Non-image types peek as a plain
+// sheet (FolderGraphic3D only renders an <img> when isImage).
+const IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
+const PEEK_SRC = (f: FolderPreviewFile) => `/api/presentations/file/${f.id}`;
 
 /** Map a presentation preview file to the shared FolderPreviewFile shape. */
 function toPreview(p: PresentationPreviewFileDTO): FolderPreviewFile {
-  return { id: p.id, title: p.title, extension: p.fileType, isImage: p.hasThumbnail };
+  return { id: p.id, title: p.title, extension: p.fileType, isImage: IMAGE_EXTS.has(p.fileType.toLowerCase()) };
 }
 
 /** Shared folder actions (rename / subfolder / move / colour / delete) + the
@@ -253,7 +257,7 @@ export function PresentationFolderCard3D({
     >
       <Link href={href} className="dl-cell__hit" aria-label={`Open ${name}`} onFocus={() => setHovered(true)} onBlur={() => setHovered(false)}>
         <span className="dl-cell__visual">
-          <FolderGraphic3D previewFiles={previewFiles.map(toPreview)} isPublic={isPublic} hovered={hovered} color={folderColor} previewSrc={THUMB} />
+          <FolderGraphic3D previewFiles={previewFiles.map(toPreview)} isPublic={isPublic} hovered={hovered} color={folderColor} previewSrc={PEEK_SRC} />
         </span>
       </Link>
 
