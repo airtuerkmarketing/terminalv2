@@ -674,6 +674,17 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-091 — Repo drift triage: revert React Compiler WIP + fix pnpm sharp build-approval
+**Date:** 2026-06-28 (W1 prep)
+**Status:** Adopted.
+**Context:** The working tree carried uncommitted drift (flagged in the D-086–090 batch): **(a)** an inert, incomplete **React Compiler** experiment — `react-compiler-runtime` + `babel-plugin-react-compiler` (package.json/lockfile) + a new `babel.config.js` (`presets:[next/babel]`, `plugins:[babel-plugin-react-compiler]`). Next 16 runs Turbopack (which ignores `babel.config.js`), `next.config.ts` has no `experimental.reactCompiler`, and no committed code imports `react-compiler-runtime` → the compiler never ran. **(b)** `pnpm install` exited 1 (`ERR_PNPM_IGNORED_BUILDS` for `sharp`) and wrote a placeholder `allowBuilds: sharp: set this to true or false` into `pnpm-workspace.yaml` — pnpm 11 demanding an explicit build-script decision. **(b), not the React Compiler, was the real "pnpm install fails".**
+**Decision:**
+  - **Revert** the React Compiler WIP (restore committed `package.json`/`pnpm-lock.yaml`, delete `babel.config.js`) — inert, incomplete, uncommitted. If React Compiler is wanted, add it the Next-16 way: `experimental.reactCompiler: true` in `next.config.ts` (+ the two packages), NOT a `babel.config.js` (which disables Turbopack). Flagged for a deliberate decision.
+  - **Fix** `pnpm-workspace.yaml`: `allowBuilds: sharp: false` (matching the existing `unrs-resolver: false`; sharp ships prebuilt binaries and is already in `ignoredBuiltDependencies`). `pnpm install` now exits 0 and the tree stays clean.
+**Verified:** `pnpm install` exit 0 ("Already up to date", supply-chain policy passes), tree clean except the intended `sharp: false`; `tsc --noEmit` exit 0; `next build` green. Vercel build unaffected (sharp prebuilt + `serverExternalPackages`).
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)
