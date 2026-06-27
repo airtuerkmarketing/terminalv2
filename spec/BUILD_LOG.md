@@ -31,7 +31,7 @@ it is append-only history (do not rewrite past entries — add new ones).
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-099**.
+  Highest decision: **D-100**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
@@ -42,8 +42,11 @@ it is append-only history (do not rewrite past entries — add new ones).
   through live `rag-query` + LLM-judges vs the 2026-06-22 reference (direction-aware,
   self-cleans prod sessions). Baseline **77.4% strict (65/84), 15 regressions** — the
   cited 92.9% was a one-day human pass, not live quality. Root cause is NOT rerank-limit
-  crowding (refuted by telemetry) — see `spec/RAG_EVAL_BASELINE_2026-06-28.md`. Fixes
-  ranked, not yet applied.
+  crowding (refuted by telemetry). **D-100 measured the fixes:** F1 (demote priority-1
+  31→12) = neutral (76.2%), REVERTED; F4 (embed 3 NULL context rows) kept; F2 refusal-tuning
+  NOT shipped (wrong + risky lever). **~5 "regressions" are correct security refusals**
+  (purged IBAN/cards/passwords) → **genuine quality ≈ 84%**. Next: denylist-aware harness
+  + F3 retrieval granularity + validated content fixes. See `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
 - **Data counts (2026-06-26):** team_members **63**, profiles **4 (all super_admin,
   0 admin/user)**, active auth users **4**, assets **718**, blocks **43**,
   gold_set_answers **84** (92.9% = one-day human pass 2026-06-22; **live harness =
@@ -96,7 +99,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## 2026-06-28 (W3) — RAG eval harness + live baseline (D-099)
+## 2026-06-28 (W3) — RAG eval harness + measured fixes (D-099, D-100)
 
 Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
 `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
@@ -115,8 +118,16 @@ Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
   the final-6 in **0** tested cases. Real causes: ~29 pinned priority-1 rows (mostly
   generic `service_offering`/`team_structure`) win topical rerank slots over the specific
   operational chunk; over-conservative refusal; single-chunk recall gaps; a few content
-  errors. Ranked fixes (F1 demote priority-1 rows → F4/F5 safe → F2/F3 careful) **not
-  yet applied** — each needs sign-off + a measured before/after harness run.
+  errors. Ranked fixes (F1 demote priority-1 rows → F4/F5 safe → F2/F3 careful) each
+  applied only after a measured before/after harness run.
+- **D-100** (DECISIONS): measured the approved fixes. **F1** (demote priority-1 31→12) =
+  **76.2%, statistically unchanged** → **REVERTED**. **F4** (embed 3 NULL context rows) =
+  **kept** (deferred D-070 backfill). **F2** refusal-tuning = **NOT shipped** (genuine fails
+  are retrieval-granularity not over-refusal; loosening risks hallucination). **Discovery:**
+  ~5 "regressions" are correct refusals of purged secret data (`SECRET_PAGE_DENYLIST` page
+  444009709) → **genuine quality ≈ 84%**, not 76%. Recommended next: denylist-aware harness
+  → F3 retrieval granularity → validated content corrections (D-070 pattern). Net prod change:
+  F1 reverted, F4 embeddings backfilled (no schema/migration).
 
 ---
 

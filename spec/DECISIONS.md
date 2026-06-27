@@ -706,6 +706,19 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-100 — RAG fix experiments: F1 neutral (reverted), F4 kept, F2 not shipped; secret-refusal confound found
+**Date:** 2026-06-28 (W3)
+**Status:** Adopted (negative result + discovery). F1 reverted; F4 kept; F2 deferred to a product decision; denylist-aware harness is the recommended next step.
+**Context:** D-099 baseline (77.4% strict). Buhara approved applying F1 (demote priority-1) + F2 (refusal tuning), measured before/after via the harness.
+**What the harness measured:** **F1** (demote `service_offering`+`team_structure`, priority-1 31→12) = **76.2% (64/84)** — statistically unchanged, the *same* questions fail. Confirms the D-099 finding that crowding is not the lever. → **F1 REVERTED** (no benefit; unvalidated downside on company/identity questions absent from the gold set). **F4** (embed the 3 NULL `company_context` rows via `embed-knowledge {source:'context',force:true}`) = **kept** (completes the deferred D-070 Phase-2 backfill; harmless, reproducible).
+**Discovery (changes the number):** ~5 "regressions" are the system **correctly refusing deliberately-purged secret data** — IBAN/credit-card/password/PayPal questions map to the `SECRET_PAGE_DENYLIST` page `444009709` (D1 security audit). The judge doesn't know the denylist, so it scores correct security refusals as failures. With those + ~2 judge-strict cases excluded, **genuine quality ≈ 84% (~71/84)**.
+**Decision on F2 (refusal tuning) — NOT shipped:** premise overridden by evidence. (1) The genuine remaining fails are **retrieval-granularity** (the specific operational chunk isn't surfaced into the final-8), not over-refusal — loosening refusal would make Claude guess → hallucinate. (2) ~5 refusals are **correct security behaviour**; a global refusal-loosen risks answering/hallucinating around purged passwords/cards/IBANs before a CEO/CFO demo. F2 left as an explicit product decision, not an autonomous change.
+**Recommended next (all measurable via the harness):** (a) **denylist-aware harness** — mark secret-data gold questions `expected_refusal` so the number reflects genuine quality + never penalises correct security; add company/identity questions to enable validating F1-style changes; (b) **F3 retrieval granularity** (re-chunk single-chunk supplier pages / raise `RETRIEVAL_VECTOR_K`); (c) **validated content corrections** (D-070 pattern, needs human fact sign-off: Pegasus PNR 6-stellig not `Axxx`; Y360 Euro not TL; Mavi Gök DE=DE/AYT, TR=rest).
+**Net prod change:** F1 reverted (none), F4 embeddings backfilled (data, regenerable). No schema/migration. Full detail: `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
+**Reversibility:** F4 is idempotent re-embed; F1 already restored to priority-1=31.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

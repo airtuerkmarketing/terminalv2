@@ -102,8 +102,53 @@ after). None shipped yet — they change demo-critical AI behaviour.
 (safe), then evaluate F2/F3 with eyes open. Re-run the harness after each and record the
 delta here. The harness is the gate; do not ship a RAG change without a before/after.
 
+## D-100 — Fix experiments (measured, 2026-06-28)
+
+Ran the harness as a gate around each change. **Result: the approved quick levers do
+not move the number; the real story is a measurement confound + retrieval granularity.**
+
+| change | applied | harness | verdict |
+|---|---|---|---|
+| **F1** demote `service_offering`+`team_structure` priority-1→2 (31→12 pinned) | UPDATE (prod) | **76.2% (64/84)** vs 77.4% baseline — **same questions fail** | **neutral → REVERTED** to priority-1=31 (no benefit; unvalidated downside on company/identity questions the gold set doesn't cover) |
+| **F4** embed the 3 NULL `company_context` rows | `embed-knowledge {source:'context',force:true}` (prod) — NULL 3→0 | n/a (completes deferred D-070 backfill) | **KEPT** (harmless, regenerable, makes the demoted Selin row vector-searchable) |
+| **F2** refusal-rule tuning | **NOT applied** | — | **reassessed as the wrong + risky lever — see below** |
+
+**Key discovery — the 76% understates genuine quality.** Of the ~20 fails, ~5 are the
+system **correctly refusing deliberately-purged secret data**: IBAN (#4, #5), credit
+card (#8), Ryanair password (#7), PayPal SMS code (#23) all live on the
+`SECRET_PAGE_DENYLIST` page `444009709` ("Operativ FAQ — passwords + cards + IBANs",
+purged in the D1 security audit). The gold set predates the purge; the judge doesn't know
+the denylist, so it scores correct security refusals as failures. Plus ~2 judge-strict
+cases (TUIfly #21 gives a *richer* operator-routing answer missing the exact
+`servicecenter@tuifly.com`; ETI #7 gives the correct `flug@eti.de` but mislabels
+"ETI Flugdispo" vs "airtuerk Flugdispo"). **Adjusted genuine quality ≈ 84%** (≈71/84).
+
+**Why F2 (refusal tuning) is now NOT recommended blind:**
+1. The genuine remaining fails are **retrieval-granularity**, not over-refusal — the
+   specific operational chunk (Er Car ADB/IST numbers, CIZGI email, AurumTours) isn't
+   surfaced into the final-8; a "refuse less" prompt would make Claude *guess* → hallucinate.
+2. ~5 refusals are **correct security behaviour**. A global refusal-loosening risks the
+   system answering (or hallucinating around) purged passwords/cards/IBANs — unacceptable
+   before a CEO/CFO demo.
+
+**Real remaining levers (post-decision, each measurable via the harness):**
+- **Denylist-aware harness** (do first): mark gold questions whose reference is on the
+  secret denylist as `expected_refusal` (refusal = PASS), so the number reflects genuine
+  quality and never penalises correct security behaviour. Also add company/identity
+  questions (currently 0 in the gold set) so priority-1 changes like F1 can be validated.
+- **F3 retrieval granularity**: re-chunk the single-chunk supplier pages and/or raise
+  `RETRIEVAL_VECTOR_K`/`TRGM_K` so the specific operational fact reaches the final-8.
+- **Validated content corrections** (D-070 pattern, needs fact sign-off): add confirmed
+  facts as `company_context` (e.g. Pegasus PNR = 6-stellig alphanumerisch not `Axxx`;
+  Y360 price in Euro not TL; Mavi Gök DE=DE/AYT, TR=rest). These directly fix
+  `still_wrong` rows — but only with human fact-validation, not auto from the gold set.
+
+**Net prod change from D-100:** F1 reverted (no net), F4 embeddings backfilled (data,
+reproducible via the command above). No schema/migration change.
+
 ## Open harness enhancements (post-baseline)
-- Split the judge's `regression` into `refusal-regression` (objective) vs
-  `content-nuance` (subjective) to sharpen the true-regression count.
+- **Denylist-aware judging** (see D-100) — the highest-value next step; makes the number trustworthy.
+- Split the judge's `regression` into `refusal-regression` (objective) vs `content-nuance` (subjective).
 - A `--frage` filter to replay specific questions without the full 84.
-- Wire into CI behind a pass-rate floor once F1–F5 stabilise the number.
+- Add company/identity questions to the gold set (currently operational-only).
+- Wire into CI behind a pass-rate floor once the genuine number stabilises.
