@@ -14,8 +14,10 @@
 import { revalidatePath } from "next/cache";
 import {
   ensureOwnTeamMember,
+  getOwnProfile,
   updateOwnAvatar,
   updateOwnProfile,
+  type OwnProfile,
   type UpdateOwnProfilePatch,
 } from "@/lib/users";
 
@@ -44,6 +46,25 @@ function toGermanMessage(err: unknown): string {
       return "Save failed. Please try again.";
     default:
       return `Error: ${err.message}`;
+  }
+}
+
+export type LoadOwnProfileResult =
+  | { ok: true; profile: OwnProfile | null }
+  | { ok: false; error: string };
+
+/**
+ * Read the signed-in user's own profile for the client. Used by the profile
+ * modal (opened from the user menu) to lazily hydrate the form — the page route
+ * still loads it server-side. `profile: null` means the account has no linked
+ * team_member yet (the activation path).
+ */
+export async function loadOwnProfileAction(): Promise<LoadOwnProfileResult> {
+  try {
+    const profile = await getOwnProfile();
+    return { ok: true, profile };
+  } catch (err) {
+    return { ok: false, error: toGermanMessage(err) };
   }
 }
 
