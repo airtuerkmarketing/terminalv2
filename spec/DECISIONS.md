@@ -719,6 +719,15 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-101 — Operational runbook for the demo
+**Date:** 2026-06-28 (W3)
+**Status:** Adopted. `spec/RUNBOOK.md` created.
+**Context:** A keyword scan of all 28 spec docs (W3 recon) confirmed **no operational/incident/rollback runbook existed** — only point-in-time audits (HEALTH_CHECK, latency probes). A solo dev running a live CEO/CFO demo needs a "something broke, what do I do" playbook.
+**Decision:** author `spec/RUNBOOK.md` — quick facts (IDs/URLs/regions/latency budget), a tiered pre-demo checklist (T–1week/day/hour), demo-critical-flow→dependency map, a symptom→diagnose→fix incident playbook (AI down, signed-URL 500, login fail, page 500), rollback procedures (Vercel promote-previous, edge-fn redeploy, migration/data revert, embedding regen), and a known-good baseline. Includes the live action items surfaced this sprint (reset the 6 seeded temp passwords, decide Emirkan's role, email-template swap, E2E CI secrets).
+**Reversibility:** doc only.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

@@ -31,7 +31,7 @@ it is append-only history (do not rewrite past entries — add new ones).
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-100**.
+  Highest decision: **D-101**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
@@ -104,7 +104,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## 2026-06-28 (W3) — RAG eval harness + measured fixes (D-099, D-100)
+## 2026-06-28 (W3) — RAG eval harness + measured fixes + V1 seed + runbook (D-099–D-101)
 
 Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
 `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
@@ -138,6 +138,12 @@ Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
   Oruc/Selin/Tim/Hakan/Murat), 3 existed, 0 failures, no emails. Prod profiles **4→10**
   (4 super_admin / 5 admin / 1 user) — all role-gated demo paths now exercisable.
   ⚠️ Emirkan = `user` (predates seed) — role decision deferred to Buhara (D-055).
+- **D-101** (DECISIONS): authored `spec/RUNBOOK.md` — the operational/incident playbook
+  that didn't exist (W3 recon confirmed: 28 spec docs, 0 runbooks). Pre-demo checklist
+  (T–1 week/day/hour), demo-flow→dependency map, symptom→fix incident playbook (AI down /
+  signed-URL 500 / login fail / page 500), rollback procedures (Vercel promote-previous,
+  edge-fn redeploy, migration/data revert), known-good baseline. Surfaces the open action
+  items: reset 6 seeded temp passwords, decide Emirkan role, email-template swap, E2E CI secrets.
 
 ---
 
