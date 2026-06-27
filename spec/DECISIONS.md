@@ -685,6 +685,16 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-095 — Co-locate Vercel functions with Supabase (fra1), not getUser→getSession
+**Date:** 2026-06-28 (W2)
+**Status:** Adopted. `vercel.json` `regions: ["fra1"]`.
+**Context:** D-094 attributed authed-SSR TTFB (~0.67s) to `auth.getUser()`; the W2 plan was a `getUser→getSession` swap. **Premise recon overrode it:** Vercel `serverlessFunctionRegion` was the default **`iad1` (US East)** while Supabase is **`eu-central-1` (Frankfurt)** → every Supabase call from a function is a transatlantic round-trip (~80–100ms). The folder-tree makes ~4, the signed-URL route 2; `getUser` is just one. Also `getIdentity()` feeds both read-only render AND `requireAdmin`/`requireSuperAdmin`, so it can't be blanket-switched without weakening admin-revocation checks. Full audit: `spec/AUTH_STRATEGY_AUDIT_2026-06-28.md`.
+**Decision:** co-locate functions with Supabase via `vercel.json` `regions: ["fra1"]`. Zero app-code, zero security risk, reversible — speeds up every authed route + signed-URL serving at once. The `getSession` swap was **not pursued** (saves ~15ms once co-located, at the cost of `requireAdmin` revocation safety); `getUser` stays everywhere incl. the proxy boundary.
+**Verified (prod, before→after):** folder-tree TTFB p50 0.67s→**0.27s** (−60%) / p95 0.90s→**0.38s** (−58%); signed-URL TTFB p50 0.48s→**0.30s** (−37%) / p95 0.87s→**0.44s** (−49%). Preview was Vercel-SSO-protected → verified on prod with revert as the net.
+**Reversibility:** delete `vercel.json` (or set region back) + redeploy.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

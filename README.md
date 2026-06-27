@@ -38,7 +38,7 @@ See `spec/BUILD_LOG.md` for full progress.
 | File | Purpose |
 |---|---|
 | `ARCHITECTURE.md` | System design, schema, block taxonomy, routing, brand hierarchy |
-| `DECISIONS.md` | Locked design decisions (D-001 through D-091) |
+| `DECISIONS.md` | Locked design decisions (D-001 through D-095) |
 | `DESIGN_SYSTEM.md` | iOS 18 Liquid Glass design language |
 | `EMBEDS_INVENTORY.md` | Webflow embeds preserved for Phase 6 |
 | `SOURCE_INVENTORY.md` | Full inventory of the Webflow zip |
