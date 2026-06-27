@@ -31,17 +31,23 @@ it is append-only history (do not rewrite past entries — add new ones).
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-095**.
+  Highest decision: **D-099**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
   input-language answers, D-072/D-073), `notify-correction-event`,
   `notify-folder-access` (D-080, deployed), `tag-classify-chunks` (Haiku), + 3 confluence fns.
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
+  **RAG eval harness** (`scripts/rag-eval.ts`, D-099): replays the 84 gold questions
+  through live `rag-query` + LLM-judges vs the 2026-06-22 reference (direction-aware,
+  self-cleans prod sessions). Baseline **77.4% strict (65/84), 15 regressions** — the
+  cited 92.9% was a one-day human pass, not live quality. Root cause is NOT rerank-limit
+  crowding (refuted by telemetry) — see `spec/RAG_EVAL_BASELINE_2026-06-28.md`. Fixes
+  ranked, not yet applied.
 - **Data counts (2026-06-26):** team_members **63**, profiles **4 (all super_admin,
   0 admin/user)**, active auth users **4**, assets **718**, blocks **43**,
-  gold_set_answers **84** (92.9% accuracy baseline), ai_chat_sessions **62** /
-  messages **230**, ai_corrections **1**.
+  gold_set_answers **84** (92.9% = one-day human pass 2026-06-22; **live harness =
+  77.4% strict**, D-099), ai_chat_sessions **62** / messages **230**, ai_corrections **1**.
 - **⚠️ V1 blocker:** prod `profiles` has only **4 rows (all super_admin, 0 admin/0
   user)** — the Stage-8 nine-key-user seed (`684d67f`) never reached prod; must be
   re-run before the 2026-08-01 demo (details in the 2026-06-25 finding below).
@@ -87,6 +93,30 @@ it is append-only history (do not rewrite past entries — add new ones).
   AUDIT-006 (frozen 2026-06-23 corpus) — AUDIT-003 (Hara Filo) + AUDIT-004 (Pegasus)
   fixed in Welle D3 (`20260626093731`, D-070); D2 + D3 Phase-2 embed backfill of the
   3 priority-1 rows (ZDR-gated consistency follow-up, not retrieval-blocking).
+
+---
+
+## 2026-06-28 (W3) — RAG eval harness + live baseline (D-099)
+
+Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
+`spec/RAG_EVAL_BASELINE_2026-06-28.md`.
+
+- **D-099** (DECISIONS): **eval-harness-first** RAG quality. New `scripts/rag-eval.ts`
+  replays the 84 `gold_set_answers` questions through the **live** `rag-query`
+  (Voyage embed → `rag_hybrid_search` → rerank → Opus 4.8), LLM-judges each answer vs
+  the 2026-06-22 reference (direction-aware: regression/fixed/correct/still_wrong), and
+  self-cleans the prod sessions it creates. Auth via `TEST_USER_*` (D-096 convention).
+- **Baseline:** **77.4% strict (65/84), 15 regressions**, worst on the operational FAQ
+  set (ai_test_3, 64%). The cited "92.9%" was a single human pass on 2026-06-22, not
+  live quality.
+- **Premise recon overrode the plan:** the assumed lever (priority-1 crowding fixable
+  by raising `RERANK_INPUT_LIMIT`) is **refuted by telemetry** — candidate sets are
+  ~67 chunks, the limit-40 cut already reaches them, and "rerank all vs top-40" changed
+  the final-6 in **0** tested cases. Real causes: ~29 pinned priority-1 rows (mostly
+  generic `service_offering`/`team_structure`) win topical rerank slots over the specific
+  operational chunk; over-conservative refusal; single-chunk recall gaps; a few content
+  errors. Ranked fixes (F1 demote priority-1 rows → F4/F5 safe → F2/F3 careful) **not
+  yet applied** — each needs sign-off + a measured before/after harness run.
 
 ---
 

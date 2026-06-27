@@ -695,6 +695,17 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-099 — RAG eval harness first; "priority-1 crowding / rerank-limit" theory refuted
+**Date:** 2026-06-28 (W3)
+**Status:** Adopted (harness shipped). Fixes ranked but **not yet applied** — pending sign-off + measured A/B. Next D-number: D-100.
+**Context:** W3 opened "RAG Quality" with the recon's headline lever = priority-1 crowding, fixable by raising `RERANK_INPUT_LIMIT` (the D-070 direction). There was **no automated eval** — "92.9%" was one human pass on 2026-06-22; `getQualityStats()` reads the `bewertung` column, never the pipeline. So we built the harness *first* (`scripts/rag-eval.ts`: replay 84 gold questions through the live `rag-query`, LLM-judge vs the 2026-06-22 reference, direction-aware: regression/fixed/correct/still_wrong; captures + deletes the prod sessions it creates).
+**Premise recon overrode the plan (telemetry > assumption):** baseline = **77.4% strict (65/84), 15 regressions, worst on the operational FAQ set (64%)** — not 92.9%. But the assumed fix is **refuted**: candidate sets are only ~67 chunks, the `RERANK_INPUT_LIMIT=40` cut already reaches them, and simulating "rerank ALL vs top-40" changed the final-6 in **0** tested cases. Answer-level telemetry shows the live system **had topical context and still refused** (ETI Stornierung; Er Car cited the priority-1 "+20% Servicegebühr" pin instead of the chunk with the ADB/IST numbers). Real causes: (1) ~29 pinned priority-1 rows at `combined_score=1.0` — mostly generic `service_offering`/`team_structure` — win topical rerank slots over the specific operational chunk; (2) over-conservative refusal on topical-but-not-exact context; (3) single-chunk recall gaps (AurumTours/CIZGI); (4) a few content errors (Pegasus PNR, Murat's title).
+**Decision:** ship the harness as the durable quality **gate** (do not change RAG behaviour without a before/after run). Do **not** raise `RERANK_INPUT_LIMIT` (measured no effect). Ranked candidate fixes in `spec/RAG_EVAL_BASELINE_2026-06-28.md`: **F1** demote `service_offering`+`team_structure` (~19 rows) priority-1→2 (reversible, highest-leverage, measurable) → **F4** embed the 3 NULL-embedding context rows + **F5** content fixes (safe) → then evaluate **F2** refusal-tuning / **F3** recall-lift with care (hallucination/redeploy risk). Each applied only after sign-off + a measured harness delta.
+**Reversibility:** harness is read-only-ish (self-cleans prod sessions); no schema change in this entry. F1 reverts via one `UPDATE company_context SET priority=1 …`.
+**Note:** D-096–D-098 exist as W2 build-log/commit identifiers (not DECISIONS entries); W3 starts at D-099 to avoid the collision.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)
