@@ -13,7 +13,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-16);  /* air between the centred hero block → Quick Grabs */
+  gap: var(--space-12);  /* hero block → Quick Grabs (tight so Quick Grabs peeks) */
   padding-bottom: var(--space-16);
 }
 /* Hero (greeting + chips + search box) = the first screen, vertically centred so
@@ -27,12 +27,11 @@
   width: 100%;
 }
 @media (min-width: 1024px) {
-  /* Desktop hides the topbar (shell.css), so only .main-inner's top padding sits
-     above the hero. Fill the viewport minus that padding and centre. min-height
-     (not height) → on short viewports the hero grows top-aligned instead of
-     clipping; Quick Grabs always follows in normal flow below. */
+  /* Centre the hero in ~78dvh (NOT the full viewport) so the group sits comfortably
+     low while Quick Grabs is already cropped into the first screen as a scroll cue.
+     min-height (not height) → short viewports grow top-aligned instead of clipping. */
   .dh-hero {
-    min-height: calc(100dvh - 2 * var(--space-5));
+    min-height: 78dvh;
     justify-content: center;
   }
 }
@@ -128,7 +127,7 @@
   line-height: 22.4px;              /* Figma */
   color: var(--text-1);
   padding: 5px 0 0 6px;             /* Figma: top 5, left 6 */
-  min-height: 72px;
+  min-height: 52px;                 /* compact (~2 lines); JS auto-grow expands it */
   max-height: 220px;
   overflow-y: auto;
 }

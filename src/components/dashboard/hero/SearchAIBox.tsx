@@ -515,7 +515,7 @@ export function SearchAIBox() {
           <textarea
             ref={textareaRef}
             className="ai-search-textarea"
-            rows={3}
+            rows={2}
             value={query}
             placeholder={
               activeChip?.placeholder ??
