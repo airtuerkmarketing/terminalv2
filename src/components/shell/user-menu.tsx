@@ -23,6 +23,7 @@ import {
   UserCogIcon,
 } from "./icons";
 import { UserSettingsModal } from "./user-settings-modal";
+import { ProfileModal } from "@/app/(public)/account/profile/profile-modal";
 import { ReviewNotifier } from "@/components/knowledge/review-notifier";
 
 const THEME_KEY = "terminalv2-theme";
@@ -78,6 +79,7 @@ export function UserMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [pos, setPos] = useState<MenuPos | null>(null);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -204,6 +206,11 @@ export function UserMenu({
     setSettingsOpen(true);
   }
 
+  function openProfile() {
+    close();
+    setProfileOpen(true);
+  }
+
   function toggleOpen() {
     if (open) {
       setOpen(false);
@@ -261,18 +268,20 @@ export function UserMenu({
 
               <div className="um-sep" role="separator" />
 
-              {/* Profile → self-service account page (AP 3). */}
-              <Link
-                href="/account/profile"
+              {/* Profile → opens the self-service account modal (AP 3). The
+                  /account/profile page still works as a deep link. */}
+              <button
+                type="button"
                 role="menuitem"
                 className="um-item"
-                onClick={() => close()}
+                aria-haspopup="dialog"
+                onClick={openProfile}
               >
                 <span className="um-item-icon">
                   <ProfileIcon />
                 </span>
                 <span className="um-item-label">Profile</span>
-              </Link>
+              </button>
 
               <button
                 type="button"
@@ -353,6 +362,7 @@ export function UserMenu({
         : null}
 
       <UserSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} name={name} />
     </>
   );
 }
