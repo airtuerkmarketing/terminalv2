@@ -46,6 +46,12 @@ supabase/.temp
 coverage/
 *.zip
 
+# Playwright (E2E, D-096)
+tests/e2e/.auth/
+test-results/
+playwright-report/
+playwright/.cache/
+
 # Manual key storage
 KEYS.txt
 *.keys.txt
