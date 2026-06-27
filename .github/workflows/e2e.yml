@@ -21,8 +21,8 @@ jobs:
         env:
           # Buhara TODO: set these as repo secrets / variables.
           E2E_BASE_URL: ${{ vars.PROD_URL || 'https://www.airtuerk.dev' }}
-          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
-          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          TEST_USER_EMAIL: ${{ secrets.bdemir@airtuerk.de }}
+          TEST_USER_PASSWORD: ${{ secrets.Aa1!768ff7da77aba93dd42e4214a057f36d }}
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         with:
