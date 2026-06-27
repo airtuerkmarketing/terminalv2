@@ -728,6 +728,16 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-102 — W3 final-health pass + derived-doc reconcile
+**Date:** 2026-06-28 (W3)
+**Status:** Adopted. **🟢 GO for the 2026-08-01 demo, zero blockers.** `spec/HEALTH_CHECK_2026-06-28.md`.
+**Context:** Close the W3 batch (D-099–D-101) with a live re-snapshot + ledger-parity re-verify + the derived-doc reconcile the W3 recon flagged (ARCHITECTURE §16 topped at D-090; §1 header "22 tables"/§4 "55 pages" stale; index/policy/function counts disagreed across docs).
+**Verified live (Supabase MCP):** 34 tables + 1 view, **163 functions** (docs said 167), 88 RLS policies, 165 indexes, 82 migrations (ledger hash `6355f130…`, repo↔registry **exact**, 0 W3 migrations), 9 buckets, 4 cron (warmup succeeding), 10 auth users, profiles 10 (4 super_admin/5 admin/1 user). Advisors: security 0 ERROR/16 WARN by-design, performance 0 ERROR.
+**Decision:** record the GO; reconcile derived docs in the same pass — ARCHITECTURE §16 extended to D-091–D-102 + functions 167→163, §1 "22 tables"→34, §4 "55 pages"→51, highest decision→D-102; BUILD_LOG Current State refreshed. Remaining items are owner-action (temp passwords, Emirkan role, email templates, E2E CI secrets) or post-demo RAG levers — none demo-blocking.
+**Reversibility:** doc only.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

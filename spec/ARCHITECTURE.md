@@ -37,7 +37,7 @@ deploy together to Vercel as one unit.
                 │  Supabase project: terminalv2   (Frankfurt)          │
                 │  ┌──────────────────┬──────────────────────────────┐ │
                 │  │  Postgres        │  Storage — 9 buckets:        │ │
-                │  │  (22 tables      │  public: images, documents,  │ │
+                │  │  (34 tables      │  public: images, documents,  │ │
                 │  │   + profiles_v)  │    videos, fonts, avatars    │ │
                 │  │  • brands (15)   │  private: library,           │ │
                 │  │  • pages (55)    │    presentations,            │ │
@@ -131,7 +131,7 @@ Deleted entirely in Phase 3.5:
 
 ---
 
-## 4. Site structure (55 pages — as of 2026-06-22)
+## 4. Site structure (51 pages — gold-set quiz pages removed, D-073)
 
 ### Group A — Brand sections (collapsible parents, 7 brands)
 
@@ -525,11 +525,14 @@ has since been removed — D-056.)
 
 ---
 
-## 16. Hardening sprint (2026-06-27 / 28)
+## 16. Hardening sprint (2026-06-27 → 28, W0–W3)
 
-A two-day sprint following the Phase-B health check (`HEALTH_CHECK_2026-06-27.md`). Live
-snapshot after the sprint (verified via Supabase MCP): **34 tables + 1 view, 167 functions,
-88 RLS policies, 165 indexes, 82 migrations, 9 extensions, 4 cron jobs, 9 storage buckets**.
+A multi-batch sprint following the Phase-B health check (`HEALTH_CHECK_2026-06-27.md`). Live
+snapshot **verified via Supabase MCP 2026-06-28 (D-102):** **34 tables + 1 view, 163 functions,
+88 RLS policies, 165 indexes, 82 migrations (ledger hash `6355f130…`, repo↔registry exact),
+9 extensions, 4 cron jobs, 9 storage buckets, 10 auth users, profiles 10 (4 super_admin /
+5 admin / 1 user)**. Advisors: security 0 ERROR / 16 WARN (by-design), performance 0 ERROR.
+Highest decision: **D-102**.
 
 | D | Change | Effect |
 |---|---|---|
@@ -540,15 +543,20 @@ snapshot after the sprint (verified via Supabase MCP): **34 tables + 1 view, 167
 | D-085 | Revoke `handle_new_user()` EXECUTE from anon/authenticated/PUBLIC | trigger fn locked; signup intact |
 | D-086 | `rag-query` warm-up via pg_cron + pg_net (`warmup-rag-query`, `*/4`) | dodges the ~7.9s cold-start |
 | D-087 | `rag-knowledge` bucket writes → admin-only | read unchanged |
-| D-088 | Authenticated-path latency probe (measurement) | signed-URL ~0.48s p50 → post-demo watch-item |
+| D-088 | Authenticated-path latency probe (measurement) | signed-URL ~0.48s p50 → resolved by D-095 |
 | D-089 | Revoke anon/PUBLIC EXECUTE on 5 RLS helpers; **keep 3** for the public Document Library | anon attack surface ↓; verified via real anon REST |
-| D-090 | This re-consolidation | ARCHITECTURE counts + refs current |
+| D-090 | ARCHITECTURE re-consolidation (targeted) | counts + refs current |
+| D-091–094 (W1) | Repo-drift fix (sharp/React-Compiler); cron-warm verify; signed-URL + folder-tree latency analysis | `SHIPPED_2026-06-28_W1.md` |
+| D-095–098 (W2) | **fra1 region co-location** (folder-tree TTFB −60%, signed-URL −37%); Playwright E2E; bundle analysis; UX-state audit | `SHIPPED_2026-06-28_W2.md` |
+| D-099–100 (W3) | **RAG eval harness** (`scripts/rag-eval.ts`); measured fixes — F1 demote neutral→reverted, F4 embed-backfill, F2 not shipped; **genuine quality ≈ 84%** (the 76% strict number is inflated by correct secret-data refusals) | `RAG_EVAL_BASELINE_2026-06-28.md` |
+| D-101 (W3) | Operational/demo-day **runbook** | `RUNBOOK.md` |
+| D-102 (W3) | Final-health: live-count re-snapshot + ledger-parity re-verify + this reconcile | `HEALTH_CHECK_2026-06-28.md` |
 
-Also (not a migration): Auth `db_max_pool_size` switched absolute 10 → percent 60 via the
-Management API.
+Also (not migrations): Auth `db_max_pool_size` switched absolute 10 → percent 60 via the
+Management API (W0); **V1 blocker resolved** — the Stage-8 key-user seed run on prod, profiles 4→10 (W3).
 
 **Open (post-demo):** the 3 helpers kept anon-executable (`is_admin`,
 `can_access_document_folder`, `can_see_document_folder`) stay as long as the Document Library
-keeps its anonymous public face; signed-URL route latency optimization (~0.48s p50); the
-`@supabase/ssr`-cookie authed folder-tree timing; an `ARCHITECTURE.md` full re-consolidation
-(this was a targeted refresh, not a rewrite).
+keeps its anonymous public face; RAG genuine-quality levers (denylist-aware harness → F3
+retrieval granularity → validated content corrections); decide Emirkan's role (`user`→?);
+reset the 6 seeded temp passwords; email-template swap (D-071); E2E CI repo secrets.

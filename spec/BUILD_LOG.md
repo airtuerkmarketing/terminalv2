@@ -31,7 +31,7 @@ it is append-only history (do not rewrite past entries — add new ones).
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-101**.
+  Highest decision: **D-102**.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` v12 live (mode-chips RAG-bypass +
@@ -104,7 +104,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## 2026-06-28 (W3) — RAG eval harness + measured fixes + V1 seed + runbook (D-099–D-101)
+## 2026-06-28 (W3) — RAG eval harness + measured fixes + V1 seed + runbook + final-health (D-099–D-102)
 
 Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
 `spec/RAG_EVAL_BASELINE_2026-06-28.md`.
@@ -144,6 +144,11 @@ Autonomous. Zero migrations (ledger unchanged 82/`6355f130`). Full write-up:
   signed-URL 500 / login fail / page 500), rollback procedures (Vercel promote-previous,
   edge-fn redeploy, migration/data revert), known-good baseline. Surfaces the open action
   items: reset 6 seeded temp passwords, decide Emirkan role, email-template swap, E2E CI secrets.
+- **D-102** (DECISIONS): W3 final-health — **🟢 GO, zero blockers** (`spec/HEALTH_CHECK_2026-06-28.md`).
+  Live re-snapshot (34 tables/1 view, 163 functions, 88 policies, 165 indexes, 82 migrations,
+  9 buckets, 4 cron, 10 auth/profiles) + ledger parity re-verified (repo↔registry exact,
+  `6355f130…`, 0 W3 migrations) + advisors 0 ERROR. Reconciled derived docs: ARCHITECTURE §16
+  extended D-091–D-102 + functions 167→163, §1 "22 tables"→34, §4 "55 pages"→51.
 
 ---
 
