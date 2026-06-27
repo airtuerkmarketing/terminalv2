@@ -440,13 +440,17 @@ export async function deleteFolder(folderId: string): Promise<ActionResult> {
   const folderIds = folderRows.map((f) => f.id);
   if (!folderIds.includes(folderId)) return { ok: false, error: "Folder not found." };
 
-  // Refuse to delete a non-empty folder (D-078): the user must clear its files
-  // first. Count ANY file rows in the subtree (live, archived or trashed) —
-  // deleting the folder would orphan them.
+  // Refuse to delete a folder that still has VISIBLE files (D-078). Count only LIVE
+  // files (not trashed, not archived old versions): an empty-looking folder must be
+  // deletable — the cascade below also removes trashed/archived rows + every blob,
+  // so nothing is orphaned. (Counting trashed/archived here was the "can't delete an
+  // empty-looking folder" bug.)
   const { count: fileCount, error: cntErr } = await admin
     .from("presentation_files")
     .select("id", { count: "exact", head: true })
-    .in("folder_id", folderIds);
+    .in("folder_id", folderIds)
+    .is("deleted_at", null)
+    .eq("is_archived", false);
   if (cntErr) return { ok: false, error: toMessage(cntErr, "folder") };
   if ((fileCount ?? 0) > 0) {
     return { ok: false, error: "This folder isn't empty. Delete the files inside it first." };

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { formatBytes } from "@/lib/presentations-constants";
 import type { PresentationFileDTO } from "@/lib/presentations";
 import { FlagIcon } from "@/components/ui/flag-icon";
@@ -15,6 +16,11 @@ function fileHref(id: string, download = false) {
 function thumbHref(id: string) {
   return `/api/presentations/file/${id}?asset=thumb`;
 }
+
+// Image types preview from the source (served inline) — like the Document Library;
+// no dependency on the (Stufe-3) thumbnail pipeline, which is why image uploads
+// showed only a type icon before.
+const IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
 
 const DownloadIcon = () => (
   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -54,11 +60,16 @@ export function PresentationCard({
 }) {
   const href = fileHref(file.id);
   const downloadHref = fileHref(file.id, true);
+  const isImage = IMAGE_EXTS.has(file.fileType.toLowerCase());
   const hasThumb = file.processingStatus === "thumbnail";
+  const [imgError, setImgError] = useState(false);
+  // Images preview from the SOURCE; others use the generated cover thumbnail if any.
+  const previewSrc = isImage ? href : thumbHref(file.id);
+  const showPreviewImg = (isImage || hasThumb) && !imgError;
 
-  const preview = hasThumb ? (
+  const preview = showPreviewImg ? (
     /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
-    <img src={thumbHref(file.id)} alt="" loading="lazy" decoding="async" />
+    <img src={previewSrc} alt="" loading="lazy" decoding="async" onError={() => setImgError(true)} />
   ) : (
     <PresentationTypeIcon extension={file.fileType} />
   );
@@ -131,9 +142,9 @@ export function PresentationCard({
           rel="noopener noreferrer"
           aria-label={`Open ${file.title}`}
         >
-          {hasThumb ? (
+          {showPreviewImg ? (
             /* eslint-disable-next-line @next/next/no-img-element -- gated signed-URL via the serving route */
-            <img className="ph-grid-tile__thumb" src={thumbHref(file.id)} alt="" loading="lazy" decoding="async" />
+            <img className="ph-grid-tile__thumb" src={previewSrc} alt="" loading="lazy" decoding="async" onError={() => setImgError(true)} />
           ) : (
             <PresentationTypeIcon extension={file.fileType} />
           )}

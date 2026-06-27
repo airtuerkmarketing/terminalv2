@@ -38,6 +38,7 @@ export async function GET(
     .from("document_files")
     .select("id, title, extension, storage_path")
     .eq("id", id)
+    .is("deleted_at", null) // trashed files aren't servable via a direct URL (D-076)
     .maybeSingle();
 
   if (!file || !file.storage_path) {
