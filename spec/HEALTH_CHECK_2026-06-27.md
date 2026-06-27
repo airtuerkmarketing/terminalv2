@@ -19,7 +19,7 @@
 | 7 | SECURITY DEFINER | 🟡 | 12 SECDEF fns; **9 executable by anon/PUBLIC**. Info-leak surface, not data leak. |
 | 8 | Storage buckets | 🟢/🟡 | Limits+mime set, scoped. `documents` bucket is **public but empty** (latent); `rag-knowledge` write open to any authenticated. |
 | 9 | Cron health | 🟢 | 3 active jobs, **all last runs succeeded** (03:15/03:30/03:45). |
-| 10 | Auth settings | 🟡 | Auth `db_connections` pinned **absolute 10** (advisor flag). Rest needs dashboard. |
+| 10 | Auth settings | 🟢 | Auth `db_connections` switched **absolute 10 → percent 60** via Management API (2026-06-27). Rest needs dashboard. |
 
 **Advisors:** Security = 0 ERROR / 24 WARN. Performance = 83 lints (59 INFO / 24 WARN). No ERROR-level anywhere.
 
@@ -182,13 +182,11 @@ History is short (jobs created recently) but clean.
 
 ---
 
-## §10 — Auth 🟡
+## §10 — Auth 🟢 (was 🟡)
 
-Advisor flags **`auth_db_connections_absolute`**: Auth server pinned to max **10 connections** (absolute, not percentage). Fine for a small demo, but concurrent logins during a live demo could bottleneck.
+✅ **Fixed 2026-06-27 via the Management API** (`PATCH /v1/projects/{ref}/config/auth`): Auth `db_max_pool_size` switched from **absolute 10** → **percent 60**, clearing `auth_db_connections_absolute`. Re-GET confirmed `unit="percent"`, `size=60`; login verified working post-change (200, ~0.13s). Now scales with instance size instead of bottlenecking concurrent demo logins.
 
-→ **Fix in Supabase Dashboard:** Settings → Auth → DB Connections → switch to percentage-based.
-
-The rest (SMTP/magic-link, OAuth, JWT expiry, rate limits) needs the Supabase **dashboard** — not accessible via MCP. Manual check needed before demo.
+The rest (SMTP/magic-link, OAuth, JWT expiry, rate limits) still want a manual **dashboard** review before the demo — not security-critical.
 
 ---
 
@@ -233,7 +231,7 @@ The rest (SMTP/magic-link, OAuth, JWT expiry, rate limits) needs the Supabase **
 | 3 | `REVOKE` SECDEF execute from `anon`/`PUBLIC` + lock `handle_new_user` + drop `gold_set_answers` public-INSERT policy | post-demo | `SECDEF_REVOKE_TEST_PLAN.md` |
 | 4 | Single FK-index migration (26) + 8 RLS-initplan rewrites | post-demo | TBD draft |
 | 5 | ✅ **Done** — `documents` bucket→private + `gold_set_answers` open-INSERT dropped (D-082); `rag-knowledge` write→admin still post-demo | 2026-06-27 | `DECISIONS.md` D-082 |
-| 6 | Auth DB connections → percentage (dashboard); authenticated-path latency probe | post-demo | manual + scripted |
+| 6 | ✅ **Done** — Auth DB connections → percent 60 (Management API); authenticated-path latency probe (`LATENCY_PROBE_2026-06-27.md`) | 2026-06-27 | — |
 
 ---
 
