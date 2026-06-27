@@ -665,6 +665,15 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-090 — ARCHITECTURE.md re-consolidation (targeted)
+**Date:** 2026-06-27
+**Status:** Adopted (docs-only).
+**Context:** `spec/ARCHITECTURE.md` was a 2026-06-22 snapshot: a 22-table count, "highest migration `20260622193003`", `00NN_` filenames (renamed in D-081), and no mention of the RAG/Wissensbasis/folder-permission tables.
+**Decision:** targeted edits (not a rewrite — preserve the D-022 consolidation principle): table count 22→34 + the missing table groups (RAG, Wissensbasis, folder permissions); highest migration → `20260628120000` (82 total); a note that `00NN_` are legacy labels (D-081); and a new **§16 "Hardening sprint 2026-06-27/28"** summarizing D-081–D-090 with live counts.
+**Verified:** counts re-queried live (34 tables, 167 functions, 88 policies, 165 indexes, 82 migrations, 9 extensions, 4 cron jobs).
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

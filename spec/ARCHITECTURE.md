@@ -4,7 +4,7 @@ This document is the **canonical system design** for terminalv2. Every
 decision below is locked. Changes require a new entry in `DECISIONS.md` and
 an update here.
 
-**Last consolidated:** 2026-06-22 (User Panel + Presentation Hub; reconciled against migrations through `20260622193003`)
+**Last consolidated:** 2026-06-22 (User Panel + Presentation Hub). **Partial refresh 2026-06-27/28** — schema counts, the migration ledger, and the new §16 (Hardening sprint, D-081–D-090) are current; some older prose below still cites the pre-D-081 `00NN_` migration labels — those files were renamed to their registered timestamp versions in D-081 (see `DECISIONS.md` D-081), so treat `00NN` as a legacy identifier.
 
 ---
 
@@ -282,7 +282,7 @@ A "new block type" PR touches these five files plus a migration if needed.
 
 ## 7. Database schema
 
-### Tables (22 base tables + 1 view, as of 2026-06-22)
+### Tables (34 base tables + 1 view, as of 2026-06-27)
 
 The schema has grown well past the original 10. Current `public` tables, by area:
 
@@ -296,6 +296,12 @@ The schema has grown well past the original 10. Current `public` tables, by area
   `presentation_tags`, `presentation_file_tags`, `presentation_views`.
 - **Intelligence layer (0025–0029):** `confluence_raw`, `confluence_attachments`,
   `confluence_comments`, `gold_set_answers`.
+- **RAG / airtuerk-KI (D-058–070):** `company_context`, `confluence_chunks`,
+  `brand_chunks`, `ai_chat_sessions`, `ai_chat_messages`, `ai_corrections`.
+- **Wissensbasis (D-065–068):** `tag_vocabulary`, `tag_suggestions`, `chunk_edit_log`,
+  `chunk_retrieval_stats`.
+- **Folder permissions (D-080):** `document_folder_permissions`,
+  `presentation_folder_permissions`.
 
 Schema entry points:
 - `0001_initial_schema.sql` — initial 9 tables + 1 junction
@@ -306,7 +312,10 @@ Schema entry points:
 - `0033` — Presentation Hub tables
 - timestamped `20260621*`/`20260622*` — User Panel (profiles↔team_members link,
   `user_activity_log`, `profiles_v`, avatars bucket, RLS recursion / search_path fixes).
-  Highest applied migration: `20260622193003_profiles_update_own_use_helper.sql`.
+  Highest applied migration (as of 2026-06-27): `20260628120000_revoke_secdef_anon_public`
+  — **82 migrations**, repo ↔ `schema_migrations` at exact parity (D-081). The `00NN_`
+  labels above are the legacy identifiers; those files now carry their registered
+  timestamp versions (renamed in D-081).
 
 ### `brands` (Phase 3.5 schema)
 
@@ -513,3 +522,33 @@ has since been removed — D-056.)
 - Real-time collaborative editing
 - Public API
 - Multi-tenant / white-label
+
+---
+
+## 16. Hardening sprint (2026-06-27 / 28)
+
+A two-day sprint following the Phase-B health check (`HEALTH_CHECK_2026-06-27.md`). Live
+snapshot after the sprint (verified via Supabase MCP): **34 tables + 1 view, 167 functions,
+88 RLS policies, 165 indexes, 82 migrations, 9 extensions, 4 cron jobs, 9 storage buckets**.
+
+| D | Change | Effect |
+|---|---|---|
+| D-081 | Migration-ledger reconcile (34 renames + 5 backfill + repair migration) | repo ↔ `schema_migrations` exact parity (md5-verified) |
+| D-082 | Drop `gold_set_answers` open-INSERT policy + privatize the empty public `documents` bucket | security WARN ↓ |
+| D-083 | 26 FK covering indexes | advisor unindexed-FK 26 → 0 |
+| D-084 | Wrap `auth.uid()` → `(select auth.uid())` in 8 RLS policies (ALTER POLICY, in place) | advisor initplan 8 → 0 |
+| D-085 | Revoke `handle_new_user()` EXECUTE from anon/authenticated/PUBLIC | trigger fn locked; signup intact |
+| D-086 | `rag-query` warm-up via pg_cron + pg_net (`warmup-rag-query`, `*/4`) | dodges the ~7.9s cold-start |
+| D-087 | `rag-knowledge` bucket writes → admin-only | read unchanged |
+| D-088 | Authenticated-path latency probe (measurement) | signed-URL ~0.48s p50 → post-demo watch-item |
+| D-089 | Revoke anon/PUBLIC EXECUTE on 5 RLS helpers; **keep 3** for the public Document Library | anon attack surface ↓; verified via real anon REST |
+| D-090 | This re-consolidation | ARCHITECTURE counts + refs current |
+
+Also (not a migration): Auth `db_max_pool_size` switched absolute 10 → percent 60 via the
+Management API.
+
+**Open (post-demo):** the 3 helpers kept anon-executable (`is_admin`,
+`can_access_document_folder`, `can_see_document_folder`) stay as long as the Document Library
+keeps its anonymous public face; signed-URL route latency optimization (~0.48s p50); the
+`@supabase/ssr`-cookie authed folder-tree timing; an `ARCHITECTURE.md` full re-consolidation
+(this was a targeted refresh, not a rewrite).
