@@ -635,6 +635,26 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-087 — rag-knowledge bucket writes → admin-only
+**Date:** 2026-06-27 (batch versioned `20260628`)
+**Status:** Adopted. Migration `20260628110000_tighten_rag_knowledge_writes` (applied + registered).
+**Context:** Health-check §8 — any `authenticated` user could INSERT/UPDATE/DELETE in the private `rag-knowledge` bucket. Read is intended for all staff; writes should be admin-only.
+**Decision:** drop `rag_knowledge_auth_{insert,update,delete}` (bucket_id-only) and recreate as `rag_knowledge_{insert,update,delete}_admin` gated on `public.is_admin()`. `rag_knowledge_auth_select` (read) unchanged. Controlled-timestamp pattern (D-081).
+**Verified:** the 4 live policies are now select (authenticated) + insert/update/delete (admin).
+
+---
+
+## D-089 — Revoke SECDEF anon/PUBLIC execute (scoped to 5 of 8 helpers)
+**Date:** 2026-06-27 (batch versioned `20260628`)
+**Status:** Adopted. Migration `20260628120000_revoke_secdef_anon_public` (applied + registered).
+**Context:** `spec/SECDEF_REVOKE_TEST_PLAN.md` proposed revoking anon/PUBLIC EXECUTE on 8 RLS helpers. A pre-flight `pg_policies` check found that **3 of them are referenced by the `{public}` policies** `document_folders_select` / `document_files_select`, which serve `is_public` Document-Library folders/files to **anonymous** visitors by design (`src/lib/documents.ts`). Revoking anon EXECUTE on those would make every anon library read raise `permission denied for function …`. The doc's admin/super/auth-only test matrix would not have caught this.
+**Decision:** revoke anon/PUBLIC EXECUTE on the **5** helpers referenced only by `{authenticated}` policies (`is_super_admin`, `get_profile_role`, `current_team_member_id`, `can_access_presentation_folder`, `can_see_presentation_folder`); **keep** anon EXECUTE on the **3** the public library needs (`is_admin`, `can_access_document_folder`, `can_see_document_folder`). `authenticated` keeps EXECUTE on all. `handle_new_user` already locked (D-085).
+**Verified (real anon role via PostgREST, not simulation):** grant matrix = anon false on the 5 / true on the 3 / authenticated true on all 8; anon `GET document_folders` → 200 with 2 rows (public library intact); anon `GET presentation_folders` → 200/0 rows (graceful); anon `rpc/is_super_admin` → 401 (locked); anon `rpc/is_admin` → 200 (kept). No app `.rpc()` calls any of the 8.
+**Reversibility:** `grant execute on function public.<fn> to anon, public;`
+**Future:** the 3 kept helpers stay anon-callable as long as the Document Library has an anonymous public face; revisit if that face is removed.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)
