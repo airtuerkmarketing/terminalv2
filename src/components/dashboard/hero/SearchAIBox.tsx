@@ -11,9 +11,8 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { TerminalLogo } from "@/components/shell/TerminalLogo";
-import { ModelSelector } from "@/components/dashboard/hero/ModelSelector";
 import { ModeChips } from "@/components/dashboard/hero/ModeChips";
 import { SearchDropdown, ASK_AI_ID } from "@/components/dashboard/hero/SearchDropdown";
 import { AIChatWindow } from "@/components/dashboard/hero/AIChatWindow";
@@ -451,21 +450,6 @@ export function SearchAIBox() {
     }
   }
 
-  function toggleKi() {
-    setMode((m) => (m === "ai" ? "search" : "ai"));
-    setActiveId(null);
-    textareaRef.current?.focus();
-  }
-
-  function onModelChange(id: string) {
-    setModel(id);
-    try {
-      localStorage.setItem(LS_MODEL, id);
-    } catch {
-      /* ignore */
-    }
-  }
-
   function onToggleMode(next: ChatMode) {
     // Toggling a chip arms/disarms a focused KI mode. Arming implies KI mode —
     // the utility prompts always go through rag-query, never the live search.
@@ -554,29 +538,21 @@ export function SearchAIBox() {
               >
                 <Plus className="ai-search-attach-icon" aria-hidden="true" />
               </button>
-              <button
-                type="button"
-                className={`ai-search-pill ai-search-ki${mode === "ai" ? " is-active" : ""}`}
-                onClick={toggleKi}
-                aria-pressed={mode === "ai"}
-              >
-                <TerminalLogo variant="mark" title="" className="ai-search-pill-icon ai-ask-mark" />
-                <span>Ask AI</span>
-              </button>
             </div>
 
             <div className="ai-search-toolbar-right">
-              {mode === "ai" && (
-                <ModelSelector value={model} onChange={onModelChange} />
-              )}
+              {/* One Ask-AI button: idle (empty) → dimmed, active (typed) → accent.
+                  The DB-results dropdown still appears while typing; this just sends
+                  the query to the KI (submitAi). Mark spins once on hover. */}
               <button
                 type="button"
-                className="ai-search-send"
+                className={`ai-search-askai-btn${query.trim() ? " is-active" : ""}`}
                 disabled={!query.trim()}
                 onClick={() => submitAi(query)}
-                aria-label="Send"
+                aria-label="Ask AI"
               >
-                <ArrowUp className="ai-search-send-icon" aria-hidden="true" />
+                <TerminalLogo variant="mark" title="" className="ai-search-askai-btn-mark ai-ask-mark" />
+                <span>Ask AI</span>
               </button>
             </div>
           </div>
