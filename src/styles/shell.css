@@ -208,7 +208,10 @@ html { scrollbar-gutter: stable; }
   :root[data-sidebar="collapsed"] .brand-mark { flex-direction: row; justify-content: center; gap: 0; padding: var(--space-2); }
   :root[data-sidebar="collapsed"] .brand-logo-link { flex: 0; justify-content: center; }
   :root[data-sidebar="collapsed"] .brand-logo-wordmark { display: none; }
-  :root[data-sidebar="collapsed"] .brand-logo-icon { display: block; transition: opacity 150ms var(--ease-smooth); }
+  /* flex-shrink:0 is essential here: the link is display:flex with min-width:0 and
+     flex:0 on the rail, so without it the scalable SVG would shrink to ~0 and the
+     mark would vanish at rest. */
+  :root[data-sidebar="collapsed"] .brand-logo-icon { display: block; flex-shrink: 0; transition: opacity 150ms var(--ease-smooth); }
   /* Toggle = absolute overlay over the whole header. opacity:0 (NOT display:none)
      keeps it keyboard-focusable; pointer-events:none at rest so the logo link
      stays clickable until hover/focus reveals the toggle. */
@@ -229,10 +232,9 @@ html { scrollbar-gutter: stable; }
   :root[data-sidebar="collapsed"] .nav-item { justify-content: center; gap: 0; width: 40px; margin-inline: auto; padding: 8px 0; }
   :root[data-sidebar="collapsed"] .nav-item .text { flex: 0; width: 0; opacity: 0; }
   :root[data-sidebar="collapsed"] .nav-item .chevron { display: none; }
-  /* Active item on the rail: a dezent accent bar on the left edge + a touch more
-     shadow so the white square reads at 64px. */
-  :root[data-sidebar="collapsed"] .nav-item.active { box-shadow: inset 2px 0 0 var(--accent), 0 1px 3px rgba(0,0,0,0.10); }
-  :root[data-theme="ios18-dark"][data-sidebar="collapsed"] .nav-item.active { box-shadow: inset 2px 0 0 var(--accent), 0 1px 3px rgba(0,0,0,0.55); }
+  /* Active item on the rail uses the SAME style as expanded (.nav-item.active:
+     surface-flat + hairline + shadow, accent icon) — no rail-specific accent bar.
+     The 40px centred item frames the icon cleanly. */
   :root[data-sidebar="collapsed"] .nav-divider { margin: 6px var(--space-2); }
   :root[data-sidebar="collapsed"] .nav-sub { display: none; }
   /* Collapsed rail uses a tighter (space-2) inner padding, so drop the scroll
