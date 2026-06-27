@@ -73,13 +73,10 @@ export function AssetLibrary({ title, assets }: { title: string; assets: AssetDT
 
   return (
     <article className="asset-library">
-      <header className="page-hero">
-        <div className="eyebrow">Resources</div>
-        <h1>{title}</h1>
-        <p className="lead">
-          Every brand asset in one searchable place — logos, icons, backgrounds and
-          photography across all airtuerk brands.
-        </p>
+      <header className="al-head">
+        <div className="al-head-title">
+          <h1>{title}</h1>
+        </div>
       </header>
 
       <div className="al-toolbar">
@@ -176,10 +173,11 @@ function AssetCard({ asset }: { asset: AssetDTO }) {
 }
 
 function SearchSvg() {
+  // Matches the lucide <Search size={16}> used in the Documents toolbar.
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="11" cy="11" r="7" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
     </svg>
   );
 }
