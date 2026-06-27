@@ -46,6 +46,13 @@ import {
   slugify,
   type LanguageCode,
 } from "@/lib/presentations-constants";
+import { getAllTeamMembers, logActivity } from "@/lib/users";
+import {
+  notifyFolderAccess,
+  type AccessMember,
+  type FolderAccessResult,
+  type SaveAccessResult,
+} from "@/lib/folder-access";
 
 export type ActionResult = { ok: true; id?: string; path?: string } | { ok: false; error: string };
 /** File mutations return the affected row so the client can update in place (no F5). */
@@ -70,6 +77,8 @@ function toMessage(e: unknown, ctx: "folder" | "file" | "generic" = "generic"): 
       : "That item already exists.";
   if (err?.code === "23503") return "That destination no longer exists.";
   if (err?.code === "23514") return "That value isn't allowed.";
+  if (err?.code === "42P01" || err?.code === "PGRST205" || /schema cache/i.test(msg))
+    return "Folder permissions aren’t set up yet — apply the latest migration and try again.";
   return "Something went wrong. Please try again.";
 }
 
@@ -89,6 +98,100 @@ function normalizeIsoOrNull(v: string | null | undefined): string | null {
   if (!v) return null;
   const t = Date.parse(v);
   return Number.isNaN(t) ? null : new Date(t).toISOString();
+}
+
+// ── Folder access / per-user permissions (D-080) ─────────────────────────────
+// 1:1 with the Document Library (documents-library/actions.ts), against
+// presentation_folder_permissions. super_admin-gated; service-role writes;
+// granted users are read-only (write policies stay admin-only).
+
+/** The team directory + which members already have access to this folder. */
+export async function getFolderAccess(folderId: string): Promise<FolderAccessResult> {
+  try {
+    await requireSuperAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  if (!UUID_RE.test(folderId)) return { ok: false, error: "That folder no longer exists." };
+
+  const { teamMembers } = await getAllTeamMembers();
+  const members: AccessMember[] = teamMembers.map((m) => ({
+    teamMemberId: m.teamMemberId,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    initials: m.initials,
+    department: m.department,
+    avatarUrl: m.avatarUrl,
+    email: m.email,
+    hasAccount: m.profileId != null,
+  }));
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("presentation_folder_permissions")
+    .select("team_member_id")
+    .eq("folder_id", folderId);
+  if (error) return { ok: false, error: toMessage(error) };
+  const grantedIds = (data ?? []).map((r) => r.team_member_id as string);
+  return { ok: true, data: { members, grantedIds } };
+}
+
+/**
+ * Replace a folder's access list with `teamMemberIds`. Diffs against the current
+ * grants, inserts additions, deletes removals, audit-logs, and emails each
+ * newly-added person (fire-and-forget). Revalidates the tree.
+ */
+export async function saveFolderAccess(
+  folderId: string,
+  teamMemberIds: string[]
+): Promise<SaveAccessResult> {
+  let id: Identity;
+  try {
+    id = await requireSuperAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  if (!UUID_RE.test(folderId)) return { ok: false, error: "That folder no longer exists." };
+  const wanted = Array.from(new Set((teamMemberIds ?? []).filter((t) => UUID_RE.test(t))));
+
+  const admin = createAdminClient();
+  const { data: cur, error: curErr } = await admin
+    .from("presentation_folder_permissions")
+    .select("team_member_id")
+    .eq("folder_id", folderId);
+  if (curErr) return { ok: false, error: toMessage(curErr) };
+
+  const current = new Set((cur ?? []).map((r) => r.team_member_id as string));
+  const toAdd = wanted.filter((t) => !current.has(t));
+  const toRemove = [...current].filter((t) => !wanted.includes(t));
+
+  if (toAdd.length) {
+    const { error } = await admin.from("presentation_folder_permissions").insert(
+      toAdd.map((tm) => ({ folder_id: folderId, team_member_id: tm, granted_by: id.userId }))
+    );
+    if (error) return { ok: false, error: toMessage(error) };
+  }
+  if (toRemove.length) {
+    const { error } = await admin
+      .from("presentation_folder_permissions")
+      .delete()
+      .eq("folder_id", folderId)
+      .in("team_member_id", toRemove);
+    if (error) return { ok: false, error: toMessage(error) };
+  }
+
+  if (toAdd.length || toRemove.length) {
+    await logActivity({
+      userId: id.userId,
+      action: "folder_access_changed",
+      resourceType: "presentation_folder",
+      resourceId: folderId,
+      metadata: { added: toAdd, removed: toRemove },
+    });
+    await notifyFolderAccess("presentation", folderId, toAdd);
+    revalidateStructure(); // a grantee must see the folder/tree appear immediately
+  }
+  return { ok: true, added: toAdd.length, removed: toRemove.length };
 }
 
 /** Collect every storage object owned by a set of file rows (source + thumb + slides). */

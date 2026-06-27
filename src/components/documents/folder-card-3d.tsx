@@ -17,6 +17,7 @@ import { CreateFolderModal } from "./create-folder-modal";
 import { ContextMenu, type CtxItem } from "./file-card";
 import { ConfirmDialog } from "./confirm-dialog";
 import { FolderMoveModal } from "./folder-move-modal";
+import { ManagePermissionsModal } from "@/components/permissions/manage-permissions-modal";
 
 /**
  * Split-layer 3D folder card (Figma redesign). The folder is two SVG layers —
@@ -113,6 +114,7 @@ function useFolderActions({ id, name, href, path, parentId, isPublic, isSuperAdm
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [permsOpen, setPermsOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const canManage = !!id && isSuperAdmin;
@@ -157,6 +159,7 @@ function useFolderActions({ id, name, href, path, parentId, isPublic, isSuperAdm
     if (path) menuItems.push({ kind: "item", label: "Move…", onClick: () => setMoveOpen(true) });
     menuItems.push(
       { kind: "item", label: isPublic ? "Make private" : "Make public", onClick: toggleVisibility },
+      { kind: "item", label: "Manage access…", onClick: () => setPermsOpen(true) },
       { kind: "sep" },
       { kind: "item", label: "Delete folder", onClick: () => setConfirmDelete(true), danger: true },
     );
@@ -190,6 +193,15 @@ function useFolderActions({ id, name, href, path, parentId, isPublic, isSuperAdm
           folderId={id}
           folderPath={path}
           parentId={parentId ?? null}
+        />
+      )}
+      {id && canManage && (
+        <ManagePermissionsModal
+          open={permsOpen}
+          onClose={() => setPermsOpen(false)}
+          folderId={id}
+          folderName={name}
+          kind="document"
         />
       )}
       {id && (

@@ -1150,6 +1150,112 @@ textarea.dl-input { min-height: 64px; }
   line-height: 1.5;
 }
 
+/* ── Manage access (per-user folder permissions, D-080) ─────────────────────
+   Shared by the Document Library + Presentation Hub access modal. */
+.dl-perm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dl-perm-search { min-height: 42px; }
+.dl-perm-meta {
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 0 2px;
+}
+.dl-perm-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 46vh;
+  overflow-y: auto;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-flat);
+}
+.dl-perm-empty {
+  margin: 0;
+  padding: 18px 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.dl-perm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms var(--ease-smooth), border-color 120ms var(--ease-smooth);
+}
+.dl-perm-row:hover { background: var(--surface-muted); }
+.dl-perm-row.is-on {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+}
+.dl-perm-avatar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+.dl-perm-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.dl-perm-id {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.dl-perm-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dl-perm-sub {
+  font-size: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dl-perm-check {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--hairline-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: transparent;
+  transition: background 120ms var(--ease-smooth), border-color 120ms var(--ease-smooth);
+}
+.dl-perm-check.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 /* ── Dropzone ───────────────────────────────────────────────────────────── */
 .dl-dropzone {
   display: flex;

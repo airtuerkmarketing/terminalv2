@@ -568,6 +568,20 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-080 — Per-user folder permissions (Document Library + Presentation Hub)
+**Date:** 2026-06-27
+**Status:** Adopted. Migration `20260627090000_folder_permissions` (two grant tables + SECURITY DEFINER helpers + widened SELECT policies).
+**Context:** Folders were binary — `is_public` (everyone) vs private (`is_admin()` only, D-051/D-079). Buhara: a super_admin must be able to grant **individual people** read access to a private folder in either library, with the grantee able to open/download but change nothing.
+**Decision:** Two parallel grant tables `document_folder_permissions` / `presentation_folder_permissions` `(folder_id, team_member_id, granted_by)`. Grants key off **team_members** (the 63-person directory), NOT `auth.users` — most people have no account yet, and a grant must persist + auto-activate on first login (resolved via `current_team_member_id()` → `profiles.team_member_id` ∥ `team_members.auth_user_id`).
+  - **Access model:** a grant on folder G gives CONTENT access to G **and every descendant** (downward inheritance), and to nothing above G — a subfolder grant never leaks the parent's content. The grantee can **see the tree** along the path to a grant (ancestors render for navigation) but those ancestors expose **no content**. Helpers: `can_access_*` (self/ancestor grant → files) vs `can_see_*` (self/ancestor/descendant grant → folder appears in the tree). Path math is LIKE-safe (slug CHECK ⇒ no metacharacters).
+  - **Read-only:** the folder/file **write** policies stay `is_admin()`-only; grants only widen SELECT. Grantees can't rename/move/delete/upload.
+  - **RLS safety:** the helpers are `SECURITY DEFINER` owned by `postgres` (which has `BYPASSRLS`), so a folder's own SELECT policy can call them without recursing through `FORCE ROW LEVEL SECURITY` — the same mechanism `is_admin()` already uses (verified against the live DB).
+  - **Enforcement is pure RLS** ⇒ the signed-URL serving routes (`/api/library/file/[id]`, `/api/presentations/file/[id]`) need **no change** (they gate by reading the row with the RLS client, then sign with the service role).
+  - **UX:** a super_admin-only **"Manage access…"** item in all four folder menus (both cards' right-click menu + both on-page ⋮ menus) opens a shared `ManagePermissionsModal` — the full team directory (avatar · name) with a search box, multi-select toggles. Saving diffs the selection (grant/revoke), audit-logs (`folder_access_changed`), and **emails each newly-added person** (fire-and-forget edge function `notify-folder-access`, Resend) with a deep link to the folder.
+**Verified:** `tsc` + `next build` green; migration DDL + the access path-math behaviourally proven in a rolled-back transaction against the live schema (ancestor = tree-only, granted+descendants = full, sibling = hidden).
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

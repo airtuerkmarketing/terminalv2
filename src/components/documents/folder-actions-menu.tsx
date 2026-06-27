@@ -6,6 +6,7 @@ import { Modal } from "./modal";
 import { deleteFolder, moveFolder } from "@/app/(public)/documents-library/actions";
 import type { FolderDTO } from "@/lib/documents";
 import { invalidateMoveTargets, useMoveTargets } from "./move-targets";
+import { ManagePermissionsModal } from "@/components/permissions/manage-permissions-modal";
 
 type ActiveModal = "move" | "delete" | null;
 
@@ -24,6 +25,7 @@ export function FolderActionsMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [modal, setModal] = useState<ActiveModal>(null);
+  const [permsOpen, setPermsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dest, setDest] = useState<string>(folder.parentId ?? "");
@@ -112,6 +114,18 @@ export function FolderActionsMenu({
             Move
           </button>
           {isSuperAdmin && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                setPermsOpen(true);
+              }}
+            >
+              Manage access
+            </button>
+          )}
+          {isSuperAdmin && (
             <button type="button" role="menuitem" className="danger" onClick={() => open("delete")}>
               Delete folder
             </button>
@@ -166,6 +180,16 @@ export function FolderActionsMenu({
           </div>
         </div>
       </Modal>
+
+      {isSuperAdmin && (
+        <ManagePermissionsModal
+          open={permsOpen}
+          onClose={() => setPermsOpen(false)}
+          folderId={folder.id}
+          folderName={folder.name}
+          kind="document"
+        />
+      )}
     </div>
   );
 }

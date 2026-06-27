@@ -38,7 +38,7 @@ See `spec/BUILD_LOG.md` for full progress.
 | File | Purpose |
 |---|---|
 | `ARCHITECTURE.md` | System design, schema, block taxonomy, routing, brand hierarchy |
-| `DECISIONS.md` | Locked design decisions (D-001 through D-056) |
+| `DECISIONS.md` | Locked design decisions (D-001 through D-080) |
 | `DESIGN_SYSTEM.md` | iOS 18 Liquid Glass design language |
 | `EMBEDS_INVENTORY.md` | Webflow embeds preserved for Phase 6 |
 | `SOURCE_INVENTORY.md` | Full inventory of the Webflow zip |
@@ -71,8 +71,8 @@ See `spec/BUILD_LOG.md` for full progress.
 | `0032_profiles_role_escalation_guard.sql` | Restrict profile role changes to super-admins (D-055) |
 | `0033_presentation_hub.sql` | Presentation Hub folder/file model + tables |
 | `20260621*`–`20260622*` (10 migrations) | User Panel: profiles↔team_members link, `user_activity_log`, `profiles_v` view, avatars bucket, RLS recursion / search_path fixes |
-
-Highest applied migration: `20260622193003_profiles_update_own_use_helper.sql`.
+| `20260623*`–`20260626*` | RAG/Wissensbasis foundation + retrieval, Document Library & Presentation Hub folder colour/Trash/visibility (D-074–079) |
+| `20260627090000_folder_permissions.sql` | Per-user folder grants: `document_folder_permissions`/`presentation_folder_permissions` + `current_team_member_id()`/`can_access_*`/`can_see_*` helpers + widened SELECT policies (D-080) |
 
 ## Design system
 
