@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeNext } from "@/lib/auth";
 import LoginForm from "./login-form";
 import TerminalMark from "./terminal-mark";
 import SsoButton from "./sso-button";
@@ -22,7 +23,7 @@ export default async function LoginPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
-    redirect(next || "/");
+    redirect(sanitizeNext(next) ?? "/");
   }
 
   return (
