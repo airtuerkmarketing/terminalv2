@@ -760,6 +760,24 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-105 — Architecture audit: SEC-01 hotfix (live) + Phase D S1/S2 refactor wave (in PR)
+**Date:** 2026-06-28
+**Status:** SEC-01 shipped to `main` + live (`37e4c33`); Phase D batch on `audit/phase-d-refactor` (PR open, awaiting review). **Code-only — no migration, no schema change.**
+**Context:** Live-source architecture audit (Phase A recon → diagnostic → strategy, each adversarially reviewed) of the App Router + Supabase data flow. Ground truth only (Supabase/Vercel/`main`); the two supplied audit docs were partly stale (one described remediations never present in `main`). Strengths confirmed: service-role discipline (26/26 mutations gated) and the private-asset RLS-read→sign pattern — left intact.
+**S0 (shipped to main, verified live):** `/api/search` ran the service-role client with **no auth gate** and **no `status='published'` filter** on `pages`, leaking draft page titles/slugs/paths to anonymous callers (Next 16 `proxy.ts` deliberately doesn't auth-gate — CVE-2025-29927). Fix: 401 for anon + mirror `pages_select_published` for non-admins. Anon `/api/search` now returns 401 on prod.
+**Phase D batch (S1+S2, branch/PR; zero functional + zero visual regression):**
+- **SEC-02** — `sanitizeNext` consolidated into `@/lib/auth` + applied to both login redirect sinks (+ backslash hardening). The prior reverted `audit/phase-2-security-cache-hardening` attempt was an abandoned ~5-min experiment, not a regression (verified via GitHub).
+- **CM-01 / PERF-04** — `next/dynamic` AIChatWindow + CorrectionModal; react-markdown leaves the dashboard initial bundle.
+- **HC-01** — `src/config/navigation.ts` single-sources the nav constants; pre-paint script generated from `LIBRARY_ROUTE_PREFIXES` (kills the lock-step duplication; output verified byte-equivalent).
+- **PERF-03** — folder counts/previews batched to one query per level (was N+1); RLS + ordering preserved.
+- **CM-02** — shared server-action helpers (`toMessage` / `UUID_RE` / `revalidate*`) → `src/lib/library/actions-shared.ts`. Data-layer folder-tree generic deferred (DTO divergence; poor risk/reward on the most-used path).
+- **CM-03** — admin + library modals code-split via `next/dynamic` (kept mounted; only the chunk deferred).
+**Gates:** `pnpm typecheck` + `pnpm build` green per commit.
+**Deferred / STOP-gated (NOT in this PR — need explicit sign-off):** PERF-01 cookie-free cached CMS reads (+ TTL choice), SEC-03 CSP header, SEC-04 rate-limiting, SEC-06/DB advisor hardening (anon `SECURITY DEFINER` revoke, multiple-permissive-policy merges, unused-index drops — schema/prod sign-off).
+**Reversibility:** revert the branch commits; the SEC-01 revert would restore the unfiltered query (not recommended). No schema to roll back.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)
