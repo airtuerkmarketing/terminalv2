@@ -136,37 +136,51 @@ export function AssetLibrary({ title, assets }: { title: string; assets: AssetDT
 }
 
 function AssetCard({ asset }: { asset: AssetDTO }) {
+  // Free-standing cell, 1:1 with the Document Library card view (.dl-cell): a
+  // shadowed object on top, then the name, then the meta — no surrounding box.
+  // Logos + icons sit contained on a soft backdrop so transparent art reads;
+  // photography/backgrounds fill the thumb (cover), like the Documents image
+  // thumbnails. Assets are read-only — the name is a plain label (no rename).
   const contain = asset.category === "Logos" || asset.category === "Icons";
   return (
-    <div className="al-card">
-      <div className="al-thumb">
-        <span className="al-badge">{ext(asset.mime)}</span>
-        <a
-          className="al-dl"
-          href={asset.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          download
-          aria-label={`Download ${asset.name}`}
-        >
-          <DownloadSvg />
-        </a>
-        {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary Supabase Storage asset URL */}
-        <img
-          className={`al-img${contain ? " is-contain" : ""}`}
-          src={asset.url}
-          alt={asset.name}
-          loading="lazy"
-          decoding="async"
-        />
+    <div className="al-cell">
+      <a
+        className="al-cell__hit"
+        href={asset.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Open ${asset.name}`}
+      >
+        <span className="al-cell__visual">
+          {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary Supabase Storage asset URL */}
+          <img
+            className={`al-cell__thumb${contain ? " is-contain" : ""}`}
+            src={asset.url}
+            alt={asset.name}
+            loading="lazy"
+            decoding="async"
+          />
+        </span>
+      </a>
+      {/* Hover-only download — mirrors .dl-cell__dl. stopPropagation keeps it from
+          opening the asset. */}
+      <a
+        className="al-cell__dl"
+        href={asset.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        download
+        onClick={(e) => e.stopPropagation()}
+        aria-label={`Download ${asset.name}`}
+        title="Download"
+      >
+        <DownloadSvg />
+      </a>
+      <div className="al-cell__name" title={asset.name}>
+        {asset.name}
       </div>
-      <div className="al-meta">
-        <div className="al-name" title={asset.name}>
-          {asset.name}
-        </div>
-        <div className="al-sub">
-          {ext(asset.mime)} · {formatSize(asset.size)}
-        </div>
+      <div className="al-cell__sub">
+        {ext(asset.mime)} · {formatSize(asset.size)}
       </div>
     </div>
   );
