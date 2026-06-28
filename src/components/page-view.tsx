@@ -15,10 +15,16 @@ import { BlockEmptyState } from "@/components/blocks/empty-state";
 import { HardcodedStub } from "@/components/blocks/hardcoded-stub";
 import { AssetLibrary } from "@/components/hardcoded/asset-library";
 import { EmailSignature } from "@/components/hardcoded/email-signature";
-import { ApixWorkflow } from "@/components/hardcoded/apix-workflow";
-import { ApixNetwork } from "@/components/hardcoded/apix-network";
-import { ApixPresentation } from "@/components/hardcoded/apix-presentation";
-import { ApixGroup } from "@/components/hardcoded/apix-group";
+// APIX tools are heavy client components (d3 / Leaflet / drag-diagram / iframe).
+// They are loaded as viewport-gated, code-split islands (ssr:false) so d3 + the
+// world atlas + leaflet never enter the route's initial bundle (audit PIPE-01/02,
+// NET-02, GRP-01, PRES-04). DOM output is unchanged once a section is in view.
+import {
+  LazyApixWorkflow as ApixWorkflow,
+  LazyApixNetwork as ApixNetwork,
+  LazyApixPresentation as ApixPresentation,
+  LazyApixGroup as ApixGroup,
+} from "@/components/hardcoded/apix-lazy-islands";
 import { TeamDirectory } from "@/components/hardcoded/team";
 import { BrandPage } from "@/components/brand-sections";
 import { isBrandTsxSlug } from "@/lib/brand-types";
