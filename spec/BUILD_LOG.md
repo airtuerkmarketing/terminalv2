@@ -9,7 +9,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-28)
 
-- **Architecture audit (D-105):** live-source audit of the App Router + Supabase data flow. **SEC-01 shipped to `main` + live** (`37e4c33`): `/api/search` no longer leaks draft pages to anonymous callers (auth-gate + `status='published'` filter; anon → 401 on prod). **Phase D S1/S2 refactor wave** on `audit/phase-d-refactor` (**PR open, awaiting review**): SEC-02 redirect sanitizer, CM-01/PERF-04 dashboard code-split, HC-01 `src/config/navigation.ts`, PERF-03 folder-count batching, CM-02 shared action helpers, CM-03 modal code-split — zero functional/visual regression, `typecheck`+`build` green per commit. **STOP-gated follow-ups (not done):** PERF-01 cached CMS reads, SEC-03 CSP, SEC-04 rate-limit, DB advisor hardening.
+- **Architecture audit (D-105) — MERGED to main:** live-source audit of the App Router + Supabase data flow. **SEC-01** (`37e4c33`): `/api/search` no longer leaks draft pages to anon (auth-gate + `status='published'`; anon → 401). **PR #17** (squash `98086c6`) Steps 0–5: SEC-02 redirect sanitizer, CM-01/PERF-04 dashboard code-split, HC-01 `src/config/navigation.ts`, PERF-03 folder-count batching, CM-02 `src/lib/library/actions-shared.ts`, CM-03 modal code-split. **PR #18** (squash `63efa2f`): PERF-01/02 cookie-free cached CMS reads (TTL 3600) + `POST /api/revalidate` super_admin lever + SEC-03 **CSP report-only** (build-derived prefs-script hash, `/api/csp-report` sink) + DOC-01. All gates green; anon prod-verified. **STILL OPEN (owner decisions — NOT done):** SEC-04 Vercel WAF rate-limit (handoff — no MCP firewall API), the CSP enforce-flip (report-only for now), and the DB-track (SEC-06 / DB-01 / DB-02 / DB-03) — each regresses as-specified, see D-105.
 - **HEAD:** `feat/folder-permissions` — **Per-user folder permissions** (D-080): a super_admin grants individual people read access to a private folder in the Document Library and/or Presentation Hub via **"Manage access…"** in all four folder menus (a searchable team-directory picker). Grants key off `team_members` (so people not yet invited can be granted; auto-activates on first login), cascade **downward** only (a subfolder grant never leaks the parent's content; ancestors show in the tree but no content), and are **read-only** (write policies stay admin-only). New grant tables `document_folder_permissions`/`presentation_folder_permissions` + SECURITY DEFINER `current_team_member_id()`/`can_access_*`/`can_see_*` helpers + widened SELECT policies; new email edge function `notify-folder-access` (Resend). Migration `20260627090000_folder_permissions` — **applied + edge-fn `notify-folder-access` deployed**. Prev: **Presentation Hub folder visibility** (D-079): `presentation_folders.is_public` (default true = non-breaking) + RLS so private folders/files are admin-only; **"Make private/public"** in the folder card + on-page menus, lock cue on private cards. Migration `20260626210000` applied to prod. Prev: **Presentation Hub ported 1:1 to the Document Library construct** (D-077/078 — nested secondary sidebar tree, managed SVG colour cards + full context menu, counts, Move, rename-redirect, delete-guard, file Trash with source+thumbnail+slides purge; migrations `…190000`+`…200000`); both library nav nodes kept visible on their own route; Resources order **Presentations → Documents → Assets → Team**. **Document Library data/shell hardening** (D-074/075/076). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
   pnpm 11. Deployed on Vercel, serving [www.airtuerk.dev](https://www.airtuerk.dev)
@@ -105,6 +105,30 @@ it is append-only history (do not rewrite past entries — add new ones).
   AUDIT-006 (frozen 2026-06-23 corpus) — AUDIT-003 (Hara Filo) + AUDIT-004 (Pegasus)
   fixed in Welle D3 (`20260626093731`, D-070); D2 + D3 Phase-2 embed backfill of the
   3 priority-1 rows (ZDR-gated consistency follow-up, not retrieval-blocking).
+
+---
+
+## 2026-06-28 (W4) — Architecture audit Phase D merged to main (D-105)
+
+Squash-merges via admin bypass (main branch protection). SEC-04 (Vercel WAF
+rate-limit) handed to owner (no MCP firewall API); the DB-track (SEC-06/DB-01/
+DB-02/DB-03) was NOT touched — each regresses as-specified (see DECISIONS.md
+D-105) — and CSP stays **report-only** (enforce deferred).
+
+- **PR #17** (`audit/phase-d-refactor` → squash `98086c6`, prod `dpl_DtZmRL8…` READY):
+  Steps 0–5 — SEC-02 redirect sanitizer, CM-01/PERF-04 dashboard code-split, HC-01
+  `src/config/navigation.ts`, PERF-03 folder-count batching, CM-02 shared action
+  helpers, CM-03 modal code-split. typecheck + build green. Anon prod verify:
+  `/login` 200, `/` →307 `/login` (no getNav 500), `/api/search` 401. Authed views
+  (dashboard / folder counts / admin modals) — owner to verify logged-in.
+- **PR #18** (`audit/phase-d-app-wave` → rebased onto squashed main, squash
+  `63efa2f`, prod `dpl_3GFfisk…` READY): PERF-01/02 cookie-free cached CMS reads
+  (TTL 3600) + `POST /api/revalidate` super_admin lever + SEC-03 CSP report-only
+  (build-derived prefs-script hash, `/api/csp-report` sink) + DOC-01. typecheck +
+  build green. Anon prod verify: `Content-Security-Policy-Report-Only` on `/` and
+  `/login` (hash `f28ae…`), `/api/revalidate` anon 403, `/api/csp-report` 204,
+  `/api/search` 401, `/login` 200. super_admin `/api/revalidate` 200 + cached CMS
+  render — owner to verify logged-in.
 
 ---
 
