@@ -13,13 +13,8 @@ import {
 } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { RadialKit } from "@/components/shell/RadialKit";
-import {
-  IBE_SLUG,
-  SPEC_HIDDEN_PRODUCT_SLUGS,
-  LIBRARY_ROUTE_PREFIXES,
-  THEME_STORAGE_KEY,
-  SIDEBAR_STORAGE_KEY,
-} from "@/config/navigation";
+import { IBE_SLUG, SPEC_HIDDEN_PRODUCT_SLUGS } from "@/config/navigation";
+import { PREFS_SCRIPT } from "@/lib/prefs-script";
 
 /** Resources section — hardcoded routes per ARCHITECTURE.md §3 / §5. Document
  *  Library is an EXPANDABLE node whose children are the visible top-level folders
@@ -131,16 +126,6 @@ async function getNav(): Promise<SidebarNav> {
     resources: [...RESOURCES_BEFORE, documentLibrary, ...RESOURCES_AFTER],
   };
 }
-
-// Apply persisted theme/sidebar before paint to avoid a flash. Also
-// pre-paint-collapses the global rail on library routes (own secondary sidebar)
-// so there's no expand→collapse flash on a hard load. The library-prefix check
-// is generated from LIBRARY_ROUTE_PREFIXES (shared with shell/sidebar.tsx) so the
-// two can no longer drift (HC-01).
-const LIBRARY_PREFIX_CHECK = LIBRARY_ROUTE_PREFIXES.map(
-  (p) => `p===${JSON.stringify(p)}||p.indexOf(${JSON.stringify(`${p}/`)})===0`
-).join("||");
-const PREFS_SCRIPT = `(function(){try{var d=document.documentElement;var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(t==='ios18-light'||t==='ios18-dark')d.dataset.theme=t;var s=localStorage.getItem(${JSON.stringify(SIDEBAR_STORAGE_KEY)});if(s==='expanded'||s==='collapsed')d.dataset.sidebar=s;var p=location.pathname;if(${LIBRARY_PREFIX_CHECK})d.dataset.sidebar='collapsed';}catch(e){}})();`;
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
