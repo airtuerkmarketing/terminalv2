@@ -186,37 +186,45 @@ export interface RootFolderDTO extends FolderDTO {
 
 /**
  * Decorate folders with a count of their DIRECT files + up to 3 preview files
- * (for the 3D card fan-out). RLS-scoped (the count + preview rows respect the
- * viewer's visibility, same as every read here). One small query per folder —
- * fine for the handful shown in a grid level; callers pass an already-bounded
- * list (a single tree level), never the whole library.
+ * (for the 3D card fan-out). RLS-scoped (the rows respect the viewer's
+ * visibility, same as every read here).
+ *
+ * PERF-03: one batched query for the whole (bounded) folder level instead of one
+ * per folder. The DB does the sort_order→created_at ordering across all folders;
+ * we group the returned rows preserving that order, so each folder's count
+ * (= group size) and top-3 preview are identical to the previous per-folder
+ * `count:"exact" … limit(3)` query — just N+1 round-trips collapsed to one.
  */
 async function withPreview(folders: FolderDTO[]): Promise<RootFolderDTO[]> {
   if (folders.length === 0) return [];
   const supabase = await createClient();
   const liveOnly = await trashReady(supabase);
-  return Promise.all(
-    folders.map(async (f) => {
-      let pq = supabase
-        .from("document_files")
-        .select("id, title, extension", { count: "exact" })
-        .eq("folder_id", f.id);
-      if (liveOnly) pq = pq.is("deleted_at", null); // exclude trashed (D-076)
-      const { data, count } = await pq
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true })
-        .limit(3);
-      const previewFiles: PreviewFileDTO[] = (
-        (data as { id: string; title: string; extension: string }[] | null) ?? []
-      ).map((r) => ({
-        id: r.id,
-        title: r.title,
-        extension: r.extension,
-        isImage: fileKind(r.extension) === "image",
-      }));
-      return { ...f, fileCount: count ?? previewFiles.length, previewFiles };
-    })
-  );
+  const ids = folders.map((f) => f.id);
+  let q = supabase
+    .from("document_files")
+    .select("id, title, extension, folder_id")
+    .in("folder_id", ids);
+  if (liveOnly) q = q.is("deleted_at", null); // exclude trashed (D-076)
+  const { data } = await q
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  type Row = { id: string; title: string; extension: string; folder_id: string };
+  const byFolder = new Map<string, Row[]>();
+  for (const r of (data as Row[] | null) ?? []) {
+    const list = byFolder.get(r.folder_id);
+    if (list) list.push(r);
+    else byFolder.set(r.folder_id, [r]);
+  }
+  return folders.map((f) => {
+    const list = byFolder.get(f.id) ?? [];
+    const previewFiles: PreviewFileDTO[] = list.slice(0, 3).map((r) => ({
+      id: r.id,
+      title: r.title,
+      extension: r.extension,
+      isImage: fileKind(r.extension) === "image",
+    }));
+    return { ...f, fileCount: list.length, previewFiles };
+  });
 }
 
 /**
@@ -370,20 +378,24 @@ export async function getFolderTreeForPath(
   };
   collect(null);
 
+  // PERF-03: one batched query for the counts of every rendered node (was one
+  // head-count per node). RLS-scoped via the .in() filter; folders with no
+  // visible files simply don't appear in the result and fall back to 0 below.
   const supabase = await createClient();
   const liveOnly = await trashReady(supabase);
   const counts = new Map<string, number>();
-  await Promise.all(
-    rendered.map(async (f) => {
-      let cq = supabase
-        .from("document_files")
-        .select("id", { count: "exact", head: true })
-        .eq("folder_id", f.id);
-      if (liveOnly) cq = cq.is("deleted_at", null); // exclude trashed (D-076)
-      const { count } = await cq;
-      counts.set(f.id, count ?? 0);
-    })
-  );
+  const renderedIds = rendered.map((f) => f.id);
+  if (renderedIds.length > 0) {
+    let cq = supabase
+      .from("document_files")
+      .select("folder_id")
+      .in("folder_id", renderedIds);
+    if (liveOnly) cq = cq.is("deleted_at", null); // exclude trashed (D-076)
+    const { data: countRows } = await cq;
+    for (const r of (countRows as { folder_id: string }[] | null) ?? []) {
+      counts.set(r.folder_id, (counts.get(r.folder_id) ?? 0) + 1);
+    }
+  }
 
   const build = (parentId: string | null): DocFolderTreeNode[] =>
     (byParent.get(parentId) ?? []).map((f) => ({
