@@ -58,6 +58,10 @@ import "@/styles/apix-network.css";
 // this is a faithful imperative port; the handles are d3 selections / DOM nodes).
 interface Point extends Country {
   x: number; y: number; lx: number; ly: number; w?: number; h?: number;
+  // rawW/rawH = pill's intrinsic offset size, measured once and cached so the
+  // hot relayout path never re-reads layout (NET-06); scale-space w/h derive from
+  // these / ratio each pass.
+  rawW?: number; rawH?: number;
   connection?: any; leader?: any; dot?: any; hit?: any; pill?: HTMLDivElement;}
 
 
@@ -136,7 +140,7 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
         if (c.hub) return;
         c.leader = leaderLayer.append("line").attr("class", "leader")
           .attr("x1", c.x).attr("y1", c.y).attr("x2", c.lx).attr("y2", c.ly)
-          .style("animation-delay", (600 + Math.random() * 300) + "ms");
+          .style("animation-delay", (600 + (i % 10) * 30) + "ms"); // NET-07: deterministic stagger (was Math.random)
 
         if (c.office) {
           const g = dotLayer.append("g").attr("class", "office-marker")
@@ -203,7 +207,13 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
       const ratio = stageEl.clientWidth / WIDTH; if (!ratio) return;
       const vis = points.filter((c) => c.pill && c.pill.style.display !== "none");
       if (!vis.length) return;
-      vis.forEach((c) => { c.w = c.pill!.offsetWidth / ratio + 8; c.h = c.pill!.offsetHeight / ratio + 8; });
+      // NET-06: measure each pill's intrinsic size ONCE (first time it is visible),
+      // then derive scale-space w/h from the cached raw size — no layout read on
+      // subsequent relayouts (resize / tab switch), killing the forced reflow.
+      vis.forEach((c) => {
+        if (c.rawW === undefined) { c.rawW = c.pill!.offsetWidth; c.rawH = c.pill!.offsetHeight; }
+        c.w = c.rawW / ratio + 8; c.h = c.rawH! / ratio + 8;
+      });
 
       const mx = mean(vis, (p) => p.x) ?? 0, my = mean(vis, (p) => p.y) ?? 0;
       vis.forEach((c) => {
@@ -213,6 +223,10 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
 
       const target = 24 / ratio, dotPad = 6 / ratio;
       for (let it = 0; it < ITER; it++) {
+        // NET-04: snapshot to early-exit once the relaxation has converged. The
+        // result is within EPS of running all ITER passes, so positions are
+        // visually identical — but ~30 labels usually settle well before 340.
+        const oldLx = vis.map((c) => c.lx), oldLy = vis.map((c) => c.ly);
         vis.forEach((c) => {
           const dx = c.lx - c.x, dy = c.ly - c.y, d = Math.hypot(dx, dy) || 0.01;
           const f = (d - target) * 0.06; c.lx -= dx / d * f; c.ly -= dy / d * f;
@@ -237,6 +251,12 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
           c.lx = Math.max(c.w! / 2 + 2, Math.min(WIDTH - c.w! / 2 - 2, c.lx));
           c.ly = Math.max(c.h! / 2 + 2, Math.min(HEIGHT - c.h! / 2 - 2, c.ly));
         });
+        let maxD = 0;
+        for (let k = 0; k < vis.length; k++) {
+          const d = Math.hypot(vis[k].lx - oldLx[k], vis[k].ly - oldLy[k]);
+          if (d > maxD) maxD = d;
+        }
+        if (maxD < 0.05) break; // converged — remaining passes would move < EPS
       }
       vis.forEach((c) => { if (c.leader) c.leader.attr("x1", c.x).attr("y1", c.y).attr("x2", c.lx).attr("y2", c.ly); });
       updateOverlay(zoomTransform(svgSel.node()));
