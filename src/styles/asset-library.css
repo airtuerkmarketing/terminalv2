@@ -75,37 +75,31 @@
 .al-cell__name { max-width: 100%; padding: 2px 4px; font-size: 14px; font-weight: 500; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .al-cell__sub { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-3); }
 
-/* ── View modes (card / grid / list). The .al-cell markup is identical across all
-   three; only the grid container + a few cell overrides change per view. ─────── */
-/* Card (default): the same free-standing explorer grid as the Documents card view
-   (.dl-explorer-grid: auto-fill minmax(176px), gap space-3, top-aligned). */
+/* ── View modes: Card + List only (no grid), like the Document Library. ──────── */
+/* Card (default): free-standing explorer grid, same measure as the Documents card
+   view (.dl-explorer-grid: auto-fill minmax(176px), gap space-3, top-aligned). */
 .al-grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); align-items: start; }
-.al-grid[data-view="card"] { grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); }
 
-/* Grid: a denser thumbnail wall — smaller cells + thumb, name only. */
-.al-grid[data-view="grid"] { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); max-width: 1472px; }
-.al-grid[data-view="grid"] .al-cell__visual { height: 104px; }
-.al-grid[data-view="grid"] .al-cell__thumb { width: 76px; height: 96px; }
-.al-grid[data-view="grid"] .al-cell__thumb.is-contain { width: 96px; height: 96px; padding: var(--space-3); }
-.al-grid[data-view="grid"] .al-cell__sub { display: none; }
-
-/* List: one item per row inside a bordered list (mirrors the Documents list:
-   hairline separators, hover surface-muted, 40px thumb, 14px name). */
+/* List: a bordered list of self-contained .al-row items — own markup, NOT the card
+   bent with flex. Mirrors the Documents list (.dl-list / .dl-row): hairline row
+   separators, a 56px row, hover surface-muted, 40px thumb, 14px name. */
 .al-grid[data-view="list"] { display: flex; flex-direction: column; gap: 0; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius-xl); box-shadow: var(--shadow-rest); overflow: hidden; }
-.al-grid[data-view="list"] .al-cell { flex-direction: row; align-items: center; gap: var(--space-4); min-height: 56px; padding: 0 var(--space-4); border-radius: 0; border-bottom: 1px solid var(--separator); transition: background 0.15s; }
-.al-grid[data-view="list"] .al-cell:last-child { border-bottom: 0; }
-.al-grid[data-view="list"] .al-cell:hover { background: var(--surface-muted); }
-.al-grid[data-view="list"] .al-cell__hit { width: auto; flex-shrink: 0; }
-.al-grid[data-view="list"] .al-cell__visual { height: auto; transform: none; }
-.al-grid[data-view="list"] .al-cell:hover .al-cell__visual { transform: none; }
-/* Row thumbs mirror file-row's .dl-row-thumb: a 40px tile with a hairline frame +
-   subtle shadow for row context — no grey backdrop, no drop-shadow. */
-.al-grid[data-view="list"] .al-cell__thumb, .al-grid[data-view="list"] .al-cell__thumb.is-contain { width: 40px; height: 40px; border-radius: var(--radius-sm); border: 1px solid var(--hairline); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); filter: none; padding: 0; background: transparent; }
-.al-grid[data-view="list"] .al-cell:hover .al-cell__thumb, .al-grid[data-view="list"] .al-cell:hover .al-cell__thumb.is-contain { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); filter: none; }
-.al-grid[data-view="list"] .al-cell__thumb.is-contain { padding: 4px; }
-.al-grid[data-view="list"] .al-cell__dl { display: none; }
-.al-grid[data-view="list"] .al-cell__name { flex: 1; min-width: 0; text-align: left; padding: 0; }
-.al-grid[data-view="list"] .al-cell__sub { flex-shrink: 0; }
+.al-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-4); min-height: 56px; padding: 0 var(--space-4); border-bottom: 1px solid var(--separator); transition: background 0.15s; }
+.al-row:last-child { border-bottom: 0; }
+.al-row:hover { background: var(--surface-muted); }
+/* Thumb mirrors file-row's .dl-row-thumb: 40px tile, hairline frame + subtle shadow
+   (cover for photos, contain for logos/icons). */
+.al-row-thumb { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; }
+.al-row-img { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--hairline); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); }
+.al-row-img.is-contain { object-fit: contain; padding: 4px; }
+.al-row-name { min-width: 0; font-size: 14px; font-weight: 500; color: var(--text-1); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.al-row-name:hover { color: var(--accent); }
+.al-row-meta { font-size: 13px; color: var(--text-3); white-space: nowrap; }
+/* Hover-reveal download (same ghost as the card's .al-cell__dl). */
+.al-row-dl { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: var(--text-2); background: var(--surface); border: 1px solid var(--hairline); opacity: 0; transition: opacity 150ms var(--ease-smooth), background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth); text-decoration: none; }
+.al-row-dl svg { width: 14px; height: 14px; }
+.al-row:hover .al-row-dl, .al-row:focus-within .al-row-dl, .al-row-dl:focus-visible { opacity: 1; }
+.al-row-dl:hover { background: rgba(120, 120, 128, 0.12); color: var(--text-1); }
 
 .al-empty { border: 1px dashed var(--hairline); border-radius: var(--radius-xl); padding: var(--space-12) var(--space-6); text-align: center; color: var(--text-3); font-size: var(--fs-base); background: var(--surface-muted); }
 
@@ -114,6 +108,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .al-chip, .al-cell, .al-cell__visual, .al-cell__thumb, .al-cell__dl { transition: none; }
+  .al-chip, .al-cell, .al-cell__visual, .al-cell__thumb, .al-cell__dl, .al-row, .al-row-dl { transition: none; }
   .al-cell:hover .al-cell__visual { transform: none; }
 }
