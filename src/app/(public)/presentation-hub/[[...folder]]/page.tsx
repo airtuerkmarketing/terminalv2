@@ -12,6 +12,7 @@ import {
   getTrashedPresentationFiles,
   PRESENTATION_TRASH_RETENTION_DAYS,
 } from "@/lib/presentations";
+import { listFolderGrantees } from "@/app/(public)/presentation-hub/actions";
 import { PresentationHubRoot } from "@/components/presentations/presentation-hub-root";
 import { PresentationFolderPage } from "@/components/presentations/presentation-folder-page";
 import { PresentationsSidebar } from "@/components/presentations/presentations-sidebar";
@@ -91,6 +92,9 @@ export default async function PresentationHubPage({ params }: Params) {
     getPresentationFolderTreeForPath(current.path),
   ]);
   const openFolderFiles = page.files.map((f) => ({ id: f.id, title: f.title, fileType: f.fileType }));
+  // Who currently has per-user access (D-080) — feeds the header avatar group.
+  // super_admin-only (the action is gated; non-admins can't read others' grants).
+  const grantees = isSuperAdmin ? await listFolderGrantees(current.id) : [];
 
   return (
     <div className="dl-page">
@@ -111,6 +115,7 @@ export default async function PresentationHubPage({ params }: Params) {
             initialFiles={page.files}
             initialHasMore={page.hasMore}
             isSuperAdmin={isSuperAdmin}
+            grantees={grantees}
           />
         </div>
       </div>

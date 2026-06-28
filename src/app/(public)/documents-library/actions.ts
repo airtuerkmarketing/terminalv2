@@ -329,6 +329,81 @@ export async function saveFolderAccess(
 }
 
 /**
+ * Only the team members who currently have access to this folder — the data the
+ * header avatar group (FolderAccessAvatars) renders. super_admin-gated; returns
+ * an empty list on any failure so the header degrades quietly.
+ */
+export async function listFolderGrantees(folderId: string): Promise<AccessMember[]> {
+  try {
+    await requireSuperAdmin();
+  } catch {
+    return [];
+  }
+  if (!UUID_RE.test(folderId)) return [];
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("document_folder_permissions")
+    .select("team_member_id")
+    .eq("folder_id", folderId);
+  if (error || !data || data.length === 0) return [];
+  const grantedIds = new Set(data.map((r) => r.team_member_id as string));
+
+  const { teamMembers } = await getAllTeamMembers();
+  return teamMembers
+    .filter((m) => grantedIds.has(m.teamMemberId))
+    .map((m) => ({
+      teamMemberId: m.teamMemberId,
+      firstName: m.firstName,
+      lastName: m.lastName,
+      initials: m.initials,
+      department: m.department,
+      avatarUrl: m.avatarUrl,
+      email: m.email,
+      hasAccount: m.profileId != null,
+    }));
+}
+
+/**
+ * Revoke ONE person's access to a folder (the avatar group's quick action).
+ * Atomic single-row delete — unlike saveFolderAccess it can't clobber other
+ * grants from a stale client view. super_admin-gated; revalidates the tree so
+ * the revoked user loses the folder + its files on their next request.
+ */
+export async function revokeFolderAccess(
+  folderId: string,
+  teamMemberId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  let id: Identity;
+  try {
+    id = await requireSuperAdmin();
+  } catch (e) {
+    return { ok: false, error: toMessage(e) };
+  }
+  if (!UUID_RE.test(folderId) || !UUID_RE.test(teamMemberId)) {
+    return { ok: false, error: "That folder no longer exists." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("document_folder_permissions")
+    .delete()
+    .eq("folder_id", folderId)
+    .eq("team_member_id", teamMemberId);
+  if (error) return { ok: false, error: toMessage(error) };
+
+  await logActivity({
+    userId: id.userId,
+    action: "folder_access_changed",
+    resourceType: "document_folder",
+    resourceId: folderId,
+    metadata: { removed: [teamMemberId] },
+  });
+  revalidateStructure();
+  return { ok: true };
+}
+
+/**
  * Recursive folder delete (super-admin). App-level cascade because FKs are
  * ON DELETE RESTRICT: gather the subtree, delete file rows, delete folder rows
  * deepest-first (children before parents), then remove storage objects last.

@@ -30,6 +30,8 @@ import { PresentationFileManageModal } from "./presentation-file-manage-modal";
 import { UploadModal } from "./upload-modal";
 import { FolderActionsMenu } from "./folder-actions-menu";
 import { PresentationFolderCard3D, PresentationFolderRow } from "./presentation-folder-card-3d";
+import { FolderAccessAvatars } from "@/components/permissions/folder-access-avatars";
+import type { AccessMember } from "@/lib/folder-access";
 
 const PAGE_SIZE = 60;
 
@@ -40,6 +42,7 @@ export function PresentationFolderPage({
   initialFiles,
   initialHasMore,
   isSuperAdmin,
+  grantees,
 }: {
   folder: PresentationFolderDTO;
   trail: PresentationFolderDTO[];
@@ -47,6 +50,7 @@ export function PresentationFolderPage({
   initialFiles: PresentationFileDTO[];
   initialHasMore: boolean;
   isSuperAdmin: boolean;
+  grantees: AccessMember[];
 }) {
   const router = useRouter();
   const [files, setFiles] = useState<PresentationFileDTO[]>(initialFiles);
@@ -226,7 +230,17 @@ export function PresentationFolderPage({
             )
           )}
         </div>
-        {isSuperAdmin && <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />}
+        {isSuperAdmin && (
+          <div className="dl-head-right">
+            <FolderAccessAvatars
+              key={grantees.map((g) => g.teamMemberId).join(",")}
+              folderId={folder.id}
+              kind="presentation"
+              grantees={grantees}
+            />
+            <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />
+          </div>
+        )}
       </header>
 
       <LibraryToolbar

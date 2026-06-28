@@ -11,6 +11,7 @@ import {
   getTrashedFiles,
   TRASH_RETENTION_DAYS,
 } from "@/lib/documents";
+import { listFolderGrantees } from "@/app/(public)/documents-library/actions";
 import { DocumentLibraryRoot } from "@/components/documents/document-library-root";
 import { FolderPage } from "@/components/documents/folder-page";
 import { DocumentsSidebar } from "@/components/documents/documents-sidebar";
@@ -88,6 +89,9 @@ export default async function DocumentLibraryPage({ params }: Params) {
     getFolderTreeForPath(current.path),
   ]);
   const openFolderFiles = page.files.map((f) => ({ id: f.id, title: f.title, extension: f.extension }));
+  // Who currently has per-user access (D-080) — feeds the header avatar group.
+  // super_admin-only (the action is gated; non-admins can't read others' grants).
+  const grantees = isSuperAdmin ? await listFolderGrantees(current.id) : [];
 
   return (
     <div className="dl-page">
@@ -108,6 +112,7 @@ export default async function DocumentLibraryPage({ params }: Params) {
             initialFiles={page.files}
             initialHasMore={page.hasMore}
             isSuperAdmin={isSuperAdmin}
+            grantees={grantees}
           />
         </div>
       </div>

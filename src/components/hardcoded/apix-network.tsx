@@ -1,9 +1,31 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import * as d3 from "d3";
+// Modular d3 imports (NET-01): only the ~7 sub-modules actually used, instead of
+// `import * as d3` which pulls the whole meta-package. `zoom` is aliased because
+// the engine keeps a local `zoom` behaviour handle.
+import { select } from "d3-selection";
+import { geoMercator, geoPath } from "d3-geo";
+import { zoom as d3Zoom, zoomTransform, zoomIdentity } from "d3-zoom";
+import { mean } from "d3-array";
+import { easeCubicOut } from "d3-ease";
+import "d3-transition"; // side-effect: augments selections with .transition()/.interrupt()
 import { feature } from "topojson-client";
 import worldData from "./data/countries-110m.json";
+import {
+  COUNTRIES,
+  STATE_META,
+  HUB_ICON,
+  FLAG,
+  BUILDING2,
+  WIDTH,
+  HEIGHT,
+  ITER,
+  HUB_R,
+  OFFICE_R,
+  DEFAULT_STATE,
+  type Country,
+} from "./apix-network.data";
 import "@/styles/apix-network.css";
 
 /**
@@ -29,74 +51,19 @@ import "@/styles/apix-network.css";
  * the original IIFE.
  */
 
-type StateKey = "active" | "upcoming" | "office";
-interface Country { name: string; code: string; lng: number; lat: number; hub?: boolean; state: StateKey; office?: boolean; role?: string }
+// Country / StateKey types + market data + geometry now live in
+// ./apix-network.data (audit NET-09). Point stays here — it is a runtime/engine
+// type (Country + projected coords + d3/DOM handles), not content.
 // Runtime point = country + projected coords + d3/DOM handles (typed loosely —
 // this is a faithful imperative port; the handles are d3 selections / DOM nodes).
 interface Point extends Country {
   x: number; y: number; lx: number; ly: number; w?: number; h?: number;
+  // rawW/rawH = pill's intrinsic offset size, measured once and cached so the
+  // hot relayout path never re-reads layout (NET-06); scale-space w/h derive from
+  // these / ratio each pass.
+  rawW?: number; rawH?: number;
   connection?: any; leader?: any; dot?: any; hit?: any; pill?: HTMLDivElement;}
 
-const SB_BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/images/apix/`;
-const HUB_ICON = `${SB_BASE}map/at-favicon.svg`;
-const FLAG = (c: string) => `${SB_BASE}flags/${c}.png`;
-
-const WIDTH = 1400, HEIGHT = 720, ITER = 340;
-const HUB_R = 13, OFFICE_R = 12;
-const DEFAULT_STATE = "active";
-
-// lucide.dev "building-2" path data (24×24) — drawn manually (not the lucide lib).
-const BUILDING2 = ["M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z", "M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2", "M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2", "M10 6h4", "M10 10h4", "M10 14h4", "M10 18h4"];
-
-const STATE_META: Record<string, { label: string; color: string }> = {
-  active: { label: "Doing business currently", color: "#0A82DF" },
-  upcoming: { label: "Coming up next", color: "#F59E0B" },
-  office: { label: "Our Offices", color: "#0557A6" },
-};
-
-// ── Market data — ported VERBATIM (hub Germany; 30 active, 6 upcoming, 3 offices) ──
-const COUNTRIES: Country[] = [
-  { name: "GERMANY", code: "de", lng: 10.45, lat: 51.16, hub: true, state: "active" },
-  { name: "TÜRKİYE", code: "tr", lng: 35.24, lat: 39.00, state: "active" },
-  { name: "IRAQ", code: "iq", lng: 43.68, lat: 33.00, state: "active" },
-  { name: "GABON", code: "ga", lng: 11.60, lat: -0.80, state: "active" },
-  { name: "IRELAND", code: "ie", lng: -8.00, lat: 53.20, state: "active" },
-  { name: "BELGIUM", code: "be", lng: 4.60, lat: 50.60, state: "active" },
-  { name: "UKRAINE", code: "ua", lng: 31.50, lat: 49.00, state: "active" },
-  { name: "LIBYA", code: "ly", lng: 17.50, lat: 27.00, state: "active" },
-  { name: "UNITED KINGDOM", code: "gb", lng: -2.00, lat: 54.00, state: "active" },
-  { name: "AZERBAIJAN", code: "az", lng: 47.70, lat: 40.30, state: "active" },
-  { name: "PALESTINE", code: "ps", lng: 35.20, lat: 31.90, state: "active" },
-  { name: "KENYA", code: "ke", lng: 37.90, lat: 0.20, state: "active" },
-  { name: "PAKISTAN", code: "pk", lng: 69.30, lat: 30.40, state: "active" },
-  { name: "UNITED ARAB EMIRATES", code: "ae", lng: 54.30, lat: 24.00, state: "active" },
-  { name: "FRANCE", code: "fr", lng: 2.40, lat: 46.60, state: "active" },
-  { name: "MOROCCO", code: "ma", lng: -6.50, lat: 31.80, state: "active" },
-  { name: "SAUDI ARABIA", code: "sa", lng: 45.00, lat: 24.00, state: "active" },
-  { name: "NEPAL", code: "np", lng: 84.10, lat: 28.40, state: "active" },
-  { name: "UNITED STATES", code: "us", lng: -98.0, lat: 39.50, state: "active" },
-  { name: "CHINA", code: "cn", lng: 104.0, lat: 35.50, state: "active" },
-  { name: "HONG KONG", code: "hk", lng: 114.2, lat: 22.30, state: "active" },
-  { name: "UZBEKISTAN", code: "uz", lng: 64.50, lat: 41.50, state: "active" },
-  { name: "INDONESIA", code: "id", lng: 113.0, lat: -1.50, state: "active" },
-  { name: "INDIA", code: "in", lng: 79.00, lat: 22.00, state: "active" },
-  { name: "ALGERIA", code: "dz", lng: 2.60, lat: 28.00, state: "active" },
-  { name: "QATAR", code: "qa", lng: 51.20, lat: 25.30, state: "active" },
-  { name: "GREECE", code: "gr", lng: 22.00, lat: 39.20, state: "active" },
-  { name: "SYRIA", code: "sy", lng: 38.50, lat: 35.00, state: "active" },
-  { name: "KYRGYZSTAN", code: "kg", lng: 74.80, lat: 41.30, state: "active" },
-  { name: "KAZAKHSTAN", code: "kz", lng: 67.00, lat: 48.00, state: "active" },
-  { name: "TAJIKISTAN", code: "tj", lng: 71.30, lat: 38.90, state: "active" },
-  { name: "SERBIA", code: "rs", lng: 21.00, lat: 44.20, state: "upcoming" },
-  { name: "BULGARIA", code: "bg", lng: 25.50, lat: 42.70, state: "upcoming" },
-  { name: "SOUTH AFRICA", code: "za", lng: 25.00, lat: -29.0, state: "upcoming" },
-  { name: "EGYPT", code: "eg", lng: 30.50, lat: 26.50, state: "upcoming" },
-  { name: "NIGERIA", code: "ng", lng: 8.00, lat: 9.00, state: "upcoming" },
-  { name: "SENEGAL", code: "sn", lng: -14.5, lat: 14.50, state: "upcoming" },
-  { name: "FRANKFURT", code: "de", lng: 8.68, lat: 50.11, state: "office", office: true, role: "HQ" },
-  { name: "ISTANBUL", code: "tr", lng: 28.98, lat: 41.01, state: "office", office: true, role: "BedBank" },
-  { name: "ANTALYA", code: "tr", lng: 30.71, lat: 36.89, state: "office", office: true, role: "Service Center" },
-];
 
 export function ApixNetwork({ title, embedded }: { title: string; embedded?: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -118,7 +85,7 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
     const svgEl = stageEl.querySelector<SVGSVGElement>("svg")!;
 
     let alive = true;
-    let activeGroup = DEFAULT_STATE;
+    let activeGroup: string = DEFAULT_STATE; // loose like the original (setActiveGroup takes any string)
     // d3 selection handles — element type varies per node, so typed loosely.
     let svgSel: any, gZoom: any, ringLayer: any, projection: any, zoom: any;
     let points: Point[] = [];
@@ -173,7 +140,7 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
         if (c.hub) return;
         c.leader = leaderLayer.append("line").attr("class", "leader")
           .attr("x1", c.x).attr("y1", c.y).attr("x2", c.lx).attr("y2", c.ly)
-          .style("animation-delay", (600 + Math.random() * 300) + "ms");
+          .style("animation-delay", (600 + (i % 10) * 30) + "ms"); // NET-07: deterministic stagger (was Math.random)
 
         if (c.office) {
           const g = dotLayer.append("g").attr("class", "office-marker")
@@ -240,9 +207,15 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
       const ratio = stageEl.clientWidth / WIDTH; if (!ratio) return;
       const vis = points.filter((c) => c.pill && c.pill.style.display !== "none");
       if (!vis.length) return;
-      vis.forEach((c) => { c.w = c.pill!.offsetWidth / ratio + 8; c.h = c.pill!.offsetHeight / ratio + 8; });
+      // NET-06: measure each pill's intrinsic size ONCE (first time it is visible),
+      // then derive scale-space w/h from the cached raw size — no layout read on
+      // subsequent relayouts (resize / tab switch), killing the forced reflow.
+      vis.forEach((c) => {
+        if (c.rawW === undefined) { c.rawW = c.pill!.offsetWidth; c.rawH = c.pill!.offsetHeight; }
+        c.w = c.rawW / ratio + 8; c.h = c.rawH! / ratio + 8;
+      });
 
-      const mx = d3.mean(vis, (p) => p.x) ?? 0, my = d3.mean(vis, (p) => p.y) ?? 0;
+      const mx = mean(vis, (p) => p.x) ?? 0, my = mean(vis, (p) => p.y) ?? 0;
       vis.forEach((c) => {
         let a = Math.atan2(c.y - my, c.x - mx); if (!isFinite(a)) a = -Math.PI / 2;
         const r0 = 30 / ratio; c.lx = c.x + Math.cos(a) * r0; c.ly = c.y + Math.sin(a) * r0;
@@ -250,6 +223,10 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
 
       const target = 24 / ratio, dotPad = 6 / ratio;
       for (let it = 0; it < ITER; it++) {
+        // NET-04: snapshot to early-exit once the relaxation has converged. The
+        // result is within EPS of running all ITER passes, so positions are
+        // visually identical — but ~30 labels usually settle well before 340.
+        const oldLx = vis.map((c) => c.lx), oldLy = vis.map((c) => c.ly);
         vis.forEach((c) => {
           const dx = c.lx - c.x, dy = c.ly - c.y, d = Math.hypot(dx, dy) || 0.01;
           const f = (d - target) * 0.06; c.lx -= dx / d * f; c.ly -= dy / d * f;
@@ -274,9 +251,15 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
           c.lx = Math.max(c.w! / 2 + 2, Math.min(WIDTH - c.w! / 2 - 2, c.lx));
           c.ly = Math.max(c.h! / 2 + 2, Math.min(HEIGHT - c.h! / 2 - 2, c.ly));
         });
+        let maxD = 0;
+        for (let k = 0; k < vis.length; k++) {
+          const d = Math.hypot(vis[k].lx - oldLx[k], vis[k].ly - oldLy[k]);
+          if (d > maxD) maxD = d;
+        }
+        if (maxD < 0.05) break; // converged — remaining passes would move < EPS
       }
       vis.forEach((c) => { if (c.leader) c.leader.attr("x1", c.x).attr("y1", c.y).attr("x2", c.lx).attr("y2", c.ly); });
-      updateOverlay(d3.zoomTransform(svgSel.node()));
+      updateOverlay(zoomTransform(svgSel.node()));
     }
 
     function updateOverlay(t: any) {      const ratio = stageEl.clientWidth / WIDTH; if (!ratio) return;
@@ -288,13 +271,13 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
     }
 
     function setupZoom() {
-      zoom = d3.zoom().scaleExtent([1, 8]).translateExtent([[-220, -220], [WIDTH + 220, HEIGHT + 220]])
+      zoom = d3Zoom().scaleExtent([1, 8]).translateExtent([[-220, -220], [WIDTH + 220, HEIGHT + 220]])
         .on("zoom", (e: any) => { gZoom.attr("transform", e.transform); updateOverlay(e.transform); });      svgSel.call(zoom).on("dblclick.zoom", null);
     }
     function zoomToCountry(c: Point, scale?: number) {
       const p = projection([c.lng, c.lat]);
-      const t = d3.zoomIdentity.translate(WIDTH / 2, HEIGHT / 2).scale(scale || 3.4).translate(-p[0], -p[1]);
-      svgSel.transition().duration(800).ease(d3.easeCubicOut).call(zoom.transform, t);
+      const t = zoomIdentity.translate(WIDTH / 2, HEIGHT / 2).scale(scale || 3.4).translate(-p[0], -p[1]);
+      svgSel.transition().duration(800).ease(easeCubicOut).call(zoom.transform, t);
     }
     function pulse(c: Point) {
       const ring = ringLayer.append("circle").attr("class", "apix-pulse")
@@ -349,7 +332,7 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
       closeDropdown(); clearHighlight();
       if (!c) {
         ddLabel.textContent = "All countries"; ddBtnFlag.innerHTML = "";
-        svgSel.transition().duration(600).call(zoom.transform, d3.zoomIdentity);
+        svgSel.transition().duration(600).call(zoom.transform, zoomIdentity);
         return;
       }
       if (!c.hub && c.state !== activeGroup) setActiveGroup(c.state);
@@ -402,7 +385,7 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
       on(fsBtn, "click", toggleFullscreen);
       on(q("#apixZoomIn"), "click", () => svgSel.transition().duration(250).call(zoom.scaleBy, 1.5));
       on(q("#apixZoomOut"), "click", () => svgSel.transition().duration(250).call(zoom.scaleBy, 1 / 1.5));
-      on(q("#apixZoomReset"), "click", () => { clearHighlight(); svgSel.transition().duration(550).call(zoom.transform, d3.zoomIdentity); });
+      on(q("#apixZoomReset"), "click", () => { clearHighlight(); svgSel.transition().duration(550).call(zoom.transform, zoomIdentity); });
       on(ddBtn, "click", (e) => { e.stopPropagation(); ddEl.classList.contains("is-open") ? closeDropdown() : openDropdown(); });
       on(ddSearch, "input", filterList);
       on(ddSearch, "click", (e) => e.stopPropagation());
@@ -412,9 +395,9 @@ export function ApixNetwork({ title, embedded }: { title: string; embedded?: boo
       });
     }
 
-    function init(world: any) {      svgSel = d3.select(svgEl);
-      projection = d3.geoMercator().scale(245).center([30, 28]).translate([WIDTH / 2, HEIGHT / 2 + 70]);
-      const path = d3.geoPath().projection(projection);
+    function init(world: any) {      svgSel = select(svgEl);
+      projection = geoMercator().scale(245).center([30, 28]).translate([WIDTH / 2, HEIGHT / 2 + 70]);
+      const path = geoPath().projection(projection);
 
       svgSel.append("defs").append("clipPath").attr("id", "apix-hub-clip").append("circle").attr("r", 11);
 

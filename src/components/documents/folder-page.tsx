@@ -18,6 +18,8 @@ import { FolderCard3D, FolderRow } from "./folder-card-3d";
 import { LibraryToolbar } from "./library-toolbar";
 import { EmptySpaceContextMenu } from "./empty-space-context-menu";
 import { VisibilityPopover } from "./visibility-popover";
+import { FolderAccessAvatars } from "@/components/permissions/folder-access-avatars";
+import type { AccessMember } from "@/lib/folder-access";
 import { DEFAULT_FILTER, type LibraryFilter } from "./filter-sort-popover";
 
 const PAGE_SIZE = 60;
@@ -47,6 +49,7 @@ export function FolderPage({
   initialFiles,
   initialHasMore,
   isSuperAdmin,
+  grantees,
 }: {
   folder: FolderDTO;
   trail: FolderDTO[];
@@ -54,6 +57,7 @@ export function FolderPage({
   initialFiles: FileDTO[];
   initialHasMore: boolean;
   isSuperAdmin: boolean;
+  grantees: AccessMember[];
 }) {
   const router = useRouter();
   const [files, setFiles] = useState<FileDTO[]>(initialFiles);
@@ -385,7 +389,17 @@ export function FolderPage({
             )
           )}
         </div>
-        {isSuperAdmin && <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />}
+        {isSuperAdmin && (
+          <div className="dl-head-right">
+            <FolderAccessAvatars
+              key={grantees.map((g) => g.teamMemberId).join(",")}
+              folderId={folder.id}
+              kind="document"
+              grantees={grantees}
+            />
+            <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />
+          </div>
+        )}
       </header>
 
       <LibraryToolbar
