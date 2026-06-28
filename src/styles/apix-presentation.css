@@ -38,7 +38,12 @@
 
 /* Fullscreen — native Fullscreen API, with a fixed-overlay fallback
    (.ppx-fsfix) for browsers without it (iOS Safari etc.). The fullscreen
-   backdrop stays the deck-friendly dark #0b0f17. */
+   backdrop stays the deck-friendly dark #0b0f17.
+   NOTE: the .ppx-fsfix and :fullscreen child rules below are INTENTIONALLY kept
+   as separate blocks, NOT merged into grouped selectors. A browser that does not
+   understand the :fullscreen pseudo-class discards the WHOLE comma-group it
+   appears in — merging would drop the .ppx-fsfix fallback styles on exactly the
+   browsers (no native Fullscreen API) that rely on them. Do not "DRY" these. */
 .ppx-wrap.ppx-fsfix { position: fixed; inset: 0; z-index: 99999; margin: 0; border-radius: 0; display: flex; flex-direction: column; background: #0b0f17; }
 .ppx-wrap.ppx-fsfix .ppx-bar { background: #0b0f17; border-color: rgba(255,255,255,.08); }
 .ppx-wrap.ppx-fsfix .ppx-title { color: #fff; }

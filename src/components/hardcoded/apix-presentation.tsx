@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { DECK_SRC, COPY } from "./apix-presentation.data";
 import "@/styles/apix-presentation.css";
 
 /**
@@ -24,14 +25,16 @@ import "@/styles/apix-presentation.css";
  * mismatch.
  */
 
-// Live SharePoint/Office-Online embed viewer — INTENTIONAL external embed.
-const DECK_SRC =
-  "https://aerticket-my.sharepoint.com/personal/bdemir_airtuerk_de/_layouts/15/Doc.aspx?sourcedoc={569fe19c-0ebd-47ce-966a-d1ac028777dc}&action=embedview&wdAr=1.7777777777777777";
+// DECK_SRC + chrome copy now live in ./apix-presentation.data (PRES-03).
 
 export function ApixPresentation({ title, embedded }: { title: string; embedded?: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [pressed, setPressed] = useState(false); // aria-pressed (fullscreen active)
   const [fsfix, setFsfix] = useState(false); // fixed-overlay fallback active
+  // PRES-02: mirror fsfix into a ref so the document listeners (below) subscribe
+  // ONCE ([] deps) instead of re-subscribing on every fsfix toggle.
+  const fsfixRef = useRef(fsfix);
+  useEffect(() => { fsfixRef.current = fsfix; }, [fsfix]);
 
   function toggleFullscreen() {
     const root = rootRef.current;
@@ -52,7 +55,7 @@ export function ApixPresentation({ title, embedded }: { title: string; embedded?
   useEffect(() => {
     const onFs = () => setPressed(!!document.fullscreenElement);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && fsfix) {
+      if (e.key === "Escape" && fsfixRef.current) {
         setFsfix(false);
         setPressed(false);
         document.body.style.overflow = "";
@@ -64,7 +67,7 @@ export function ApixPresentation({ title, embedded }: { title: string; embedded?
       document.removeEventListener("fullscreenchange", onFs);
       document.removeEventListener("keydown", onKey);
     };
-  }, [fsfix]);
+  }, []);
 
   // Safety: clear any leftover body scroll-lock on unmount.
   useEffect(() => () => { document.body.style.overflow = ""; }, []);
@@ -81,13 +84,13 @@ export function ApixPresentation({ title, embedded }: { title: string; embedded?
       <div className={`ppx-wrap${fsfix ? " ppx-fsfix" : ""}`} id="ppx-root" ref={rootRef}>
         <div className="ppx-bar">
           <div>
-            <h3 className="ppx-title">APIX Presentation</h3>
-            <p className="ppx-sub">Use the arrows inside the player · press the button for fullscreen</p>
+            <h3 className="ppx-title">{COPY.title}</h3>
+            <p className="ppx-sub">{COPY.subtitle}</p>
           </div>
-          <button className="ppx-btn" id="ppx-fs" type="button" aria-pressed={pressed} title="Fullscreen" onClick={toggleFullscreen}>
+          <button className="ppx-btn" id="ppx-fs" type="button" aria-pressed={pressed} title={COPY.fullscreenLabel} onClick={toggleFullscreen}>
             <svg className="ic-on" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
             <svg className="ic-off" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" /></svg>
-            <span className="t-on">Fullscreen</span><span className="t-off">Exit</span>
+            <span className="t-on">{COPY.fullscreenLabel}</span><span className="t-off">{COPY.exitLabel}</span>
           </button>
         </div>
 
@@ -96,14 +99,15 @@ export function ApixPresentation({ title, embedded }: { title: string; embedded?
             id="ppx-frame"
             src={DECK_SRC}
             allowFullScreen
-            title="APIX Presentation — PowerPoint Viewer"
+            title={COPY.iframeTitle}
             loading="lazy"
           >
             {/* iframe fallback is shown only by user agents that can't render
-                iframes (effectively none). Kept as a single static string — no
-                {" "} whitespace expressions or nested elements, which under
-                React 19 hydrate as separate text nodes and mismatch (M4). */}
-            This is an embedded Microsoft Office presentation, powered by Office.
+                iframes (effectively none). A single {COPY.iframeFallback}
+                expression is one text node (no {" "}/nested nodes), and the
+                component is now ssr:false so it never hydrates server HTML —
+                the M4 concern no longer applies. */}
+            {COPY.iframeFallback}
           </iframe>
         </div>
       </div>
