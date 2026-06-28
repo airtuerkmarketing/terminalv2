@@ -10,6 +10,7 @@ import { TerminalLogo } from "./TerminalLogo";
 import { UserMenu } from "./user-menu";
 import { CreateFolderModal } from "@/components/documents/create-folder-modal";
 import { cn } from "@/lib/utils";
+import { LIBRARY_ROUTE_PREFIXES, SIDEBAR_STORAGE_KEY as SIDEBAR_KEY } from "@/config/navigation";
 
 export type NavLeaf = { label: string; href: string; iconKey: string; isPrivate?: boolean };
 export type NavNode = NavLeaf & { children?: NavLeaf[] };
@@ -21,13 +22,10 @@ export interface SidebarNav {
 
 type SidebarIdentity = { name: string; email: string; role: string; initials: string; isSuperAdmin: boolean };
 
-const SIDEBAR_KEY = "terminalv2-sidebar";
-
 // Routes that render their OWN secondary sidebar (Documents Library, …). On these
 // the global rail (a) auto-collapses to free space and (b) hides its own duplicate
-// nav node. Add a prefix here to opt another library-style page into the pattern.
-// Keep in lock-step with the same list inlined in the layout's pre-paint script.
-const LIBRARY_ROUTE_PREFIXES = ["/documents-library", "/presentation-hub"];
+// nav node. LIBRARY_ROUTE_PREFIXES is the shared source of truth
+// (src/config/navigation.ts), also consumed by the layout's pre-paint script.
 function isLibraryRoute(pathname: string) {
   return LIBRARY_ROUTE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }

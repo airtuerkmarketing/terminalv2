@@ -35,6 +35,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { IBE_SLUG } from "@/config/navigation";
 import type { BlockRow } from "@/lib/blocks/types";
 
 export const SHOW_DRAFTS =
@@ -109,7 +110,7 @@ export async function getIbeProducts(): Promise<{ slug: string; name: string }[]
   const { data: ibe } = await supabase
     .from("brands")
     .select("id")
-    .eq("slug", "ibe-product-suite")
+    .eq("slug", IBE_SLUG)
     .maybeSingle();
   if (!ibe) return [];
   const { data } = await supabase
@@ -129,7 +130,7 @@ export async function getIbeProducts(): Promise<{ slug: string; name: string }[]
 //     (getIbeProducts), which preserves the spec'd product order.
 // airtuerk-apix was previously excluded but is now a single-page brand:
 // its 4 hardcoded tools + block sections all render as anchors on /airtuerk-apix.
-const SINGLE_PAGE_EXCLUDED_SLUGS = new Set(["ibe-product-suite"]);
+const SINGLE_PAGE_EXCLUDED_SLUGS = new Set<string>([IBE_SLUG]);
 
 /** Slugs of top-level brands that render as a single anchored page. Cached so
  *  the sidebar (getNav), the redirect check, and the aggregator share one read. */
