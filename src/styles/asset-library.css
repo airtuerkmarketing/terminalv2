@@ -58,7 +58,11 @@
    contained on a soft backdrop (132×132) so transparent art reads. */
 .al-cell__thumb { width: 104px; height: 132px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--hairline); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); transition: box-shadow 220ms var(--ease-smooth); }
 .al-cell:hover .al-cell__thumb { box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10); }
-.al-cell__thumb.is-contain { width: 132px; height: 132px; object-fit: contain; padding: var(--space-4); background: var(--surface-muted); }
+/* Logos/icons stand completely free — no box, no backdrop, no border: a
+   drop-shadow traces the artwork itself (like Documents' .dl-ftg-shadow), not a
+   rectangle. The footprint just gives the shadow room + keeps the grid aligned. */
+.al-cell__thumb.is-contain { width: 132px; height: 132px; object-fit: contain; padding: var(--space-4); background: transparent; border: 0; box-shadow: none; filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.06)); transition: filter 220ms var(--ease-smooth); }
+.al-cell:hover .al-cell__thumb.is-contain { box-shadow: none; filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.10)); }
 
 /* Hover-reveal download (mirrors .dl-cell__dl: 28px, radius 8px, surface, hairline,
    rest shadow; opacity 0→1; hover = soft grey fill + text-1). */
@@ -95,9 +99,11 @@
 .al-grid[data-view="list"] .al-cell__hit { width: auto; flex-shrink: 0; }
 .al-grid[data-view="list"] .al-cell__visual { height: auto; transform: none; }
 .al-grid[data-view="list"] .al-cell:hover .al-cell__visual { transform: none; }
-.al-grid[data-view="list"] .al-cell__thumb, .al-grid[data-view="list"] .al-cell__thumb.is-contain { width: 40px; height: 40px; border-radius: var(--radius-sm); box-shadow: none; padding: 0; }
-.al-grid[data-view="list"] .al-cell:hover .al-cell__thumb { box-shadow: none; }
-.al-grid[data-view="list"] .al-cell__thumb.is-contain { padding: 4px; background: var(--surface-muted); }
+/* Row thumbs mirror file-row's .dl-row-thumb: a 40px tile with a hairline frame +
+   subtle shadow for row context — no grey backdrop, no drop-shadow. */
+.al-grid[data-view="list"] .al-cell__thumb, .al-grid[data-view="list"] .al-cell__thumb.is-contain { width: 40px; height: 40px; border-radius: var(--radius-sm); border: 1px solid var(--hairline); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); filter: none; padding: 0; background: transparent; }
+.al-grid[data-view="list"] .al-cell:hover .al-cell__thumb, .al-grid[data-view="list"] .al-cell:hover .al-cell__thumb.is-contain { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); filter: none; }
+.al-grid[data-view="list"] .al-cell__thumb.is-contain { padding: 4px; }
 .al-grid[data-view="list"] .al-cell__dl { display: none; }
 .al-grid[data-view="list"] .al-cell__name { flex: 1; min-width: 0; text-align: left; padding: 0; }
 .al-grid[data-view="list"] .al-cell__sub { flex-shrink: 0; }
