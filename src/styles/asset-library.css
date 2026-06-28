@@ -53,16 +53,15 @@
 .al-cell__visual { display: flex; align-items: center; justify-content: center; height: 150px; transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 .al-cell:hover .al-cell__visual { transform: translateY(-4px); }
 
-/* Thumb footprint (mirrors .dl-cell__thumb: radius-md, hairline, the same rest +
-   hover drop shadow). Photos fill the 104×132 box (cover); logos/icons sit
-   contained on a soft backdrop (132×132) so transparent art reads. */
-.al-cell__thumb { width: 104px; height: 132px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--hairline); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); transition: box-shadow 220ms var(--ease-smooth); }
-.al-cell:hover .al-cell__thumb { box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10); }
-/* Logos/icons stand completely free — no box, no backdrop, no border: a
-   drop-shadow traces the artwork itself (like Documents' .dl-ftg-shadow), not a
-   rectangle. The footprint just gives the shadow room + keeps the grid aligned. */
-.al-cell__thumb.is-contain { width: 132px; height: 132px; object-fit: contain; padding: var(--space-4); background: transparent; border: 0; box-shadow: none; filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.06)); transition: filter 220ms var(--ease-smooth); }
-.al-cell:hover .al-cell__thumb.is-contain { box-shadow: none; filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.10)); }
+/* Every asset stands free — no box, no backdrop, no border, NO box-shadow. The
+   depth comes from a CSS filter drop-shadow on the image itself, so it follows the
+   artwork's contours (transparent SVG logos cast a shadow of the letters/marks,
+   not of their bounding box) and the rounded edge of photos. Same value as the
+   Documents FileTypeGraphic shadow (.dl-ftg-shadow). Photos fill a 104×132 box
+   (cover); logos/icons sit contained in a 132×132 footprint (is-contain). */
+.al-cell__thumb { width: 104px; height: 132px; object-fit: cover; border-radius: var(--radius-md); filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.06)); transition: filter 220ms var(--ease-smooth); }
+.al-cell:hover .al-cell__thumb { filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.10)); }
+.al-cell__thumb.is-contain { width: 132px; height: 132px; object-fit: contain; padding: var(--space-4); }
 
 /* Hover-reveal download (mirrors .dl-cell__dl: 28px, radius 8px, surface, hairline,
    rest shadow; opacity 0→1; hover = soft grey fill + text-1). */
