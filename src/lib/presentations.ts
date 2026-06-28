@@ -275,29 +275,37 @@ async function withPreview(folders: PresentationFolderDTO[]): Promise<RootPresen
   if (folders.length === 0) return [];
   const supabase = await createClient();
   const liveOnly = await trashReady(supabase);
-  return Promise.all(
-    folders.map(async (f) => {
-      let pq = supabase
-        .from("presentation_files")
-        .select("id, title, file_type, thumbnail_path", { count: "exact" })
-        .eq("folder_id", f.id)
-        .eq("is_archived", false);
-      if (liveOnly) pq = pq.is("deleted_at", null); // exclude trashed (D-078)
-      const { data, count } = await pq
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true })
-        .limit(3);
-      const previewFiles: PresentationPreviewFileDTO[] = (
-        (data as { id: string; title: string; file_type: string; thumbnail_path: string | null }[] | null) ?? []
-      ).map((r) => ({
-        id: r.id,
-        title: r.title,
-        fileType: r.file_type,
-        hasThumbnail: r.thumbnail_path != null,
-      }));
-      return { ...f, fileCount: count ?? previewFiles.length, previewFiles };
-    })
-  );
+  // PERF-03: one batched query for the whole (bounded) folder level instead of
+  // one per folder. DB does the ordering; we group preserving it, so each
+  // folder's count (= group size) and top-3 preview match the previous
+  // per-folder `count:"exact" … limit(3)`. Live = non-archived AND non-trashed.
+  const ids = folders.map((f) => f.id);
+  let q = supabase
+    .from("presentation_files")
+    .select("id, title, file_type, thumbnail_path, folder_id")
+    .in("folder_id", ids)
+    .eq("is_archived", false);
+  if (liveOnly) q = q.is("deleted_at", null); // exclude trashed (D-078)
+  const { data } = await q
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  type Row = { id: string; title: string; file_type: string; thumbnail_path: string | null; folder_id: string };
+  const byFolder = new Map<string, Row[]>();
+  for (const r of (data as Row[] | null) ?? []) {
+    const list = byFolder.get(r.folder_id);
+    if (list) list.push(r);
+    else byFolder.set(r.folder_id, [r]);
+  }
+  return folders.map((f) => {
+    const list = byFolder.get(f.id) ?? [];
+    const previewFiles: PresentationPreviewFileDTO[] = list.slice(0, 3).map((r) => ({
+      id: r.id,
+      title: r.title,
+      fileType: r.file_type,
+      hasThumbnail: r.thumbnail_path != null,
+    }));
+    return { ...f, fileCount: list.length, previewFiles };
+  });
 }
 
 export async function getRootPresentationFoldersWithPreview(): Promise<RootPresentationFolderDTO[]> {
@@ -637,21 +645,25 @@ export async function getPresentationFolderTreeForPath(
   };
   collect(null);
 
+  // PERF-03: one batched query for every rendered node's count (was one
+  // head-count per node). RLS-scoped via .in(); live = non-archived AND
+  // non-trashed. Nodes with no visible files fall back to 0 below.
   const supabase = await createClient();
   const liveOnly = await trashReady(supabase);
   const counts = new Map<string, number>();
-  await Promise.all(
-    rendered.map(async (f) => {
-      let cq = supabase
-        .from("presentation_files")
-        .select("id", { count: "exact", head: true })
-        .eq("folder_id", f.id)
-        .eq("is_archived", false);
-      if (liveOnly) cq = cq.is("deleted_at", null);
-      const { count } = await cq;
-      counts.set(f.id, count ?? 0);
-    })
-  );
+  const renderedIds = rendered.map((f) => f.id);
+  if (renderedIds.length > 0) {
+    let cq = supabase
+      .from("presentation_files")
+      .select("folder_id")
+      .in("folder_id", renderedIds)
+      .eq("is_archived", false);
+    if (liveOnly) cq = cq.is("deleted_at", null);
+    const { data: countRows } = await cq;
+    for (const r of (countRows as { folder_id: string }[] | null) ?? []) {
+      counts.set(r.folder_id, (counts.get(r.folder_id) ?? 0) + 1);
+    }
+  }
 
   const build = (parentId: string | null): PresentationFolderTreeNode[] =>
     (byParent.get(parentId) ?? []).map((f) => ({

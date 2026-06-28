@@ -2,11 +2,14 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeNext } from "@/lib/auth";
 
 export async function loginAction(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const next = (formData.get("next") as string) || "/";
+  // Sanitize the post-login redirect target: only same-origin relative paths
+  // (blocks open-redirect via a crafted ?next=https://evil.com — SEC-02).
+  const next = sanitizeNext(formData.get("next") as string | null) ?? "/";
 
   if (!email || !password) {
     return { error: "Email and password are required." };

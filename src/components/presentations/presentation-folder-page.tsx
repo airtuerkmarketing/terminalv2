@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Lock, Pencil, Plus, Upload } from "lucide-react";
 import "@/styles/presentation-hub.css";
 import "@/styles/document-library.css";
@@ -26,14 +27,23 @@ import { nextFolderName } from "@/components/documents/folder-page";
 import { PresentationBreadcrumb } from "./presentation-breadcrumb";
 import { PresentationCard } from "./presentation-card";
 import { PresentationFileRow } from "./presentation-file-row";
-import { PresentationFileManageModal } from "./presentation-file-manage-modal";
-import { UploadModal } from "./upload-modal";
 import { FolderActionsMenu } from "./folder-actions-menu";
 import { PresentationFolderCard3D, PresentationFolderRow } from "./presentation-folder-card-3d";
 import { FolderAccessAvatars } from "@/components/permissions/folder-access-avatars";
 import type { AccessMember } from "@/lib/folder-access";
 
 const PAGE_SIZE = 60;
+
+// Admin-only modals shown on demand — load their chunks lazily (CM-03). ssr:false
+// + loading:()=>null: a closed modal renders nothing, so no DOM/hydration change.
+const UploadModal = dynamic(() => import("./upload-modal").then((m) => m.UploadModal), {
+  ssr: false,
+  loading: () => null,
+});
+const PresentationFileManageModal = dynamic(
+  () => import("./presentation-file-manage-modal").then((m) => m.PresentationFileManageModal),
+  { ssr: false, loading: () => null }
+);
 
 export function PresentationFolderPage({
   folder,
