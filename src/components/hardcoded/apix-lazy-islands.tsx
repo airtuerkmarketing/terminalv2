@@ -15,16 +15,31 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  *
  * Each tool is now:
  *   • next/dynamic({ ssr:false }) — its own chunk, fetched only when mounted.
- *     ssr:false is correct here: every engine renders nothing meaningful on the
- *     server (the SVG/map/lines are built imperatively in useEffect), so there is
- *     no SSR markup or LCP content to lose.
  *   • viewport-gated by <InView> — the chunk is requested only when the section
  *     scrolls near the viewport (rootMargin pre-load), so the initial page does
  *     not pay for any tool the visitor never scrolls to.
  *
+ * What ssr:false trades (be precise — this is NOT a pure no-op):
+ *   • The imperative engines (d3 map, Leaflet map, SVG connector lines) genuinely
+ *     render nothing on the server — they build their DOM in useEffect — so for
+ *     them nothing is lost.
+ *   • BUT each tool also renders DECLARATIVE JSX: the standalone <header><h1>
+ *     {title}</h1> + eyebrow, the toolbar headings/labels, and — most concretely —
+ *     apix-presentation's <iframe src={DECK_SRC}> (the SharePoint deck). Under
+ *     ssr:false this static shell is ALSO client-only: the server HTML for each
+ *     section is just the <div aria-hidden> placeholder, and the shell + deck
+ *     iframe appear only after JS loads, the section scrolls within rootMargin,
+ *     and the chunk parses.
+ *   • So the FINAL hydrated DOM is byte-identical to the old static mount, but the
+ *     SERVER-RENDERED / initial-paint / no-JS / crawler HTML is intentionally
+ *     different. Accepted because /airtuerk-apix is login-gated and JS-required
+ *     and these tools sit below the fold (the deck even kept loading="lazy").
+ *     If SSR-visible titles or an eagerly-loading deck ever matter, render the
+ *     static <header>/title from page-view (server) and gate only the engine.
+ *
  * DOM contract: <InView> renders a min-height placeholder until shown, then swaps
  * in the children. Once shown it returns the tool's own root <section> DIRECTLY
- * (no persistent wrapper element), so the rendered hierarchy is byte-identical to
+ * (no persistent wrapper element), so the hydrated hierarchy is byte-identical to
  * the previous static mount — the audit's "do not change structure" constraint.
  */
 
