@@ -110,11 +110,24 @@ export interface BrandRef {
 export interface UserDetail extends UserListItem {
   firstName: string | null;
   lastName: string | null;
+  /** Salutation / honorific (team_members.title), or null. */
+  title: string | null;
   position: string | null;
   phone: string | null;
+  privatePhone: string | null;
   /** ISO date (YYYY-MM-DD) or null. Display ONLY when showBirthday is true (DSGVO opt-in). */
   dateOfBirth: string | null;
   showBirthday: boolean;
+  statusLine: string | null;
+  about: string | null;
+  location: string | null;
+  company: string | null;
+  website: string | null;
+  github: string | null;
+  linkedin: string | null;
+  instagram: string | null;
+  /** team_members.metadata jsonb (ad-hoc bag). Admin-view only; never on /team. */
+  metadata: Record<string, unknown>;
   brands: BrandRef[];
   createdAt: string;
   updatedAt: string;
@@ -173,10 +186,32 @@ export interface LogActivityInput {
 export interface UpdateUserProfilePatch {
   firstName?: string;
   lastName?: string;
+  /** Salutation / honorific (team_members.title, ≤20 chars), or null to clear. */
+  title?: string | null;
+  /** Job title / position (team_members.position). */
+  position?: string | null;
   department?: string | null;
   phone?: string | null;
+  /** Private phone — kept out of the public /team projection (DSGVO). */
+  privatePhone?: string | null;
   dateOfBirth?: string | null;
   showBirthday?: boolean;
+  /** Short status line, ≤50 chars (mirrors the DB CHECK). */
+  statusLine?: string | null;
+  about?: string | null;
+  location?: string | null;
+  company?: string | null;
+  website?: string | null;
+  github?: string | null;
+  linkedin?: string | null;
+  instagram?: string | null;
+  /**
+   * Shallow MERGE into team_members.metadata (jsonb). Keys with a value are
+   * upserted; a key set to `null` is DELETED from the stored object. Reserved for
+   * ad-hoc, non-queried annotations only — do NOT route typed/queried fields here.
+   * `role` and `email` are intentionally absent (see adminUpdateUser).
+   */
+  metadata?: Record<string, unknown>;
 }
 
 export interface InviteUserInput {
@@ -280,10 +315,21 @@ type TeamMemberListRel = {
   avatar: AssetUrlRow | AssetUrlRow[] | null;
 };
 type TeamMemberDetailRel = TeamMemberListRel & {
+  title: string | null;
   position: string | null;
   phone: string | null;
+  private_phone: string | null;
   date_of_birth: string | null;
   show_birthday: boolean;
+  status_line: string | null;
+  about: string | null;
+  location: string | null;
+  company: string | null;
+  website: string | null;
+  github: string | null;
+  linkedin: string | null;
+  instagram: string | null;
+  metadata: Record<string, unknown> | null;
   team_member_brands: TmBrandRow[] | null;
 };
 
@@ -319,7 +365,7 @@ type ActivityRow = {
 const TM_LIST_EMBED =
   "first_name, last_name, department, avatar_asset_id, avatar:assets!team_members_avatar_asset_id_fkey(public_url)";
 const TM_DETAIL_EMBED =
-  "first_name, last_name, position, department, phone, date_of_birth, show_birthday, avatar_asset_id, avatar:assets!team_members_avatar_asset_id_fkey(public_url), team_member_brands(is_primary, brands(id, slug, name, short_name, logo:assets!brands_logo_asset_id_fkey(public_url)))";
+  "first_name, last_name, title, position, department, phone, private_phone, date_of_birth, show_birthday, status_line, about, location, company, website, github, linkedin, instagram, metadata, avatar_asset_id, avatar:assets!team_members_avatar_asset_id_fkey(public_url), team_member_brands(is_primary, brands(id, slug, name, short_name, logo:assets!brands_logo_asset_id_fkey(public_url)))";
 const PROFILE_DETAIL_SELECT = `id, email, full_name, role, team_member_id, created_at, updated_at, team_members(${TM_DETAIL_EMBED})`;
 const ACTIVITY_COLS = "id, action, resource_type, resource_id, metadata, created_at";
 
@@ -393,10 +439,21 @@ function mapDetail(r0: unknown, lastSignInAt: string | null): UserDetail {
     teamMemberId: r.team_member_id,
     firstName: tm?.first_name ?? null,
     lastName: tm?.last_name ?? null,
+    title: tm?.title ?? null,
     position: tm?.position ?? null,
     phone: tm?.phone ?? null,
+    privatePhone: tm?.private_phone ?? null,
     dateOfBirth: tm?.date_of_birth ?? null,
     showBirthday: tm?.show_birthday ?? false,
+    statusLine: tm?.status_line ?? null,
+    about: tm?.about ?? null,
+    location: tm?.location ?? null,
+    company: tm?.company ?? null,
+    website: tm?.website ?? null,
+    github: tm?.github ?? null,
+    linkedin: tm?.linkedin ?? null,
+    instagram: tm?.instagram ?? null,
+    metadata: tm?.metadata ?? {},
     brands,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -420,20 +477,25 @@ function clampLimit(v: number | undefined, def: number, max = 200): number {
 }
 
 /**
- * Build a userId → last_sign_in_at map from auth.users via the service role.
- * Paginated (listUsers caps at MAX_USER_FETCH per page); the company is small so
- * this is almost always one page. Service-role only — auth.users is unreadable by
- * the RLS client. Returns an empty map on any failure (enrichment is best-effort).
+ * Build a userId → last_sign_in_at map for the given profile ids (= auth.users.id).
+ * Service-role ONLY — auth.users is unreadable by the RLS client AND not exposed to
+ * PostgREST, so this goes through the `last_sign_in_for(ids)` SECURITY DEFINER RPC
+ * (migration 20260628130001), a SINGLE bounded SELECT keyed on the ids actually in
+ * hand. This replaced the old GoTrue `listUsers` pager that looped up to 50 pages
+ * and pulled the whole auth.users object graph on every panel load (finding O4).
+ * Returns an empty map when called with no ids or on any failure (best-effort —
+ * callers fall back to lastSignInAt = null).
  */
-async function fetchLastSignInMap(): Promise<Map<string, string | null>> {
+async function fetchLastSignInMap(profileIds: string[]): Promise<Map<string, string | null>> {
   const map = new Map<string, string | null>();
+  const ids = profileIds.filter((id): id is string => !!id);
+  if (ids.length === 0) return map;
   try {
     const admin = createAdminClient();
-    for (let page = 1; page <= 50; page++) {
-      const { data, error } = await admin.auth.admin.listUsers({ page, perPage: MAX_USER_FETCH });
-      if (error || !data) break;
-      for (const u of data.users) map.set(u.id, u.last_sign_in_at ?? null);
-      if (data.users.length < MAX_USER_FETCH) break;
+    const { data, error } = await admin.rpc("last_sign_in_for", { ids });
+    if (error || !data) return map;
+    for (const u of data as { id: string; last_sign_in_at: string | null }[]) {
+      map.set(u.id, u.last_sign_in_at ?? null);
     }
   } catch {
     // best-effort: callers fall back to lastSignInAt = null
@@ -476,7 +538,9 @@ export async function getAllUsers(
   // Enrich last_sign_in_at (service-role) only for admin viewers — a plain user's
   // RLS read returns just their own row, and we don't run a privileged list for them.
   const identity = await getIdentity();
-  const signInMap = identity?.isAdmin ? await fetchLastSignInMap() : new Map<string, string | null>();
+  const signInMap = identity?.isAdmin
+    ? await fetchLastSignInMap(rows.map((r) => (r as ProfileListRow).id))
+    : new Map<string, string | null>();
 
   let items = rows.map((r) => mapListItem(r, signInMap.get((r as ProfileListRow).id) ?? null));
 
@@ -519,15 +583,10 @@ export const getUserById = cache(async (userId: string): Promise<UserDetail | nu
     .maybeSingle();
   if (!data) return null;
 
-  let lastSignInAt: string | null = null;
-  try {
-    const admin = createAdminClient();
-    const { data: au } = await admin.auth.admin.getUserById(userId);
-    lastSignInAt = au?.user?.last_sign_in_at ?? null;
-  } catch {
-    // best-effort enrichment
-  }
-  return mapDetail(data, lastSignInAt);
+  // Single-id sign-in enrichment via the same service-role RPC as the list reads
+  // (O4) — a non-null RLS result above means the viewer is authorized for this row.
+  const signInMap = await fetchLastSignInMap([userId]);
+  return mapDetail(data, signInMap.get(userId) ?? null);
 });
 
 // ── 3. Activity log (RLS read) ───────────────────────────────────────────────
@@ -653,6 +712,179 @@ export async function updateUserProfile(userId: string, patch: UpdateUserProfile
     resourceType: "team_member",
     resourceId: teamMemberId,
     metadata: { targetUserId: userId, fields: Object.keys(update) },
+  });
+}
+
+// ── 5b. Admin full edit (service-role write to team_members) ──────────────────
+
+/**
+ * Admin full-edit of a user's stammdaten — the superset of updateUserProfile,
+ * keyed on the TEAM_MEMBER id (the admin panel's natural key — getAllTeamMembers
+ * is team_members-based, and this works for the ~54 people with no auth account
+ * yet, unlike a profiles-keyed path). Writes team_members via the SERVICE-ROLE
+ * client AFTER requireSuperAdmin(): this edits ANOTHER user's row, the
+ * team_self_update RLS policy only grants the SELF row, and the whole /admin/users
+ * surface is super_admin-only — so the app-layer guard IS the gate. The new
+ * 20260628130000 trigger additionally blocks a non-admin self-write to
+ * title/metadata at the DB layer.
+ *
+ * Partial-update: only DEFINED patch keys are mapped (extra keys are ignored —
+ * this whitelist is the only thing keeping `role`/`email` off this path).
+ *
+ * Two deliberate EXCLUSIONS:
+ *  - role:  stays on updateUserRole (RLS client → the 20260620020000 escalation
+ *           guard is the real boundary). Routing it through this service-role path
+ *           would bypass that guard.
+ *  - email: login identity owned by auth.users — a GoTrue mutation that can fail
+ *           independently of the DB write. Out of v1 scope; passing it is ignored.
+ *
+ * Drift fix: when first/last name changes, profiles.full_name is the denormalized
+ * greeting read RAW by getIdentity (auth.ts) → the sidebar. So a name edit also
+ * re-stamps profiles.full_name (keyed by team_member_id; a no-op for not-yet-
+ * invited people with no profile row). profiles has no updated_at trigger → manual
+ * stamp. Best-effort: a re-stamp failure must not undo the stammdaten write.
+ *
+ * metadata: a SHALLOW MERGE (provided keys upsert; keys set to null are removed),
+ * object-only + ≤4 KB serialized (defensive — it is an admin-controlled jsonb bag).
+ *
+ * Throws NO_TEAM_MEMBER, INVALID_NAME, TITLE_TOO_LONG (≤20), PHONE_TOO_LONG (≤50),
+ * STATUS_TOO_LONG (≤50), VALUE_TOO_LONG, INVALID_DATE, INVALID_METADATA, UPDATE_FAILED.
+ */
+export async function adminUpdateUser(
+  teamMemberId: string,
+  patch: UpdateUserProfilePatch
+): Promise<void> {
+  const identity = await requireSuperAdmin();
+  const admin = createAdminClient();
+
+  const update: Record<string, unknown> = {};
+
+  // Required names (NOT NULL columns — reject a blank value).
+  if (patch.firstName !== undefined) {
+    const v = patch.firstName.trim();
+    if (!v) throw new Error("INVALID_NAME");
+    update.first_name = v;
+  }
+  if (patch.lastName !== undefined) {
+    const v = patch.lastName.trim();
+    if (!v) throw new Error("INVALID_NAME");
+    update.last_name = v;
+  }
+
+  // Title — honorific, ≤20 (mirrors the team_members_title_len CHECK).
+  if (patch.title !== undefined) {
+    const v = patch.title?.trim() || null;
+    if (v && v.length > 20) throw new Error("TITLE_TOO_LONG");
+    update.title = v;
+  }
+
+  if (patch.position !== undefined) update.position = patch.position?.trim() || null;
+  if (patch.department !== undefined) update.department = patch.department?.trim() || null;
+
+  // Phones (≤50) — same caps as updateOwnProfile.
+  for (const [key, col] of [
+    ["phone", "phone"],
+    ["privatePhone", "private_phone"],
+  ] as const) {
+    if (patch[key] === undefined) continue;
+    const v = patch[key]?.trim() || null;
+    if (v && v.length > 50) throw new Error("PHONE_TOO_LONG");
+    update[col] = v;
+  }
+
+  if (patch.dateOfBirth !== undefined) {
+    if (patch.dateOfBirth === null || patch.dateOfBirth.trim() === "") {
+      update.date_of_birth = null;
+    } else {
+      const trimmed = patch.dateOfBirth.trim();
+      const d = new Date(trimmed);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed) || isNaN(d.getTime())) {
+        throw new Error("INVALID_DATE");
+      }
+      update.date_of_birth = trimmed;
+    }
+  }
+
+  if (patch.showBirthday !== undefined) update.show_birthday = !!patch.showBirthday;
+
+  // Status line — hard 50-char cap (mirrors the DB CHECK).
+  if (patch.statusLine !== undefined) {
+    const v = patch.statusLine?.trim() || null;
+    if (v && v.length > 50) throw new Error("STATUS_TOO_LONG");
+    update.status_line = v;
+  }
+
+  // Free-text + links (column → max length) — same caps as updateOwnProfile.
+  for (const [key, col, max] of [
+    ["about", "about", 2000],
+    ["location", "location", 120],
+    ["company", "company", 120],
+    ["website", "website", 300],
+    ["github", "github", 300],
+    ["linkedin", "linkedin", 300],
+    ["instagram", "instagram", 300],
+  ] as const) {
+    if (patch[key] === undefined) continue;
+    const v = patch[key]?.trim() || null;
+    if (v && v.length > max) throw new Error("VALUE_TOO_LONG");
+    update[col] = v;
+  }
+
+  // metadata: shallow merge (read-modify-write). Object-only + ≤4 KB (defensive).
+  if (patch.metadata !== undefined) {
+    const m = patch.metadata;
+    if (m === null || typeof m !== "object" || Array.isArray(m)) throw new Error("INVALID_METADATA");
+    if (Object.keys(m).length > 0) {
+      const { data: cur } = await admin
+        .from("team_members")
+        .select("metadata")
+        .eq("id", teamMemberId)
+        .maybeSingle();
+      const base = ((cur as { metadata: Record<string, unknown> | null } | null)?.metadata) ?? {};
+      const merged: Record<string, unknown> = { ...base };
+      for (const [k, val] of Object.entries(m)) {
+        if (val === null) delete merged[k];
+        else merged[k] = val;
+      }
+      if (JSON.stringify(merged).length > 4096) throw new Error("INVALID_METADATA");
+      update.metadata = merged;
+    }
+  }
+
+  if (Object.keys(update).length === 0) return; // nothing to do
+
+  // team_members has an updated_at trigger (no manual stamp). RETURNING the names
+  // folds the post-write read-back for the full_name re-stamp; an empty result
+  // means the row doesn't exist → NO_TEAM_MEMBER.
+  const { data: upd, error } = await admin
+    .from("team_members")
+    .update(update)
+    .eq("id", teamMemberId)
+    .select("id, first_name, last_name");
+  if (error) throw new Error("UPDATE_FAILED");
+  if (!upd || upd.length === 0) throw new Error("NO_TEAM_MEMBER");
+
+  // Drift fix: keep profiles.full_name (the sidebar greeting) honest on a name
+  // change. Keyed by team_member_id (unique partial index) → single-row, no
+  // pre-SELECT; a no-op when no profile is linked. profiles has no updated_at
+  // trigger → manual stamp. Best-effort (must not undo the stammdaten write).
+  if (update.first_name !== undefined || update.last_name !== undefined) {
+    const row = upd[0] as { first_name: string | null; last_name: string | null };
+    const newFullName =
+      [row.first_name, row.last_name].filter((s) => s && s.trim()).join(" ").trim() || null;
+    const { error: pErr } = await admin
+      .from("profiles")
+      .update({ full_name: newFullName, updated_at: new Date().toISOString() })
+      .eq("team_member_id", teamMemberId);
+    if (pErr) console.error("[adminUpdateUser] full_name re-stamp failed:", pErr.message);
+  }
+
+  await logActivity({
+    userId: identity.userId,
+    action: "edit_profile",
+    resourceType: "team_member",
+    resourceId: teamMemberId,
+    metadata: { teamMemberId, fields: Object.keys(update) },
   });
 }
 
@@ -1272,6 +1504,140 @@ export async function deactivateUser(userId: string): Promise<void> {
   });
 }
 
+// ── 9a2. Send password reset (admin-trigger, GoTrue recovery email) ──────────
+
+/**
+ * Admin-trigger "send password reset" — emails the user a GoTrue recovery link.
+ * Keyed on the TEAM_MEMBER id (panel's natural key); reads auth_user_id + email
+ * directly from team_members (no profiles hop). Reuses the SAME primitive
+ * (resetPasswordForEmail) as the public forgot-password path (login/actions.ts),
+ * so it needs ZERO new email-template/redirect infra: the Recovery template builds
+ * the link from {{ .SiteURL }} → /auth/confirm?type=recovery → update-password
+ * (the single password sink, which clears force_password_change on completion). NO
+ * redirectTo (a stale NEXT_PUBLIC_SITE_URL host risks falling off GoTrue's
+ * uri_allow_list — same reasoning as inviteUser).
+ *
+ * NOT inviteUserByEmail (mints a NEW auth user — wrong for an active account),
+ * NOT generateLink (returns a link the app must email itself). A plain reset does
+ * NOT set force_password_change (the recovery link itself authorizes the change).
+ *
+ * requireSuperAdmin — a credential-adjacent action; matches the panel's gate.
+ * A person never invited has no auth user → NOT_INVITED (the UI offers Invite
+ * instead). Mirrors inviteUser's email guards (NO_EMAIL / PRIVATE_EMAIL_BLOCKED).
+ * Rate-limit relies on GoTrue's built-in recovery limit (as the public path does).
+ *
+ * Throws NO_TEAM_MEMBER, NOT_INVITED, NO_EMAIL, PRIVATE_EMAIL_BLOCKED, RESET_FAILED.
+ */
+export async function sendPasswordReset(teamMemberId: string): Promise<void> {
+  const identity = await requireSuperAdmin();
+  const admin = createAdminClient();
+
+  const { data: tm } = await admin
+    .from("team_members")
+    .select("auth_user_id, email")
+    .eq("id", teamMemberId)
+    .maybeSingle();
+  const tmRow = tm as { auth_user_id: string | null; email: string | null } | null;
+  if (!tmRow) throw new Error("NO_TEAM_MEMBER");
+  if (!tmRow.auth_user_id) throw new Error("NOT_INVITED"); // never invited → invite, not reset
+  if (!tmRow.email) throw new Error("NO_EMAIL");
+
+  const email = tmRow.email.trim().toLowerCase();
+  if (!isCorpEmail(email)) throw new Error("PRIVATE_EMAIL_BLOCKED");
+
+  // Same call the public path makes — anon auth surface, NO redirectTo.
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if (error) throw new Error("RESET_FAILED");
+
+  await logActivity({
+    userId: identity.userId,
+    action: "send_password_reset",
+    resourceType: "team_member",
+    resourceId: teamMemberId,
+    metadata: { teamMemberId, email },
+  });
+}
+
+// ── 9a3. Change login email (auth.users ⇄ profiles ⇄ team_members) ───────────
+
+/**
+ * Change a user's LOGIN email. Email is the GoTrue identity (auth.users.email)
+ * denormalized into profiles.email AND team_members.email — three places that must
+ * move together. requireSuperAdmin (email is credential-adjacent identity).
+ *
+ * Order (fail-closed, can't span a single txn across GoTrue + Postgres):
+ *  1. requireSuperAdmin + validate (format, corp-email) + resolve the target.
+ *  2. PEER-SUPER_ADMIN GUARD (review F4/F5): changing ANOTHER super_admin's email is
+ *     an account-takeover vector (set a peer's email to an attacker address, then
+ *     trigger a reset → link lands in the attacker's inbox). So a super_admin target
+ *     may only be changed by themselves → CANNOT_MANAGE_PEER_SUPERADMIN.
+ *  3. AUDIT BEFORE the writes (review M1): a partial apply must always leave a trail.
+ *  4. GoTrue first (source of truth). email_confirm:true skips the double-confirm
+ *     loop for an admin-forced change — the UI requires a typed re-entry to guard
+ *     the fat-finger risk this opens (review M3). On failure → EMAIL_CHANGE_FAILED,
+ *     before any DB write.
+ *  5. The change_user_email RPC (migration 20260628130002) mirrors profiles.email +
+ *     team_members.email + the user_role_defaults key rename in ONE transaction.
+ *
+ * Throws NO_TEAM_MEMBER, NOT_INVITED (no auth user — invite, don't change),
+ * NO_EMAIL, INVALID_EMAIL, PRIVATE_EMAIL_BLOCKED, CANNOT_MANAGE_PEER_SUPERADMIN,
+ * EMAIL_CHANGE_FAILED (GoTrue), UPDATE_FAILED (the DB mirror RPC).
+ */
+export async function changeUserEmail(teamMemberId: string, newEmail: string): Promise<void> {
+  const identity = await requireSuperAdmin();
+  const admin = createAdminClient();
+
+  const raw = (newEmail ?? "").trim().toLowerCase();
+  if (!raw) throw new Error("NO_EMAIL");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) throw new Error("INVALID_EMAIL");
+  if (!isCorpEmail(raw)) throw new Error("PRIVATE_EMAIL_BLOCKED");
+
+  // Resolve target: auth user + current email + the linked profile's role (peer guard).
+  const { data: tm } = await admin
+    .from("team_members")
+    .select("auth_user_id, email, profile:profiles!profiles_team_member_id_fkey(id, role)")
+    .eq("id", teamMemberId)
+    .maybeSingle();
+  const tmRow = tm as {
+    auth_user_id: string | null;
+    email: string | null;
+    profile: ProfileRel | ProfileRel[] | null;
+  } | null;
+  if (!tmRow) throw new Error("NO_TEAM_MEMBER");
+  if (!tmRow.auth_user_id) throw new Error("NOT_INVITED");
+
+  // F4/F5: a peer super_admin's email may only be changed by themselves.
+  const prof = one(tmRow.profile);
+  if (prof?.role === "super_admin" && prof.id !== identity.userId) {
+    throw new Error("CANNOT_MANAGE_PEER_SUPERADMIN");
+  }
+
+  // M1: audit the attempt BEFORE the writes so a half-apply is always recorded.
+  await logActivity({
+    userId: identity.userId,
+    action: "change_email",
+    resourceType: "team_member",
+    resourceId: teamMemberId,
+    metadata: { teamMemberId, old: tmRow.email, new: raw },
+  });
+
+  // GoTrue first (identity source of truth). email_confirm bypasses the ownership
+  // re-confirm loop for an admin-forced change (the UI's typed re-entry is the guard).
+  const { error: authErr } = await admin.auth.admin.updateUserById(tmRow.auth_user_id, {
+    email: raw,
+    email_confirm: true,
+  });
+  if (authErr) throw new Error("EMAIL_CHANGE_FAILED");
+
+  // DB mirrors in ONE transaction (profiles + team_members + user_role_defaults).
+  const { error: rpcErr } = await admin.rpc("change_user_email", {
+    p_team_member_id: teamMemberId,
+    p_new_email: raw,
+  });
+  if (rpcErr) throw new Error("UPDATE_FAILED");
+}
+
 // ── 9b. Export audit (super-admin, log-only) ─────────────────────────────────
 
 /**
@@ -1352,6 +1718,8 @@ export interface TeamMemberListItem {
   teamMemberId: string;
   firstName: string;
   lastName: string;
+  /** Salutation / honorific (team_members.title), or null. Prefixed to the display name. */
+  title: string | null;
   position: string | null;
   department: string | null;
   /** Precomputed initials (e.g. "BD"); NOT NULL in team_members. */
@@ -1404,6 +1772,7 @@ type TeamMemberAdminRow = {
   id: string;
   first_name: string;
   last_name: string;
+  title: string | null;
   position: string | null;
   department: string | null;
   initials: string;
@@ -1423,7 +1792,7 @@ type TeamMemberAdminRow = {
 };
 
 const TEAM_MEMBER_ADMIN_SELECT =
-  "id, first_name, last_name, position, department, initials, email, phone, " +
+  "id, first_name, last_name, title, position, department, initials, email, phone, " +
   "joined_year, is_lead, tools, tasks, last_invited_at, created_at, avatar_asset_id, " +
   "avatar:assets!team_members_avatar_asset_id_fkey(public_url), " +
   "profile:profiles!profiles_team_member_id_fkey(id, role)";
@@ -1445,6 +1814,7 @@ function mapTeamMember(
     teamMemberId: r.id,
     firstName: r.first_name,
     lastName: r.last_name,
+    title: r.title,
     position: r.position,
     department: r.department,
     initials: r.initials,
@@ -1490,10 +1860,14 @@ export async function getAllTeamMembers(
     .limit(MAX_USER_FETCH);
   const rows = (data ?? []) as unknown[];
 
-  // Enrich last_sign_in_at only if some members have a linked profile (else skip
-  // the service-role listUsers round-trip entirely).
-  const hasAnyProfile = rows.some((r) => one((r as TeamMemberAdminRow).profile)?.id);
-  const signInMap = hasAnyProfile ? await fetchLastSignInMap() : new Map<string, string | null>();
+  // Enrich last_sign_in_at only for members with a linked profile — collect those
+  // ids and do one bounded RPC (O4); skip entirely when none are linked.
+  const profileIds = rows
+    .map((r) => one((r as TeamMemberAdminRow).profile)?.id)
+    .filter((id): id is string => !!id);
+  const signInMap = profileIds.length
+    ? await fetchLastSignInMap(profileIds)
+    : new Map<string, string | null>();
 
   // Planned-role hint (AP 3 Phase 7): email-keyed lookup into user_role_defaults.
   // RLS-scoped — its policy is USING is_super_admin() (migration 0030), which is
@@ -1523,6 +1897,39 @@ export async function getAllTeamMembers(
   }
 
   return { teamMembers: items, totalCount: items.length };
+}
+
+// ── 10b. Single team_member as a list DTO (post-edit splice) ─────────────────
+
+/**
+ * One team_member mapped to the list DTO. Used by adminUpdateUserAction to return
+ * the freshly-written row so the panel can splice it in place (no full 63-row
+ * refetch — finding from the caching pass). RLS-scoped read (same visibility as
+ * getAllTeamMembers) + the single-row sign-in enrichment via the service-role RPC.
+ * Returns null if the row is gone.
+ */
+export async function getTeamMemberById(teamMemberId: string): Promise<TeamMemberListItem | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("team_members")
+    .select(TEAM_MEMBER_ADMIN_SELECT)
+    .eq("id", teamMemberId)
+    .maybeSingle();
+  if (!data) return null;
+
+  const row = data as unknown as TeamMemberAdminRow;
+  const profileId = one(row.profile)?.id ?? null;
+  const signInMap = profileId
+    ? await fetchLastSignInMap([profileId])
+    : new Map<string, string | null>();
+
+  const { data: rdData } = await supabase.from("user_role_defaults").select("email, role");
+  const roleDefaults = new Map<string, Role>();
+  for (const rd of (rdData ?? []) as { email: string; role: string }[]) {
+    if (rd.email) roleDefaults.set(rd.email.trim().toLowerCase(), rd.role as Role);
+  }
+
+  return mapTeamMember(row, signInMap, roleDefaults);
 }
 
 // ── 11. AI-chat history for one user (super-admin audit — RLS read) ──────────

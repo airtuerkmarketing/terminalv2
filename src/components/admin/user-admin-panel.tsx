@@ -19,6 +19,8 @@ import { UserToolbar } from "./user-toolbar";
 import { SortableHeader } from "./sortable-header";
 import { UserDetailModal } from "./user-detail-modal";
 import { CreatePersonModal } from "./create-person-modal";
+import { EditUserModal } from "./edit-user-modal";
+import { ChangeEmailModal } from "./change-email-modal";
 import { useBulkInvite } from "./use-bulk-invite";
 import { useSelection } from "./use-selection";
 import { BulkActionBar } from "./bulk-action-bar";
@@ -108,13 +110,36 @@ export function UserAdminPanel({
   const [noPhoto, setNoPhoto] = useState(initialFilters.noPhoto ?? false);
   const [sort, setSort] = useState<SortState>(initialSort);
 
+  // Local copy of the server list so a single-row edit can splice in place without
+  // a full 63-row refetch (the caching pass's one real latency win). Re-synced
+  // whenever the server passes fresh data (after a revalidatePath navigation).
+  const [members, setMembers] = useState(teamMembers);
+  useEffect(() => setMembers(teamMembers), [teamMembers]);
+
   const [openUserId, setOpenUserId] = useState<string | null>(null);
+  const [editUserId, setEditUserId] = useState<string | null>(null);
+  const [changeEmailUserId, setChangeEmailUserId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const closeModal = useCallback(() => setOpenUserId(null), []);
+  const closeEdit = useCallback(() => setEditUserId(null), []);
+  const closeChangeEmail = useCallback(() => setChangeEmailUserId(null), []);
   const closeCreate = useCallback(() => setCreateOpen(false), []);
   const openUser = openUserId
-    ? teamMembers.find((u) => u.teamMemberId === openUserId) ?? null
+    ? members.find((u) => u.teamMemberId === openUserId) ?? null
     : null;
+  const editUser = editUserId
+    ? members.find((u) => u.teamMemberId === editUserId) ?? null
+    : null;
+  const changeEmailUser = changeEmailUserId
+    ? members.find((u) => u.teamMemberId === changeEmailUserId) ?? null
+    : null;
+
+  // Splice an edited row back into the local list (from adminUpdateUserAction).
+  const applyEditedMember = useCallback((updated: TeamMemberListItem) => {
+    setMembers((prev) =>
+      prev.map((m) => (m.teamMemberId === updated.teamMemberId ? updated : m))
+    );
+  }, []);
 
   // Row selection (AP 3 Phase 5). Lives in the orchestrator like all other panel
   // state; the checkbox column (B2) and the sticky bulk-action bar (B3+) consume
@@ -210,7 +235,7 @@ export function UserAdminPanel({
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return teamMembers.filter((u) => {
+    return members.filter((u) => {
       if (selectedDepartments.length && (!u.department || !selectedDepartments.includes(u.department)))
         return false;
       if (selectedStatuses.length && !selectedStatuses.includes(u.loginStatus)) return false;
@@ -225,7 +250,7 @@ export function UserAdminPanel({
         return false;
       return true;
     });
-  }, [teamMembers, q, selectedDepartments, selectedStatuses, privateOnly, noPhoto]);
+  }, [members, q, selectedDepartments, selectedStatuses, privateOnly, noPhoto]);
 
   // Group the filtered set by role, then sort within each group by the active
   // sort (grouping is preserved — sort is global but applied inside each section).
@@ -270,11 +295,11 @@ export function UserAdminPanel({
   // when (and only when) it should.
   const invitableSelectedCount = useMemo(() => {
     let n = 0;
-    for (const u of teamMembers) {
+    for (const u of members) {
       if (selection.selected.has(u.teamMemberId) && isInvitableMember(u)) n++;
     }
     return n;
-  }, [teamMembers, selection.selected]);
+  }, [members, selection.selected]);
 
   const visibleColumns = useMemo(() => COLUMNS.filter((c) => visibility[c.key]), [visibility]);
   const colSpan = visibleColumns.length;
@@ -297,7 +322,7 @@ export function UserAdminPanel({
   // the shared per-section bulk hook so its confirm dialog shows the right count
   // and confirm() runs the same progress/result toasts as a section invite.
   function handleBulkInvite() {
-    const selectedMembers = teamMembers.filter((m) => selection.selected.has(m.teamMemberId));
+    const selectedMembers = members.filter((m) => selection.selected.has(m.teamMemberId));
     const invitableMembers = selectedMembers.filter(isInvitableMember);
     const skipped = selectedMembers.length - invitableMembers.length;
 
@@ -325,7 +350,7 @@ export function UserAdminPanel({
   async function handleExportCsv() {
     const hasSelection = selection.size > 0;
     const exportMembers = hasSelection
-      ? teamMembers.filter((m) => selection.selected.has(m.teamMemberId))
+      ? members.filter((m) => selection.selected.has(m.teamMemberId))
       : filtered;
     const scope: "selection" | "filtered" = hasSelection ? "selection" : "filtered";
 
@@ -470,8 +495,35 @@ export function UserAdminPanel({
           user={openUser}
           currentUserId={currentUserId}
           onClose={closeModal}
+          onEdit={() => {
+            setEditUserId(openUser.teamMemberId);
+            closeModal();
+          }}
         />
       )}
+
+      {/* Super-admin full-edit. Mounted permanently (open is a prop) so the
+          password-reset ConfirmDialog survives the form modal closing. */}
+      <EditUserModal
+        open={editUser !== null}
+        user={editUser}
+        departments={departments}
+        onClose={closeEdit}
+        onSaved={applyEditedMember}
+        onChangeEmail={() => {
+          if (editUser) setChangeEmailUserId(editUser.teamMemberId);
+          closeEdit();
+        }}
+      />
+
+      {/* Dedicated change-login-email modal (typed re-entry). Mounted permanently so
+          its confirm dialog survives the edit modal closing. */}
+      <ChangeEmailModal
+        open={changeEmailUser !== null}
+        user={changeEmailUser}
+        currentUserId={currentUserId}
+        onClose={closeChangeEmail}
+      />
 
       {/* Mounted permanently (open is a prop, not a mount guard) so the post-create
           invite ConfirmDialog survives the form modal closing. */}

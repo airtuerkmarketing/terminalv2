@@ -3,20 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin, requireSuperAdmin } from "@/lib/auth";
 import {
+  adminUpdateUser,
   bulkInvite,
+  changeUserEmail,
   createTeamMember,
   exportUsersLog,
   getTeamMemberBrands,
+  getTeamMemberById,
   getUserActivityLog,
   getUserChatHistory,
   inviteUser,
   logActivity,
+  sendPasswordReset,
   updateUserRole,
   type ActivityLogPage,
   type BrandRef,
   type BulkInviteResult,
   type ChatSessionItem,
   type Role,
+  type TeamMemberListItem,
+  type UpdateUserProfilePatch,
 } from "@/lib/users";
 
 /**
@@ -124,10 +130,107 @@ function toGermanMessage(err: unknown): string {
       return "Save failed. Please try again.";
     case "INVITE_FAILED":
       return "The invitation could not be sent.";
+    case "NOT_INVITED":
+      return "This person has not been invited yet — send an invitation first.";
+    case "RESET_FAILED":
+      return "The password reset email could not be sent.";
+    case "EMAIL_CHANGE_FAILED":
+      return "The email address could not be changed.";
+    case "CANNOT_MANAGE_PEER_SUPERADMIN":
+      return "You cannot change the email of another super admin.";
+    case "TITLE_TOO_LONG":
+      return "The title is too long (max 20 characters).";
+    case "PHONE_TOO_LONG":
+      return "The phone number is too long (max 50 characters).";
+    case "STATUS_TOO_LONG":
+      return "The status line is too long (max 50 characters).";
+    case "VALUE_TOO_LONG":
+      return "One of the fields is too long.";
+    case "INVALID_DATE":
+      return "Please provide a valid date (YYYY-MM-DD).";
+    case "INVALID_METADATA":
+      return "The notes/metadata value is invalid.";
+    case "UPDATE_FAILED":
+      return "Save failed. Please try again.";
     case "NOT_FOUND":
       return "Entry not found.";
     default:
-      return `Error: ${msg}`;
+      // Don't echo internal tokens to the UI.
+      return "Action failed.";
+  }
+}
+
+// ── Admin full edit (stammdaten) ─────────────────────────────────────────────
+
+export type EditUserResult =
+  | { ok: true; user: TeamMemberListItem | null }
+  | { ok: false; error: string };
+
+/**
+ * Full-edit a team member's stammdaten from the detail-modal Edit form.
+ * super_admin-gated (the panel is super_admin-only; doppel-guard: adminUpdateUser
+ * re-checks via requireSuperAdmin). Writes team_members via service-role +
+ * re-stamps profiles.full_name on a name change. Role + email are NOT part of this
+ * patch — role stays on updateUserRoleAction (RLS escalation guard), email is out
+ * of v1 scope. Returns the freshly-written row so the panel can splice it in place
+ * without a full refetch (a null user just falls back to a router.refresh).
+ * `teamMemberId` is the team_members id (the panel's key).
+ */
+export async function adminUpdateUserAction(
+  teamMemberId: string,
+  patch: UpdateUserProfilePatch
+): Promise<EditUserResult> {
+  try {
+    await requireSuperAdmin();
+    await adminUpdateUser(teamMemberId, patch);
+    revalidatePath("/admin/users");
+    const user = await getTeamMemberById(teamMemberId);
+    return { ok: true, user };
+  } catch (err) {
+    return { ok: false, error: toGermanMessage(err) };
+  }
+}
+
+// ── Change login email (auth.users ⇄ profiles ⇄ team_members) ─────────────────
+
+export type ChangeEmailResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Change a team member's login email. super_admin-gated (doppel-guard:
+ * changeUserEmail re-checks via requireSuperAdmin + applies the peer-super_admin
+ * guard). GoTrue is mutated first; on success the change_user_email RPC syncs the
+ * public tables in one transaction. `teamMemberId` is the team_members id.
+ */
+export async function changeUserEmailAction(
+  teamMemberId: string,
+  newEmail: string
+): Promise<ChangeEmailResult> {
+  try {
+    await requireSuperAdmin();
+    await changeUserEmail(teamMemberId, newEmail);
+    revalidatePath("/admin/users");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: toGermanMessage(err) };
+  }
+}
+
+// ── Send password reset (admin-trigger recovery email) ───────────────────────
+
+export type ResetResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Send a GoTrue recovery email to an invited team member. super_admin-gated
+ * (doppel-guard: sendPasswordReset re-checks). No on-page data changes.
+ * `teamMemberId` is the team_members id (the panel's key).
+ */
+export async function sendPasswordResetAction(teamMemberId: string): Promise<ResetResult> {
+  try {
+    await requireSuperAdmin();
+    await sendPasswordReset(teamMemberId);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: toGermanMessage(err) };
   }
 }
 

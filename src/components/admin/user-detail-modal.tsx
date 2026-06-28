@@ -43,11 +43,14 @@ export function UserDetailModal({
   user,
   currentUserId,
   onClose,
+  onEdit,
 }: {
   user: TeamMemberListItem;
   /** Self-lock: a super_admin can't change their OWN role (lockout guard). */
   currentUserId: string;
   onClose: () => void;
+  /** Open the super_admin full-edit modal for this member. */
+  onEdit: () => void;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -69,7 +72,11 @@ export function UserDetailModal({
 
   const modalRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const name = `${user.firstName} ${user.lastName}`.trim();
+  // title (salutation/honorific, e.g. "Dr.") is prefixed to the displayed name.
+  const name = [user.title, user.firstName, user.lastName]
+    .filter((p) => p && p.trim())
+    .join(" ")
+    .trim();
 
   async function saveRole() {
     if (!user.profileId || pendingRole === role) {
@@ -166,18 +173,7 @@ export function UserDetailModal({
 
   const profileFields = (
     <dl className="uap-fields">
-      <div>
-        <dt>Department</dt>
-        <dd>{user.department ?? "—"}</dd>
-      </div>
-      <div>
-        <dt>E-Mail</dt>
-        <dd>{user.email ?? "—"}</dd>
-      </div>
-      <div>
-        <dt>On the team</dt>
-        <dd>{user.joinedYear ? `since ${user.joinedYear}` : "—"}</dd>
-      </div>
+      {/* 1. Role & status — the most consequential attribute, directly under identity. */}
       {!isTabbed && user.intendedRole && user.intendedRole !== "user" && (
         <div>
           <dt>Role</dt>
@@ -252,6 +248,32 @@ export function UserDetailModal({
           <dd>{user.lastSignInAt ? <RelativeTime iso={user.lastSignInAt} /> : "—"}</dd>
         </div>
       )}
+
+      {/* 2. Contact */}
+      <div>
+        <dt>E-Mail</dt>
+        <dd>{user.email ?? "—"}</dd>
+      </div>
+      <div>
+        <dt>Phone</dt>
+        <dd>{user.phone ?? "—"}</dd>
+      </div>
+
+      {/* 3. Org & tenure */}
+      <div>
+        <dt>Department</dt>
+        <dd>{user.department ?? "—"}</dd>
+      </div>
+      <div>
+        <dt>Position</dt>
+        <dd>{user.position ?? "—"}</dd>
+      </div>
+      <div>
+        <dt>On the team</dt>
+        <dd>{user.joinedYear ? `since ${user.joinedYear}` : "—"}</dd>
+      </div>
+
+      {/* 4. Tools / Tasks */}
       <div className="uap-fields-full">
         <dt>Tools</dt>
         <dd>
@@ -415,6 +437,13 @@ export function UserDetailModal({
 
         <div className="uap-modal-footer">
           <InviteFooter user={user} />
+          <button type="button" className="uap-modal-btn" onClick={onEdit}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+            </svg>
+            Edit
+          </button>
           <button type="button" className="uap-modal-btn" onClick={onClose}>
             Close
           </button>
