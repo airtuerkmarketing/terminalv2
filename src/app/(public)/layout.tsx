@@ -13,8 +13,8 @@ import {
 } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { RadialKit } from "@/components/shell/RadialKit";
-
-const IBE_SLUG = "ibe-product-suite";
+import { IBE_SLUG, SPEC_HIDDEN_PRODUCT_SLUGS } from "@/config/navigation";
+import { PREFS_SCRIPT } from "@/lib/prefs-script";
 
 /** Resources section — hardcoded routes per ARCHITECTURE.md §3 / §5. Document
  *  Library is an EXPANDABLE node whose children are the visible top-level folders
@@ -27,16 +27,6 @@ const RESOURCES_AFTER: NavLeaf[] = [
   { label: "Assets", href: "/asset-library", iconKey: "asset-library" },
   { label: "Team", href: "/team", iconKey: "team" },
 ];
-
-/**
- * IBE products kept in the DB but permanently hidden from the sidebar (D-043).
- * pages.hidden_in_sidebar is the runtime source of truth (ARCHITECTURE.md §3),
- * but those product pages are still drafts and the public RLS policy on `pages`
- * only exposes published rows — so the anon key can't read the flag yet. This
- * constant guarantees the locked decision regardless; once the pages are
- * published, the pages query below also picks up any admin-toggled hidden ones.
- */
-const SPEC_HIDDEN_PRODUCT_SLUGS = ["airlounge"];
 
 type BrandRow = {
   id: string;
@@ -136,12 +126,6 @@ async function getNav(): Promise<SidebarNav> {
     resources: [...RESOURCES_BEFORE, documentLibrary, ...RESOURCES_AFTER],
   };
 }
-
-// Apply persisted theme/sidebar before paint to avoid a flash.
-// Also pre-paint-collapses the global rail on library routes (own secondary
-// sidebar) so there's no expand→collapse flash on a hard load. Keep the prefix
-// list in lock-step with LIBRARY_ROUTE_PREFIXES in shell/sidebar.tsx.
-const PREFS_SCRIPT = `(function(){try{var d=document.documentElement;var t=localStorage.getItem('terminalv2-theme');if(t==='ios18-light'||t==='ios18-dark')d.dataset.theme=t;var s=localStorage.getItem('terminalv2-sidebar');if(s==='expanded'||s==='collapsed')d.dataset.sidebar=s;var p=location.pathname;if(p==='/documents-library'||p.indexOf('/documents-library/')===0||p==='/presentation-hub'||p.indexOf('/presentation-hub/')===0)d.dataset.sidebar='collapsed';}catch(e){}})();`;
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);

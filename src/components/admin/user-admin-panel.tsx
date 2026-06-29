@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import type { TeamMemberListItem } from "@/lib/users";
 import { isCorpEmail } from "@/lib/corp-email";
 import { useDebouncedCallback } from "@/lib/use-debounced-callback";
@@ -17,10 +18,6 @@ import {
 import { UserSection } from "./user-section";
 import { UserToolbar } from "./user-toolbar";
 import { SortableHeader } from "./sortable-header";
-import { UserDetailModal } from "./user-detail-modal";
-import { CreatePersonModal } from "./create-person-modal";
-import { EditUserModal } from "./edit-user-modal";
-import { ChangeEmailModal } from "./change-email-modal";
 import { useBulkInvite } from "./use-bulk-invite";
 import { useSelection } from "./use-selection";
 import { BulkActionBar } from "./bulk-action-bar";
@@ -30,6 +27,15 @@ import { useToast } from "@/components/ui/toast";
 import { exportUsersAction } from "@/app/(public)/admin/users/actions";
 import { buildUsersCsv, downloadCsv, generateCsvFilename } from "@/lib/admin-users-csv";
 import "@/styles/user-admin.css";
+
+// The four admin modals stay permanently mounted (open-controlled, so nested
+// confirm dialogs survive the parent closing) but are only interactive on demand
+// — code-split their ~1900 LOC out of the /admin/users initial bundle (CM-03).
+// ssr:false + loading:()=>null: a closed modal renders nothing, so no DOM change.
+const UserDetailModal = dynamic(() => import("./user-detail-modal").then((m) => m.UserDetailModal), { ssr: false, loading: () => null });
+const CreatePersonModal = dynamic(() => import("./create-person-modal").then((m) => m.CreatePersonModal), { ssr: false, loading: () => null });
+const EditUserModal = dynamic(() => import("./edit-user-modal").then((m) => m.EditUserModal), { ssr: false, loading: () => null });
+const ChangeEmailModal = dynamic(() => import("./change-email-modal").then((m) => m.ChangeEmailModal), { ssr: false, loading: () => null });
 
 // How many names to preview in the bulk-invite confirm dialog before collapsing
 // the rest into a "…und X weitere" line.

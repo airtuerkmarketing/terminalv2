@@ -10,23 +10,25 @@
  *   - ON  → read via the service-role admin client (bypasses RLS) so drafts are
  *           viewable while building. SERVER-ONLY; the secret never reaches the
  *           client (it has no NEXT_PUBLIC_ prefix).
- *   - OFF → read via the anon server client; RLS restricts to published rows,
- *           so drafts 404 for anonymous visitors (correct production behavior).
+ *   - OFF → read via the cookie-free PUBLIC anon client (src/lib/supabase/public.ts).
+ *           RLS restricts to published rows, and an explicit status='published'
+ *           filter caps every viewer to published content (viewer-independent —
+ *           correct production behavior).
  *
- * CACHING (Phase A, D-056): the three public read functions — getPageByPath,
- * getBlocks, getBrandSectionsAll — are wrapped in unstable_cache with a 24h TTL
- * (brand content changes 3-5x/year, so the window is deliberately conservative)
- * and a tag hierarchy:
+ * CACHING (Phase A D-056; PERF-01/02, D-105): the three public read functions —
+ * getPageByPath, getBlocks, getBrandSectionsAll — are wrapped in unstable_cache
+ * with a 1h TTL (revalidate=3600, matching ARCHITECTURE.md §14) and a tag
+ * hierarchy:
  *   - pages:all                 global invalidation
  *   - page:{fullPath}           a single page row
  *   - blocks:page:{pageId}      one page's blocks
  *   - brand-sections:{parentId} one brand's section tree
- * The cache is GUARDED on SHOW_DRAFTS: only the SHOW_DRAFTS=true path (admin
- * client, cookie-free, deterministic) is cached. The SHOW_DRAFTS=false path reads
- * via the anon client with cookies(), which cannot run inside unstable_cache, so
- * it stays uncached until Phase C extracts a cookie-free read path.
- * No revalidateTag wiring exists yet (Phase A1 follow-up); until then the 24h TTL
- * is the only invalidation, so edits can take up to 24h to reflect on production.
+ * BOTH paths are now cached: the SHOW_DRAFTS=true path (admin client) and the prod
+ * path (cookie-free public client) are deterministic, so unstable_cache applies in
+ * production too (D-105 replaced the old cookie-bound read that couldn't be cached).
+ * There is no in-app publish UI, so content edits (via SQL/migration) have no
+ * automatic revalidation trigger; a super_admin can POST /api/revalidate to drop
+ * the pages:all tag on demand — otherwise the 1h TTL bounds staleness.
  *
  * Do not import this module from a Client Component.
  */
@@ -35,6 +37,8 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createPublicClient } from "@/lib/supabase/public";
+import { IBE_SLUG } from "@/config/navigation";
 import type { BlockRow } from "@/lib/blocks/types";
 
 export const SHOW_DRAFTS =
@@ -59,10 +63,12 @@ export interface PageRow {
 const PAGE_COLUMNS =
   "id, parent_id, slug, full_path, number, title, meta_title, meta_description, rendering_mode, component_key, status";
 
-// Reads that must see drafts in dev use the admin client; production anonymous
-// reads use the RLS-scoped anon client.
+// Drafts in dev → service-role admin client. Production → the cookie-free public
+// (anon) client, so the read is deterministic and can run inside unstable_cache
+// (PERF-01). Both are deterministic; the cookie-bound server client is no longer
+// used for these cached CMS reads.
 async function readClient() {
-  return SHOW_DRAFTS ? createAdminClient() : await createClient();
+  return SHOW_DRAFTS ? createAdminClient() : createPublicClient();
 }
 
 /**
@@ -78,10 +84,9 @@ export const getPageByPath = cache(async (fullPath: string): Promise<PageRow | n
     const { data } = await query.maybeSingle();
     return (data as PageRow | null) ?? null;
   };
-  if (!SHOW_DRAFTS) return run(); // cookie-bound anon path — uncached (see file header)
   return unstable_cache(run, ["page-by-path", fullPath], {
     tags: ["pages:all", `page:${fullPath}`],
-    revalidate: 86400,
+    revalidate: 3600,
   })();
 });
 
@@ -96,10 +101,9 @@ export async function getBlocks(pageId: string): Promise<BlockRow[]> {
       .order("position", { ascending: true });
     return (data as BlockRow[] | null) ?? [];
   };
-  if (!SHOW_DRAFTS) return run(); // cookie-bound anon path — uncached (see file header)
   return unstable_cache(run, ["blocks-by-page", pageId], {
     tags: ["pages:all", `blocks:page:${pageId}`],
-    revalidate: 86400,
+    revalidate: 3600,
   })();
 }
 
@@ -109,7 +113,7 @@ export async function getIbeProducts(): Promise<{ slug: string; name: string }[]
   const { data: ibe } = await supabase
     .from("brands")
     .select("id")
-    .eq("slug", "ibe-product-suite")
+    .eq("slug", IBE_SLUG)
     .maybeSingle();
   if (!ibe) return [];
   const { data } = await supabase
@@ -129,7 +133,7 @@ export async function getIbeProducts(): Promise<{ slug: string; name: string }[]
 //     (getIbeProducts), which preserves the spec'd product order.
 // airtuerk-apix was previously excluded but is now a single-page brand:
 // its 4 hardcoded tools + block sections all render as anchors on /airtuerk-apix.
-const SINGLE_PAGE_EXCLUDED_SLUGS = new Set(["ibe-product-suite"]);
+const SINGLE_PAGE_EXCLUDED_SLUGS = new Set<string>([IBE_SLUG]);
 
 /** Slugs of top-level brands that render as a single anchored page. Cached so
  *  the sidebar (getNav), the redirect check, and the aggregator share one read. */
@@ -222,14 +226,12 @@ export async function getBrandSectionsAll(parentId: string): Promise<BrandSectio
       })
     );
   };
-  if (!SHOW_DRAFTS) return run(); // cookie-bound anon path — uncached (see file header)
-  // Nested cache: run() calls getBlocks (itself cached). A future
-  // revalidateTag("blocks:page:X") would hit only the inner getBlocks entry, not
-  // this outer brand-sections entry — the clean lever is pages:all (or the 24h
-  // TTL). The Phase A1 invalidation task should fire pages:all on every edit.
+  // Nested cache: run() calls getBlocks (itself cached). revalidateTag("pages:all")
+  // (POST /api/revalidate) drops both this entry and the inner getBlocks entries;
+  // the per-page tags only hit one layer.
   return unstable_cache(run, ["brand-sections", parentId], {
     tags: ["pages:all", `brand-sections:${parentId}`],
-    revalidate: 86400,
+    revalidate: 3600,
   })();
 }
 

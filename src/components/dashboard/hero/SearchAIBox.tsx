@@ -11,12 +11,11 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import { TerminalLogo } from "@/components/shell/TerminalLogo";
 import { ModeChips } from "@/components/dashboard/hero/ModeChips";
 import { SearchDropdown, ASK_AI_ID } from "@/components/dashboard/hero/SearchDropdown";
-import { AIChatWindow } from "@/components/dashboard/hero/AIChatWindow";
-import { CorrectionModal } from "@/components/dashboard/hero/CorrectionModal";
 import { createClient } from "@/lib/supabase/client";
 import {
   DEFAULT_MODEL_ID,
@@ -38,6 +37,20 @@ import {
   inferKonfidenz,
   isOutOfScope,
 } from "@/lib/rag/client";
+
+// Chat + correction surfaces are below-the-fold interaction islands: load them as
+// separate client chunks (ssr:false) so react-markdown + remark-gfm and the modal
+// code stay out of the dashboard's initial JS bundle (CM-01 / PERF-04). AIChatWindow
+// stays mounted (open-controlled, preserves its close animation); CorrectionModal
+// mounts on demand. loading:()=>null — no placeholder, no layout shift.
+const AIChatWindow = dynamic(
+  () => import("@/components/dashboard/hero/AIChatWindow").then((m) => m.AIChatWindow),
+  { ssr: false, loading: () => null }
+);
+const CorrectionModal = dynamic(
+  () => import("@/components/dashboard/hero/CorrectionModal").then((m) => m.CorrectionModal),
+  { ssr: false, loading: () => null }
+);
 
 /* Such+KI-Box (BAU-Auftrag §5) — orchestrates search mode (live dropdown over
  * /api/search) and KI-Modus (UI-only placeholder answers). Stage 1: no real RAG

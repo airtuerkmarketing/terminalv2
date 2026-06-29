@@ -20,7 +20,6 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateImageThumbnail } from "@/lib/presentations-thumbnail";
 import { getIdentity, requireAdmin, requireSuperAdmin, type Identity } from "@/lib/documents";
@@ -53,6 +52,12 @@ import {
   type FolderAccessResult,
   type SaveAccessResult,
 } from "@/lib/folder-access";
+import {
+  UUID_RE,
+  toMessage,
+  revalidateStructure,
+  revalidateLibraryFiles,
+} from "@/lib/library/actions-shared";
 
 export type ActionResult = { ok: true; id?: string; path?: string } | { ok: false; error: string };
 /** File mutations return the affected row so the client can update in place (no F5). */
@@ -60,37 +65,13 @@ export type FileResult = { ok: true; file?: PresentationFileDTO } | { ok: false;
 export type ViewResult = { ok: true; viewId?: string } | { ok: false; error: string };
 
 const BUCKET = "presentations";
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Admin = ReturnType<typeof createAdminClient>;
 
-/** Map thrown auth errors + Postgres error codes to friendly messages. */
-function toMessage(e: unknown, ctx: "folder" | "file" | "generic" = "generic"): string {
-  const err = e as { message?: string; code?: string } | null;
-  const msg = err?.message ?? String(e);
-  if (msg === "NOT_AUTHENTICATED") return "Please sign in to do that.";
-  if (msg === "NOT_AUTHORIZED") return "You don't have permission to do that.";
-  if (/cycle/i.test(msg)) return "You can't move a folder into itself or one of its subfolders.";
-  if (err?.code === "23505")
-    return ctx === "folder"
-      ? "A folder with that name already exists here."
-      : "That item already exists.";
-  if (err?.code === "23503") return "That destination no longer exists.";
-  if (err?.code === "23514") return "That value isn't allowed.";
-  if (err?.code === "42P01" || err?.code === "PGRST205" || /schema cache/i.test(msg))
-    return "Folder permissions aren’t set up yet — apply the latest migration and try again.";
-  return "Something went wrong. Please try again.";
-}
-
-/**
- * Folder STRUCTURE changes the shared sidebar (public root layout), so the whole
- * tree is revalidated. File-only changes affect just the presentation-hub pages.
- */
-function revalidateStructure() {
-  revalidatePath("/", "layout");
-}
+// toMessage / UUID_RE / revalidateStructure are shared with the Document Library
+// (src/lib/library/actions-shared.ts, CM-02). revalidateFiles scopes to this hub.
 function revalidateFiles() {
-  revalidatePath("/presentation-hub", "layout");
+  revalidateLibraryFiles("/presentation-hub");
 }
 
 /** Validate + normalize an optional ISO datetime ("" / invalid → null). */

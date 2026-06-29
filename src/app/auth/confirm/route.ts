@@ -1,6 +1,7 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeNext } from "@/lib/auth";
 
 /**
  * Auth confirmation landing for Supabase email links (invite / recovery / magic).
@@ -54,11 +55,4 @@ export async function GET(request: NextRequest) {
         : "/");
 
   return NextResponse.redirect(`${origin}${dest}`);
-}
-
-/** Only allow same-origin relative paths (blocks open-redirect via ?next). */
-function sanitizeNext(raw: string | null): string | null {
-  if (!raw) return null;
-  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
-  return raw;
 }

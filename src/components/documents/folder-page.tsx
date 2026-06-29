@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { ChevronDown, ChevronUp, Lock, Pencil, Plus, Upload } from "lucide-react";
 import "@/styles/document-library.css";
 import type { ViewMode } from "@/components/ui/view-toggle";
@@ -11,8 +12,6 @@ import { fileKind } from "@/lib/documents-constants";
 import { Breadcrumb } from "./breadcrumb";
 import { FileCard, type CtxItem } from "./file-card";
 import { FileRow } from "./file-row";
-import { FileEditModal } from "./file-edit-modal";
-import { UploadModal } from "./upload-modal";
 import { FolderActionsMenu } from "./folder-actions-menu";
 import { FolderCard3D, FolderRow } from "./folder-card-3d";
 import { LibraryToolbar } from "./library-toolbar";
@@ -23,6 +22,17 @@ import type { AccessMember } from "@/lib/folder-access";
 import { DEFAULT_FILTER, type LibraryFilter } from "./filter-sort-popover";
 
 const PAGE_SIZE = 60;
+
+// Admin-only modals shown on demand — load their chunks lazily (CM-03). ssr:false
+// + loading:()=>null: a closed modal renders nothing, so no DOM/hydration change.
+const UploadModal = dynamic(() => import("./upload-modal").then((m) => m.UploadModal), {
+  ssr: false,
+  loading: () => null,
+});
+const FileEditModal = dynamic(() => import("./file-edit-modal").then((m) => m.FileEditModal), {
+  ssr: false,
+  loading: () => null,
+});
 
 // Client-side comparator (used for the type-filter + direction layer that runs
 // over the already-loaded list). ISO timestamps sort lexically.

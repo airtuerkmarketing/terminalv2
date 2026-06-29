@@ -120,3 +120,20 @@ export async function requireSuperAdmin(): Promise<Identity> {
   if (!id.isSuperAdmin) throw new Error("NOT_AUTHORIZED");
   return id;
 }
+
+/**
+ * Same-origin redirect guard for auth flows (login `?next`, invite/recovery
+ * confirm). Returns the value only if it is a same-origin, path-RELATIVE URL;
+ * returns null otherwise so callers can fall back to "/".
+ *
+ * Rejects: absolute URLs (`https://…`), protocol-relative (`//host`), and
+ * backslash variants (browsers may fold `\` → `/`, so `/\evil.com` would become
+ * `//evil.com`). Single source of truth — used by src/app/login/actions.ts,
+ * src/app/login/page.tsx and src/app/auth/confirm/route.ts.
+ */
+export function sanitizeNext(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  if (raw.includes("\\")) return null;
+  return raw;
+}

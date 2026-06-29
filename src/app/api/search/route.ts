@@ -67,13 +67,23 @@ export async function GET(req: NextRequest) {
   if (q.length < 2) return NextResponse.json({ results: empty() });
 
   const p = `%${q}%`;
+
+  // Auth gate (SEC-01): the dashboard search box lives behind the (public) login
+  // gate, so only signed-in users ever legitimately call this. The handler runs
+  // with the service-role client below (RLS-bypass), and Next 16's proxy.ts does
+  // NOT auth-gate (CVE-2025-29927) — so without this check an anonymous caller on
+  // the public internet would receive draft page titles/slugs/paths. Reject anon.
+  const identity = await getIdentity();
+  if (!identity) {
+    return NextResponse.json({ results: empty() }, { status: 401 });
+  }
+  const isAdmin = identity.isAdmin;
+
   const supabase = createAdminClient();
 
   // Library results respect folder visibility: the service-role client bypasses
   // RLS, so we filter is_public ourselves for non-admin callers (no NDA-title
   // leak via search). Admins (session-resolved) see everything.
-  const identity = await getIdentity();
-  const isAdmin = identity?.isAdmin ?? false;
 
   let filesQuery = supabase
     .from("document_files")
@@ -89,14 +99,20 @@ export async function GET(req: NextRequest) {
     .limit(PER_TABLE);
   if (!isAdmin) foldersQuery = foldersQuery.eq("is_public", true);
 
+  // Pages mirror the pages_select_published RLS policy: non-admins see only
+  // published pages, admins see drafts too. The service-role client bypasses RLS,
+  // so we re-apply the status gate here (SEC-01 — was previously unfiltered).
+  let pagesQuery = supabase
+    .from("pages")
+    .select("id, title, slug, full_path")
+    .or(
+      `title.ilike.${p},meta_title.ilike.${p},meta_description.ilike.${p},slug.ilike.${p},full_path.ilike.${p}`
+    )
+    .limit(PER_TABLE);
+  if (!isAdmin) pagesQuery = pagesQuery.eq("status", "published");
+
   const [pagesRes, filesRes, foldersRes, assetsRes, brandsRes] = await Promise.all([
-    supabase
-      .from("pages")
-      .select("id, title, slug, full_path")
-      .or(
-        `title.ilike.${p},meta_title.ilike.${p},meta_description.ilike.${p},slug.ilike.${p},full_path.ilike.${p}`
-      )
-      .limit(PER_TABLE),
+    pagesQuery,
     filesQuery,
     foldersQuery,
     supabase

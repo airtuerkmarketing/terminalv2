@@ -504,10 +504,22 @@ has since been removed — D-056.)
 
 ## 14. Caching & revalidation
 
-- Public page rendering: `revalidate = 3600` (1 hour)
-- Admin publish action: `revalidatePath(page.full_path)` + parent paths
-- Asset URLs: immutable
-- Sidebar tree: per-request React memoization
+- Public CMS reads (`getPageByPath`, `getBlocks`, `getBrandSectionsAll` in
+  `src/lib/pages.ts`): wrapped in `unstable_cache`, `revalidate = 3600` (1 hour),
+  tags `pages:all` / `page:{fullPath}` / `blocks:page:{pageId}` /
+  `brand-sections:{parentId}`. Read via the cookie-free public anon client
+  (`src/lib/supabase/public.ts`) so the prod path is deterministic + cacheable
+  (D-105 / PERF-01).
+- No in-app CMS publish UI exists yet, so there is **no automatic** revalidation on
+  content change (edits land via SQL/migration). A super_admin can `POST
+  /api/revalidate` to drop the `pages:all` tag on demand (PERF-02); otherwise the
+  1h TTL bounds staleness. (When a publish flow is built, call
+  `revalidateTag('pages:all', 'max')` / `updateTag` from it.)
+- Folder libraries (documents / presentations): viewer-specific (RLS), so NOT
+  `unstable_cache`d — request-scoped `React.cache()` only. Counts/previews batched
+  to one query per level (PERF-03).
+- Asset URLs: immutable. Signed file URLs: never cached (`no-store`).
+- Sidebar tree: per-request React memoization.
 
 ---
 
