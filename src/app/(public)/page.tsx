@@ -26,8 +26,12 @@ export default async function Home() {
   return (
     <div className="main-inner">
       <div className="dh-page">
-        <GreetingOrbit name={firstName} />
-        <SearchAIBox firstName={firstName} />
+        {/* Hero = first screen, vertically centred (whitespace above). Quick Grabs
+            stays in normal flow below it. */}
+        <div className="dh-hero">
+          <GreetingOrbit name={firstName} />
+          <SearchAIBox firstName={firstName} />
+        </div>
         <QuickGrabs />
       </div>
     </div>

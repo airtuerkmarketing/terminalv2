@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowUp, ChevronDown, History, Plus, X } from "lucide-react";
+import { ArrowUp, ChevronDown, Edit3, History, Plus, X } from "lucide-react";
 import { AIAnswerBlock } from "@/components/dashboard/hero/AIAnswerBlock";
+import { ChatHistoryModal } from "@/components/dashboard/hero/ChatHistoryModal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { AiTurn } from "@/lib/search/types";
+// Type-only — erased, so the server-only users.ts module isn't bundled here.
+import type { ChatSessionItem } from "@/lib/users";
 
 /* Full-page chat surface (BAU-Auftrag §5). Opens as its own page — an opaque
  * full-viewport view that cross-fades + rises in (no side-drawer slide); the
@@ -17,9 +21,14 @@ import type { AiTurn } from "@/lib/search/types";
 interface Props {
   open: boolean;
   turns: AiTurn[];
+  sessionId?: string | null;
+  titleOverride?: string | null;
   onClose: () => void;
   onSubmit: (text: string) => void;
   onNewChat: () => void;
+  onRename?: (sessionId: string, title: string) => void;
+  /** Open a persisted chat (restore its turns into the active thread). */
+  onOpenChat?: (session: ChatSessionItem) => void;
   onCorrect?: (turn: AiTurn) => void;
   onFeedbackChange?: (turnId: string, feedback: "helpful" | "not_helpful") => void;
   /** Accept the rule-7 web-search offer for an out-of-scope turn. */
@@ -31,21 +40,25 @@ interface Props {
 export function AIChatWindow({
   open,
   turns,
+  sessionId,
+  titleOverride,
   onClose,
   onSubmit,
   onNewChat,
+  onRename,
+  onOpenChat,
   onCorrect,
   onFeedbackChange,
   onWebSearch,
   firstName = null,
 }: Props) {
   const [draft, setDraft] = useState("");
-  const [confirming, setConfirming] = useState(false); // "Neuer Chat" two-step arm
+  const [historyOpen, setHistoryOpen] = useState(false); // chat-history search modal
+  const [pendingSession, setPendingSession] = useState<ChatSessionItem | null>(null); // switch-confirm
   const [showScrollDown, setShowScrollDown] = useState(false); // jump-to-latest button
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLElement>(null);
-  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Esc closes — ONLY when focus is inside the panel (so Esc in the hero search
   // box stays with the box's own close-dropdown handler; no double-dismiss).
@@ -92,18 +105,6 @@ export function AIChatWindow({
     el.style.height = `${el.scrollHeight}px`;
   }, [draft]);
 
-  // Reset the "Neuer Chat" arm whenever the panel closes.
-  useEffect(() => {
-    if (!open) setConfirming(false);
-  }, [open]);
-
-  useEffect(
-    () => () => {
-      if (confirmTimer.current) clearTimeout(confirmTimer.current);
-    },
-    []
-  );
-
   // Jump to the newest turn when turns change or the panel opens.
   useEffect(() => {
     const el = bodyRef.current;
@@ -142,19 +143,6 @@ export function AIChatWindow({
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }
 
-  function clickNewChat() {
-    // Two-step: first click arms ("Wirklich löschen?"), second click confirms.
-    if (!confirming) {
-      setConfirming(true);
-      if (confirmTimer.current) clearTimeout(confirmTimer.current);
-      confirmTimer.current = setTimeout(() => setConfirming(false), 3000);
-      return;
-    }
-    if (confirmTimer.current) clearTimeout(confirmTimer.current);
-    setConfirming(false);
-    onNewChat();
-  }
-
   function send() {
     const t = draft.trim();
     if (!t) return;
@@ -169,6 +157,42 @@ export function AIChatWindow({
     }
   }
 
+  // Header context (local turns-state only — no fetch, no timestamp this stage).
+  // Title priority: a user-set override > the first question > product-name
+  // fallback. Ellipsis is CSS, not JS-slice, so it stays responsive.
+  const derivedTitle = turns[0]?.question?.trim() || "";
+  const displayTitle = titleOverride ?? (derivedTitle || "airtuerk Intelligence");
+  const messageCount = turns.length;
+  // Inline rename: only once the session exists (a fresh thread has no id to
+  // write to). The pencil reveals on hover; Enter/blur commit, Esc cancels.
+  const canEdit = !!sessionId && turns.length > 0;
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  function startEdit() {
+    setEditValue(displayTitle);
+    setEditing(true);
+  }
+  function commitEdit() {
+    const v = editValue.trim();
+    setEditing(false);
+    if (v && v !== displayTitle && sessionId) onRename?.(sessionId, v);
+  }
+
+  // Open a chat from the history modal. Restore is destructive (replaces the
+  // thread), so confirm ONLY when there's unsent work: a draft in the composer
+  // or a turn still streaming. Otherwise switch immediately.
+  function proceedOpen(session: ChatSessionItem) {
+    setDraft(""); // the old draft is intentionally discarded
+    setPendingSession(null);
+    setHistoryOpen(false);
+    onOpenChat?.(session);
+  }
+  function guardSelect(session: ChatSessionItem) {
+    const dirty = draft.trim().length > 0 || turns.some((t) => t.isStreaming);
+    if (dirty) setPendingSession(session); // history modal stays open under the confirm
+    else proceedOpen(session);
+  }
+
   return (
     <aside
       ref={panelRef}
@@ -180,7 +204,7 @@ export function AIChatWindow({
       // a11y tree (it still cross-fades) — prevents tabbing into hidden controls.
       inert={!open}
     >
-      {/* Header: left = History + New chat, right = Close, middle intentionally empty. */}
+      {/* Header: left = History icon + chat title/meta, right = New chat + Close. */}
       <header className="ai-chat-header">
         <div className="ai-chat-header-actions">
           {/* Placeholder — history panel later (localStorage questions → DB). */}
@@ -189,28 +213,73 @@ export function AIChatWindow({
             className="ai-chat-history"
             title="History"
             aria-label="History"
+            onClick={() => setHistoryOpen(true)}
           >
             <History className="ai-chat-history-icon" aria-hidden="true" />
           </button>
+          <div className="ai-chat-header-title">
+            {editing ? (
+              <input
+                className="ai-chat-header-title-input"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                autoFocus
+                onFocus={(e) => e.currentTarget.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitEdit();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setEditing(false);
+                  }
+                }}
+                onBlur={commitEdit}
+                aria-label="Chat title"
+              />
+            ) : (
+              <div className="ai-chat-header-title-row">
+                <span className="ai-chat-header-title-text">{displayTitle}</span>
+                {canEdit && (
+                  <button
+                    type="button"
+                    className="ai-chat-header-edit"
+                    onClick={startEdit}
+                    aria-label="Titel umbenennen"
+                    title="Rename"
+                  >
+                    <Edit3 aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            )}
+            {messageCount > 0 && (
+              <span className="ai-chat-header-meta">
+                {messageCount} {messageCount === 1 ? "Nachricht" : "Nachrichten"}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="ai-chat-header-right">
           <button
             type="button"
-            className={`ai-chat-new${confirming ? " is-confirming" : ""}`}
-            onClick={clickNewChat}
+            className="ai-chat-new"
+            onClick={onNewChat}
             disabled={turns.length === 0}
-            title="New chat (clear history)"
+            title="New chat"
           >
             <Plus className="ai-chat-new-icon" aria-hidden="true" />
-            <span>{confirming ? "Delete history?" : "New chat"}</span>
+            <span>New chat</span>
+          </button>
+          <button
+            type="button"
+            className="ai-chat-close"
+            onClick={onClose}
+            aria-label="Close chat"
+          >
+            <X className="ai-chat-close-icon" aria-hidden="true" />
           </button>
         </div>
-        <button
-          type="button"
-          className="ai-chat-close"
-          onClick={onClose}
-          aria-label="Close chat"
-        >
-          <X className="ai-chat-close-icon" aria-hidden="true" />
-        </button>
       </header>
 
       <div className="ai-chat-body" ref={bodyRef}>
@@ -283,6 +352,23 @@ export function AIChatWindow({
           <ChevronDown className="ai-chat-scroll-down-icon" aria-hidden="true" />
         </button>
       )}
+
+      {/* Chat-history search (B.1: display + search + close; chat-loading is B.2).
+          Mounted only while open so each open starts from a fresh load. */}
+      {historyOpen && (
+        <ChatHistoryModal open onClose={() => setHistoryOpen(false)} onSelect={guardSelect} />
+      )}
+
+      {/* Switch confirm — only shown when opening a chat would lose unsent work. */}
+      <ConfirmDialog
+        open={!!pendingSession}
+        onClose={() => setPendingSession(null)}
+        onConfirm={() => { if (pendingSession) proceedOpen(pendingSession); }}
+        title="Aktuellen Chat verlassen?"
+        description="Dein nicht gesendeter Text geht verloren."
+        confirmLabel="Chat öffnen"
+        cancelLabel="Abbrechen"
+      />
     </aside>
   );
 }

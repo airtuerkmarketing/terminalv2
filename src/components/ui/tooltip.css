@@ -28,6 +28,14 @@
   transform: translateX(-50%) translateY(2px);
   transition: opacity 0.12s var(--ease-smooth), transform 0.12s var(--ease-smooth);
 }
+/* Dark variant (opt-in via the `dark` prop) — used by the compact chat action
+   icon-buttons. Additive modifier so the default light card is unaffected. */
+.ui-tooltip-card--dark {
+  background: #1c1c1e;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
 .ui-tooltip-card--top {
   bottom: calc(100% + 6px);
 }

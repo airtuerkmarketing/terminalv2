@@ -12,30 +12,42 @@ import { NavIcon } from "@/components/shell/icons";
 // Anon or unnamed users (e.g. dev@ with no linked team_member) fall back to "there".
 const FALLBACK_NAME = "there";
 
+// Orbit temporarily hidden — keep for later. Flip to true to bring back the
+// floating brand-favicon seal above the greeting.
+const SHOW_ORBIT = false;
+
 export function GreetingOrbit({ name }: { name?: string | null }) {
   const greetingName = name?.trim() || FALLBACK_NAME;
   return (
     <div className="dh-greeting">
-      <div className="orbit-seal" aria-hidden="true">
-        <div className="orbit-field">
-          <div className="orbit-coin s1">
-            <span className="badge"><NavIcon name="airtuerk-holidays" /></span>
+      {SHOW_ORBIT && (
+        <div className="orbit-seal" aria-hidden="true">
+          <div className="orbit-field">
+            <div className="orbit-coin s1">
+              <span className="badge"><NavIcon name="airtuerk-holidays" /></span>
+            </div>
+            <div className="orbit-coin s2">
+              <span className="badge"><NavIcon name="atbeds" /></span>
+            </div>
+            <div className="orbit-coin s3">
+              <span className="badge"><NavIcon name="airtuerk-service" /></span>
+            </div>
+            <div className="orbit-coin s4">
+              <span className="badge"><NavIcon name="service-center-antalya" /></span>
+            </div>
           </div>
-          <div className="orbit-coin s2">
-            <span className="badge"><NavIcon name="atbeds" /></span>
-          </div>
-          <div className="orbit-coin s3">
-            <span className="badge"><NavIcon name="airtuerk-service" /></span>
-          </div>
-          <div className="orbit-coin s4">
-            <span className="badge"><NavIcon name="service-center-antalya" /></span>
+          <div className="core">
+            <NavIcon name="airtuerk-service" />
           </div>
         </div>
-        <div className="core">
+      )}
+      {/* at-favicon (two-colour airtuerk glyph) left of the greeting, one row. */}
+      <div className="dh-greeting-row">
+        <span className="dh-greeting-mark" aria-hidden="true">
           <NavIcon name="airtuerk-service" />
-        </div>
+        </span>
+        <h1 className="dh-greeting-title">Alright {greetingName}, what are we fixing today?</h1>
       </div>
-      <h1 className="dh-greeting-title">Alright {greetingName}, what are we fixing today?</h1>
     </div>
   );
 }

@@ -104,11 +104,17 @@ const MASTER_DECK_AIRTUERK: DocumentListContent = {
   ],
 };
 
-/** Master decks exist only for service + antalya (antalya reuses airtuerk's deck,
- *  exactly as the DB block content does). Holidays + atBeds → empty state. */
+/** airtuerk-service owns the only real deck; antalya reuses it (as the DB block
+ *  content does). Holidays + atBeds have no deck of their own yet → they show the
+ *  airtuerk deck as a PLACEHOLDER (same PDFs + preview) until real decks exist —
+ *  a known compromise: the brand shown is wrong, but it's a live file (no 404 /
+ *  broken image). previewPathFor derives the preview brand from the PDF URL
+ *  (airtuerk-service), so the existing KNOWN_PREVIEWS entries already cover all 4. */
 export const MASTER_DECK: Partial<Record<BrandSlug, DocumentListContent>> = {
   "airtuerk-service": MASTER_DECK_AIRTUERK,
   "service-center-antalya": MASTER_DECK_AIRTUERK,
+  "airtuerk-holidays": MASTER_DECK_AIRTUERK, // PLATZHALTER — falsche Marke, bis eigenes Deck existiert
+  "atbeds": MASTER_DECK_AIRTUERK, // PLATZHALTER — falsche Marke, bis eigenes Deck existiert
 };
 
 const LETTERHEAD_BANK: DocumentListContent = {

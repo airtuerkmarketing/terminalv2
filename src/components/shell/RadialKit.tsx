@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  History,
   MoreHorizontal,
   Package,
-  Palette,
   Presentation,
   PenLine,
   Search,
@@ -30,7 +30,7 @@ type Action = {
 
 const ACTIONS: Action[] = [
   { id: "logo",   label: "Get logo",       href: "#", Icon: Package,      tx: 0,   ty: -104 },
-  { id: "color",  label: "Copy color",     href: "#", Icon: Palette,      tx: 90,  ty: -52 },
+  { id: "recent", label: "Recent chats",   href: "#", Icon: History,      tx: 90,  ty: -52 },
   { id: "deck",   label: "Master Deck",    href: "#", Icon: Presentation, tx: 90,  ty: 52 },
   { id: "sig",    label: "Signature",      href: "#", Icon: PenLine,      tx: 0,   ty: 104 },
   { id: "search", label: "Search",         href: "#", Icon: Search,       tx: -90, ty: 52 },

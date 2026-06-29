@@ -46,13 +46,13 @@ html { scrollbar-gutter: stable; }
    hidden) so the user block always sticks to the bottom and is never clipped. */
 /* Panel: flush on the left (square corners), rounded 20px on the right only —
    the sidebar sits attached to the viewport's left edge. */
-.sidebar-inner { background-color: var(--sidebar-bg); border: 1px solid var(--hairline); border-radius: 0 var(--sidebar-panel-radius) var(--sidebar-panel-radius) 0; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-rest); overflow: hidden; }
+.sidebar-inner { background-color: var(--sidebar-bg); border: 1px solid var(--hairline); border-radius: 0 var(--sidebar-panel-radius) var(--sidebar-panel-radius) 0; padding: var(--space-4) var(--space-3); flex: 1; display: flex; flex-direction: column; gap: var(--space-3); box-shadow: var(--shadow-rest); overflow: hidden; }
 
-.sidebar-top { flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.sidebar-top { flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 /* The scroll zone breaks out of the inner's right padding so its scrollbar sits
    flush against the panel's right edge (cleaner than a floating, inset bar); the
    matching padding-right keeps the nav items themselves inset exactly as before. */
-.sidebar-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: var(--space-4); margin-right: calc(-1 * var(--space-3)); padding-right: var(--space-3); }
+.sidebar-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: var(--space-2); margin-right: calc(-1 * var(--space-3)); padding-right: var(--space-3); }
 /* Subtle scrollbar: thin, light thumb, transparent track, NO end arrow buttons.
    The standard scrollbar-width/color and the ::-webkit-scrollbar pseudo are
    mutually exclusive — on a WebKit/Chromium engine, setting scrollbar-width
@@ -73,7 +73,7 @@ html { scrollbar-gutter: stable; }
 :root[data-theme="ios18-dark"] .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(235, 235, 245, 0.22); }
 :root[data-theme="ios18-dark"] .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(235, 235, 245, 0.35); }
 
-.brand-mark { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--radius-md); }
+.brand-mark { position: relative; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--radius-md); }
 /* terminal SVG logo (TerminalLogo, single source of truth): wordmark when
    expanded, glyph mark when collapsed. Both paint with currentColor, so they
    inherit the rail's text colour and need no per-theme invert hack. */
@@ -86,8 +86,9 @@ html { scrollbar-gutter: stable; }
 .collapse-btn svg { width: 14px; height: 14px; transition: transform 250ms var(--ease-smooth); }
 
 .nav-section { display: flex; flex-direction: column; gap: 2px; }
-/* Slightly larger gap between groups (Dashboard | Brands | IBE/APIX | Resources). */
-.nav-divider { height: 1px; background: var(--separator); margin: var(--space-3); }
+/* Tight dividers between groups (Dashboard | Brands | IBE/APIX | Resources):
+   little vertical air, horizontal inset kept. */
+.nav-divider { height: 1px; background: var(--separator); margin: 6px var(--space-3); }
 
 /* border is 1px transparent on every item so the active state can add a hairline
    border without nudging the layout (no width/height reflow between states). */
@@ -102,10 +103,87 @@ html { scrollbar-gutter: stable; }
 /* Private (is_public=false) folder in the Document Library sub-nav — admin-only
    cue (only admins see private folders in the tree). Wins over .active. */
 .nav-item.is-private .icon { color: var(--torch); }
-.nav-item .icon { width: 18px; height: 18px; flex-shrink: 0; display: grid; place-items: center; transform-origin: center; transition: transform 180ms var(--ease-smooth); }
-/* Icon micro-animation on hover — only the icon scales/lifts, not the whole item. */
-.nav-item:hover .icon { transform: scale(1.12) translateY(-1px); }
-.nav-item .icon svg { width: 16px; height: 16px; }
+.nav-item .icon { width: 18px; height: 18px; flex-shrink: 0; display: grid; place-items: center; overflow: visible; }
+.nav-item .icon svg { width: 16px; height: 16px; overflow: visible; }
+
+/* ── Icon micro-animations ───────────────────────────────────────────────────
+   On .nav-item hover the INNER parts of each icon move (not the whole icon box —
+   the old block scale(1.12) is gone). Spring curve cubic-bezier(.34,1.56,.64,1)
+   with staggered transition-delays. transform-box pins each origin to its own
+   geometry (fill-box) or the icon frame (view-box) so nothing jumps. */
+.ic-at-red, .ic-at-blue, .ic-hol-a, .ic-hol-b, .ic-bed-1, .ic-bed-2, .ic-bed-3,
+.ic-apix-gt, .ic-apix-lt, .ic-stat-1, .ic-stat-2, .ic-stat-3, .ic-doc-corner,
+.ic-dash-q1, .ic-dash-q2, .ic-dash-q3, .ic-dash-q4, .ic-files-front, .ic-files-back,
+.ic-lib-1, .ic-lib-2, .ic-lib-3, .ic-pres-base, .ic-user-head, .ic-gal-1, .ic-gal-2 {
+  transition: transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* A1 — at-glyph (service / antalya): unified zoom about the icon centre, blue trails. */
+.ic-at-red, .ic-at-blue { transform-box: view-box; transform-origin: center; }
+.nav-item:hover .ic-at-red { transform: scale(1.18); }
+.nav-item:hover .ic-at-blue { transform: scale(1.18); transition-delay: 80ms; }
+
+/* A2 — holidays: staggered pop, each about its own centre. */
+.ic-hol-a, .ic-hol-b { transform-box: fill-box; transform-origin: center; }
+.nav-item:hover .ic-hol-a { transform: scale(1.15); }
+.nav-item:hover .ic-hol-b { transform: scale(1.15); transition-delay: 80ms; }
+
+/* A3 — atbeds: three parts pop in place, staggered. */
+.ic-bed-1, .ic-bed-2, .ic-bed-3 { transform-box: fill-box; transform-origin: center; }
+.nav-item:hover .ic-bed-1 { transform: scale(1.12); }
+.nav-item:hover .ic-bed-2 { transform: scale(1.12); transition-delay: 70ms; }
+.nav-item:hover .ic-bed-3 { transform: scale(1.12); transition-delay: 140ms; }
+
+/* B4 — apix: the brackets spread apart (translate needs no origin). */
+.nav-item:hover .ic-apix-gt { transform: translateX(2.5px); }
+.nav-item:hover .ic-apix-lt { transform: translateX(-2.5px); }
+
+/* B5 — mystats: bars grow upward from their base. <line> fill-box is degenerate,
+   so pin the origin to each bar's foot in viewBox units. */
+.ic-stat-1, .ic-stat-2, .ic-stat-3 { transform-box: view-box; }
+.ic-stat-1 { transform-origin: 12px 20px; }
+.ic-stat-2 { transform-origin: 18px 20px; }
+.ic-stat-3 { transform-origin: 6px 20px; }
+.nav-item:hover .ic-stat-1 { transform: scaleY(1.25); }
+.nav-item:hover .ic-stat-2 { transform: scaleY(1.25); transition-delay: 60ms; }
+.nav-item:hover .ic-stat-3 { transform: scaleY(1.25); transition-delay: 120ms; }
+
+/* B6 — internal-branding: the folded corner tips about the fold. */
+.ic-doc-corner { transform-box: fill-box; transform-origin: top left; }
+.nav-item:hover .ic-doc-corner { transform: rotate(-12deg); }
+
+/* C7 — dashboard: each tile shrinks about its own centre, staggered. */
+.ic-dash-q1, .ic-dash-q2, .ic-dash-q3, .ic-dash-q4 { transform-box: fill-box; transform-origin: center; }
+.nav-item:hover .ic-dash-q1 { transform: scale(0.78); }
+.nav-item:hover .ic-dash-q2 { transform: scale(0.78); transition-delay: 55ms; }
+.nav-item:hover .ic-dash-q3 { transform: scale(0.78); transition-delay: 110ms; }
+.nav-item:hover .ic-dash-q4 { transform: scale(0.78); transition-delay: 165ms; }
+
+/* C8 — document-library: front file (+ its corner) and back file fan apart. */
+.nav-item:hover .ic-files-front { transform: translate(1px, 1px); }
+.nav-item:hover .ic-files-back { transform: translate(-1px, -1px); }
+
+/* C9 — asset-library: the book parts lift, staggered (the tilted book also tips). */
+.ic-lib-3 { transform-box: fill-box; transform-origin: center; }
+.nav-item:hover .ic-lib-1 { transform: translateY(-1.5px); }
+.nav-item:hover .ic-lib-2 { transform: translateY(-1.5px); transition-delay: 70ms; }
+.nav-item:hover .ic-lib-3 { transform: translateY(-2px) rotate(-4deg); transition-delay: 140ms; }
+
+/* C10 — presentation-hub: the easel base lifts (screen body + rail static). */
+.nav-item:hover .ic-pres-base { transform: translateY(2px); }
+
+/* C11 — team / users: the head bobs (lucide 1.18.0 Users has a single head circle). */
+.ic-user-head { transform-box: fill-box; transform-origin: center; }
+.nav-item:hover .ic-user-head { transform: translateY(-2px); }
+
+/* C12 — ibe-product-suite: the stacked sheets fan up. */
+.nav-item:hover .ic-gal-1 { transform: translateY(-1.5px); }
+.nav-item:hover .ic-gal-2 { transform: translateY(-0.75px); transition-delay: 60ms; }
+
+/* Reduced motion: kill the inner movement (the colour highlight stays). */
+@media (prefers-reduced-motion: reduce) {
+  .nav-item .icon svg [class^="ic-"] { transition: none; transform: none; }
+}
 .nav-item .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; opacity: 1; transition: opacity 200ms var(--ease-smooth); }
 .nav-item .chevron { color: var(--text-3); opacity: 0; transition: opacity 150ms var(--ease-smooth), transform 200ms var(--ease-smooth); flex-shrink: 0; display: grid; place-items: center; }
 .nav-item .chevron svg { width: 14px; height: 14px; }
@@ -170,7 +248,10 @@ html { scrollbar-gutter: stable; }
 
 /* ════ DESKTOP (≥ 1024px / lg): fixed, collapsible sidebar ════ */
 @media (min-width: 1024px) {
-  .layout { display: grid; grid-template-columns: var(--sidebar-w) 1fr; transition: grid-template-columns 300ms var(--ease-smooth); }
+  /* Smooth collapse/expand: the grid track width glides (reduced-motion freezes it
+     below). Only fires on toggle — the pre-paint script sets the initial value
+     before paint, so first render doesn't animate (no flash). */
+  .layout { display: grid; grid-template-columns: var(--sidebar-w) 1fr; transition: grid-template-columns 280ms var(--ease-smooth); }
   :root[data-sidebar="collapsed"] .layout { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
 
   .sidebar { position: sticky; top: 0; height: 100vh; width: auto; padding: 0; transform: none; z-index: auto; transition: none; }
@@ -198,23 +279,40 @@ html { scrollbar-gutter: stable; }
      space-2 v / user-block space-3 v all match the expanded values.) */
   :root[data-sidebar="collapsed"] .sidebar { padding: 0; }
   :root[data-sidebar="collapsed"] .sidebar-inner { padding: var(--space-4) var(--space-2); }
-  /* Collapsed rail (48px content): stack the icon badge over the collapse
-     toggle so neither gets cramped side-by-side. */
-  :root[data-sidebar="collapsed"] .brand-mark { flex-direction: column; justify-content: center; gap: var(--space-2); padding: var(--space-2); }
+  /* Collapsed rail header: show ONLY the logo mark; the collapse toggle is an
+     overlay that fades in on hover (or keyboard focus) and, when shown, replaces
+     the mark — click expands. The mark fades out so the swap reads cleanly. */
+  :root[data-sidebar="collapsed"] .brand-mark { flex-direction: row; justify-content: center; gap: 0; padding: var(--space-2); }
   :root[data-sidebar="collapsed"] .brand-logo-link { flex: 0; justify-content: center; }
   :root[data-sidebar="collapsed"] .brand-logo-wordmark { display: none; }
-  :root[data-sidebar="collapsed"] .brand-logo-icon { display: block; }
-  :root[data-sidebar="collapsed"] .collapse-btn { margin-left: 0; }
+  /* flex-shrink:0 is essential here: the link is display:flex with min-width:0 and
+     flex:0 on the rail, so without it the scalable SVG would shrink to ~0 and the
+     mark would vanish at rest. */
+  :root[data-sidebar="collapsed"] .brand-logo-icon { display: block; flex-shrink: 0; transition: opacity 150ms var(--ease-smooth); }
+  /* Toggle = absolute overlay over the whole header. opacity:0 (NOT display:none)
+     keeps it keyboard-focusable; pointer-events:none at rest so the logo link
+     stays clickable until hover/focus reveals the toggle. */
+  :root[data-sidebar="collapsed"] .collapse-btn {
+    position: absolute; inset: 0; width: 100%; height: 100%; margin: 0;
+    border-radius: var(--radius-md);
+    opacity: 0; pointer-events: none;
+    transition: opacity 150ms var(--ease-smooth);
+  }
+  :root[data-sidebar="collapsed"] .brand-mark:hover .brand-logo-icon { opacity: 0; }
+  :root[data-sidebar="collapsed"] .brand-mark:hover .collapse-btn,
+  :root[data-sidebar="collapsed"] .collapse-btn:focus-visible {
+    opacity: 1; pointer-events: auto; background: rgba(120, 120, 128, 0.10);
+  }
   :root[data-sidebar="collapsed"] .collapse-btn svg { transform: rotate(180deg); }
   /* Squared 40×40 hover/active centered on the rail. min-height:40 (base) keeps
      the item height identical to expanded; width:40 + margin auto centers it. */
   :root[data-sidebar="collapsed"] .nav-item { justify-content: center; gap: 0; width: 40px; margin-inline: auto; padding: 8px 0; }
   :root[data-sidebar="collapsed"] .nav-item .text { flex: 0; width: 0; opacity: 0; }
   :root[data-sidebar="collapsed"] .nav-item .chevron { display: none; }
-  /* White-on-white active square needs a touch more shadow to read at 64px. */
-  :root[data-sidebar="collapsed"] .nav-item.active { box-shadow: 0 1px 3px rgba(0,0,0,0.10); }
-  :root[data-theme="ios18-dark"][data-sidebar="collapsed"] .nav-item.active { box-shadow: 0 1px 3px rgba(0,0,0,0.55); }
-  :root[data-sidebar="collapsed"] .nav-divider { margin: var(--space-3) var(--space-2); }
+  /* Active item on the rail uses the SAME style as expanded (.nav-item.active:
+     surface-flat + hairline + shadow, accent icon) — no rail-specific accent bar.
+     The 40px centred item frames the icon cleanly. */
+  :root[data-sidebar="collapsed"] .nav-divider { margin: 6px var(--space-2); }
   :root[data-sidebar="collapsed"] .nav-sub { display: none; }
   /* Collapsed rail uses a tighter (space-2) inner padding, so drop the scroll
      zone's right break-out — otherwise it would overshoot the narrower panel. */

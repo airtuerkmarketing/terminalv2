@@ -2,8 +2,11 @@
 // C12: reuse the repo's browser Supabase wrapper. Turn-based: SearchAIBox drives
 // streaming per AiTurn; this lib stays UI-agnostic.
 import { createClient } from "@/lib/supabase/client";
-import type { AiSource, AiKonfidenz } from "@/lib/search/types";
+import type { AiSource, AiKonfidenz, AiTurn } from "@/lib/search/types";
 import { parseSseLine } from "./sse";
+// Type-only import: erased at compile, so the server-only users.ts module is NOT
+// pulled into the client bundle.
+import type { ChatMessageItem } from "@/lib/users";
 
 const RAG_QUERY_PATH = "/functions/v1/rag-query";
 
@@ -178,6 +181,28 @@ export async function submitMessageFeedback(
   if (error) throw error;
 }
 
+/**
+ * Rename one of the caller's own AI-chat sessions. Like the other per-user chat
+ * writes here, it goes through the browser RLS client — the `sessions_own_update`
+ * policy (user_id = auth.uid()) is the real gate, so a user physically cannot
+ * rename someone else's session. Empty/whitespace title → stored as null (the UI
+ * falls back to the derived first-question title). Returns the stored value.
+ */
+export async function renameChatSession(
+  sessionId: string,
+  title: string,
+): Promise<{ title: string | null }> {
+  const supabase = createClient();
+  const trimmed = title.trim();
+  const value = trimmed.length > 0 ? trimmed.slice(0, 120) : null;
+  const { error } = await supabase
+    .from("ai_chat_sessions")
+    .update({ title: value })
+    .eq("id", sessionId);
+  if (error) throw error;
+  return { title: value };
+}
+
 export interface CorrectionSubmission {
   sessionId: string;
   messageId: number;
@@ -297,4 +322,69 @@ export function inferKonfidenz(text: string, weissNicht: boolean): AiKonfidenz {
   if (isOutOfScope(text)) return "niedrig";
   if (/\[Quellen?:/.test(text)) return "hoch";
   return "mittel";
+}
+
+/** Defensive map of a persisted retrieved_chunks jsonb array (RagSource[] shape,
+ *  same as fetchMessageSources reads) to AiSource[]. Malformed chunks are skipped
+ *  rather than crashing the render. */
+function chunksToSources(chunks: unknown[]): AiSource[] {
+  if (!Array.isArray(chunks)) return [];
+  const out: AiSource[] = [];
+  for (const c of chunks) {
+    const s = c as RagSource;
+    if (s && typeof s === "object" && s.metadata && typeof s.metadata === "object") {
+      try {
+        out.push(ragToAiSource(s));
+      } catch {
+        /* skip a malformed chunk */
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Rebuild chat turns from persisted DB messages (B.2 — opening an old chat).
+ * Messages arrive chronologically (created_at asc). Each user message pairs with
+ * the NEXT assistant message; a user with no following assistant (aborted) is
+ * dropped (cleaner than an empty turn). Mirrors the live finalize in SearchAIBox:
+ * confidence is RE-INFERRED from the answer text (not stored), sources come from
+ * the assistant row's retrieved_chunks, out-of-scope refusals hide their sources.
+ *
+ * `isStreaming: false` is REQUIRED — AIAnswerBlock treats `isStreaming !== undefined`
+ * as "this is a RAG turn" and suppresses the typewriter, so a restored chat renders
+ * finished instead of re-typing letter by letter. The turn id is the assistant
+ * message id so React keys stay stable across reopens.
+ */
+export function messagesToTurns(messages: ChatMessageItem[]): AiTurn[] {
+  const turns: AiTurn[] = [];
+  let question: string | null = null;
+  for (const m of messages) {
+    if (m.role === "system") continue;
+    if (m.role === "user") {
+      question = m.content;
+      continue;
+    }
+    // assistant — close the turn with the pending question (drop if none).
+    if (question === null) continue;
+    const text = m.content;
+    const outOfScope = isOutOfScope(text);
+    turns.push({
+      id: m.id,
+      question,
+      model: "",
+      messageId: Number(m.id),
+      isStreaming: false,
+      feedback: m.userFeedback,
+      weissNicht: outOfScope,
+      answer: {
+        text,
+        quellen: outOfScope ? [] : chunksToSources(m.retrievedChunks),
+        konfidenz: inferKonfidenz(text, outOfScope),
+        weiss_nicht: outOfScope,
+      },
+    });
+    question = null;
+  }
+  return turns;
 }

@@ -13,14 +13,27 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-16);                            /* generous air between greeting → box → Quick Grabs */
-  padding-block: var(--space-12) var(--space-16);  /* was --space-6 top — lowers the hero toward centre */
+  gap: var(--space-12);  /* hero block → Quick Grabs (tight so Quick Grabs peeks) */
+  padding-bottom: var(--space-16);
 }
-/* Extra breathing room around the AI cluster (margins add on top of the flex gap):
-   greeting → chips = 64px gap + 16px = 80px; box → Quick Grabs = 64px gap + 48px. */
-.dh-page > .ai-stack {
-  margin-top: var(--space-4);
-  margin-bottom: var(--space-12);
+/* Hero (greeting + chips + search box) = the first screen, vertically centred so
+   the group sits in the optical middle with natural whitespace above. greeting →
+   chips/box keeps the snug ~32px rhythm via this gap. */
+.dh-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);  /* ~32px greeting ↔ chips */
+  width: 100%;
+}
+@media (min-width: 1024px) {
+  /* Centre the hero in ~78dvh (NOT the full viewport) so the group sits comfortably
+     low while Quick Grabs is already cropped into the first screen as a scroll cue.
+     min-height (not height) → short viewports grow top-aligned instead of clipping. */
+  .dh-hero {
+    min-height: 78dvh;
+    justify-content: center;
+  }
 }
 
 /* ── Cloud Orbit ── */
@@ -114,7 +127,7 @@
   line-height: 22.4px;              /* Figma */
   color: var(--text-1);
   padding: 5px 0 0 6px;             /* Figma: top 5, left 6 */
-  min-height: 72px;
+  min-height: 52px;                 /* compact (~2 lines); JS auto-grow expands it */
   max-height: 220px;
   overflow-y: auto;
 }
@@ -175,7 +188,7 @@
   transition: transform 0.6s ease;
   pointer-events: none;
 }
-.ai-search-ki:hover .ai-ask-mark {
+.ai-search-askai-btn:hover:not(:disabled) .ai-ask-mark {
   transform: rotate(360deg);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -217,26 +230,35 @@
   height: 18px;
 }
 
-/* Ask-AI + Model trigger: clean ghost pills — no fill/border/shadow at rest, just
-   a subtle grey hover; full radius is inherited from .ai-search-pill. */
-.ai-search-ki,
-.ai-search-model-trigger {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
+/* Ask-AI button (footer-right): a single pill that replaces the old Ask-AI toggle
+   + ModelSelector + Send. Idle (empty input) = dimmed/uncommittal; active (text
+   typed) = solid accent. Click sends the query to the KI (submitAi). */
+.ai-search-askai-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: var(--fs-base);
+  font-weight: var(--weight-medium);
+  background: var(--surface-muted);   /* idle */
+  color: var(--text-3);
+  cursor: default;                     /* idle = not clickable-feeling */
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }
-.ai-search-ki:hover:not(:disabled),
-.ai-search-model-trigger:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--text-1);
+.ai-search-askai-btn.is-active {
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(10, 130, 223, 0.25);
 }
-/* Armed KI mode: SOFT blue (not a full accent fill / white text). The filled mark
-   inherits the accent colour. */
-.ai-search-ki.is-active,
-.ai-search-ki.is-active:hover {
-  background: rgba(10, 130, 223, 0.10);
-  border-color: transparent;
-  color: var(--accent);
+.ai-search-askai-btn-mark {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 /* Keep the terminal mark FILLED (it paints with fill:currentColor) — guard against
    any global stroke-only icon rule. */
@@ -511,11 +533,89 @@
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--separator);
 }
-/* Header middle is intentionally empty (no centered branding). */
+/* Left group: History icon + the chat title/meta column. min-width:0 so the
+   title can ellipsise instead of forcing the header to overflow. */
 .ai-chat-header-actions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
+}
+/* Right group: New chat + Close, never shrinks. */
+.ai-chat-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+/* Two-line title block: chat title (first question) + message count. */
+.ai-chat-header-title {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  line-height: 1.2;
+}
+/* Title row holds the text + the hover-reveal rename pencil. */
+.ai-chat-header-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.ai-chat-header-title-text {
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Rename pencil — hidden at rest, revealed on title hover / keyboard focus
+   (opacity, not display, so it stays tabbable). */
+.ai-chat-header-edit {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-3);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+  display: inline-grid;
+  place-items: center;
+}
+.ai-chat-header-title:hover .ai-chat-header-edit,
+.ai-chat-header-edit:focus-visible {
+  opacity: 1;
+}
+.ai-chat-header-edit:hover {
+  color: var(--text-1);
+}
+.ai-chat-header-edit svg {
+  width: 13px;
+  height: 13px;
+}
+.ai-chat-header-title-input {
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-1);
+  font-family: inherit;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 2px 6px;
+  min-width: 0;
+  width: 220px;
+  max-width: 100%;
+  outline: none;
+}
+.ai-chat-header-meta {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  white-space: nowrap;
 }
 /* History (placeholder) — square ghost icon button, left of New chat. */
 .ai-chat-history {
@@ -545,7 +645,7 @@
   gap: 6px;
   padding: 6px 12px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--hairline);
+  border: 0;
   background: var(--surface-muted);
   color: var(--text-2);
   font-family: inherit;
@@ -562,13 +662,6 @@
 .ai-chat-new:disabled {
   opacity: 0.5;
   cursor: default;
-}
-/* armed (second click confirms) — accent fill per D-036 accent-only chrome */
-.ai-chat-new.is-confirming,
-.ai-chat-new.is-confirming:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
 }
 .ai-chat-new-icon {
   width: 15px;
@@ -602,6 +695,10 @@
   min-height: 0;
   overflow-y: auto;
   scroll-behavior: smooth;
+  /* Reserve the scrollbar gutter on BOTH edges so the centered thread stays on
+     the true centre whether or not the scrollbar is visible — keeps its edges
+     flush with the composer (which centres against the full window). */
+  scrollbar-gutter: stable both-edges;
   /* Generous bottom pad clears the floating composer so the last answer is
      never hidden behind it. */
   padding: var(--space-8) var(--space-4) 180px;
@@ -814,22 +911,31 @@
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 7px;
+  /* Borderless ghost, consistent with the action icon-buttons in the same row. */
   border-radius: var(--radius-sm);
-  border: 1px solid var(--hairline);
+  border: 0;
   background: transparent;
   color: var(--text-2);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: var(--weight-semibold);
   transition: background 150ms var(--ease-smooth),
               color 150ms var(--ease-smooth);
 }
+.ai-chat-sources-summary-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border-radius: var(--radius-sm);
+}
 .ai-chat-sources-toggle summary::-webkit-details-marker {
   display: none;
 }
-.ai-chat-sources-toggle summary:hover,
-.ai-chat-sources-toggle[open] summary {
+.ai-chat-sources-toggle summary:hover .ai-chat-sources-summary-inner {
+  background: var(--surface-muted);
+  color: var(--text-1);
+}
+.ai-chat-sources-toggle[open] summary .ai-chat-sources-summary-inner {
   background: var(--accent-soft);
   color: var(--accent);
 }
@@ -875,7 +981,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: var(--space-4);
 }
 .ai-chat-conf-bars {
   display: inline-flex;
@@ -907,8 +1012,14 @@
   left: 50%;
   bottom: var(--space-6);
   z-index: 20;
-  width: calc(100% - 2 * var(--space-4));
-  max-width: 768px;
+  /* Outer box spans the full window minus its own side padding; the readable
+     inner column is then 768px — the SAME geometry as .ai-chat-thread (which
+     sits inside the body's var(--space-4) padding). max-width grows by the
+     padding so the inner column stays 768px (box-sizing: border-box). */
+  width: 100%;
+  max-width: calc(768px + 2 * var(--space-4));
+  padding-inline: var(--space-4);
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -1109,6 +1220,33 @@
   width: 15px;
   height: 15px;
   flex-shrink: 0;
+  /* Let the hover micro-animation overshoot past the icon box (same lesson as the
+     sidebar icons) — the chip pill would otherwise clip it. */
+  overflow: visible;
+}
+
+/* ── Mode-chip icon micro-animations: on .ai-mode-chip hover the inner parts move
+   (spring curve, staggered). Hover + .is-active coexist (active glow/colour is on
+   the chip, untouched here). transform-box pins each origin. ── */
+.ic-mail-flap, .ic-lang-a, .ic-lang-b, .ic-zap, .ic-shield-mark {
+  transition: transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* mail: the flap opens — scaleY toward its top edge (the envelope rim). */
+.ic-mail-flap { transform-box: fill-box; transform-origin: top; }
+.ai-mode-chip:hover .ic-mail-flap { transform: scaleY(0.62); }
+/* languages: the two glyph groups spread apart. */
+.ai-mode-chip:hover .ic-lang-a { transform: translateX(-1.5px); }
+.ai-mode-chip:hover .ic-lang-b { transform: translateX(1.5px); }
+/* zap: single-path bolt — the whole bolt zaps (scale + slight tilt). */
+.ic-zap { transform-box: fill-box; transform-origin: center; }
+.ai-mode-chip:hover .ic-zap { transform: scale(1.15) rotate(-6deg); }
+/* shield-alert: the "!" mark pulses about its centre (view-box px — the line's
+   fill-box is degenerate). */
+.ic-shield-mark { transform-box: view-box; transform-origin: 12px 12px; }
+.ai-mode-chip:hover .ic-shield-mark { transform: scale(1.2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-mode-chip-icon [class^="ic-"] { transition: none; transform: none; }
 }
 
 /* Per-mode colour assignments (the box reuses the same rgba sets via [data-glow]). */
@@ -1270,60 +1408,63 @@
   color: var(--text-3);
 }
 
-/* Bottom action row: feedback buttons + the sources toggle, side by side. */
+/* Meta row — ONE line: actions left, trust group (sources · sep · confidence)
+   right. flex-wrap is defensive for narrow widths (desktop-only otherwise). */
 .ai-chat-actions {
   margin-top: var(--space-4);
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
-/* Copy answer — dezenter Ghost-Button, matches the feedback-button aesthetic. */
-.ai-chat-copy {
+.ai-chat-actions-left {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 7px;
-  font-size: 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--hairline);
-  background: transparent;
-  color: var(--text-2);
-  cursor: pointer;
-  transition: background 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+  gap: 4px;
 }
-.ai-chat-copy:hover {
-  background: var(--surface-muted);
-  color: var(--text-1);
-}
-
-/* ── AnswerFeedback (Atomic 3.5) — modeled after .ai-chat-source aesthetic ── */
-.ai-chat-feedback {
-  display: flex;
-  gap: var(--space-2);
+.ai-chat-actions-right {
+  margin-left: auto;
+  display: inline-flex;
   align-items: center;
+  gap: var(--space-3);
+}
+/* Thin separator between the sources toggle and the confidence bars. */
+.ai-chat-meta-sep {
+  width: 1px;
+  height: 15px;
+  background: var(--hairline);
+  flex-shrink: 0;
 }
 
+/* Action buttons (Copy + feedback) — rahmenlose square icon ghosts: transparent
+   at rest, a soft grey wash on hover. No border, no label. */
+.ai-chat-copy,
 .ai-chat-feedback-btn {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  /* ~37% smaller than the old 6px/10px·16px-icon chips (per design feedback). */
-  padding: 2px 7px;
-  font-size: 10px;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--hairline);
+  border: 0;
   background: transparent;
   color: var(--text-2);
   cursor: pointer;
   transition: background 150ms var(--ease-smooth),
-              border-color 150ms var(--ease-smooth),
               color 150ms var(--ease-smooth);
 }
-
+.ai-chat-copy:hover,
 .ai-chat-feedback-btn:hover:not(:disabled) {
   background: var(--surface-muted);
   color: var(--text-1);
+}
+
+/* ── AnswerFeedback (Atomic 3.5) — icon-only ghost buttons ── */
+.ai-chat-feedback {
+  display: flex;
+  gap: 4px;
+  align-items: center;
 }
 
 .ai-chat-feedback-btn:disabled {
@@ -1331,14 +1472,10 @@
   cursor: not-allowed;
 }
 
+/* Active feedback: borderless — a soft accent wash + accent icon (no border). */
 .ai-chat-feedback-btn--active {
   background: var(--accent-soft);
-  border-color: var(--accent-border);
   color: var(--accent);
-}
-
-.ai-chat-feedback-btn--correct .ai-chat-feedback-label {
-  display: inline-block;
 }
 
 /* ── CorrectionModal (Atomic 3.6) — follows the repo overlay convention

@@ -4,20 +4,41 @@
  * sized via CSS here. */
 
 .dh-greeting {
+  --fs-greeting: 30px;           /* greeting-specific (NOT the global --fs-2xl 40px) */
   display: flex;
-  flex-direction: column;        /* orbit-seal on top, greeting centred below it */
+  flex-direction: column;        /* orbit-seal (if shown) on top, greeting row below */
   align-items: center;
   justify-content: center;
-  gap: var(--space-4);           /* 16px between the seal and the title */
+  gap: var(--space-4);           /* 16px between the seal and the row */
   text-align: center;
 }
 
+/* Favicon + greeting as one centred horizontal group. */
+.dh-greeting-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+/* at-favicon (two-colour airtuerk glyph), ~34px, with a soft drop shadow. */
+.dh-greeting-mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.15));
+}
+.dh-greeting-mark svg {
+  width: 34px;
+  height: 34px;
+  display: block;
+}
+
 .dh-greeting-title {
-  font-size: var(--fs-2xl);          /* 40px */
+  font-size: var(--fs-greeting);     /* 30px */
   font-weight: var(--weight-medium); /* 500 */
-  line-height: 60px;
-  letter-spacing: -1.5px;
-  color: var(--text-1);
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  color: #373734;
   margin: 0;
 }
 

@@ -73,13 +73,10 @@ export function AssetLibrary({ title, assets }: { title: string; assets: AssetDT
 
   return (
     <article className="asset-library">
-      <header className="page-hero">
-        <div className="eyebrow">Resources</div>
-        <h1>{title}</h1>
-        <p className="lead">
-          Every brand asset in one searchable place — logos, icons, backgrounds and
-          photography across all airtuerk brands.
-        </p>
+      <header className="al-head">
+        <div className="al-head-title">
+          <h1>{title}</h1>
+        </div>
       </header>
 
       <div className="al-toolbar">
@@ -93,7 +90,9 @@ export function AssetLibrary({ title, assets }: { title: string; assets: AssetDT
             aria-label="Search assets"
           />
         </div>
-        <ViewToggle value={view} onChange={setView} storageKey="terminalv2-assetlib-view" />
+        {/* Card + List only (no grid), like the Document Library. `allowed` also
+            stops an old persisted "grid" value from being lifted on mount. */}
+        <ViewToggle value={view} onChange={setView} storageKey="terminalv2-assetlib-view" allowed={["card", "list"]} />
       </div>
 
       <div className="al-filters" role="tablist" aria-label="Asset categories">
@@ -128,7 +127,7 @@ export function AssetLibrary({ title, assets }: { title: string; assets: AssetDT
             </div>
             <div className="al-grid" data-view={view}>
               {g.items.map((a) => (
-                <AssetCard key={a.id} asset={a} />
+                <AssetCard key={a.id} asset={a} view={view} />
               ))}
             </div>
           </section>
@@ -138,48 +137,107 @@ export function AssetLibrary({ title, assets }: { title: string; assets: AssetDT
   );
 }
 
-function AssetCard({ asset }: { asset: AssetDTO }) {
+function AssetCard({ asset, view }: { asset: AssetDTO; view: ViewMode }) {
   const contain = asset.category === "Logos" || asset.category === "Icons";
-  return (
-    <div className="al-card">
-      <div className="al-thumb">
-        <span className="al-badge">{ext(asset.mime)}</span>
+
+  // List view: a stable, self-contained row (own markup, mirrors file-row.tsx) —
+  // fixed-height row, small thumb left, name, then meta right, hover-reveal
+  // download. NOT the card markup bent with flex.
+  if (view === "list") {
+    return (
+      <div className="al-row">
+        <span className="al-row-thumb">
+          {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary Supabase Storage asset URL */}
+          <img
+            className={`al-row-img${contain ? " is-contain" : ""}`}
+            src={asset.url}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+        </span>
         <a
-          className="al-dl"
+          className="al-row-name"
+          href={asset.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={asset.name}
+        >
+          {asset.name}
+        </a>
+        <span className="al-row-meta">
+          {ext(asset.mime)} · {formatSize(asset.size)}
+        </span>
+        <a
+          className="al-row-dl"
           href={asset.url}
           target="_blank"
           rel="noopener noreferrer"
           download
           aria-label={`Download ${asset.name}`}
+          title="Download"
         >
           <DownloadSvg />
         </a>
-        {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary Supabase Storage asset URL */}
-        <img
-          className={`al-img${contain ? " is-contain" : ""}`}
-          src={asset.url}
-          alt={asset.name}
-          loading="lazy"
-          decoding="async"
-        />
       </div>
-      <div className="al-meta">
-        <div className="al-name" title={asset.name}>
-          {asset.name}
-        </div>
-        <div className="al-sub">
-          {ext(asset.mime)} · {formatSize(asset.size)}
-        </div>
+    );
+  }
+
+  // Card view: free-standing cell, 1:1 with the Document Library card view
+  // (.dl-cell): a shadowed object on top, then the name, then the meta — no
+  // surrounding box. Logos + icons sit contained so transparent art reads;
+  // photography/backgrounds fill the thumb (cover), like the Documents image
+  // thumbnails. Assets are read-only — the name is a plain label (no rename).
+  return (
+    <div className="al-cell">
+      <a
+        className="al-cell__hit"
+        href={asset.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Open ${asset.name}`}
+      >
+        <span className="al-cell__visual">
+          {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary Supabase Storage asset URL */}
+          <img
+            className={`al-cell__thumb${contain ? " is-contain" : ""}`}
+            src={asset.url}
+            alt={asset.name}
+            loading="lazy"
+            decoding="async"
+          />
+        </span>
+      </a>
+      {/* Hover-only download — mirrors .dl-cell__dl. stopPropagation keeps it from
+          opening the asset. */}
+      <a
+        className="al-cell__dl"
+        href={asset.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        download
+        onClick={(e) => e.stopPropagation()}
+        aria-label={`Download ${asset.name}`}
+        title="Download"
+      >
+        <DownloadSvg />
+      </a>
+      <div className="al-cell__name" title={asset.name}>
+        {asset.name}
+      </div>
+      <div className="al-cell__sub">
+        {ext(asset.mime)} · {formatSize(asset.size)}
       </div>
     </div>
   );
 }
 
 function SearchSvg() {
+  // Matches the lucide <Search size={16}> used in the Documents toolbar.
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="11" cy="11" r="7" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
     </svg>
   );
 }

@@ -1,0 +1,167 @@
+/* ChatHistoryModal — command-palette over the user's own chats. Tokens only
+   (theme.css); shell convention adapted from confirm-dialog.css. No media queries. */
+
+.chm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1040;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10vh var(--space-4) var(--space-6);
+  background: rgba(15, 20, 30, 0.42);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.chm-panel {
+  width: 100%;
+  max-width: 640px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface-strong);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-hover);
+}
+
+/* Search row — icon + input, hairline divider below. */
+.chm-search {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--hairline);
+}
+.chm-search-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-3);
+}
+.chm-search-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: var(--fs-base);
+  color: var(--text-1);
+}
+.chm-search-input::placeholder {
+  color: var(--text-3);
+}
+
+/* Scrollable result list. */
+.chm-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+.chm-group + .chm-group {
+  margin-top: var(--space-2);
+}
+.chm-group-label {
+  position: sticky;
+  top: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  background: var(--surface-strong);
+}
+
+/* One chat — full-width button: icon · title (ellipsis) · relative time. */
+.chm-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-1);
+  transition: background 150ms var(--ease-smooth);
+}
+/* Keyboard-active row looks the same as hover, so mouse + arrows don't diverge.
+   The focus-visible outline stays for genuine Tab focus. */
+.chm-item:hover,
+.chm-item--active {
+  background: var(--surface-muted);
+}
+.chm-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.chm-item-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-3);
+}
+/* Title + optional hint stacked; takes the remaining width so the title ellipses. */
+.chm-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.chm-item-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Accent highlight of the matched substring — not a loud yellow mark. */
+.chm-mark {
+  background: transparent;
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+/* "Treffer im Verlauf" — why a cryptic-titled chat matched (content, not title). */
+.chm-item-hint {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+.chm-item-time {
+  flex-shrink: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+/* Loading + empty states. */
+.chm-loading,
+.chm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-10) var(--space-5);
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+.chm-empty-sub {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  margin-top: var(--space-1);
+}
+.chm-empty-icon {
+  width: 22px;
+  height: 22px;
+  margin-bottom: var(--space-2);
+  color: var(--text-3);
+}

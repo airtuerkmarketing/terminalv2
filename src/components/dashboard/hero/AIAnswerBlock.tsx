@@ -5,6 +5,7 @@ import { BookOpen, Check, Copy } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { TerminalLogo } from "@/components/shell/TerminalLogo";
+import { TooltipShell } from "@/components/ui/tooltip";
 import { useTypewriterText } from "@/components/dashboard/hero/useTypewriterText";
 import { AnswerFeedback } from "@/components/dashboard/hero/AnswerFeedback";
 import type { AiKonfidenz, AiTurn } from "@/lib/search/types";
@@ -239,68 +240,72 @@ function AITurnAnswer({
           </div>
         )}
 
-      {finished && !turn.paused && (
-        <div
-          className="ai-chat-confidence"
-          data-level={KONFIDENZ_LEVEL[answer.konfidenz]}
-        >
-          <span className="ai-chat-conf-bars" aria-hidden="true">
-            <span className="ai-chat-conf-bar" />
-            <span className="ai-chat-conf-bar" />
-            <span className="ai-chat-conf-bar" />
-          </span>
-          <span className="ai-chat-conf-label">
-            {KONFIDENZ_LABEL[answer.konfidenz]}
-          </span>
-        </div>
-      )}
-
-      {/* Action row — feedback buttons with the sources toggle beside them. (The
-          sources badge used to float top-right of the answer and overlapped the
-          question bubble.) */}
+      {/* Meta row — ONE line: actions left (icon-only ghost buttons), the trust
+          group right (sources toggle · separator · confidence). The confidence
+          block is no longer a separate stacked row. */}
       {finished && (
         <div className="ai-chat-actions">
-          <button
-            type="button"
-            className="ai-chat-copy"
-            onClick={copyAnswer}
-            aria-label={copied ? "Copied" : "Copy answer"}
-            title={copied ? "Copied" : "Copy answer"}
-          >
-            {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
-            <span>{copied ? "Copied" : "Copy"}</span>
-          </button>
-          {turn.messageId && onCorrect && onFeedbackChange && (
-            <AnswerFeedback
-              messageId={turn.messageId}
-              currentFeedback={turn.feedback ?? null}
-              onCorrect={() => onCorrect(turn)}
-              onFeedbackChange={(fb) => onFeedbackChange(turn.id, fb)}
-              disabled={turn.isStreaming}
-            />
-          )}
-          {answer.quellen.length > 0 && (
-            <details className="ai-chat-sources-toggle">
-              <summary aria-label={`Show ${answer.quellen.length} sources`}>
-                <BookOpen size={13} aria-hidden="true" />
-                <span className="ai-chat-sources-count">{answer.quellen.length}</span>
-              </summary>
-              <div className="ai-chat-sources-popover">
-                {answer.quellen.map((s, i) => (
-                  <a
-                    key={`${s.dokument_titel}-${i}`}
-                    className="ai-chat-source-chip"
-                    href={s.link}
-                    target={s.link.startsWith("http") ? "_blank" : undefined}
-                    rel={s.link.startsWith("http") ? "noreferrer" : undefined}
-                    title={s.dokument_titel}
-                  >
-                    {s.dokument_titel}
-                  </a>
-                ))}
-              </div>
-            </details>
-          )}
+          <div className="ai-chat-actions-left">
+            <TooltipShell content={copied ? "Copied" : "Copy"} dark>
+              <button
+                type="button"
+                className="ai-chat-copy"
+                onClick={copyAnswer}
+                aria-label={copied ? "Copied" : "Copy answer"}
+              >
+                {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+              </button>
+            </TooltipShell>
+            {turn.messageId && onCorrect && onFeedbackChange && (
+              <AnswerFeedback
+                messageId={turn.messageId}
+                currentFeedback={turn.feedback ?? null}
+                onCorrect={() => onCorrect(turn)}
+                onFeedbackChange={(fb) => onFeedbackChange(turn.id, fb)}
+                disabled={turn.isStreaming}
+              />
+            )}
+          </div>
+
+          <div className="ai-chat-actions-right">
+            {answer.quellen.length > 0 && (
+              <>
+                <details className="ai-chat-sources-toggle">
+                  <summary aria-label={`Show ${answer.quellen.length} sources`}>
+                    <TooltipShell content="Sources" dark>
+                      <span className="ai-chat-sources-summary-inner">
+                        <BookOpen size={13} aria-hidden="true" />
+                        <span className="ai-chat-sources-count">{answer.quellen.length}</span>
+                      </span>
+                    </TooltipShell>
+                  </summary>
+                  <div className="ai-chat-sources-popover">
+                    {answer.quellen.map((s, i) => (
+                      <a
+                        key={`${s.dokument_titel}-${i}`}
+                        className="ai-chat-source-chip"
+                        href={s.link}
+                        target={s.link.startsWith("http") ? "_blank" : undefined}
+                        rel={s.link.startsWith("http") ? "noreferrer" : undefined}
+                        title={s.dokument_titel}
+                      >
+                        {s.dokument_titel}
+                      </a>
+                    ))}
+                  </div>
+                </details>
+                <span className="ai-chat-meta-sep" aria-hidden="true" />
+              </>
+            )}
+            <div className="ai-chat-confidence" data-level={KONFIDENZ_LEVEL[answer.konfidenz]}>
+              <span className="ai-chat-conf-bars" aria-hidden="true">
+                <span className="ai-chat-conf-bar" />
+                <span className="ai-chat-conf-bar" />
+                <span className="ai-chat-conf-bar" />
+              </span>
+              <span className="ai-chat-conf-label">{KONFIDENZ_LABEL[answer.konfidenz]}</span>
+            </div>
+          </div>
         </div>
       )}
     </>
