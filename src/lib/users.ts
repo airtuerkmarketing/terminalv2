@@ -1939,6 +1939,10 @@ export interface ChatMessageItem {
   role: "user" | "assistant" | "system";
   /** Verbatim text — role='user' is the question the user typed. */
   content: string;
+  /** Raw retrieved_chunks jsonb (RagSource[] shape); mapped to AiSource client-side. */
+  retrievedChunks: unknown[];
+  /** Persisted 👍/👎 on the assistant message (null = none). */
+  userFeedback: "helpful" | "not_helpful" | null;
   createdAt: string;
 }
 
@@ -1978,7 +1982,7 @@ export async function getUserChatHistory(
   const ids = sRows.map((s) => s.id);
   const { data: messages } = await supabase
     .from("ai_chat_messages")
-    .select("id, session_id, role, content, created_at")
+    .select("id, session_id, role, content, retrieved_chunks, user_feedback, created_at")
     .in("session_id", ids)
     .in("role", ["user", "assistant"])
     .order("created_at", { ascending: true });
@@ -1987,6 +1991,8 @@ export async function getUserChatHistory(
     session_id: string;
     role: string;
     content: string;
+    retrieved_chunks: unknown[] | null;
+    user_feedback: "helpful" | "not_helpful" | null;
     created_at: string;
   }[];
 
@@ -1997,6 +2003,8 @@ export async function getUserChatHistory(
       id: String(m.id),
       role: m.role as ChatMessageItem["role"],
       content: m.content,
+      retrievedChunks: (m.retrieved_chunks ?? []) as unknown[],
+      userFeedback: (m.user_feedback ?? null) as ChatMessageItem["userFeedback"],
       createdAt: m.created_at,
     });
     bySession.set(m.session_id, arr);

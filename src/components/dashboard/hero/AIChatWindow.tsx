@@ -4,7 +4,10 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowUp, ChevronDown, Edit3, History, Plus, X } from "lucide-react";
 import { AIAnswerBlock } from "@/components/dashboard/hero/AIAnswerBlock";
 import { ChatHistoryModal } from "@/components/dashboard/hero/ChatHistoryModal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { AiTurn } from "@/lib/search/types";
+// Type-only — erased, so the server-only users.ts module isn't bundled here.
+import type { ChatSessionItem } from "@/lib/users";
 
 /* Full-page chat surface (BAU-Auftrag §5). Opens as its own page — an opaque
  * full-viewport view that cross-fades + rises in (no side-drawer slide); the
@@ -24,6 +27,8 @@ interface Props {
   onSubmit: (text: string) => void;
   onNewChat: () => void;
   onRename?: (sessionId: string, title: string) => void;
+  /** Open a persisted chat (restore its turns into the active thread). */
+  onOpenChat?: (session: ChatSessionItem) => void;
   onCorrect?: (turn: AiTurn) => void;
   onFeedbackChange?: (turnId: string, feedback: "helpful" | "not_helpful") => void;
 }
@@ -37,12 +42,14 @@ export function AIChatWindow({
   onSubmit,
   onNewChat,
   onRename,
+  onOpenChat,
   onCorrect,
   onFeedbackChange,
 }: Props) {
   const [draft, setDraft] = useState("");
   const [confirming, setConfirming] = useState(false); // "Neuer Chat" two-step arm
   const [historyOpen, setHistoryOpen] = useState(false); // chat-history search modal
+  const [pendingSession, setPendingSession] = useState<ChatSessionItem | null>(null); // switch-confirm
   const [showScrollDown, setShowScrollDown] = useState(false); // jump-to-latest button
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -190,6 +197,21 @@ export function AIChatWindow({
     const v = editValue.trim();
     setEditing(false);
     if (v && v !== displayTitle && sessionId) onRename?.(sessionId, v);
+  }
+
+  // Open a chat from the history modal. Restore is destructive (replaces the
+  // thread), so confirm ONLY when there's unsent work: a draft in the composer
+  // or a turn still streaming. Otherwise switch immediately.
+  function proceedOpen(session: ChatSessionItem) {
+    setDraft(""); // the old draft is intentionally discarded
+    setPendingSession(null);
+    setHistoryOpen(false);
+    onOpenChat?.(session);
+  }
+  function guardSelect(session: ChatSessionItem) {
+    const dirty = draft.trim().length > 0 || turns.some((t) => t.isStreaming);
+    if (dirty) setPendingSession(session); // history modal stays open under the confirm
+    else proceedOpen(session);
   }
 
   return (
@@ -353,8 +375,19 @@ export function AIChatWindow({
       {/* Chat-history search (B.1: display + search + close; chat-loading is B.2).
           Mounted only while open so each open starts from a fresh load. */}
       {historyOpen && (
-        <ChatHistoryModal open onClose={() => setHistoryOpen(false)} />
+        <ChatHistoryModal open onClose={() => setHistoryOpen(false)} onSelect={guardSelect} />
       )}
+
+      {/* Switch confirm — only shown when opening a chat would lose unsent work. */}
+      <ConfirmDialog
+        open={!!pendingSession}
+        onClose={() => setPendingSession(null)}
+        onConfirm={() => { if (pendingSession) proceedOpen(pendingSession); }}
+        title="Aktuellen Chat verlassen?"
+        description="Dein nicht gesendeter Text geht verloren."
+        confirmLabel="Chat öffnen"
+        cancelLabel="Abbrechen"
+      />
     </aside>
   );
 }

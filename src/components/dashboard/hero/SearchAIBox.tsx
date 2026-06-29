@@ -37,7 +37,10 @@ import {
   inferKonfidenz,
   isOutOfScope,
   renameChatSession,
+  messagesToTurns,
 } from "@/lib/rag/client";
+// Type-only — erased, so the server-only users.ts module isn't bundled here.
+import type { ChatSessionItem } from "@/lib/users";
 
 // Chat + correction surfaces are below-the-fold interaction islands: load them as
 // separate client chunks (ssr:false) so react-markdown + remark-gfm and the modal
@@ -414,6 +417,16 @@ export function SearchAIBox() {
     setTitleOverride(null);
   }, []);
 
+  // Open a persisted chat: map its DB messages → turns and replace the active
+  // thread + session. The data is already loaded in the modal, so it's handed up
+  // whole (no second fetch). The persist effect writes the restored turns to
+  // localStorage on the next tick, so a reload keeps the opened chat.
+  const handleOpenChat = useCallback((session: ChatSessionItem) => {
+    setTurns(messagesToTurns(session.messages));
+    setSessionId(session.sessionId);
+    setTitleOverride(session.title ?? null);
+  }, []);
+
   // Optimistic rename: show the new title immediately, persist in the background,
   // roll back on failure. RLS gates the write (sessions_own_update).
   const handleRename = useCallback(
@@ -617,6 +630,7 @@ export function SearchAIBox() {
         onSubmit={submitAi}
         onNewChat={newChat}
         onRename={handleRename}
+        onOpenChat={handleOpenChat}
         onCorrect={handleCorrect}
         onFeedbackChange={handleFeedbackChange}
       />

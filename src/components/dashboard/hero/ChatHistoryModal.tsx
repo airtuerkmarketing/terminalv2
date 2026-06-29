@@ -66,8 +66,9 @@ export function ChatHistoryModal({
 }: {
   open: boolean;
   onClose: () => void;
-  /** B.2 placeholder — unused in B.1 (item click only closes the modal). */
-  onSelect?: (sessionId: string) => void;
+  /** Open a chat. The parent decides whether to close the modal (a confirm step
+   *  may keep it open), so this no longer closes the modal itself. */
+  onSelect?: (session: ChatSession) => void;
 }) {
   const [chats, setChats] = useState<ChatSession[] | null>(null); // null = loading
   const [query, setQuery] = useState("");
@@ -186,10 +187,7 @@ export function ChatHistoryModal({
                     key={s.sessionId}
                     type="button"
                     className="chm-item"
-                    onClick={() => {
-                      onSelect?.(s.sessionId); // B.2 will load the chat; B.1 no-op
-                      onClose();
-                    }}
+                    onClick={() => onSelect?.(s)}
                   >
                     <MessageCircle className="chm-item-icon" aria-hidden="true" />
                     <span className="chm-item-title">{sessionTitle(s)}</span>
