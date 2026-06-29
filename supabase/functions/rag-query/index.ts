@@ -751,6 +751,16 @@ async function streamClaudeResponse({
   let tokensIn = 0
   let tokensOut = 0
   const toolCallsLog: Array<Record<string, unknown>> = []
+  // Web-search citations (web_search_20260209). Keyed by URL for dedup across the
+  // 3–5 web_search_tool_result blocks a single turn can emit; first-write-wins so the
+  // earliest (most relevant) occurrence is kept. Shape mirrors the team_directory
+  // synthetic entry (title/source_type nested in metadata) so the client's
+  // ragToAiSource maps it unchanged. encrypted_content is deliberately dropped (opaque,
+  // multi-KB, unused — we don't do tool-continuation); page_age stored, not rendered.
+  const webSearchByUrl = new Map<
+    string,
+    { source: string; source_id: string; metadata: Record<string, unknown>; combined_score: number }
+  >()
   const enc = new TextEncoder()
 
   type TurnBlock =
@@ -790,7 +800,14 @@ async function streamClaudeResponse({
             type?: string
             index?: number
             message?: { usage?: { input_tokens?: number } }
-            content_block?: { type?: string; id?: string; name?: string }
+            content_block?: {
+              type?: string
+              id?: string
+              name?: string
+              // web_search_tool_result: results arrive here, fully populated, at
+              // content_block_start (no deltas — verified via streaming probe).
+              content?: Array<{ type?: string; title?: string; url?: string; page_age?: string | null }>
+            }
             delta?: { type?: string; text?: string; partial_json?: string; stop_reason?: string }
             usage?: { output_tokens?: number }
           }
@@ -812,6 +829,28 @@ async function streamClaudeResponse({
                 }
               } else if (evt.content_block?.type === 'text') {
                 curText = { index: evt.index!, text: '' }
+              } else if (evt.content_block?.type === 'web_search_tool_result') {
+                // Server-tool result block: its content[] is already fully populated
+                // at content_block_start (no input_json_delta follows). Collect every
+                // web_search_result and dedup by URL (first-write-wins = relevance order).
+                const results = Array.isArray(evt.content_block.content)
+                  ? evt.content_block.content
+                  : []
+                for (const r of results) {
+                  if (r?.type !== 'web_search_result' || !r.url) continue
+                  if (webSearchByUrl.has(r.url)) continue
+                  webSearchByUrl.set(r.url, {
+                    source: 'web_search',
+                    source_id: r.url,
+                    metadata: {
+                      title: r.title ?? r.url,
+                      source_type: 'web_search',
+                      source_url: r.url,
+                      page_age: r.page_age ?? null,
+                    },
+                    combined_score: 1,
+                  })
+                }
               }
               break
             case 'content_block_delta':
@@ -953,6 +992,18 @@ async function streamClaudeResponse({
                 combined_score: c.combined_score,
                 rerank_score: c.rerank_score,
               })),
+              // Web-search citations. Dedup against the RAG chunks too (a default-RAG
+              // turn could in principle invoke web_search), keyed on source_url. For a
+              // mode:'web-search' turn retrievedChunks is [] and the team-directory tool
+              // is not offered, so these become the ONLY chunks — no anchor/team bleed.
+              ...Array.from(webSearchByUrl.values()).filter(
+                (w) =>
+                  !retrievedChunks.some(
+                    (c) =>
+                      (c.metadata as { source_url?: string }).source_url ===
+                      (w.metadata as { source_url?: string }).source_url,
+                  ),
+              ),
               ...(toolCallsLog.length
                 ? [
                     {

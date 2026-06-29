@@ -8,7 +8,9 @@ import { parseSseLine } from "./sse";
 const RAG_QUERY_PATH = "/functions/v1/rag-query";
 
 export interface RagSource {
-  source: "context" | "confluence" | "brand";
+  // 'team_directory' (D-069) + 'web_search' (D-106 Phase 5b) are synthetic sources
+  // appended server-side into retrieved_chunks — both already used at runtime.
+  source: "context" | "confluence" | "brand" | "web_search" | "team_directory";
   source_id: string;
   metadata: {
     title?: string;
