@@ -663,13 +663,6 @@
   opacity: 0.5;
   cursor: default;
 }
-/* armed (second click confirms) — accent fill per D-036 accent-only chrome */
-.ai-chat-new.is-confirming,
-.ai-chat-new.is-confirming:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
 .ai-chat-new-icon {
   width: 15px;
   height: 15px;

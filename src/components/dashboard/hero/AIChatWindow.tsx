@@ -47,14 +47,12 @@ export function AIChatWindow({
   onFeedbackChange,
 }: Props) {
   const [draft, setDraft] = useState("");
-  const [confirming, setConfirming] = useState(false); // "Neuer Chat" two-step arm
   const [historyOpen, setHistoryOpen] = useState(false); // chat-history search modal
   const [pendingSession, setPendingSession] = useState<ChatSessionItem | null>(null); // switch-confirm
   const [showScrollDown, setShowScrollDown] = useState(false); // jump-to-latest button
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLElement>(null);
-  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Esc closes — ONLY when focus is inside the panel (so Esc in the hero search
   // box stays with the box's own close-dropdown handler; no double-dismiss).
@@ -101,18 +99,6 @@ export function AIChatWindow({
     el.style.height = `${el.scrollHeight}px`;
   }, [draft]);
 
-  // Reset the "Neuer Chat" arm whenever the panel closes.
-  useEffect(() => {
-    if (!open) setConfirming(false);
-  }, [open]);
-
-  useEffect(
-    () => () => {
-      if (confirmTimer.current) clearTimeout(confirmTimer.current);
-    },
-    []
-  );
-
   // Jump to the newest turn when turns change or the panel opens.
   useEffect(() => {
     const el = bodyRef.current;
@@ -149,19 +135,6 @@ export function AIChatWindow({
   function scrollToBottom() {
     const el = bodyRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }
-
-  function clickNewChat() {
-    // Two-step: first click arms ("Wirklich löschen?"), second click confirms.
-    if (!confirming) {
-      setConfirming(true);
-      if (confirmTimer.current) clearTimeout(confirmTimer.current);
-      confirmTimer.current = setTimeout(() => setConfirming(false), 3000);
-      return;
-    }
-    if (confirmTimer.current) clearTimeout(confirmTimer.current);
-    setConfirming(false);
-    onNewChat();
   }
 
   function send() {
@@ -284,13 +257,13 @@ export function AIChatWindow({
         <div className="ai-chat-header-right">
           <button
             type="button"
-            className={`ai-chat-new${confirming ? " is-confirming" : ""}`}
-            onClick={clickNewChat}
+            className="ai-chat-new"
+            onClick={onNewChat}
             disabled={turns.length === 0}
-            title="New chat (clear history)"
+            title="New chat"
           >
             <Plus className="ai-chat-new-icon" aria-hidden="true" />
-            <span>{confirming ? "Delete history?" : "New chat"}</span>
+            <span>New chat</span>
           </button>
           <button
             type="button"
