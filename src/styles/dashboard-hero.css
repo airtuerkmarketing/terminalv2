@@ -726,18 +726,30 @@
 .ai-chat-q {
   align-self: flex-end;
   max-width: 85%;
-  padding: 10px 14px;
-  /* Light-grey bubble (was the accent-soft blue tint). */
-  background: var(--surface-muted);
+  padding: var(--space-3) var(--space-4);
+  /* Distinct bubble surface (--surface-bubble) so the question never reads as a
+     code frame (--surface-muted + border) or the page (--surface-flat). D-108 v3.
+     Borderless — the surface alone carries the differentiation. */
+  background: var(--surface-bubble);
   color: var(--text-1);
   border-radius: var(--radius-lg);
   border-top-right-radius: var(--radius-sm);
-  font-size: var(--fs-base);
+  font-size: var(--fs-reading);
   line-height: var(--lh-normal);
 }
 /* AI answer = plain high-contrast prose directly on the page (no card chrome). */
 .ai-chat-a {
   min-width: 0;
+}
+/* Brand-mark avatar atop each AI answer — anchors the turn so Q (right bubble)
+   vs A (left prose) is unmistakable. fill=currentColor inherits this color.
+   D-108 v3. */
+.ai-chat-ai-mark {
+  display: block;
+  width: 20px;
+  height: 20px;
+  color: var(--text-2);
+  margin-bottom: var(--space-2);
 }
 .ai-chat-loading {
   display: flex;

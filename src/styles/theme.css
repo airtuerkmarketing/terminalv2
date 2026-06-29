@@ -92,6 +92,7 @@
   --surface-strong: #FFFFFF;
   --surface-flat: #FFFFFF;
   --surface-muted: #F7F7F7;
+  --surface-bubble: #EDEDEF;   /* user-question bubble — distinct from code's --surface-muted + page #FFF (D-108 v3) */
   /* Sidebar is a hair off the white content so its right hairline edge reads. */
   --sidebar-bg: #FCFCFC;
   --hairline: rgba(0, 0, 0, 0.08);
@@ -137,6 +138,7 @@
   --surface-strong: #1C1C1F;
   --surface-flat: #18181B;
   --surface-muted: #232327;
+  --surface-bubble: #2A2A2E;   /* user-question bubble — lighter than body #18181B + code #232327 (D-108 v3) */
   /* Sidebar keeps the dark surface value (unchanged from the flat dark theme). */
   --sidebar-bg: #18181B;
   --hairline: rgba(255, 255, 255, 0.08);

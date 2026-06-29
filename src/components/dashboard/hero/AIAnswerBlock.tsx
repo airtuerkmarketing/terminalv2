@@ -198,6 +198,9 @@ function AITurnAnswer({
 
   return (
     <>
+      {/* Brand-mark avatar — anchors each AI answer so it's unmistakably the answer
+          (vs the right-aligned question bubble). title="" → aria-hidden. D-108 v3. */}
+      <TerminalLogo variant="mark" title="" className="ai-chat-ai-mark" />
       {/* Personalization preamble — chrome ABOVE the answer, kept out of answer.text
           so the chip output stays clean for copy-paste. Language mirrors the input. */}
       {preamble && <p className="ai-chat-preamble">{preamble}</p>}
