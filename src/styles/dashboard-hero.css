@@ -624,6 +624,10 @@
   min-height: 0;
   overflow-y: auto;
   scroll-behavior: smooth;
+  /* Reserve the scrollbar gutter on BOTH edges so the centered thread stays on
+     the true centre whether or not the scrollbar is visible — keeps its edges
+     flush with the composer (which centres against the full window). */
+  scrollbar-gutter: stable both-edges;
   /* Generous bottom pad clears the floating composer so the last answer is
      never hidden behind it. */
   padding: var(--space-8) var(--space-4) 180px;
@@ -914,8 +918,14 @@
   left: 50%;
   bottom: var(--space-6);
   z-index: 20;
-  width: calc(100% - 2 * var(--space-4));
-  max-width: 768px;
+  /* Outer box spans the full window minus its own side padding; the readable
+     inner column is then 768px — the SAME geometry as .ai-chat-thread (which
+     sits inside the body's var(--space-4) padding). max-width grows by the
+     padding so the inner column stays 768px (box-sizing: border-box). */
+  width: 100%;
+  max-width: calc(768px + 2 * var(--space-4));
+  padding-inline: var(--space-4);
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
