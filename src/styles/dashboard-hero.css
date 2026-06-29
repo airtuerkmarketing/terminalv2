@@ -810,11 +810,12 @@
    pre-wrap, the parser collapses whitespace. Fixes literal **bold** / - bullets
    leaking into the prose. */
 /* Chat-content typography (D-108). Reading-experience pass scoped strictly to
-   the markdown body — see T2 spec. All values use existing tokens (no new tokens,
-   dark-mode-safe); the only literal is text-underline-offset (geometry). */
+   the markdown body — see T2 spec. Colors/spacing/sizes are all tokens
+   (dark-mode-safe). Geometry literals only: text-underline-offset 2px, code
+   border 1px, inline code border-radius 4px — theme-agnostic dimensions. */
 .ai-chat-answer {
-  font-size: var(--fs-md);
-  line-height: var(--lh-relaxed);
+  font-size: var(--fs-reading);
+  line-height: var(--lh-loose);
   color: var(--text-1);
 }
 .ai-chat-answer > :first-child {
@@ -852,22 +853,25 @@
 .ai-chat-answer code {
   font-family: var(--font-mono);
   background: var(--surface-muted);
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--hairline); /* visible inline frame (Claude-style) */
+  padding: 1px 6px;
+  border-radius: 4px; /* geometry literal — tighter than --radius-sm for an inline chip */
   font-size: 0.9em;
 }
 .ai-chat-answer pre {
   margin: var(--space-4) 0;
   padding: var(--space-4);
   background: var(--surface-muted);
+  border: 1px solid var(--hairline); /* visible code-block frame (Claude-style) */
   border-radius: var(--radius-md);
   overflow-x: auto;
   font-size: var(--fs-base);
   line-height: var(--lh-normal);
 }
 .ai-chat-answer pre code {
+  background: transparent; /* reset: the frame lives on <pre>, not nested */
+  border: none;
   padding: 0;
-  background: none;
   font-size: inherit;
 }
 /* Blockquote — muted, left-barred. --text-3 (not --hairline) keeps the 3px bar
@@ -917,11 +921,11 @@
   color: var(--text-1);
 }
 .ai-chat-answer h2 {
-  font-size: var(--fs-lead);
+  font-size: var(--fs-lg);
   margin-top: var(--space-8);
 }
 .ai-chat-answer h3 {
-  font-size: var(--fs-md);
+  font-size: var(--fs-lead);
   margin-top: var(--space-6);
 }
 /* Source citations collapsed behind a BookOpen icon (top-right of the answer

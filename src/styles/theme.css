@@ -30,6 +30,7 @@
   --fs-sm: 13px;
   --fs-base: 14px;
   --fs-md: 17px;
+  --fs-reading: 18px;   /* chat-answer body, a notch above --fs-md (D-108 typography v2) */
   --fs-lead: 20px;
   --fs-lg: 22px;
   --fs-xl: 28px;
@@ -41,6 +42,7 @@
   --lh-snug: 1.3;
   --lh-normal: 1.5;
   --lh-relaxed: 1.65;
+  --lh-loose: 1.75;     /* relaxed prose rhythm for chat answers (D-108 typography v2) */
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
