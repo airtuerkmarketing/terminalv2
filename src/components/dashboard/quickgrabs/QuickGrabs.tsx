@@ -31,6 +31,12 @@ const ROWS_BY_TAB: Record<string, QGRow[]> = {
 };
 
 const AUTO_MS = 5000;
+// Movement (px) past which a pointer gesture counts as a DRAG, not a click — used
+// both to start following the pointer meaningfully and to suppress the stretched
+// link on release. Slide-switch threshold is a fraction of the track width.
+const DRAG_MOVE_PX = 8;
+const SWIPE_RATIO = 0.15;
+const SWIPE_MIN_PX = 48;
 
 // Fixed tab set + order. Only "all" has content for now (the brand list).
 const QG_TABS = [
@@ -82,17 +88,73 @@ export function QuickGrabs() {
   const [active, setActive] = useState(0);
   const hovering = useRef(false);
 
+  // Drag / swipe. dragOffsetPx is the live finger/mouse offset (the track follows
+  // it with its transition switched off); dragging toggles the cursor + that
+  // transition. drag holds gesture state that must update synchronously (the
+  // pointermove/up handlers gate on pointerId, not on the async state). `moved`
+  // records whether the DRAG_MOVE_PX threshold was crossed → the stretched-link
+  // click is suppressed on release so a swipe never navigates.
+  const [dragOffsetPx, setDragOffsetPx] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const drag = useRef({ startX: 0, pointerId: -1, moved: false, dx: 0 });
+
   const go = useCallback((i: number) => setActive(((i % count) + count) % count), [count]);
   const next = useCallback(() => go(active + 1), [go, active]);
 
-  // Auto-advance every 5s, paused on hover. Skipped entirely under reduced motion.
+  // Auto-advance every 5s, paused on hover and while dragging (no interval is
+  // created during a drag; it restarts afterwards). Skipped under reduced motion.
   useEffect(() => {
-    if (prefersReducedMotion()) return;
+    if (prefersReducedMotion() || dragging) return;
     const id = window.setInterval(() => {
       if (!hovering.current) setActive((a) => (a + 1) % count);
     }, AUTO_MS);
     return () => window.clearInterval(id);
-  }, [count]);
+  }, [count, dragging]);
+
+  // Pointer capture is taken LAZILY — only once the move threshold is crossed —
+  // not on pointerdown. Capturing on pointerdown makes Chromium fire the eventual
+  // click on the capture target instead of the link, so a plain tap/click would
+  // never navigate. Recording on down + capturing on first real move keeps clicks
+  // working and still lets a drag follow the pointer outside the track.
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "mouse" && e.button !== 0) return; // primary button only
+    drag.current = { startX: e.clientX, pointerId: e.pointerId, moved: false, dx: 0 };
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (drag.current.pointerId === -1) return;
+    let dx = e.clientX - drag.current.startX;
+    if (!drag.current.moved) {
+      if (Math.abs(dx) <= DRAG_MOVE_PX) return; // still within click tolerance
+      drag.current.moved = true; // promote to a drag: capture + enter drag mode
+      e.currentTarget.setPointerCapture(drag.current.pointerId);
+      setDragging(true);
+    }
+    // Rubber-band at the (non-wrapping) ends so dragging into the void resists.
+    if ((active === 0 && dx > 0) || (active === count - 1 && dx < 0)) dx *= 0.35;
+    drag.current.dx = dx;
+    setDragOffsetPx(dx);
+  }
+
+  function endDrag(e: React.PointerEvent<HTMLDivElement>) {
+    if (drag.current.pointerId === -1) return;
+    if (drag.current.moved) {
+      const width = trackRef.current?.offsetWidth ?? 1;
+      const threshold = Math.max(SWIPE_MIN_PX, width * SWIPE_RATIO);
+      const dx = drag.current.dx;
+      // Clamp (don't wrap) on drag: dragging past the first/last slide snaps back.
+      // The arrow / dots / auto-advance keep their existing wrap behaviour.
+      if (dx <= -threshold && active < count - 1) setActive(active + 1);
+      else if (dx >= threshold && active > 0) setActive(active - 1);
+      if (e.currentTarget.hasPointerCapture(drag.current.pointerId)) {
+        e.currentTarget.releasePointerCapture(drag.current.pointerId);
+      }
+      setDragOffsetPx(0); // snap (transition re-enabled now that dragging is false)
+      setDragging(false);
+    }
+    drag.current.pointerId = -1; // a no-move release stays a click (moved=false → link fires)
+  }
 
   const [tab, setTab] = useState("all");
   // "all" → brand list (NavIcon); the other tabs → curated QGRows (QGRowIcon).
@@ -111,29 +173,45 @@ export function QuickGrabs() {
       </header>
 
       <div
-        className="qg-carousel"
+        className={`qg-carousel${dragging ? " is-dragging" : ""}`}
         onMouseEnter={() => { hovering.current = true; }}
         onMouseLeave={() => { hovering.current = false; }}
       >
-        <div className="qg-track" style={{ transform: `translateX(-${active * 100}%)` }}>
+        <div
+          ref={trackRef}
+          className="qg-track"
+          style={{
+            transform: `translateX(calc(${-active * 100}% + ${dragOffsetPx}px))`,
+            transition: dragging ? "none" : undefined,
+          }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onDragStart={(e) => e.preventDefault()} /* kill native img/link drag */
+        >
           {QUICK_GRABS.map((c) => (
             <article className="car-card" key={c.id}>
               {/* eslint-disable-next-line @next/next/no-img-element -- full-bleed card art */}
-              <img className="car-bg" src={c.bgUrl} alt="" aria-hidden="true" />
+              <img className="car-bg" src={c.bgUrl} alt="" aria-hidden="true" draggable={false} />
               <span className="car-scrim" aria-hidden="true" />
               {/* eslint-disable-next-line @next/next/no-img-element -- right-side composition */}
-              <img className="car-art" src={c.artUrl} alt="" aria-hidden="true" />
+              <img className="car-art" src={c.artUrl} alt="" aria-hidden="true" draggable={false} />
               <div className="car-content">
                 <span className="car-badge"><QGBadgeIcon icon={c.icon} /></span>
                 <h3 className="car-title">{c.title}</h3>
                 <p className="car-sub">{c.sub}</p>
                 {/* Stretched link: .car-cta::after covers the whole card (CSS).
-                    Guard a placeholder "#" href so it doesn't scroll-jump; real
-                    deep-links navigate normally. */}
+                    Suppress navigation when the gesture was a drag (moved guard);
+                    guard a placeholder "#" href so it doesn't scroll-jump. */}
                 <a
                   className="car-cta"
                   href={c.href}
-                  onClick={(e) => { if (c.href === "#") e.preventDefault(); }}
+                  draggable={false}
+                  onClick={(e) => {
+                    if (drag.current.moved) { e.preventDefault(); e.stopPropagation(); drag.current.moved = false; return; }
+                    if (c.href === "#") e.preventDefault();
+                  }}
                 >
                   {c.cta}
                 </a>

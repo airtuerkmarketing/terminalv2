@@ -21,13 +21,22 @@
 .qg-sub { font-size: 16px; font-weight: var(--weight-regular); line-height: 24px; color: var(--text-3); margin: 2px 0 0; }
 
 /* ── Carousel ── */
+/* Draggable: grab at rest, grabbing while a swipe is in progress (.is-dragging,
+   toggled in JS). cursor is inherited, so the cards/track follow it. */
 .qg-carousel {
   position: relative;
   border-radius: var(--radius-32);
   overflow: hidden;
   box-shadow: var(--shadow-card);
+  cursor: grab;
 }
-.qg-track { display: flex; height: 320px; transition: transform 420ms var(--ease-smooth); }
+.qg-carousel.is-dragging { cursor: grabbing; }
+/* pan-y lets the page still scroll vertically while horizontal swipes drive the
+   carousel; user-select:none stops a mouse-drag from selecting the card text. */
+.qg-track {
+  display: flex; height: 320px; transition: transform 420ms var(--ease-smooth);
+  touch-action: pan-y; user-select: none;
+}
 
 /* isolate so the card's own (negative) z-index layers stay contained, and so the
    whole-card stretched link (.car-cta::after) anchors to the card. */
@@ -69,6 +78,7 @@
   font-size: var(--fs-base); font-weight: var(--weight-semibold);
   text-decoration: none; margin-top: var(--space-2);
   transition: box-shadow 150ms var(--ease-smooth);
+  cursor: inherit; /* the whole card is draggable → grab/grabbing, not the link pointer */
 }
 /* Stretched link: the CTA's ::after covers the whole card so a click anywhere on
    the card follows the slide's deep-link. Anchors to .car-card (positioned +
