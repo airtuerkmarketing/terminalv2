@@ -50,6 +50,22 @@ const PAUSED_NOTICE: Record<"de" | "en" | "tr", string> = {
   tr: "Arama, yineleme sınırına ulaştı. Lütfen daha spesifik bir soru sorun veya yeniden ifade edin.",
 };
 
+/* Web-search loading copy (1.5b). A web-search turn runs a 30-90s server-side
+   operation (3 search iterations + Sonnet synthesis), so the generic "AI is thinking…"
+   reads as "stuck". Tier 1 shows immediately; Tier 2 escalates after 8s (no first token
+   yet) to set the 30-60s expectation. Both language-mirror the question via detectLang.
+   Once the first token streams the loading branch unmounts entirely. */
+const WEB_SEARCH_LOADING_TIER1: Record<"de" | "en" | "tr", string> = {
+  de: "Im Web wird gesucht…",
+  en: "Searching the web…",
+  tr: "Web'de aranıyor…",
+};
+const WEB_SEARCH_LOADING_TIER2: Record<"de" | "en" | "tr", string> = {
+  de: "Suche im Web läuft — kann 30-60 Sekunden dauern.",
+  en: "Searching the web — this can take 30-60 seconds.",
+  tr: "Web'de aranıyor — 30-60 saniye sürebilir.",
+};
+
 export function AIAnswerBlock({
   turn,
   typewriter = false,
@@ -79,11 +95,7 @@ export function AIAnswerBlock({
         {turn.error ? (
           <p className="ai-chat-a-text">⚠️ {turn.error}</p>
         ) : showLoading ? (
-          <div className="ai-chat-loading">
-            {/* Spinning terminal mark as the load indicator (filled, currentColor). */}
-            <TerminalLogo variant="mark" title="" className="ai-chat-loader-mark" />
-            <span>AI is thinking…</span>
-          </div>
+          <ChatLoading turn={turn} />
         ) : (
           <AITurnAnswer
             turn={turn}
@@ -96,6 +108,39 @@ export function AIAnswerBlock({
         )}
       </div>
     </div>
+  );
+}
+
+/* Loading branch — split out so the 8s tier-2 timer can live in a hook without
+ * violating Rules of Hooks (the inline JSX it replaced had no hooks). Normal turns
+ * keep the unchanged English "AI is thinking…"; web-search turns get the
+ * language-mirrored two-tier copy (Tier 1 immediate, Tier 2 after 8s with no token).
+ * The whole component unmounts the moment the first token flips showLoading to false,
+ * which also clears the timer — so the timer firing == "8s elapsed, still no token". */
+function ChatLoading({ turn }: { turn: AiTurn }) {
+  const [extended, setExtended] = useState(false);
+  useEffect(() => {
+    if (!turn.isWebSearch) return; // no escalation timer for normal RAG turns
+    const t = setTimeout(() => setExtended(true), 8000);
+    return () => clearTimeout(t);
+  }, [turn.isWebSearch]);
+
+  const lang = detectLang(turn.question);
+
+  return (
+    <>
+      <div className="ai-chat-loading">
+        {/* Spinning terminal mark as the load indicator (filled, currentColor). */}
+        <TerminalLogo variant="mark" title="" className="ai-chat-loader-mark" />
+        <span>{turn.isWebSearch ? WEB_SEARCH_LOADING_TIER1[lang] : "AI is thinking…"}</span>
+      </div>
+      {/* Tier 2 — muted expectation-setter, reuses the paused-notice banner styling. */}
+      {turn.isWebSearch && extended && (
+        <p className="ai-chat-paused-notice" role="status">
+          ⏳ {WEB_SEARCH_LOADING_TIER2[lang]}
+        </p>
+      )}
+    </>
   );
 }
 
