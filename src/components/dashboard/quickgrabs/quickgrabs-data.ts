@@ -7,28 +7,30 @@ import type { BrandSlug } from "@/lib/brand-types";
 
 export interface QuickGrabCard {
   id: string;
-  kind: "aktion" | "asset"; // tag label on the card
   title: string;
   sub: string;
   cta: string; // button text
   href: string; // target ("#" while unresolved)
-  accentHex: string; // card gradient base (brand colour)
-  imageUrl?: string; // optional right-half image; gradient placeholder if absent
+  icon: "signature" | "atbeds" | "deck"; // badge glyph
+  bgUrl: string; // full-bleed background image of the card
+  artUrl: string; // right-side foreground composition (transparent PNG)
 }
 
+// HARDCODED for now. Images live under public/previews/quickgrabs/ (-bg =
+// full-bleed background, -art = right-side foreground composition).
 export const QUICK_GRABS: QuickGrabCard[] = [
-  { id: "sig",    kind: "aktion", title: "Create signature",
-    sub: "Your email signature in 3 steps", cta: "Start",
-    href: "#", accentHex: "#0A82DF" },
-  { id: "deck",   kind: "asset",  title: "Latest master deck",
-    sub: "airtuerk Service · Version 4 · DE / EN", cta: "View",
-    href: "#", accentHex: "#1D9E75" },
-  { id: "logos",  kind: "aktion", title: "Get logo packages",
-    sub: "All brands · SVG, PNG & favicons", cta: "Open",
-    href: "#", accentHex: "#BA7517" },
-  { id: "farben", kind: "asset",  title: "Copy color palettes",
-    sub: "Hex codes of all brands in one click", cta: "View",
-    href: "#", accentHex: "#D85A30" },
+  { id: "sig",   title: "Create signature",
+    sub: "Your email signature in 3 steps", cta: "Start", href: "#",
+    icon: "signature",
+    bgUrl: "/previews/quickgrabs/sig-bg.png",   artUrl: "/previews/quickgrabs/sig-art.png" },
+  { id: "brand", title: "Our new brand",
+    sub: "Introducing ATBeds – Hotel IBE", cta: "Start", href: "#",
+    icon: "atbeds",
+    bgUrl: "/previews/quickgrabs/brand-bg.png", artUrl: "/previews/quickgrabs/brand-art.png" },
+  { id: "deck",  title: "Latest master deck",
+    sub: "airtuerk Service · Version 4 · DE / EN", cta: "Start", href: "#",
+    icon: "deck",
+    bgUrl: "/previews/quickgrabs/deck-bg.png",  artUrl: "/previews/quickgrabs/deck-art.png" },
 ];
 
 export interface BrandTab {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Package, Search, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import "@/styles/dashboard-quickgrabs.css";
 import { NavIcon } from "@/components/shell/icons";
 import { QUICK_GRABS, BRAND_TABS, type QuickGrabCard } from "./quickgrabs-data";
@@ -24,8 +24,17 @@ function prefersReducedMotion(): boolean {
   );
 }
 
-function CardIcon({ kind }: { kind: QuickGrabCard["kind"] }) {
-  return kind === "aktion" ? <Sparkles aria-hidden /> : <Package aria-hidden />;
+/** Badge glyph per card. atbeds reuses the real brand mark; deck the presentation
+ *  glyph; signature a lucide pen-line (real 1.18.0 geometry). */
+function QGBadgeIcon({ icon }: { icon: QuickGrabCard["icon"] }) {
+  if (icon === "atbeds") return <NavIcon name="atbeds" />;
+  if (icon === "deck") return <NavIcon name="presentation-hub" />;
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M13 21h8" />
+      <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+    </svg>
+  );
 }
 
 export function QuickGrabs() {
@@ -58,11 +67,8 @@ export function QuickGrabs() {
           <h2 className="qg-title">Quick Grabs</h2>
           <p className="qg-sub">Your most important assets — right at your fingertips</p>
         </div>
-        {/* Visual-only search affordance (no state yet). */}
-        <div className="qg-search" aria-hidden="true">
-          <Search className="qg-search-icon" aria-hidden />
-          <span className="qg-search-ph">Search apps</span>
-        </div>
+        {/* Right side intentionally empty (whitespace) — the dead "Search apps"
+            affordance was removed. */}
       </header>
 
       <div
@@ -73,19 +79,13 @@ export function QuickGrabs() {
         <div className="qg-track" style={{ transform: `translateX(-${active * 100}%)` }}>
           {QUICK_GRABS.map((c) => (
             <article className="car-card" key={c.id}>
-              <div
-                className="car-photo"
-                style={{ background: `linear-gradient(135deg, ${c.accentHex}, color-mix(in srgb, ${c.accentHex} 60%, #000))` }}
-              />
-              {c.imageUrl ? (
-                <div className="car-img-zone">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- optional card art */}
-                  <img src={c.imageUrl} alt="" aria-hidden="true" />
-                </div>
-              ) : null}
+              {/* eslint-disable-next-line @next/next/no-img-element -- full-bleed card art */}
+              <img className="car-bg" src={c.bgUrl} alt="" aria-hidden="true" />
+              <span className="car-scrim" aria-hidden="true" />
+              {/* eslint-disable-next-line @next/next/no-img-element -- right-side composition */}
+              <img className="car-art" src={c.artUrl} alt="" aria-hidden="true" />
               <div className="car-content">
-                <span className="car-coin"><CardIcon kind={c.kind} /></span>
-                <span className="car-tag">{c.kind}</span>
+                <span className="car-badge"><QGBadgeIcon icon={c.icon} /></span>
                 <h3 className="car-title">{c.title}</h3>
                 <p className="car-sub">{c.sub}</p>
                 <a className="car-cta" href={c.href}>{c.cta}</a>

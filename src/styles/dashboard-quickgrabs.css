@@ -16,17 +16,9 @@
 }
 
 /* ── Header ── */
-.qg-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); }
+.qg-head { display: flex; align-items: flex-end; justify-content: flex-start; gap: var(--space-4); }
 .qg-title { font-size: 24px; font-weight: var(--weight-medium); line-height: 32px; color: var(--text-1); margin: 0; }
 .qg-sub { font-size: 16px; font-weight: var(--weight-regular); line-height: 24px; color: var(--text-3); margin: 2px 0 0; }
-.qg-search {
-  display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
-  height: 36px; padding: 0 14px;
-  background: var(--surface-muted); border: 1px solid var(--hairline);
-  border-radius: var(--radius-full); color: var(--text-3);
-}
-.qg-search-icon { width: 16px; height: 16px; flex-shrink: 0; }
-.qg-search-ph { font-size: var(--fs-sm); }
 
 /* ── Carousel ── */
 .qg-carousel {
@@ -38,33 +30,32 @@
 .qg-track { display: flex; height: 320px; transition: transform 420ms var(--ease-smooth); }
 
 .car-card { flex: 0 0 100%; height: 100%; position: relative; overflow: hidden; display: flex; }
-.car-photo { position: absolute; inset: 0; z-index: 0; }
-/* Left scrim for text contrast over the gradient. */
-.car-photo::after {
-  content: ""; position: absolute; inset: 0;
+/* Two image layers: full-bleed bg (z0), a left text-scrim (z1), the right-side
+   foreground composition (z2). Content sits above all (z3). */
+.car-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+.car-scrim {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: linear-gradient(90deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.10) 55%, transparent 100%);
 }
-.car-img-zone { position: absolute; top: 0; right: 0; width: 55%; height: 100%; z-index: 1; }
-.car-img-zone img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.car-art {
+  position: absolute; top: 0; right: 0; height: 100%; width: auto; z-index: 2;
+  object-fit: contain; object-position: right top; pointer-events: none;
+}
 
 .car-content {
-  position: relative; z-index: 2;
+  position: relative; z-index: 3;
   width: 384px; max-width: 70%;
   padding: var(--space-8);
-  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-3);
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-2);
   color: #fff;
 }
-.car-coin {
-  width: 48px; height: 48px; border-radius: 50%; background: #fff;
+/* Rounded-square badge (NOT a circle), white, hairline outline + soft shadow. */
+.car-badge {
+  width: 48px; height: 48px; border-radius: 16px; background: #fff;
+  outline: 1px solid #EBEBEB; box-shadow: 0 2px 8px rgba(17, 24, 39, 0.06);
   display: grid; place-items: center; flex-shrink: 0;
 }
-.car-coin svg { width: 22px; height: 22px; color: #0D0D0D; }
-.car-tag {
-  text-transform: uppercase; font-size: var(--fs-xs); font-weight: var(--weight-semibold);
-  letter-spacing: 0.06em; color: #fff;
-  background: rgba(255, 255, 255, 0.20); border-radius: var(--radius-full);
-  padding: 3px 10px;
-}
+.car-badge svg { width: 22px; height: 22px; color: #0D0D0D; }
 .car-title { font-size: 24px; font-weight: var(--weight-regular); line-height: 32px; color: #fff; margin: 0; }
 .car-sub { font-size: 16px; font-weight: var(--weight-regular); line-height: 24px; color: rgba(255, 255, 255, 0.9); margin: 0; }
 /* CTA sits on the always-coloured card → fixed black + white, theme-independent. */
