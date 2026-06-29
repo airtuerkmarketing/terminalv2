@@ -9,7 +9,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-29)
 
-- **AI UX wave (D-106) — shipped to main + deployed:** four owner-requested airtuerk Intelligence changes. (1) **Generation model Opus 4.8 → Sonnet 4.6** (`rag-query` `ANTHROPIC_MODEL`; supersedes D-060). ⚠️ rag-eval 86.9% was on Opus — re-baseline on Sonnet. (2) **Chip personalization preamble** — "Hallo {Vorname}, hier ist {…}:" rendered as UI chrome above translate/mail/summary/escalation results (`src/lib/rag/preamble.ts`), language-mirrored, kept out of `answer.text` so copy-paste stays clean. (3) **Strict language mirroring** — `rag-query` rules 3/7/8 (uncertainty / out-of-scope / identity) now DE/EN/TR variants instead of hard-German; mode prompts hardened; frontend `isOutOfScope`/`inferKonfidenz` detect all three langs. (4) **Working web-search fallback** — the rule-7 "Yes, search the web" button now runs a `web-search` mode using the Anthropic `web_search_20260209` server tool (was a disabled skeleton). Gates green; frontend browser-verified; prod-verified post-deploy. See D-106.
+- **AI UX wave (D-106) — shipped to main + deployed:** four owner-requested airtuerk Intelligence changes. (1) **Generation model Opus 4.8 → Sonnet 4.6** (`rag-query` `ANTHROPIC_MODEL`; supersedes D-060). ⚠️ rag-eval re-baseline pending: 86.9% (Opus single-draw) and 85.7% (Sonnet single-draw) are unreliable for CI-gate pinning — variance evidence (n=3 on identical config) showed μ=80.97%, σ=2.35pp (~5pp intra-version swing typical). Phase 10 prerequisite: a clean n≥3 baseline on v18 prod (~$8–15). Single-draw eval stays valid for regression smoke checks (used for v17 deploy verification this wave). See D-107. (2) **Chip personalization preamble** — "Hallo {Vorname}, hier ist {…}:" rendered as UI chrome above translate/mail/summary/escalation results (`src/lib/rag/preamble.ts`), language-mirrored, kept out of `answer.text` so copy-paste stays clean. (3) **Strict language mirroring** — `rag-query` rules 3/7/8 (uncertainty / out-of-scope / identity) now DE/EN/TR variants instead of hard-German; mode prompts hardened; frontend `isOutOfScope`/`inferKonfidenz` detect all three langs. (4) **Working web-search fallback** — the rule-7 "Yes, search the web" button now runs a `web-search` mode using the Anthropic `web_search_20260209` server tool (was a disabled skeleton). Gates green; frontend browser-verified; prod-verified post-deploy. See D-106.
 - **Architecture audit (D-105) — MERGED to main:** live-source audit of the App Router + Supabase data flow. **SEC-01** (`37e4c33`): `/api/search` no longer leaks draft pages to anon (auth-gate + `status='published'`; anon → 401). **PR #17** (squash `98086c6`) Steps 0–5: SEC-02 redirect sanitizer, CM-01/PERF-04 dashboard code-split, HC-01 `src/config/navigation.ts`, PERF-03 folder-count batching, CM-02 `src/lib/library/actions-shared.ts`, CM-03 modal code-split. **PR #18** (squash `63efa2f`): PERF-01/02 cookie-free cached CMS reads (TTL 3600) + `POST /api/revalidate` super_admin lever + SEC-03 **CSP report-only** (build-derived prefs-script hash, `/api/csp-report` sink) + DOC-01. All gates green; anon prod-verified. **STILL OPEN (owner decisions — NOT done):** SEC-04 Vercel WAF rate-limit (handoff — no MCP firewall API), the CSP enforce-flip (report-only for now), and the DB-track (SEC-06 / DB-01 / DB-02 / DB-03) — each regresses as-specified, see D-105.
 - **HEAD:** `feat/folder-permissions` — **Per-user folder permissions** (D-080): a super_admin grants individual people read access to a private folder in the Document Library and/or Presentation Hub via **"Manage access…"** in all four folder menus (a searchable team-directory picker). Grants key off `team_members` (so people not yet invited can be granted; auto-activates on first login), cascade **downward** only (a subfolder grant never leaks the parent's content; ancestors show in the tree but no content), and are **read-only** (write policies stay admin-only). New grant tables `document_folder_permissions`/`presentation_folder_permissions` + SECURITY DEFINER `current_team_member_id()`/`can_access_*`/`can_see_*` helpers + widened SELECT policies; new email edge function `notify-folder-access` (Resend). Migration `20260627090000_folder_permissions` — **applied + edge-fn `notify-folder-access` deployed**. Prev: **Presentation Hub folder visibility** (D-079): `presentation_folders.is_public` (default true = non-breaking) + RLS so private folders/files are admin-only; **"Make private/public"** in the folder card + on-page menus, lock cue on private cards. Migration `20260626210000` applied to prod. Prev: **Presentation Hub ported 1:1 to the Document Library construct** (D-077/078 — nested secondary sidebar tree, managed SVG colour cards + full context menu, counts, Move, rename-redirect, delete-guard, file Trash with source+thumbnail+slides purge; migrations `…190000`+`…200000`); both library nav nodes kept visible on their own route; Resources order **Presentations → Documents → Assets → Team**. **Document Library data/shell hardening** (D-074/075/076). **Demo:** 2026-08-01.
 - **Stack:** Next.js 16.2.9, React 19.2.4, Tailwind CSS 4, Supabase Postgres 17,
@@ -24,21 +24,23 @@ it is append-only history (do not rewrite past entries — add new ones).
   **51 pages** (gold-set quiz pages removed), **15 brands**,
   **9 storage buckets** (public: `images`, `documents`, `videos`, `fonts`, `avatars`;
   private: `library`, `presentations`, `rag-knowledge`, `confluence-attachments`).
-  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` + `pg_net` installed. **82 migrations** (file↔registry
-  ledger reconciled to exact parity, D-081–D-089), highest:
-  `20260628120000_revoke_secdef_anon_public` (D-089); `20260627090000_folder_permissions` applied + registered. **4 cron jobs** (+`warmup-rag-query` `*/4`, D-086).
+  `pgvector 0.8.0` + `pg_trgm 1.6` + `pg_cron` + `pg_net` installed. **86 migrations** (file↔registry
+  ledger reconciled to exact parity, D-081–D-107; count corrected 82→86 — the user-mgmt 1300xx series
+  + `20260629140000` were not yet reflected), highest:
+  `20260629140000_ai_observability` (D-107, applied via the D-081 controlled-version pattern). **4 cron jobs** (+`warmup-rag-query` `*/4`, D-086).
   Prev applied: `20260626210000_presentation_folder_visibility`. `document_folders`/`presentation_folders`
   +`color`; `presentation_folders` +`is_public` (private = admin-only, D-079);
   `document_files`/`presentation_files` +`deleted_at`/`deleted_by` (Trash); daily
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-106** (D-105 = architecture audit; D-106 = AI UX wave — both code/edge-only, no migration).
+  Highest decision: **D-107** (D-105 = architecture audit; D-106 = AI UX wave, code/edge-only; D-107 = AI observability + web-search hardening, **includes schema change** via `20260629140000`).
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
-  `embed-knowledge` (7 source modes), `rag-query` **v14** live (model **Sonnet 4.6** D-106;
+  `embed-knowledge` (7 source modes), `rag-query` **v18** live (model **Sonnet 4.6** D-106;
   mode-chips RAG-bypass + strict DE/EN/TR mirroring D-072/D-073/D-106; web-search fallback via
-  `web_search_20260209` D-106; F3 retrieval breadth VECTOR_K/TRGM_K/RERANK 60/30/80, D-104),
+  `web_search_20260209` D-106; web_search `max_uses` 3 + `web_search_tool_result` citation chips
+  + `mode`/`tool_calls`/`ttft_ms` observability columns D-107; F3 retrieval breadth VECTOR_K/TRGM_K/RERANK 60/30/80, D-104),
   `notify-correction-event`,
   `notify-folder-access` (D-080, deployed), `tag-classify-chunks` (Haiku), + 3 confluence fns.
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
@@ -107,6 +109,23 @@ it is append-only history (do not rewrite past entries — add new ones).
   AUDIT-006 (frozen 2026-06-23 corpus) — AUDIT-003 (Hara Filo) + AUDIT-004 (Pegasus)
   fixed in Welle D3 (`20260626093731`, D-070); D2 + D3 Phase-2 embed backfill of the
   3 priority-1 rows (ZDR-gated consistency follow-up, not retrieval-blocking).
+
+---
+
+## 2026-06-29 — D-107 AI observability + web-search hardening (v18 bundle)
+
+**Status:** Shipped to `main` (`b5aeb0a`→`1fcfd47`, 7 commits) + fully deployed. Edge `rag-query` **v18 ACTIVE** (verify_jwt true, sha256 `ab0b9db…`), Vercel prod `1fcfd47` at www.airtuerk.dev (fra1, READY), migration `20260629140000_ai_observability` applied + registered. Decision **D-107**.
+
+Sequence (this session):
+- **v16 Personennamen experiment → REVERTED.** Removed the "Personennamen (Ansprechpartner, Funktionen)" category from rag-query Rule 1 (hypothesis: unblock contact answers). Single-draw eval 78.6%. **Variance analysis n=3 on identical v16 config: μ=80.97%, σ=2.35pp** vs v15 single-draw 85.7% (outside μ±2σ). The drop was not causally the edit (stable regressions sat in untouched categories — corpus/retrieval, not prompt), but v16 showed no measured upside, so reverted per the pre-registered decision rule. Working-tree edit discarded (never committed); `37eb9b3` redeployed as **v17** (== v15 source, byte-verified).
+- **Phase commits** (on top of D-106 `b5aeb0a`): `893e8a5` Phase 4 pause_turn handler · `37eb9b3` Phase 4b anti-halluc rules 1+3 (these two were already live in the out-of-session v15/v17) · `634938c` Phase 5b `web_search_tool_result` citation parser · `ceda761` Phase 1.5a `max_uses` 5→3 · `3e8132a` Phase 1.5b two-tier web-search loading UI · `8fd1a18` Phase 7a observability migration · `1fcfd47` Phase 7b edge column population.
+- **Phase 7a migration** `20260629140000_ai_observability` (`mode` text / `tool_calls` jsonb / `ttft_ms` int, all nullable) applied via the **D-081 controlled-version pattern** (`execute_sql` DDL + explicit `schema_migrations` row at a chosen version, not MCP auto-timestamp) → file↔registry exact parity, count 82→**86** reconciled.
+- **Bundle Deploy v18** (steps A–F, owner-gated per step): pre-deploy snapshot → `deploy_edge_function` v17→v18 (byte-verified vs disk, 7 source spot-checks) → **smoke 4/4 + DB observability 4/4** on live v18 (C1 Provision guard intact; C3 combined 5b+1.5a+7b proof: `tool_calls={web_search,uses:2,unique_urls:9}`, 9 web_search chunks, 34s latency) → push `b5aeb0a..1fcfd47` → Vercel `1fcfd47` READY in ~23s.
+- **Audit note:** the original v14→v15 edge deploy happened OUTSIDE any Claude Code session log (no recorded `deploy_edge_function` turn); production was a superset of committed git. This wave reconciled git to match, then advanced to v18. Post-mission hardening ticket: deploy-via-git-only / CI-only edge deploys.
+
+**Rollback target:** `37eb9b3` source (v15/v17 last-known-good) → redeploy as v19; Vercel `b5aeb0a` deployment remains `isRollbackCandidate`. Migration is additive-nullable — no DB rollback needed even in worst case.
+
+**Pending:** Phase 9 (live incognito verify), Phase 10 (CI gate + variance-aware n≥3 baseline), Phase 6 (cleanup incl. 4 smoke test rows ids 2206/2208/2210/2212). Corpus contact-routing (PayPal→Selin) is a separate post-mission ticket (ai_corrections layer).
 
 ---
 

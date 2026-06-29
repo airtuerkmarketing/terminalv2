@@ -780,7 +780,7 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ## D-106 — AI UX wave: Sonnet generation, chip preamble, strict language mirroring, working web-search fallback
 **Date:** 2026-06-29
-**Status:** Shipped to `main` + deployed (frontend → Vercel; `rag-query` redeployed v14). Code + edge-function only — no migration, no schema change.
+**Status:** Shipped to `main` + deployed (frontend → Vercel; `rag-query` redeployed v14). Code + edge-function only — no migration, no schema change. **Follow-up wave consolidated into D-107** — `rag-query` progressed v14 → v15 → v16 (Personennamen experiment) → v17 (revert to v15 source) → v18 (Phase 5b+1.5a+7b bundle); D-107 added the first schema change (`20260629140000`).
 **Context:** Four owner-requested improvements to the airtuerk Intelligence surface, shipped together.
 **Decisions:**
 - **Model Opus 4.8 → Sonnet 4.6.** `ANTHROPIC_MODEL` in `rag-query` switched to `claude-sonnet-4-6` (supersedes the D-060 Opus choice). Same request surface (no temperature / thinking / prefill) → a pure model-ID swap; Sonnet 4.6 is also the floor for the `web_search_20260209` tool below. ⚠️ Re-run `scripts/rag-eval.ts` to re-baseline genuine quality on Sonnet — the D-104 86.9% was measured on Opus.
@@ -788,7 +788,53 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 - **Strict language mirroring.** Rules 3/7/8 in `rag-query` (uncertainty / out-of-scope / identity) made multilingual (DE/EN/TR variants) instead of hard-forced German; the Rule 4 "always German" exception removed. Mode prompts (summarize / escalation) hardened to mirror strictly (observed English→German miss). Frontend `isOutOfScope` + `inferKonfidenz` upgraded to detect all three languages (else EN/TR refusals lose the web-search button + low-confidence marking).
 - **Working web-search fallback (Workstream 4).** New `web-search` mode runs Claude with the Anthropic-hosted `web_search_20260209` server tool under a focused, language-mirrored prompt (no corpus, no team tool). The previously-disabled "Yes, search the web" button (the rule-7 offer) now fires a fresh web-search turn for the same question. Known v1 limits: a `pause_turn` (10-search cap) ends the turn without continuation; web source-chips not captured (the answer carries its own source mentions).
 **Gates:** `pnpm typecheck` + `pnpm build` green; frontend browser-verified (preamble DE/EN, button enabled + wired); prod verified post-deploy.
-**Reversibility:** revert the commit (frontend) + redeploy prior `rag-query` (v13 = Opus 4.8, German-only protocol phrases, no web search). No schema to roll back.
+**Reversibility:** revert the commit (frontend) + redeploy prior `rag-query` (v13 = Opus 4.8, German-only protocol phrases, no web search). No schema to roll back. (Superseded for current rollback: the live last-known-good is now `37eb9b3` = v15/v17 source — redeploy as v19; see D-107.)
+
+---
+
+## D-107 — AI observability + web-search hardening (v18 bundle)
+**Date:** 2026-06-29
+**Status:** COMPLETE, deployed (edge `rag-query` v18 + Vercel `1fcfd47` + migration `20260629140000`).
+**Summary:** Consolidates the D-106 follow-up wave — the 5b citation-chip parser, 1.5a latency cap, 1.5b loading UI, and the 7a/7b observability migration + population — plus the v16 Personennamen experiment and its variance-evidenced revert. First schema change since D-080.
+
+**Scope:**
+- **Phase 5b** (`634938c`): parse `web_search_tool_result` blocks server-side (content arrives fully-populated at `content_block_start`) into `source_type:'web_search'` citation chips; dedup by URL, drop `encrypted_content`, store `page_age`. Widened `RagSource.source` TS union (`web_search` | `team_directory`).
+- **Phase 1.5a** (`ceda761`): web_search `max_uses` 5→3 — bounds demo-day latency (~90–100s worst case).
+- **Phase 1.5b** (`3e8132a`): two-tier web-search loading UI (`ChatLoading`) — Tier 1 immediate, Tier 2 after 8s; DE/EN/TR mirrored; reuses `.ai-chat-paused-notice` styling.
+- **Phase 7a** (`8fd1a18`): migration `20260629140000_ai_observability` adds `mode` text / `tool_calls` jsonb / `ttft_ms` int (all nullable) — applied via the D-081 controlled-version pattern.
+- **Phase 7b** (`1fcfd47`): edge fn populates the new columns with defensive defaults.
+- **Bundle Deploy v18:** single edge-fn redeploy (4 + 4b + 5b + 1.5a + 7b) + Vercel push (5b + 1.5b frontend).
+
+**Sub-decisions:**
+- **A — `ttft_ms` uses the same `startTime` as `latency_ms`.** Math-invariant `ttft ≤ latency`; clean first-token/last-token pair. Embed+retrieval latency is a separate concern, not "time to first answer token".
+- **B — `tool_calls` shape is count-based, no per-tool timing.** Per-tool `started/completed_at` is not currently captured and adding it is invasive; the count-based shape (`team_directory` entries from `toolCallsLog` + `{tool:'web_search', uses, unique_urls}`) captures what a dashboard needs.
+- **C — `weiss-nicht` path skipped.** `streamWeissNichtResponse` writes its own row and was not threaded the new columns (stay NULL/[]); structurally unreachable per its own comment. Logged as a post-mission reachability-review ticket.
+- **D — `retrieved_chunks.metadata.calls` hack kept parallel.** The UI team-directory chip renders from it; `tool_calls` becomes the canonical source while the hack stays for backward compat until a post-D-107 UI migration.
+
+**Variance evidence (v16 → v17 revert):**
+- v16 removed the "Personennamen (Ansprechpartner, Funktionen)" category from rag-query Rule 1's anti-hallucination list (hypothesis: unblock contact answers).
+- Single-draw eval: **78.6%** (84-row gold set), −7.1pp vs v15's 85.7%.
+- Variance analysis **n=3 on identical v16 config: 78.6% / 83.3% / 81.0% → μ=80.97%, σ=2.35pp**. v15 reference 85.7% sits at the μ+2σ boundary (85.67%) → math test failed → **revert per pre-registered rule**.
+- `37eb9b3` (= v15 source) redeployed as **v17** same day. **t3#28 (Provision hallucination guard) intact in both v15 and v16** — no demo-critical loss from the revert.
+- 12 stable v16 regressions sat in categories the edit didn't touch (PNR, fees, Portal names) → **retrieval/corpus root cause, not prompt-experiment causation**.
+- **Methodology decision:** single-draw eval baselines (86.9% Opus, 85.7% Sonnet) are unreliable for CI-gate pinning; a clean **n≥3 baseline** on v18 is a Phase 10 prerequisite. Single-draw eval stays valid for regression smoke checks.
+
+**D-081 controlled-version pattern reuse:** migration applied via `execute_sql` (DDL) + an explicit `schema_migrations` INSERT at a chosen version (`20260629140000`), NOT MCP `apply_migration` (auto-timestamp → drift). File ↔ ledger executable SQL byte-matched; count reconciled 82→86. Additive nullable columns → no DB rollback needed even on full deploy revert.
+
+**Production state at completion:**
+- Edge: `rag-query` **v18** ACTIVE, verify_jwt true, sha256 `ab0b9db571895220e29d94e2ae8924907b5ef481735b702a2138553727fb5777`.
+- Vercel: `dpl_7JYEWQKSY3Wu1b7fB76PjfTu1TjR` at `1fcfd47`, www.airtuerk.dev, region fra1.
+- DB: `20260629140000_ai_observability` applied + registered, 482-row baseline preserved.
+- Smoke 4/4 + DB observability 4/4 live: C1 Provision refusal (demo-critical guard), C2 RAG sanity (8 sources), C3 combined 5b+1.5a+7b (`web_search` uses=2, unique_urls=9, 34s latency), C4 out-of-scope refusal + web offer.
+
+**Reversibility / rollback:**
+- Edge: deploy `37eb9b3` source as v19 (~1 min).
+- Frontend: Vercel UI promote `dpl_oErj9jACjubiVriJxviXh7yb1Ajb` (`b5aeb0a`) to production (~30s; `isRollbackCandidate`).
+- DB: leave migration in place (additive nullable, no harm).
+
+**Pending (out of D-107 scope):** Phase 9 (live incognito verify); Phase 10 (CI eval gate + variance-aware n≥3 baseline on v18, ~$8–15); Phase 6 (cleanup — 4 smoke rows ids 2206/2208/2210/2212 + paired user rows); post-mission — weiss-nicht reachability review (sub-decision C), UI migration to read `tool_calls` (sub-decision D sunset), corpus contact-routing correction (PayPal→Selin via ai_corrections).
+
+**References:** predecessor D-106 (Sonnet + web-search + safety); pattern source D-081 (controlled-version migrations) + D-082 (reconciliation). Commits: `634938c`, `ceda761`, `3e8132a`, `8fd1a18`, `1fcfd47` (+ `893e8a5` + `37eb9b3` from D-106, active in v18).
 
 ---
 

@@ -16,7 +16,7 @@ Tenekeci (CEO) + Ahmet Özbek (CFO). Written 2026-06-28. Keep concrete — this 
 | Prod URL | https://www.airtuerk.dev (login: `/login`) |
 | Hosting | Vercel project `terminalv2` (`prj_hUiCkTyZSxVbxoHAvRpUjlnFQAKr`), team `airtuerk-service-gmbhs-projects`, functions in **fra1** |
 | Database | Supabase `terminalv2` (`zkydrymygjrscjbhusxp`, eu-central-1, Postgres 17) |
-| Edge fns | 8 ACTIVE — `rag-query` **v13** (F3 breadth, D-104), `embed-knowledge` v12, `notify-correction-event` v2, `notify-folder-access` v1, `tag-classify-chunks` v1, 3× confluence |
+| Edge fns | 8 ACTIVE — `rag-query` **v18** (D-104 F3 breadth + D-106 Sonnet/web-search + D-107 `max_uses` 3 / `web_search_tool_result` citations / observability — writes `mode`/`tool_calls`/`ttft_ms` per turn), `embed-knowledge` v12, `notify-correction-event` v2, `notify-folder-access` v1, `tag-classify-chunks` v1, 3× confluence |
 | Cron | 4 active — `warmup-rag-query` `*/4`, `refresh-chunk-retrieval-stats` `15 3`, `purge-expired-trashed-{documents,presentations}` `30/45 3` |
 | Test account | `dev@airtuerk.de` (super_admin) — creds in `CLAUDE.local.md` |
 | Latency budget (p50, post-fra1 D-095) | login ≈ 0.21s · folder-tree TTFB ≈ 0.27s · signed-URL ≈ 0.30s · **RAG warm TTFB ≈ 3–5s** (cold ≈ 8s) |
@@ -54,7 +54,7 @@ Tenekeci (CEO) + Ahmet Özbek (CFO). Written 2026-06-28. Keep concrete — this 
 | Flow | Path | Breaks if… |
 |---|---|---|
 | Home AI box renders | `/` `.ai-search-textarea` | frontend build broken |
-| AI answer streams | `rag-query` v12 | Voyage/Anthropic key, cold start, embed timeout |
+| AI answer streams | `rag-query` v18 | Voyage/Anthropic key, cold start, embed timeout |
 | Library folder + file list | `/documents-library/...` | DB / RLS |
 | File opens (signed URL) | `/api/library/file/*` → 302 | storage bucket private-read, region |
 | Login / logout | `/login`, `user-block` → Sign out | auth db pool, Supabase auth |

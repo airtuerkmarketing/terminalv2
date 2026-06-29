@@ -312,8 +312,8 @@ Schema entry points:
 - `0033` — Presentation Hub tables
 - timestamped `20260621*`/`20260622*` — User Panel (profiles↔team_members link,
   `user_activity_log`, `profiles_v`, avatars bucket, RLS recursion / search_path fixes).
-  Highest applied migration (as of 2026-06-27): `20260628120000_revoke_secdef_anon_public`
-  — **82 migrations**, repo ↔ `schema_migrations` at exact parity (D-081). The `00NN_`
+  Highest applied migration (as of 2026-06-29): `20260629140000_ai_observability`
+  — **86 migrations**, repo ↔ `schema_migrations` at exact parity (D-081; count corrected 82→86 in D-107 — the user-mgmt 1300xx series + `20260629140000` were not yet reflected). The `00NN_`
   labels above are the legacy identifiers; those files now carry their registered
   timestamp versions (renamed in D-081).
 
@@ -574,3 +574,18 @@ Management API (W0); **V1 blocker resolved** — the Stage-8 key-user seed run o
 keeps its anonymous public face; RAG genuine-quality levers (denylist-aware harness → F3
 retrieval granularity → validated content corrections); decide Emirkan's role (`user`→?);
 reset the 6 seeded temp passwords; email-template swap (D-071); E2E CI repo secrets.
+
+---
+
+## 17. Current snapshot (2026-06-29, D-107)
+
+Live snapshot verified via Supabase MCP 2026-06-29 (D-107 deploy verification):
+
+- **86 migrations** applied + registered (file ↔ registry exact parity)
+- Ledger hash: `c06a138fff0f62856f7cdf08b380d898`
+- Highest applied migration: `20260629140000` (D-107 — `ai_observability` columns: `mode`/`tool_calls`/`ttft_ms`)
+- Highest decision: **D-107** (AI observability + web-search hardening, v18 bundle)
+- `rag-query` edge function: **v18 ACTIVE** (verify_jwt true, sha256 `ab0b9db…`)
+- Vercel production: `1fcfd47` at www.airtuerk.dev (region fra1)
+
+For sprint-scoped detail of D-081–D-104 see §16 above; for D-105–D-107 detail see `DECISIONS.md`.
