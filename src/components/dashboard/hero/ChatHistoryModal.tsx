@@ -1,20 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { MessageCircle, Search } from "lucide-react";
+import { MessageCircle, Search, SearchX } from "lucide-react";
 import { loadMyChats } from "@/app/(public)/actions";
 import "./chat-history-modal.css";
 
-/* Command-palette-style search over the caller's own AI chats (BAU §5, Etappe
- * B.1). Opens from the chat-header clock icon. Lists every own chat grouped by
- * recency, with a search box that matches BOTH the title and the message
- * content. Portaled to <body>, focus-trapped, Esc/backdrop close — the same
- * shell convention as ConfirmDialog (kept separate, not imported).
- *
- * SCOPE: B.1 is display + search + close only. Clicking an item just closes the
- * modal (onSelect is a placeholder); actually restoring an old chat into the
- * active thread is B.2 (ChatMessageItem[] → AiTurn[] state replace). */
+/* Command-palette over the caller's own AI chats (BAU §5, Etappe B). Opens from
+ * the chat-header clock icon: every own chat grouped by recency, a search box
+ * matching BOTH title and message content, ↑/↓/Enter keyboard nav, match
+ * highlight. Portaled to <body>, focus-trapped, Esc/backdrop close (same shell
+ * convention as ConfirmDialog, kept separate). onSelect opens a chat — the parent
+ * decides whether to close (a confirm step may keep the modal open). */
 
 // The action's return shape, derived so this client file never imports the
 // server-only users.ts module.
@@ -59,6 +56,21 @@ function sessionTitle(s: ChatSession): string {
   return firstUser?.content.trim() || "Unbenannter Chat";
 }
 
+/** Accent-highlight the first occurrence of `q` (already lowercased) in `text`.
+ *  Real JSX splitting — no dangerouslySetInnerHTML. */
+function highlightMatch(text: string, q: string): ReactNode {
+  if (!q) return text;
+  const idx = text.toLowerCase().indexOf(q);
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="chm-mark">{text.slice(idx, idx + q.length)}</mark>
+      {text.slice(idx + q.length)}
+    </>
+  );
+}
+
 export function ChatHistoryModal({
   open,
   onClose,
@@ -75,6 +87,8 @@ export function ChatHistoryModal({
   // Reference "now" captured at load time (in the async callback, not during
   // render) so recency grouping + relative times stay pure/idempotent.
   const [now, setNow] = useState(0);
+  // Keyboard-nav cursor over the FLAT (cross-group) order.
+  const [activeIdx, setActiveIdx] = useState(0);
   const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -95,7 +109,8 @@ export function ChatHistoryModal({
     if (open) inputRef.current?.focus();
   }, [open]);
 
-  // Esc to close + focus trap (same shape as ConfirmDialog).
+  // Esc to close + focus trap (same shape as ConfirmDialog). Arrow/Enter nav is
+  // handled on the input (where focus lives) so it doesn't fight this.
   useEffect(() => {
     if (!open) return;
     const prevFocus = document.activeElement as HTMLElement | null;
@@ -122,10 +137,11 @@ export function ChatHistoryModal({
     };
   }, [open, onClose]);
 
+  const q = query.trim().toLowerCase();
+
   // Filter (title OR message content) + group by recency.
   const groups = useMemo(() => {
     if (!chats) return [];
-    const q = query.trim().toLowerCase();
     const matched = q === ""
       ? chats
       : chats.filter(
@@ -141,12 +157,38 @@ export function ChatHistoryModal({
       out[bi].items.push(s);
     }
     return out.filter((b) => b.items.length > 0);
-  }, [chats, query, now]);
+  }, [chats, q, now]);
+
+  // Flat, cross-group order — arrow nav runs over THIS so ↓ crosses group edges.
+  const flatItems = useMemo(() => groups.flatMap((g) => g.items), [groups]);
+  const clampedIdx = Math.min(activeIdx, Math.max(0, flatItems.length - 1));
+
+  // Keep the active row in view as the cursor moves (block:nearest = calm scroll).
+  useEffect(() => {
+    dialogRef.current?.querySelector(".chm-item--active")?.scrollIntoView({ block: "nearest" });
+  }, [clampedIdx]);
 
   if (!open || typeof document === "undefined") return null;
 
   const hasAny = !!chats && chats.length > 0;
   const noMatch = hasAny && groups.length === 0;
+
+  function onInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIdx((i) => Math.min(i + 1, flatItems.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIdx((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const sel = flatItems[clampedIdx];
+      if (sel) onSelect?.(sel);
+    }
+  }
+
+  // Running index across groups so the visual marker matches the flat nav index.
+  let runningIdx = -1;
 
   return createPortal(
     <div className="chm-backdrop" onClick={onClose}>
@@ -165,7 +207,8 @@ export function ChatHistoryModal({
             type="search"
             className="chm-search-input"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setActiveIdx(0); }}
+            onKeyDown={onInputKeyDown}
             placeholder="Chats durchsuchen…"
             aria-label="Search chats"
           />
@@ -175,25 +218,42 @@ export function ChatHistoryModal({
           {chats === null ? (
             <div className="chm-loading">Chats werden geladen…</div>
           ) : !hasAny ? (
-            <div className="chm-empty">Noch keine Chats</div>
+            <div className="chm-empty">
+              Noch keine Chats
+              <span className="chm-empty-sub">Deine Unterhaltungen erscheinen hier.</span>
+            </div>
           ) : noMatch ? (
-            <div className="chm-empty">Kein Treffer für „{query.trim()}“</div>
+            <div className="chm-empty">
+              <SearchX className="chm-empty-icon" aria-hidden="true" />
+              Kein Treffer für „{query.trim()}“
+            </div>
           ) : (
             groups.map((g) => (
               <div key={g.key} className="chm-group">
                 <div className="chm-group-label">{g.label}</div>
-                {g.items.map((s) => (
-                  <button
-                    key={s.sessionId}
-                    type="button"
-                    className="chm-item"
-                    onClick={() => onSelect?.(s)}
-                  >
-                    <MessageCircle className="chm-item-icon" aria-hidden="true" />
-                    <span className="chm-item-title">{sessionTitle(s)}</span>
-                    <span className="chm-item-time">{relativeTime(s.createdAt, now)}</span>
-                  </button>
-                ))}
+                {g.items.map((s) => {
+                  runningIdx++;
+                  const i = runningIdx;
+                  const isActive = i === clampedIdx;
+                  const title = sessionTitle(s);
+                  const contentOnly = q !== "" && !title.toLowerCase().includes(q);
+                  return (
+                    <button
+                      key={s.sessionId}
+                      type="button"
+                      className={`chm-item${isActive ? " chm-item--active" : ""}`}
+                      onClick={() => onSelect?.(s)}
+                      onMouseEnter={() => setActiveIdx(i)}
+                    >
+                      <MessageCircle className="chm-item-icon" aria-hidden="true" />
+                      <span className="chm-item-main">
+                        <span className="chm-item-title">{highlightMatch(title, q)}</span>
+                        {contentOnly && <span className="chm-item-hint">Treffer im Verlauf</span>}
+                      </span>
+                      <span className="chm-item-time">{relativeTime(s.createdAt, now)}</span>
+                    </button>
+                  );
+                })}
               </div>
             ))
           )}

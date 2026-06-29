@@ -94,7 +94,10 @@
   color: var(--text-1);
   transition: background 150ms var(--ease-smooth);
 }
-.chm-item:hover {
+/* Keyboard-active row looks the same as hover, so mouse + arrows don't diverge.
+   The focus-visible outline stays for genuine Tab focus. */
+.chm-item:hover,
+.chm-item--active {
   background: var(--surface-muted);
 }
 .chm-item:focus-visible {
@@ -107,14 +110,31 @@
   flex-shrink: 0;
   color: var(--text-3);
 }
-.chm-item-title {
+/* Title + optional hint stacked; takes the remaining width so the title ellipses. */
+.chm-item-main {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.chm-item-title {
   font-size: var(--fs-sm);
   font-weight: var(--weight-medium);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* Accent highlight of the matched substring — not a loud yellow mark. */
+.chm-mark {
+  background: transparent;
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+/* "Treffer im Verlauf" — why a cryptic-titled chat matched (content, not title). */
+.chm-item-hint {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
 }
 .chm-item-time {
   flex-shrink: 0;
@@ -126,8 +146,22 @@
 /* Loading + empty states. */
 .chm-loading,
 .chm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: var(--space-10) var(--space-5);
   text-align: center;
   font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+.chm-empty-sub {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  margin-top: var(--space-1);
+}
+.chm-empty-icon {
+  width: 22px;
+  height: 22px;
+  margin-bottom: var(--space-2);
   color: var(--text-3);
 }
