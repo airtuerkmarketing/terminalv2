@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowUp, ChevronDown, Edit3, History, Plus, X } from "lucide-react";
 import { AIAnswerBlock } from "@/components/dashboard/hero/AIAnswerBlock";
+import { ChatHistoryModal } from "@/components/dashboard/hero/ChatHistoryModal";
 import type { AiTurn } from "@/lib/search/types";
 
 /* Full-page chat surface (BAU-Auftrag §5). Opens as its own page — an opaque
@@ -41,6 +42,7 @@ export function AIChatWindow({
 }: Props) {
   const [draft, setDraft] = useState("");
   const [confirming, setConfirming] = useState(false); // "Neuer Chat" two-step arm
+  const [historyOpen, setHistoryOpen] = useState(false); // chat-history search modal
   const [showScrollDown, setShowScrollDown] = useState(false); // jump-to-latest button
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -210,6 +212,7 @@ export function AIChatWindow({
             className="ai-chat-history"
             title="History"
             aria-label="History"
+            onClick={() => setHistoryOpen(true)}
           >
             <History className="ai-chat-history-icon" aria-hidden="true" />
           </button>
@@ -345,6 +348,12 @@ export function AIChatWindow({
         >
           <ChevronDown className="ai-chat-scroll-down-icon" aria-hidden="true" />
         </button>
+      )}
+
+      {/* Chat-history search (B.1: display + search + close; chat-loading is B.2).
+          Mounted only while open so each open starts from a fresh load. */}
+      {historyOpen && (
+        <ChatHistoryModal open onClose={() => setHistoryOpen(false)} />
       )}
     </aside>
   );
