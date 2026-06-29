@@ -10,6 +10,7 @@ import { useTypewriterText } from "@/components/dashboard/hero/useTypewriterText
 import { AnswerFeedback } from "@/components/dashboard/hero/AnswerFeedback";
 import type { AiKonfidenz, AiTurn } from "@/lib/search/types";
 import { isOutOfScope } from "@/lib/rag/client";
+import { buildPreamble } from "@/lib/rag/preamble";
 
 /* One question→answer turn inside the chat window (BAU-Auftrag §5.4).
  * Stage 1: the answer is a placeholder rendered after a fake delay; the shape
@@ -42,13 +43,19 @@ function stripInlineCitations(text: string): string {
 export function AIAnswerBlock({
   turn,
   typewriter = false,
+  firstName = null,
   onCorrect,
   onFeedbackChange,
+  onWebSearch,
 }: {
   turn: AiTurn;
   typewriter?: boolean;
+  /** Signed-in user's first name — drives the chip personalization preamble. */
+  firstName?: string | null;
   onCorrect?: (turn: AiTurn) => void;
   onFeedbackChange?: (turnId: string, feedback: "helpful" | "not_helpful") => void;
+  /** Accept the rule-7 web-search offer for this out-of-scope turn. */
+  onWebSearch?: (turn: AiTurn) => void;
 }) {
   // Spinner until the first token; once text streams it renders live.
   const showLoading =
@@ -71,8 +78,10 @@ export function AIAnswerBlock({
           <AITurnAnswer
             turn={turn}
             typewriter={typewriter}
+            firstName={firstName}
             onCorrect={onCorrect}
             onFeedbackChange={onFeedbackChange}
+            onWebSearch={onWebSearch}
           />
         )}
       </div>
@@ -85,16 +94,26 @@ export function AIAnswerBlock({
 function AITurnAnswer({
   turn,
   typewriter,
+  firstName,
   onCorrect,
   onFeedbackChange,
+  onWebSearch,
 }: {
   turn: AiTurn;
   typewriter: boolean;
+  firstName?: string | null;
   onCorrect?: (turn: AiTurn) => void;
   onFeedbackChange?: (turnId: string, feedback: "helpful" | "not_helpful") => void;
+  onWebSearch?: (turn: AiTurn) => void;
 }) {
   const answer = turn.answer!;
   const streaming = turn.isStreaming === true;
+  // Chip personalization preamble (UI chrome, language-mirrored from the question).
+  // null for default-RAG turns. Hidden on an out-of-scope refusal — a "here is your
+  // translation" line above a "this is outside my knowledge base" answer is wrong.
+  const preamble = isOutOfScope(answer.text)
+    ? null
+    : buildPreamble(turn.chatMode, firstName ?? null, turn.question);
   // A RAG turn (streamed this session, or persisted from one) already animated
   // live via the stream — don't re-typewriter it. Legacy/non-RAG turns keep it.
   const isRagTurn = turn.isStreaming !== undefined;
@@ -121,6 +140,10 @@ function AITurnAnswer({
 
   return (
     <>
+      {/* Personalization preamble — chrome ABOVE the answer, kept out of answer.text
+          so the chip output stays clean for copy-paste. Language mirrors the input. */}
+      {preamble && <p className="ai-chat-preamble">{preamble}</p>}
+
       {/* Markdown is rendered live as tokens stream in (Claude-style) so the
           answer carries structure immediately — no raw-text-then-snap reflow.
           A blinking caret trails the text while streaming or typewriting. */}
@@ -131,22 +154,25 @@ function AITurnAnswer({
         )}
       </div>
 
-      {/* Web-Search Button (Workstream 1 skeleton — full impl in WS4) */}
-      {finished && !turn.isWebSearch && !turn.webSearchTriggered && isOutOfScope(answer.text) && (
-        <div className="ai-chat-websearch-container">
-          <button
-            type="button"
-            className="ai-chat-websearch-btn"
-            disabled
-            title="Web search arrives in Workstream 4"
-            aria-label="Enable web search (coming soon)"
-          >
-            <span className="ai-chat-websearch-icon">🌐</span>
-            <span>Yes, search the web</span>
-            <span className="ai-chat-websearch-coming-soon">(coming soon)</span>
-          </button>
-        </div>
-      )}
+      {/* Web-Search fallback — offered on a rule-7 out-of-scope refusal. Clicking it
+          fires a fresh web-search turn for the same question (handled in SearchAIBox). */}
+      {finished &&
+        !turn.isWebSearch &&
+        !turn.webSearchTriggered &&
+        onWebSearch &&
+        isOutOfScope(answer.text) && (
+          <div className="ai-chat-websearch-container">
+            <button
+              type="button"
+              className="ai-chat-websearch-btn"
+              onClick={() => onWebSearch(turn)}
+              aria-label="Search the web for this question"
+            >
+              <span className="ai-chat-websearch-icon">🌐</span>
+              <span>Yes, search the web</span>
+            </button>
+          </div>
+        )}
 
       {/* Meta row — ONE line: actions left (icon-only ghost buttons), the trust
           group right (sources toggle · separator · confidence). The confidence

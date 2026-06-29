@@ -95,7 +95,7 @@ function topCenterRoundedRect(w: number, h: number, r: number): string {
   ].join(" ");
 }
 
-export function SearchAIBox() {
+export function SearchAIBox({ firstName = null }: { firstName?: string | null }) {
   const router = useRouter();
 
   const [mode, setMode] = useState<Mode>("search");
@@ -288,7 +288,7 @@ export function SearchAIBox() {
   }, [query]);
 
   const submitAi = useCallback(
-    async (text: string) => {
+    async (text: string, opts?: { webSearch?: boolean }) => {
       const qq = text.trim();
       if (!qq) return;
 
@@ -298,10 +298,14 @@ export function SearchAIBox() {
       setChatOpen(true);
       setQuery("");
 
+      // Web search is button-triggered (the rule-7 out-of-scope fallback), not a chip:
+      // it skips the chip mode + preamble and routes to the backend "web-search" mode.
+      const webSearch = opts?.webSearch === true;
       // Consume the armed mode for THIS send, then disarm so the chip de-highlights
       // and the next dashboard query (+ chat-window follow-ups) default to normal RAG.
-      const activeMode = chatMode;
-      if (activeMode !== "default") setChatMode("default");
+      const activeMode = webSearch ? "default" : chatMode;
+      if (!webSearch && chatMode !== "default") setChatMode("default");
+      const requestMode = webSearch ? "web-search" : activeMode;
 
       // History from completed prior turns (rag-query keeps the last 10).
       const conversationHistory = turnsRef.current
@@ -321,6 +325,7 @@ export function SearchAIBox() {
           answer: { text: "", quellen: [], konfidenz: "mittel", weiss_nicht: false },
           isStreaming: true,
           chatMode: activeMode !== "default" ? activeMode : undefined,
+          isWebSearch: webSearch || undefined,
         },
       ]);
       const patchTurn = (u: Partial<AiTurn>) =>
@@ -331,7 +336,7 @@ export function SearchAIBox() {
           question: qq,
           sessionId: sessionId ?? undefined,
           conversationHistory,
-          mode: activeMode,
+          mode: requestMode,
           onEvent: (e) => {
             if (e.type === "session" && e.sessionId) {
               setSessionId(e.sessionId);
@@ -408,6 +413,18 @@ export function SearchAIBox() {
     }
     setCorrectTurn(turn);
   }, []);
+
+  // Accept the rule-7 "search the web" offer: mark the refusal turn as handled
+  // (hides the button) and fire a fresh web-search turn for the same question.
+  const handleWebSearch = useCallback(
+    (turn: AiTurn) => {
+      setTurns((prev) =>
+        prev.map((t) => (t.id === turn.id ? { ...t, webSearchTriggered: true } : t))
+      );
+      void submitAi(turn.question, { webSearch: true });
+    },
+    [submitAi]
+  );
 
   const closeChat = useCallback(() => setChatOpen(false), []);
   // New chat: reset the thread + close the window. Closing fades the panel out
@@ -638,6 +655,8 @@ export function SearchAIBox() {
         onOpenChat={handleOpenChat}
         onCorrect={handleCorrect}
         onFeedbackChange={handleFeedbackChange}
+        onWebSearch={handleWebSearch}
+        firstName={firstName}
       />
 
       {correctTurn && correctTurn.messageId && sessionId && (

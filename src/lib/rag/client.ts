@@ -283,14 +283,24 @@ export function ragToAiSource(s: RagSource): AiSource {
   };
 }
 
-/** Detects a rule-7 out-of-scope refusal — the exact phrase the system prompt
- * emits + its fragments. The frontend uses this to hide sources, mark low
- * confidence, and (Workstream 4) offer the web-search fallback. */
+/** Detects a rule-7 out-of-scope refusal across DE/EN/TR. The system prompt now
+ * mirrors the protocol phrase into the user's input language (strict-mirroring),
+ * so this matches each language's stable anchors — the web-search offer and the
+ * "outside my knowledge base" clause. The frontend uses it to hide sources, mark
+ * low confidence, and (Workstream 4) offer the web-search fallback.
+ *
+ * NB: the Turkish web-search regex starts at "nternette" (no leading İ) on purpose
+ * — JS case-insensitive matching does not fold the dotted capital İ to "i". */
 export function isOutOfScope(text: string): boolean {
   return (
-    /außerhalb meiner Wissensbasis/i.test(text) ||
-    /Ich bin airtuerk Intelligence/i.test(text) ||
-    /Soll ich im Internet recherchieren/i.test(text)
+    // Web-search offer — the signal unique to the rule-7 refusal.
+    /Soll ich im Internet recherchieren/i.test(text) || // DE
+    /search the web/i.test(text) || // EN
+    /nternette ara[şs]t[ıi]r/i.test(text) || // TR ("İnternette araştır…")
+    // "outside my knowledge base" clause.
+    /außerhalb meiner Wissensbasis/i.test(text) || // DE
+    /outside my knowledge base/i.test(text) || // EN
+    /bilgi taban[ıi]m[ıi]n d[ıi][şs][ıi]nda/i.test(text) // TR
   );
 }
 
@@ -298,7 +308,14 @@ export function isOutOfScope(text: string): boolean {
  * Phase-2 backlog: compute from rerank scores + retrieval count. */
 export function inferKonfidenz(text: string, weissNicht: boolean): AiKonfidenz {
   if (weissNicht) return "niedrig";
-  if (text.includes("nicht eindeutig hervor")) return "niedrig";
+  // Rule-3 "unclear from our sources" hedge, mirrored across DE/EN/TR.
+  if (
+    /nicht eindeutig hervor/i.test(text) || // DE
+    /not clearly stated in our sources/i.test(text) || // EN
+    /net olarak belirtilmemiş/i.test(text) // TR
+  ) {
+    return "niedrig";
+  }
   if (isOutOfScope(text)) return "niedrig";
   if (/\[Quellen?:/.test(text)) return "hoch";
   return "mittel";

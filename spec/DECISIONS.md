@@ -778,6 +778,20 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-106 — AI UX wave: Sonnet generation, chip preamble, strict language mirroring, working web-search fallback
+**Date:** 2026-06-29
+**Status:** Shipped to `main` + deployed (frontend → Vercel; `rag-query` redeployed v14). Code + edge-function only — no migration, no schema change.
+**Context:** Four owner-requested improvements to the airtuerk Intelligence surface, shipped together.
+**Decisions:**
+- **Model Opus 4.8 → Sonnet 4.6.** `ANTHROPIC_MODEL` in `rag-query` switched to `claude-sonnet-4-6` (supersedes the D-060 Opus choice). Same request surface (no temperature / thinking / prefill) → a pure model-ID swap; Sonnet 4.6 is also the floor for the `web_search_20260209` tool below. ⚠️ Re-run `scripts/rag-eval.ts` to re-baseline genuine quality on Sonnet — the D-104 86.9% was measured on Opus.
+- **AI-Mode-Chip personalization preamble.** Chip results (translate / mail / summary / escalation) now render a greeting — "Hallo {Vorname}, hier ist {…}:" — as **UI chrome above** the answer (`src/lib/rag/preamble.ts` + `AIAnswerBlock`), never inside `answer.text`, so the copy-paste payload stays clean. Language mirrors the input (DE/EN/TR heuristic); `firstName` threaded from `getIdentity` via `page.tsx`.
+- **Strict language mirroring.** Rules 3/7/8 in `rag-query` (uncertainty / out-of-scope / identity) made multilingual (DE/EN/TR variants) instead of hard-forced German; the Rule 4 "always German" exception removed. Mode prompts (summarize / escalation) hardened to mirror strictly (observed English→German miss). Frontend `isOutOfScope` + `inferKonfidenz` upgraded to detect all three languages (else EN/TR refusals lose the web-search button + low-confidence marking).
+- **Working web-search fallback (Workstream 4).** New `web-search` mode runs Claude with the Anthropic-hosted `web_search_20260209` server tool under a focused, language-mirrored prompt (no corpus, no team tool). The previously-disabled "Yes, search the web" button (the rule-7 offer) now fires a fresh web-search turn for the same question. Known v1 limits: a `pause_turn` (10-search cap) ends the turn without continuation; web source-chips not captured (the answer carries its own source mentions).
+**Gates:** `pnpm typecheck` + `pnpm build` green; frontend browser-verified (preamble DE/EN, button enabled + wired); prod verified post-deploy.
+**Reversibility:** revert the commit (frontend) + redeploy prior `rag-query` (v13 = Opus 4.8, German-only protocol phrases, no web search). No schema to roll back.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

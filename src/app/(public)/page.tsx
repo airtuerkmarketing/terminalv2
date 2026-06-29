@@ -30,7 +30,7 @@ export default async function Home() {
             stays in normal flow below it. */}
         <div className="dh-hero">
           <GreetingOrbit name={firstName} />
-          <SearchAIBox />
+          <SearchAIBox firstName={firstName} />
         </div>
         <QuickGrabs />
       </div>

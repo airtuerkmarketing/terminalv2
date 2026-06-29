@@ -5,7 +5,7 @@
 //
 // Flow: embed question (Voyage, 5s timeout) -> create/reuse session + log user
 // msg (BEFORE retrieval, so weiss-nicht is correctable) -> rag_hybrid_search ->
-// identity-reserved rerank (Voyage rerank-2.5) -> stream Claude Opus 4.8 (NO
+// identity-reserved rerank (Voyage rerank-2.5) -> stream Claude Sonnet 4.6 (NO
 // temperature / NO thinking) with pre-inserted assistant row + finally-update.
 //
 // Integrated review-corrections:
@@ -31,7 +31,11 @@ const EMBED_TIMEOUT_MS = 5000
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 const ANTHROPIC_VERSION = '2023-06-01'
-const ANTHROPIC_MODEL = 'claude-opus-4-8'
+// Generation model. D-060 originally chose Opus 4.8; switched to Sonnet 4.6 per
+// owner request. Sonnet 4.6 keeps the same request surface used here (no
+// temperature / thinking / prefill) and supports the web_search_20260209 server
+// tool used by the web-search fallback mode below.
+const ANTHROPIC_MODEL = 'claude-sonnet-4-6'
 const ANTHROPIC_MAX_TOKENS = 4096
 
 const RETRIEVAL_VECTOR_K = 60
@@ -83,6 +87,16 @@ const TEAM_DIRECTORY_TOOL = {
   },
 }
 
+// Server-side web search (Anthropic-hosted). Used ONLY by the web-search fallback
+// mode — fired when the user accepts the rule-7 "Soll ich im Internet recherchieren?"
+// offer on an out-of-scope question. web_search_20260209 (dynamic filtering) requires
+// Sonnet 4.6+ / Opus 4.6+; no beta header. max_uses bounds searches (and cost) per request.
+const WEB_SEARCH_TOOL = {
+  type: 'web_search_20260209',
+  name: 'web_search',
+  max_uses: 5,
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -94,7 +108,15 @@ const EXPOSE_HEADERS = 'X-Session-Id, X-Message-Id, X-Weiss-Nicht'
 // KI sub-modes (mode-chips, D-072). The 3 utility modes operate on the user's
 // pasted text only, so they bypass RAG retrieval + the team-directory tool and run
 // a focused system prompt; 'default' + 'escalation' keep the full pipeline.
-type ChatMode = 'default' | 'rewrite-mail' | 'translate' | 'summarize' | 'escalation'
+type ChatMode =
+  | 'default'
+  | 'rewrite-mail'
+  | 'translate'
+  | 'summarize'
+  | 'escalation'
+  // Button-triggered fallback when the user accepts the rule-7 "shall I search the
+  // web?" offer on an out-of-scope question. Bypasses RAG; uses the web_search tool.
+  | 'web-search'
 const RAG_BYPASS_MODES: ReadonlySet<ChatMode> = new Set([
   'rewrite-mail',
   'translate',
@@ -174,6 +196,29 @@ Deno.serve(async (req: Request) => {
         sessionId: activeSessionId,
         retrievedChunks: [],
         allowTools: false,
+      })
+    }
+
+    // === Mode branch: web-search fallback (out-of-scope -> live internet) ===
+    // The corpus has nothing for these questions, so skip embed/retrieval/rerank and
+    // the team-directory tool; run Claude with the web_search server tool and a focused,
+    // language-mirrored prompt. Session + user-message still logged (correctable id).
+    if (mode === 'web-search') {
+      const activeSessionId = await ensureSessionAndLog(
+        supabaseService,
+        session_id,
+        user.id,
+        question,
+      )
+      return await streamClaudeResponse({
+        systemPrompt: WEB_SEARCH_PROMPT,
+        messages: buildConversation(conversation_history, question),
+        anthropicKey,
+        supabaseService,
+        sessionId: activeSessionId,
+        retrievedChunks: [],
+        allowTools: false,
+        webSearch: true,
       })
     }
 
@@ -437,7 +482,7 @@ Der Nutzer-Input ist ein zu übersetzender Text. Deine Aufgabe:
 const SUMMARIZE_PROMPT = `${MODE_INTRO} Du arbeitest im **Kurzfass-Modus**.
 
 Der Nutzer-Input ist ein längerer Text (E-Mail-Verlauf, Dokument, Notizen). Deine Aufgabe:
-1. Erkenne die Sprache des Inputs und antworte in dieser Sprache.
+1. Erkenne die Sprache des Inputs (Deutsch, Englisch oder Türkisch) und antworte AUSSCHLIESSLICH in GENAU dieser Sprache — niemals in einer anderen. Ist der Input Englisch, ist die Zusammenfassung Englisch; ist er Türkisch, Türkisch.
 2. Fasse den Kern in 2–5 prägnanten Punkten zusammen. Gibt es klare To-Dos oder Fristen, liste sie separat unter "Nächste Schritte".
 3. Behalte alle entscheidungsrelevanten Fakten, Zahlen, Fristen und Namen exakt bei. Erfinde nichts hinzu.
 4. Keine Einleitung wie "Hier ist die Zusammenfassung" — geh direkt in den Inhalt.`
@@ -462,10 +507,21 @@ const ESCALATION_SUFFIX = `
 
 # Sondermodus: Eskalations-Antwort (für diese Anfrage aktiv)
 Der Nutzer-Input ist eine Kunden-Beschwerde oder eine eskalierte Anfrage. Zusätzlich zu allen obigen Regeln:
-- Erkenne die Sprache des Inputs und entwirf die Antwort in dieser Sprache.
+- Erkenne die Sprache des Inputs (Deutsch, Englisch oder Türkisch) und entwirf die Antwort AUSSCHLIESSLICH in GENAU dieser Sprache — niemals in einer anderen.
 - Entwirf eine diplomatische, deeskalierende Kundenmail: zeige Verständnis, übernimm Verantwortung dort wo angebracht, und biete konkrete nächste Schritte oder eine Lösung an — ohne Schuldeingeständnisse über das Belegte hinaus.
 - Nutze die bereitgestellten Quellen und das Team-Verzeichnis, um die richtige Zuständigkeit/Eskalationsstufe und reale Kontaktwege zu nennen (beachte die Telefonnummern-Politik).
 - Gib den fertigen Antwort-Entwurf aus. Eine kurze Zeile zur empfohlenen internen Eskalation darf vorangestellt werden, klar getrennt vom eigentlichen Mail-Text.`
+
+// Web-search fallback prompt. The user explicitly asked to search the internet after
+// an out-of-scope refusal, so RAG/corpus rules don't apply — answer from live results.
+const WEB_SEARCH_PROMPT = `${MODE_INTRO} Du arbeitest im **Web-Recherche-Modus**.
+
+Die Frage des Nutzers liegt außerhalb der internen airtuerk-Wissensbasis, daher recherchierst du jetzt im Internet.
+
+1. Erkenne die Sprache der Frage (Deutsch, Englisch oder Türkisch) und antworte AUSSCHLIESSLICH in GENAU dieser Sprache — niemals in einer anderen.
+2. Nutze die Websuche, um aktuelle und korrekte Informationen zu finden. Stütze deine Antwort auf die Suchergebnisse, nicht auf Vermutungen.
+3. Nenne am Ende die wichtigsten Quellen, auf die du dich stützt (Website-Name bzw. URL).
+4. Fasse dich präzise. Liefert die Suche keine verlässliche Antwort, sage das ehrlich, statt zu raten.`
 
 // ============ System prompt ============
 function buildSystemPrompt(chunks: RetrievedChunk[]): string {
@@ -517,23 +573,30 @@ ${facts}
 
 2. **Quellen-Zitation:** Nenne nach jeder faktischen Aussage die Quelle in Klammern: [Quelle: <SourceLabel>]. Mehrere: [Quellen: A, B].
 
-3. **Unsicherheit innerhalb der Wissensbasis:** Wenn die Quellen keine eindeutige Antwort enthalten (Frage ist airtuerk-bezogen, aber Details fehlen), sage explizit: "Das geht aus unseren Quellen nicht eindeutig hervor. Ich empfehle, Murat Sinim (Head of Operations) oder das Service-Team direkt anzusprechen."
+3. **Unsicherheit innerhalb der Wissensbasis:** Wenn die Quellen keine eindeutige Antwort enthalten (Frage ist airtuerk-bezogen, aber Details fehlen), sage das explizit — in der Sprache der Frage. Nutze je nach Frage-Sprache exakt eine dieser Formulierungen:
+   - Deutsch: "Das geht aus unseren Quellen nicht eindeutig hervor. Ich empfehle, Murat Sinim (Head of Operations) oder das Service-Team direkt anzusprechen."
+   - Englisch: "This is not clearly stated in our sources. I recommend reaching out to Murat Sinim (Head of Operations) or the Service team directly."
+   - Türkisch: "Bu, kaynaklarımızda net olarak belirtilmemiş. Doğrudan Murat Sinim (Head of Operations) veya Servis ekibine danışmanızı öneririm."
 
-4. **Sprache:** Antworte in der Sprache, in der die aktuelle Frage des Nutzers gestellt ist (Deutsch, Englisch oder Türkisch). Erkenne die Sprache der Frage und antworte in GENAU dieser Sprache. Die Quellen sind überwiegend auf Deutsch — übertrage die relevanten Fakten in die Antwortsprache. Fachbegriffe (Konti, PNR, Refund, NDC) bleiben in Originalsprache. AUSNAHME: Die exakt vorgegebenen Protokoll-Phrasen in Regel 7 (außerhalb der Wissensbasis) und Regel 8 (Identität) bleiben IMMER wörtlich auf Deutsch wie angegeben, unabhängig von der Frage-Sprache.
+4. **Sprache (strikt — Spiegelung):** Antworte AUSSCHLIESSLICH in der Sprache, in der die aktuelle Frage des Nutzers gestellt ist (Deutsch, Englisch oder Türkisch). Erkenne die Sprache der aktuellen Frage und antworte in GENAU dieser Sprache — das gilt OHNE AUSNAHME auch für die festen Protokoll-Phrasen in den Regeln 3, 7 und 8 (dort steht je eine Formulierung pro Sprache; wähle die zur Frage-Sprache passende). Die Quellen sind überwiegend auf Deutsch — übertrage die relevanten Fakten in die Antwortsprache. Fachbegriffe (Konti, PNR, Refund, NDC) bleiben in Originalsprache.
 
 5. **Struktur:** Kurze, präzise Antworten. Detaillierte Formatierungsregeln im Abschnitt „Antwort-Formatierung" unten.
 
 6. **Keine Marketing-Sprache.** Professionell und faktisch.
 
-7. **Außerhalb der Wissensbasis (komplett nicht-airtuerk-relevant):** Wenn die Frage komplett außerhalb des airtuerk-Kontextes liegt (Wetter, Geographie, Sport, allgemeine Welt-Fakten, Mathematik, etc.), antworte EXAKT mit dieser Phrase:
+7. **Außerhalb der Wissensbasis (komplett nicht-airtuerk-relevant):** Wenn die Frage komplett außerhalb des airtuerk-Kontextes liegt (Wetter, Geographie, Sport, allgemeine Welt-Fakten, Mathematik, etc.), antworte EXAKT mit der zur Frage-Sprache passenden Phrase:
 
-"Diese Frage liegt außerhalb meiner Wissensbasis. Ich bin airtuerk Intelligence — die interne KI der airtuerk Service GmbH. Soll ich im Internet recherchieren?"
+- Deutsch: "Diese Frage liegt außerhalb meiner Wissensbasis. Ich bin airtuerk Intelligence — die interne KI der airtuerk Service GmbH. Soll ich im Internet recherchieren?"
+- Englisch: "This question is outside my knowledge base. I am airtuerk Intelligence — the internal AI of airtuerk Service GmbH. Should I search the web?"
+- Türkisch: "Bu soru bilgi tabanımın dışında. Ben airtuerk Intelligence — airtuerk Service GmbH'nin dahili yapay zekâsıyım. İnternette araştırmamı ister misiniz?"
 
-WICHTIG: Verwende EXAKT diese Formulierung. Das Frontend erkennt sie und wird einen Button "Ja, im Web suchen" anbieten.
+WICHTIG: Verwende EXAKT die passende Formulierung (gleiche Sprache wie die Frage). Das Frontend erkennt sie und bietet einen Button "Ja, im Web suchen" an.
 
-8. **Identitätsfragen:** Bei Fragen wie "Wer hat dich gebaut?", "Wer hat dich entwickelt?", "Wer ist dein Schöpfer?", "Wer steckt hinter dir?", antworte EXAKT:
+8. **Identitätsfragen:** Bei Fragen wie "Wer hat dich gebaut?", "Wer hat dich entwickelt?", "Wer ist dein Schöpfer?", "Wer steckt hinter dir?", antworte mit der zur Frage-Sprache passenden Phrase:
 
-"Ich wurde von Buhara Demir für die airtuerk Service GmbH entwickelt — als interne Wissens-KI für das gesamte airtuerk Team."
+- Deutsch: "Ich wurde von Buhara Demir für die airtuerk Service GmbH entwickelt — als interne Wissens-KI für das gesamte airtuerk Team."
+- Englisch: "I was developed by Buhara Demir for airtuerk Service GmbH — as an internal knowledge AI for the entire airtuerk team."
+- Türkisch: "Buhara Demir tarafından airtuerk Service GmbH için geliştirildim — tüm airtuerk ekibi için dahili bir bilgi yapay zekâsı olarak."
 
 9. **Telefonnummern-Politik (strikt):**
 
@@ -576,8 +639,9 @@ Gut: "Private oder Handy-Nummern stehen mir nicht zur Verfügung. Du kannst Oruc
 Frage: "Wie kann ich Ümit Bey erreichen?"
 Gut: "Die direkte Telefonnummer von Ümit Tenekeci habe ich nicht. Du kannst ihm eine Mail an utenekeci@airtuerk.de schreiben oder über die Office-Managerin Ayten Koc gehen."
 
-Frage: "Was ist die Hauptstadt von Mars?"
-Gut: "Diese Frage liegt außerhalb meiner Wissensbasis. Ich bin airtuerk Intelligence — die interne KI der airtuerk Service GmbH. Soll ich im Internet recherchieren?"`
+Frage (Deutsch): "Was ist die Hauptstadt von Mars?"
+Gut: "Diese Frage liegt außerhalb meiner Wissensbasis. Ich bin airtuerk Intelligence — die interne KI der airtuerk Service GmbH. Soll ich im Internet recherchieren?"
+(Bei einer englischen Frage gibst du dieselbe Phrase in der englischen Variante aus, bei einer türkischen in der türkischen — siehe Regel 7.)`
 }
 
 // ============ Conversation ============
@@ -605,6 +669,7 @@ async function streamClaudeResponse({
   sessionId,
   retrievedChunks,
   allowTools = true,
+  webSearch = false,
 }: {
   systemPrompt: string
   messages: Array<{ role: 'user' | 'assistant'; content: string }>
@@ -613,6 +678,7 @@ async function streamClaudeResponse({
   sessionId: string
   retrievedChunks: RetrievedChunk[]
   allowTools?: boolean
+  webSearch?: boolean
 }): Promise<Response> {
   const startTime = Date.now()
 
@@ -643,10 +709,17 @@ async function streamClaudeResponse({
   // content for assistant tool_use turns + user tool_result turns).
   const convo: Array<{ role: 'user' | 'assistant'; content: unknown }> = [...messages]
 
-  // C1: NO temperature, NO thinking, NO output_config.effort. Tools offered until the
-  // round cap; the final (capped) turn omits them so Claude must answer with text.
-  const callClaude = (offerTools: boolean) =>
-    fetch(ANTHROPIC_URL, {
+  // C1: NO temperature, NO thinking, NO output_config.effort. The client-side
+  // team-directory tool is offered until the round cap (the final capped turn omits
+  // it so Claude must answer with text). The server-side web_search tool, when
+  // enabled, is offered on every turn — Anthropic runs it server-side, so it is not
+  // bounded by our client-tool round cap (its own cap surfaces as stop_reason
+  // 'pause_turn', which the loop treats as the final turn).
+  const callClaude = (offerTools: boolean) => {
+    const tools: unknown[] = []
+    if (offerTools) tools.push(TEAM_DIRECTORY_TOOL)
+    if (webSearch) tools.push(WEB_SEARCH_TOOL)
+    return fetch(ANTHROPIC_URL, {
       method: 'POST',
       headers: {
         'x-api-key': anthropicKey,
@@ -659,9 +732,10 @@ async function streamClaudeResponse({
         system: systemPrompt,
         messages: convo,
         stream: true,
-        ...(offerTools ? { tools: [TEAM_DIRECTORY_TOOL] } : {}),
+        ...(tools.length ? { tools } : {}),
       }),
     })
+  }
 
   // First call OUTSIDE the stream so an early API failure still returns a clean HTTP
   // 500 (and deletes the empty row) instead of a half-open stream — preserves the
