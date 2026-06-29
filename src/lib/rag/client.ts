@@ -175,6 +175,28 @@ export async function submitMessageFeedback(
   if (error) throw error;
 }
 
+/**
+ * Rename one of the caller's own AI-chat sessions. Like the other per-user chat
+ * writes here, it goes through the browser RLS client — the `sessions_own_update`
+ * policy (user_id = auth.uid()) is the real gate, so a user physically cannot
+ * rename someone else's session. Empty/whitespace title → stored as null (the UI
+ * falls back to the derived first-question title). Returns the stored value.
+ */
+export async function renameChatSession(
+  sessionId: string,
+  title: string,
+): Promise<{ title: string | null }> {
+  const supabase = createClient();
+  const trimmed = title.trim();
+  const value = trimmed.length > 0 ? trimmed.slice(0, 120) : null;
+  const { error } = await supabase
+    .from("ai_chat_sessions")
+    .update({ title: value })
+    .eq("id", sessionId);
+  if (error) throw error;
+  return { title: value };
+}
+
 export interface CorrectionSubmission {
   sessionId: string;
   messageId: number;

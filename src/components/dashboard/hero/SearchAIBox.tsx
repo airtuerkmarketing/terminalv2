@@ -36,6 +36,7 @@ import {
   ragToAiSource,
   inferKonfidenz,
   isOutOfScope,
+  renameChatSession,
 } from "@/lib/rag/client";
 
 // Chat + correction surfaces are below-the-fold interaction islands: load them as
@@ -104,6 +105,10 @@ export function SearchAIBox() {
   const [model, setModel] = useState(DEFAULT_MODEL_ID);
   const [chatOpen, setChatOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  // User-set chat title (optimistic). Overrides the derived first-question title
+  // for the lifetime of the session; the rename is persisted to the DB in the
+  // background. Re-hydrating the DB title for old chats is a later stage.
+  const [titleOverride, setTitleOverride] = useState<string | null>(null);
   const [correctTurn, setCorrectTurn] = useState<AiTurn | null>(null);
   const [chatMode, setChatMode] = useState<ChatMode>("default");
 
@@ -182,6 +187,7 @@ export function SearchAIBox() {
       skipPersist.current = true; // don't immediately re-persist the cleared state
       setTurns([]);
       setSessionId(null);
+      setTitleOverride(null);
     };
 
     let lastUserId: string | null | undefined;
@@ -403,7 +409,25 @@ export function SearchAIBox() {
   const closeChat = useCallback(() => setChatOpen(false), []);
   // Reset the thread: clearing turns lets the persist effect write [] back to
   // terminal_chat_history (the "Neuer Chat" button guards this behind a confirm).
-  const newChat = useCallback(() => setTurns([]), []);
+  const newChat = useCallback(() => {
+    setTurns([]);
+    setTitleOverride(null);
+  }, []);
+
+  // Optimistic rename: show the new title immediately, persist in the background,
+  // roll back on failure. RLS gates the write (sessions_own_update).
+  const handleRename = useCallback(
+    async (sid: string, title: string) => {
+      const prev = titleOverride;
+      setTitleOverride(title);
+      try {
+        await renameChatSession(sid, title);
+      } catch {
+        setTitleOverride(prev); // rollback
+      }
+    },
+    [titleOverride],
+  );
 
   const selectHit = useCallback(
     (hit: SearchHit) => {
@@ -587,9 +611,12 @@ export function SearchAIBox() {
       <AIChatWindow
         open={chatOpen}
         turns={turns}
+        sessionId={sessionId}
+        titleOverride={titleOverride}
         onClose={closeChat}
         onSubmit={submitAi}
         onNewChat={newChat}
+        onRename={handleRename}
         onCorrect={handleCorrect}
         onFeedbackChange={handleFeedbackChange}
       />

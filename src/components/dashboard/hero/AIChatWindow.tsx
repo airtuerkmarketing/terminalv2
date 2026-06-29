@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowUp, ChevronDown, History, Plus, X } from "lucide-react";
+import { ArrowUp, ChevronDown, Edit3, History, Plus, X } from "lucide-react";
 import { AIAnswerBlock } from "@/components/dashboard/hero/AIAnswerBlock";
 import type { AiTurn } from "@/lib/search/types";
 
@@ -17,9 +17,12 @@ import type { AiTurn } from "@/lib/search/types";
 interface Props {
   open: boolean;
   turns: AiTurn[];
+  sessionId?: string | null;
+  titleOverride?: string | null;
   onClose: () => void;
   onSubmit: (text: string) => void;
   onNewChat: () => void;
+  onRename?: (sessionId: string, title: string) => void;
   onCorrect?: (turn: AiTurn) => void;
   onFeedbackChange?: (turnId: string, feedback: "helpful" | "not_helpful") => void;
 }
@@ -27,9 +30,12 @@ interface Props {
 export function AIChatWindow({
   open,
   turns,
+  sessionId,
+  titleOverride,
   onClose,
   onSubmit,
   onNewChat,
+  onRename,
   onCorrect,
   onFeedbackChange,
 }: Props) {
@@ -164,11 +170,25 @@ export function AIChatWindow({
   }
 
   // Header context (local turns-state only — no fetch, no timestamp this stage).
-  // Title = the first question (CSS-ellipsised, not JS-sliced, so it stays
-  // responsive); falls back to the product name on an empty chat.
-  const firstQuestion = turns[0]?.question?.trim() || "";
-  const chatTitle = firstQuestion || "airtuerk Intelligence";
+  // Title priority: a user-set override > the first question > product-name
+  // fallback. Ellipsis is CSS, not JS-slice, so it stays responsive.
+  const derivedTitle = turns[0]?.question?.trim() || "";
+  const displayTitle = titleOverride ?? (derivedTitle || "airtuerk Intelligence");
   const messageCount = turns.length;
+  // Inline rename: only once the session exists (a fresh thread has no id to
+  // write to). The pencil reveals on hover; Enter/blur commit, Esc cancels.
+  const canEdit = !!sessionId && turns.length > 0;
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  function startEdit() {
+    setEditValue(displayTitle);
+    setEditing(true);
+  }
+  function commitEdit() {
+    const v = editValue.trim();
+    setEditing(false);
+    if (v && v !== displayTitle && sessionId) onRename?.(sessionId, v);
+  }
 
   return (
     <aside
@@ -194,7 +214,41 @@ export function AIChatWindow({
             <History className="ai-chat-history-icon" aria-hidden="true" />
           </button>
           <div className="ai-chat-header-title">
-            <span className="ai-chat-header-title-text">{chatTitle}</span>
+            {editing ? (
+              <input
+                className="ai-chat-header-title-input"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                autoFocus
+                onFocus={(e) => e.currentTarget.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitEdit();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setEditing(false);
+                  }
+                }}
+                onBlur={commitEdit}
+                aria-label="Chat title"
+              />
+            ) : (
+              <div className="ai-chat-header-title-row">
+                <span className="ai-chat-header-title-text">{displayTitle}</span>
+                {canEdit && (
+                  <button
+                    type="button"
+                    className="ai-chat-header-edit"
+                    onClick={startEdit}
+                    aria-label="Titel umbenennen"
+                    title="Rename"
+                  >
+                    <Edit3 aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            )}
             {messageCount > 0 && (
               <span className="ai-chat-header-meta">
                 {messageCount} {messageCount === 1 ? "Nachricht" : "Nachrichten"}
