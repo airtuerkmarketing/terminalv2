@@ -131,8 +131,7 @@ export function QuickGrabs() {
       e.currentTarget.setPointerCapture(drag.current.pointerId);
       setDragging(true);
     }
-    // Rubber-band at the (non-wrapping) ends so dragging into the void resists.
-    if ((active === 0 && dx > 0) || (active === count - 1 && dx < 0)) dx *= 0.35;
+    // No edge resistance — the carousel loops, so every direction has a neighbour.
     drag.current.dx = dx;
     setDragOffsetPx(dx);
   }
@@ -140,13 +139,26 @@ export function QuickGrabs() {
   function endDrag(e: React.PointerEvent<HTMLDivElement>) {
     if (drag.current.pointerId === -1) return;
     if (drag.current.moved) {
-      const width = trackRef.current?.offsetWidth ?? 1;
+      const el = trackRef.current;
+      const width = el?.offsetWidth ?? 1;
       const threshold = Math.max(SWIPE_MIN_PX, width * SWIPE_RATIO);
       const dx = drag.current.dx;
-      // Clamp (don't wrap) on drag: dragging past the first/last slide snaps back.
-      // The arrow / dots / auto-advance keep their existing wrap behaviour.
-      if (dx <= -threshold && active < count - 1) setActive(active + 1);
-      else if (dx >= threshold && active > 0) setActive(active - 1);
+      // Loop on drag like the arrow/dots: go() wraps (go(-1)→last, go(count)→0),
+      // so no edge clamping. dir 0 = below threshold → snap back to current.
+      const dir = dx <= -threshold ? 1 : dx >= threshold ? -1 : 0;
+      if (dir !== 0) {
+        const target = ((active + dir) % count + count) % count;
+        // A wrap (first↔last) jumps more than one slide. With the normal 420ms
+        // transition the strip would glide the "wrong" way across the middle
+        // slide(s); snap it instantly instead (forced reflow commits the jump
+        // before React re-enables the transition) for a clean cut.
+        if (el && Math.abs(target - active) > 1) {
+          el.style.transition = "none";
+          el.style.transform = `translateX(-${target * 100}%)`;
+          void el.offsetWidth;
+        }
+        go(active + dir);
+      }
       if (e.currentTarget.hasPointerCapture(drag.current.pointerId)) {
         e.currentTarget.releasePointerCapture(drag.current.pointerId);
       }
