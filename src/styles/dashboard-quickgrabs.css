@@ -35,7 +35,7 @@
 .car-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
 .car-scrim {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.10) 55%, transparent 100%);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.06) 55%, transparent 100%);
 }
 .car-art {
   position: absolute; right: 0; top: 50%; transform: translateY(-50%);
@@ -46,8 +46,8 @@
 .car-content {
   position: relative; z-index: 3;
   width: 384px; max-width: 70%;
-  padding: var(--space-8);
-  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-2);
+  padding: var(--space-8); /* 32px — Figma top+left corner inset */
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: var(--space-2);
   color: #fff;
 }
 /* Rounded-square badge (NOT a circle), white, hairline outline + soft shadow. */
@@ -71,7 +71,7 @@
 
 /* Pagination dots — bottom-left pill on the card. */
 .qg-dots {
-  position: absolute; bottom: 16px; left: 16px; z-index: 3;
+  position: absolute; bottom: 24px; left: 24px; z-index: 3;
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 8px; border-radius: var(--radius-full);
   background: rgba(0, 0, 0, 0.18); backdrop-filter: blur(8px);
@@ -82,10 +82,9 @@
 }
 .qg-dot.is-active { background: #fff; }
 
-/* Prev / next arrows — paired bottom-right (out of the left text column, which
-   the old vertically-centred prev arrow overlapped). */
+/* Prev / next arrows — vertically centred on each edge (standard carousel). */
 .qg-arrow {
-  position: absolute; bottom: 16px; z-index: 3;
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
   width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer;
   background: rgba(0, 0, 0, 0.12); backdrop-filter: blur(8px);
   color: #fff; display: grid; place-items: center;
@@ -93,8 +92,8 @@
 }
 .qg-arrow:hover { background: rgba(0, 0, 0, 0.22); }
 .qg-arrow svg { width: 18px; height: 18px; }
+.qg-arrow-prev { left: 16px; right: auto; }
 .qg-arrow-next { right: 16px; }
-.qg-arrow-prev { right: 56px; } /* 32px arrow + 8px gap, sits left of next */
 
 /* ── Brand tabs ── */
 .qg-tabs { display: flex; flex-wrap: wrap; gap: var(--space-2); border-bottom: 1px solid var(--separator); padding-bottom: var(--space-3); }
