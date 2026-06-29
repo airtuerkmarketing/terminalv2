@@ -1,10 +1,34 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChevronRight,
+  FileText,
+  Files,
+  GalleryVerticalEnd,
+  IdCard,
+  Image as ImageIcon,
+  Palette,
+  PenLine,
+  Presentation,
+} from "lucide-react";
 import "@/styles/dashboard-quickgrabs.css";
 import { NavIcon } from "@/components/shell/icons";
-import { QUICK_GRABS, BRAND_TABS, type QuickGrabCard } from "./quickgrabs-data";
+import {
+  QUICK_GRABS,
+  BRAND_TABS,
+  FEATURED_ROWS,
+  TOOLS_ROWS,
+  TEMPLATES_ROWS,
+  type QuickGrabCard,
+  type QGRow,
+} from "./quickgrabs-data";
+
+const ROWS_BY_TAB: Record<string, QGRow[]> = {
+  featured: FEATURED_ROWS,
+  tools: TOOLS_ROWS,
+  templates: TEMPLATES_ROWS,
+};
 
 const AUTO_MS = 5000;
 
@@ -37,6 +61,22 @@ function QGBadgeIcon({ icon }: { icon: QuickGrabCard["icon"] }) {
   );
 }
 
+/** Coin glyph for the Featured/Tools/Templates rows. lucide 1.18.0 has no
+ *  Linkedin brand icon → IdCard (profile) stands in for "LinkedIn banner". */
+function QGRowIcon({ icon }: { icon: string }) {
+  switch (icon) {
+    case "presentation": return <Presentation aria-hidden />;
+    case "image": return <ImageIcon aria-hidden />;
+    case "palette": return <Palette aria-hidden />;
+    case "files": return <Files aria-hidden />;
+    case "pen": return <PenLine aria-hidden />;
+    case "file-text": return <FileText aria-hidden />;
+    case "linkedin": return <IdCard aria-hidden />;
+    case "gallery": return <GalleryVerticalEnd aria-hidden />;
+    default: return <Files aria-hidden />;
+  }
+}
+
 export function QuickGrabs() {
   const count = QUICK_GRABS.length;
   const [active, setActive] = useState(0);
@@ -44,7 +84,6 @@ export function QuickGrabs() {
 
   const go = useCallback((i: number) => setActive(((i % count) + count) % count), [count]);
   const next = useCallback(() => go(active + 1), [go, active]);
-  const prev = useCallback(() => go(active - 1), [go, active]);
 
   // Auto-advance every 5s, paused on hover. Skipped entirely under reduced motion.
   useEffect(() => {
@@ -56,9 +95,9 @@ export function QuickGrabs() {
   }, [count]);
 
   const [tab, setTab] = useState("all");
-  // Tab-Inhalte für Vorgestellt/Tools/Vorlagen folgen später — vorerst zeigt nur
-  // "Alle Marken" die Markenliste, die anderen Tabs eine leere Platzhalter-Liste.
-  const rows = tab === "all" ? BRAND_TABS : [];
+  // "all" → brand list (NavIcon); the other tabs → curated QGRows (QGRowIcon).
+  const qgRows = tab === "all" ? [] : ROWS_BY_TAB[tab] ?? [];
+  const isEmpty = tab === "all" ? BRAND_TABS.length === 0 : qgRows.length === 0;
 
   return (
     <section className="qg-section" aria-label="Quick Grabs">
@@ -88,7 +127,16 @@ export function QuickGrabs() {
                 <span className="car-badge"><QGBadgeIcon icon={c.icon} /></span>
                 <h3 className="car-title">{c.title}</h3>
                 <p className="car-sub">{c.sub}</p>
-                <a className="car-cta" href={c.href}>{c.cta}</a>
+                {/* Stretched link: .car-cta::after covers the whole card (CSS).
+                    Guard a placeholder "#" href so it doesn't scroll-jump; real
+                    deep-links navigate normally. */}
+                <a
+                  className="car-cta"
+                  href={c.href}
+                  onClick={(e) => { if (c.href === "#") e.preventDefault(); }}
+                >
+                  {c.cta}
+                </a>
               </div>
             </article>
           ))}
@@ -107,15 +155,13 @@ export function QuickGrabs() {
           ))}
         </div>
 
-        <button type="button" className="qg-arrow qg-arrow-prev" aria-label="Previous" onClick={prev}>
-          <ChevronLeft aria-hidden />
-        </button>
+        {/* Next only — stepping back is via the dots. */}
         <button type="button" className="qg-arrow qg-arrow-next" aria-label="Next" onClick={next}>
           <ChevronRight aria-hidden />
         </button>
       </div>
 
-      {/* ── Tabs (content for Vorgestellt/Tools/Vorlagen follows later) ── */}
+      {/* ── Tabs ── */}
       <div className="qg-tabs" role="tablist">
         {QG_TABS.map((t) => (
           <button
@@ -132,21 +178,32 @@ export function QuickGrabs() {
       </div>
 
       <ul className="qg-brand-list">
-        {rows.map((b) => (
-          <li key={b.slug}>
-            <a className="qg-brand-row" href={b.href}>
-              <span className="qg-brand-coin"><NavIcon name={b.slug} /></span>
-              <span className="qg-brand-meta">
-                <span className="qg-brand-name">{b.label}</span>
-                <span className="qg-brand-desc">{b.description}</span>
-              </span>
-              <ChevronRight className="qg-brand-chevron" aria-hidden />
-            </a>
-          </li>
-        ))}
-        {rows.length === 0 ? (
-          <li className="qg-brand-empty">Content coming soon.</li>
-        ) : null}
+        {tab === "all"
+          ? BRAND_TABS.map((b) => (
+              <li key={b.slug}>
+                <a className="qg-brand-row" href={b.href}>
+                  <span className="qg-brand-coin"><NavIcon name={b.slug} /></span>
+                  <span className="qg-brand-meta">
+                    <span className="qg-brand-name">{b.label}</span>
+                    <span className="qg-brand-desc">{b.description}</span>
+                  </span>
+                  <ChevronRight className="qg-brand-chevron" aria-hidden />
+                </a>
+              </li>
+            ))
+          : qgRows.map((r) => (
+              <li key={r.id}>
+                <a className="qg-brand-row" href={r.href}>
+                  <span className="qg-brand-coin"><QGRowIcon icon={r.icon} /></span>
+                  <span className="qg-brand-meta">
+                    <span className="qg-brand-name">{r.label}</span>
+                    <span className="qg-brand-desc">{r.description}</span>
+                  </span>
+                  <ChevronRight className="qg-brand-chevron" aria-hidden />
+                </a>
+              </li>
+            ))}
+        {isEmpty ? <li className="qg-brand-empty">Content coming soon.</li> : null}
       </ul>
     </section>
   );

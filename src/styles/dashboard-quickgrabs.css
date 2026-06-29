@@ -29,22 +29,25 @@
 }
 .qg-track { display: flex; height: 320px; transition: transform 420ms var(--ease-smooth); }
 
-.car-card { flex: 0 0 100%; height: 100%; position: relative; overflow: hidden; display: flex; }
-/* Two image layers: full-bleed bg (z0), a left text-scrim (z1), the right-side
-   foreground composition (z2). Content sits above all (z3). */
-.car-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+/* isolate so the card's own (negative) z-index layers stay contained, and so the
+   whole-card stretched link (.car-cta::after) anchors to the card. */
+.car-card { flex: 0 0 100%; height: 100%; position: relative; isolation: isolate; overflow: hidden; display: flex; }
+/* Image layers sit BEHIND the in-flow content (negative z). bg full-bleed, a left
+   text-scrim, then the right-side composition. Content (in flow, z auto) paints
+   above them, and stays unpositioned so the stretched link below reaches the
+   whole card rather than just this column. */
+.car-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -3; }
 .car-scrim {
-  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  position: absolute; inset: 0; z-index: -2; pointer-events: none;
   background: linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.06) 55%, transparent 100%);
 }
 .car-art {
   position: absolute; right: 0; top: 50%; transform: translateY(-50%);
-  height: 86%; width: auto; max-width: 62%; z-index: 2;
+  height: 86%; width: auto; max-width: 62%; z-index: -1;
   object-fit: contain; object-position: right center; pointer-events: none;
 }
 
 .car-content {
-  position: relative; z-index: 3;
   width: 384px; max-width: 70%;
   padding: var(--space-8); /* 32px — Figma top+left corner inset */
   display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: var(--space-2);
@@ -65,16 +68,26 @@
   background: #0D0D0D; color: #fff; border-radius: var(--radius-full);
   font-size: var(--fs-base); font-weight: var(--weight-semibold);
   text-decoration: none; margin-top: var(--space-2);
-  transition: transform 150ms var(--ease-smooth);
+  transition: box-shadow 150ms var(--ease-smooth);
 }
-.car-cta:hover { transform: translateY(-1px); }
+/* Stretched link: the CTA's ::after covers the whole card so a click anywhere on
+   the card follows the slide's deep-link. Anchors to .car-card (positioned +
+   isolate); the controls below sit at a higher z so they stay clickable. */
+.car-cta::after { content: ""; position: absolute; inset: 0; z-index: 3; }
+/* Hover affordance on the (now whole-card) link. MUST stay box-shadow, NOT
+   transform: a transform on .car-cta makes it a stacking context, which traps
+   its ::after inside the button's own context and breaks the stretched link
+   (clicks fall through to the card content). box-shadow elevates without that. */
+.car-card:hover .car-cta { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28); }
 
-/* Pagination dots — bottom-left pill on the card. */
+/* Pagination dots — bottom-left pill on the card. Hidden at rest, revealed on
+   carousel hover/focus (opacity, not display, to keep them focusable). */
 .qg-dots {
-  position: absolute; bottom: 24px; left: 24px; z-index: 3;
+  position: absolute; bottom: 24px; left: 24px; z-index: 5;
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 8px; border-radius: var(--radius-full);
   background: rgba(0, 0, 0, 0.18); backdrop-filter: blur(8px);
+  opacity: 0; transition: opacity 200ms var(--ease-smooth);
 }
 .qg-dot {
   width: 8px; height: 8px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
@@ -82,18 +95,28 @@
 }
 .qg-dot.is-active { background: #fff; }
 
-/* Prev / next arrows — vertically centred on each edge (standard carousel). */
+/* Next arrow — vertically centred on the right edge. Hidden at rest, revealed on
+   carousel hover/focus (opacity, not display, to keep it focusable). z above the
+   stretched link so it stays clickable. */
 .qg-arrow {
-  position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
   width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer;
   background: rgba(0, 0, 0, 0.12); backdrop-filter: blur(8px);
   color: #fff; display: grid; place-items: center;
-  transition: background-color 150ms var(--ease-smooth);
+  opacity: 0; transition: background-color 150ms var(--ease-smooth), opacity 200ms var(--ease-smooth);
 }
 .qg-arrow:hover { background: rgba(0, 0, 0, 0.22); }
 .qg-arrow svg { width: 18px; height: 18px; }
-.qg-arrow-prev { left: 16px; right: auto; }
 .qg-arrow-next { right: 16px; }
+
+/* Reveal controls on hover/focus-within; keyboard focus on any control also
+   reveals (focus-within covers it, focus-visible is the explicit belt-and-braces). */
+.qg-carousel:hover .qg-arrow,
+.qg-carousel:hover .qg-dots,
+.qg-carousel:focus-within .qg-arrow,
+.qg-carousel:focus-within .qg-dots { opacity: 1; }
+.qg-arrow:focus-visible,
+.qg-dot:focus-visible { opacity: 1; }
 
 /* ── Brand tabs ── */
 .qg-tabs { display: flex; flex-wrap: wrap; gap: var(--space-2); border-bottom: 1px solid var(--separator); padding-bottom: var(--space-3); }
@@ -130,5 +153,5 @@
    disabled in JS. */
 @media (prefers-reduced-motion: reduce) {
   .qg-track { transition: none; }
-  .car-cta:hover { transform: none; }
+  .qg-arrow, .qg-dots { transition: none; }
 }
