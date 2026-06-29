@@ -195,6 +195,7 @@ Deno.serve(async (req: Request) => {
         supabaseService,
         sessionId: activeSessionId,
         retrievedChunks: [],
+        mode,
         allowTools: false,
       })
     }
@@ -217,6 +218,7 @@ Deno.serve(async (req: Request) => {
         supabaseService,
         sessionId: activeSessionId,
         retrievedChunks: [],
+        mode,
         allowTools: false,
         webSearch: true,
       })
@@ -284,6 +286,7 @@ Deno.serve(async (req: Request) => {
       supabaseService,
       sessionId: activeSessionId,
       retrievedChunks: finalChunks,
+      mode,
     })
   } catch (err) {
     console.error('rag-query error:', err)
@@ -668,6 +671,7 @@ async function streamClaudeResponse({
   supabaseService,
   sessionId,
   retrievedChunks,
+  mode,
   allowTools = true,
   webSearch = false,
 }: {
@@ -677,6 +681,8 @@ async function streamClaudeResponse({
   supabaseService: ReturnType<typeof createClient>
   sessionId: string
   retrievedChunks: RetrievedChunk[]
+  // Chat mode for this turn — persisted to ai_chat_messages.mode (D-106 Phase 7b).
+  mode: ChatMode
   allowTools?: boolean
   webSearch?: boolean
 }): Promise<Response> {
@@ -761,6 +767,11 @@ async function streamClaudeResponse({
     string,
     { source: string; source_id: string; metadata: Record<string, unknown>; combined_score: number }
   >()
+  // Observability (D-106 Phase 7b). ttftMs: time to first answer token, same origin as
+  // latency_ms (startTime) so ttft <= latency always. webSearchUses: count of
+  // web_search_tool_result blocks this turn (feeds tool_calls.uses).
+  let ttftMs: number | null = null
+  let webSearchUses = 0
   const enc = new TextEncoder()
 
   type TurnBlock =
@@ -771,6 +782,9 @@ async function streamClaudeResponse({
     async start(controller) {
       const emitText = (t: string) => {
         if (!t) return
+        // ttft: first answer token (emitText fires only for content text deltas, not
+        // tool blocks). Same origin as latency_ms (startTime) → ttft <= latency.
+        if (ttftMs === null) ttftMs = Date.now() - startTime
         fullText += t
         controller.enqueue(
           enc.encode(
@@ -833,6 +847,7 @@ async function streamClaudeResponse({
                 // Server-tool result block: its content[] is already fully populated
                 // at content_block_start (no input_json_delta follows). Collect every
                 // web_search_result and dedup by URL (first-write-wins = relevance order).
+                webSearchUses++ // one block == one web_search invocation (tool_calls.uses)
                 const results = Array.isArray(evt.content_block.content)
                   ? evt.content_block.content
                   : []
@@ -977,6 +992,16 @@ async function streamClaudeResponse({
         // C4: persist content + tokens + tool-call observability (whether complete or
         // partial). retrieved_chunks keeps the RAG sources and appends a synthetic
         // team_directory entry recording the tool invocations.
+        // tool_calls (D-106 Phase 7b) is the canonical tool-invocation log: the existing
+        // query_team_directory entries (toolCallsLog) + a web_search summary. The
+        // retrieved_chunks.metadata.calls entry below is kept for backward-compat (the UI
+        // team-directory chip renders from it) but is no longer the source of truth.
+        const toolCalls = [
+          ...toolCallsLog,
+          ...(webSearchUses > 0
+            ? [{ tool: 'web_search', uses: webSearchUses, unique_urls: webSearchByUrl.size }]
+            : []),
+        ]
         await supabaseService
           .from('ai_chat_messages')
           .update({
@@ -984,6 +1009,12 @@ async function streamClaudeResponse({
             tokens_in: tokensIn,
             tokens_out: tokensOut,
             latency_ms: Date.now() - startTime,
+            // D-106 Phase 7b observability columns. Defensive defaults so a capture bug
+            // never blocks persistence: mode falls back to 'default', tool_calls is always
+            // an array ([] if no tools), ttft_ms is null if no answer token ever streamed.
+            mode: mode ?? 'default',
+            tool_calls: toolCalls,
+            ttft_ms: ttftMs,
             retrieved_chunks: [
               ...retrievedChunks.map((c) => ({
                 source: c.source,
