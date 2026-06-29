@@ -699,9 +699,12 @@
      the true centre whether or not the scrollbar is visible — keeps its edges
      flush with the composer (which centres against the full window). */
   scrollbar-gutter: stable both-edges;
-  /* Generous bottom pad clears the floating composer so the last answer is
-     never hidden behind it. */
-  padding: var(--space-8) var(--space-4) 180px;
+  /* Bottom pad clears the floating composer so the last answer is never hidden
+     behind it. --composer-pad is measured at runtime (ResizeObserver on
+     .ai-chat-input in AIChatWindow) = composer height + 24px; 180px is the
+     first-paint fallback before the JS measures (Bug C: Emirkan's expanded
+     meta-row composer outgrew the old hardcoded 180px). */
+  padding: var(--space-8) var(--space-4) var(--composer-pad, 180px);
 }
 /* Centered readable column (Claude-style) — the conversation thread. */
 .ai-chat-thread {
@@ -806,8 +809,11 @@
    .ai-chat-a-text typography but lets block elements own their spacing — no
    pre-wrap, the parser collapses whitespace. Fixes literal **bold** / - bullets
    leaking into the prose. */
+/* Chat-content typography (D-108). Reading-experience pass scoped strictly to
+   the markdown body — see T2 spec. All values use existing tokens (no new tokens,
+   dark-mode-safe); the only literal is text-underline-offset (geometry). */
 .ai-chat-answer {
-  font-size: var(--fs-base);
+  font-size: var(--fs-md);
   line-height: var(--lh-relaxed);
   color: var(--text-1);
 }
@@ -818,10 +824,10 @@
   margin-bottom: 0;
 }
 .ai-chat-answer p {
-  margin: 0 0 var(--space-3);
+  margin: 0 0 var(--space-4);
 }
 .ai-chat-answer strong {
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-medium);
   color: var(--text-1);
 }
 .ai-chat-answer em {
@@ -829,11 +835,11 @@
 }
 .ai-chat-answer ul,
 .ai-chat-answer ol {
-  padding-left: var(--space-5);
-  margin: var(--space-2) 0;
+  padding-left: var(--space-6);
+  margin: var(--space-2) 0 var(--space-4);
 }
 .ai-chat-answer li {
-  margin: 2px 0;
+  margin: var(--space-1) 0;
 }
 .ai-chat-answer li::marker {
   color: var(--text-3);
@@ -841,6 +847,7 @@
 .ai-chat-answer a {
   color: var(--accent);
   text-decoration: underline;
+  text-underline-offset: 2px; /* one-off geometry literal, theme-agnostic */
 }
 .ai-chat-answer code {
   font-family: var(--font-mono);
@@ -850,34 +857,52 @@
   font-size: 0.9em;
 }
 .ai-chat-answer pre {
-  margin: var(--space-2) 0;
-  padding: var(--space-3);
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
   background: var(--surface-muted);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   overflow-x: auto;
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
 }
 .ai-chat-answer pre code {
   padding: 0;
   background: none;
+  font-size: inherit;
+}
+/* Blockquote — muted, left-barred. --text-3 (not --hairline) keeps the 3px bar
+   visible on both light + dark backgrounds. */
+.ai-chat-answer blockquote {
+  margin: var(--space-4) 0;
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--text-3);
+  color: var(--text-2);
+}
+/* Horizontal rule — subtle section divider. */
+.ai-chat-answer hr {
+  margin: var(--space-6) 0;
+  border: none;
+  border-top: 1px solid var(--hairline);
 }
 /* Tables (remark-gfm) + headings — system prompt v7 asks Claude to structure
-   comparisons / multi-person data as tables and status overviews with icons. */
+   comparisons / multi-person data as tables and status overviews with icons.
+   Table text inherits the body --fs-md (17px) — the old hardcoded 13px made
+   cells hard to read. */
 .ai-chat-answer table {
   width: 100%;
   border-collapse: collapse;
-  margin: var(--space-3) 0;
-  font-size: 13px;
+  margin: var(--space-5) 0;
 }
 .ai-chat-answer th {
   background: var(--surface-muted);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-medium);
   text-align: left;
-  padding: 8px 12px;
-  border-bottom: 2px solid var(--hairline);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--hairline);
   color: var(--text-1);
 }
 .ai-chat-answer td {
-  padding: 8px 12px;
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--hairline);
   /* Body-dark, not the faint --text-2 — table cells were nearly invisible. */
   color: var(--text-1);
@@ -887,16 +912,17 @@
 }
 .ai-chat-answer h2,
 .ai-chat-answer h3 {
-  font-weight: var(--weight-semibold);
-  margin-top: var(--space-3);
+  font-weight: var(--weight-medium);
   margin-bottom: var(--space-2);
   color: var(--text-1);
 }
 .ai-chat-answer h2 {
-  font-size: 16px;
+  font-size: var(--fs-lead);
+  margin-top: var(--space-8);
 }
 .ai-chat-answer h3 {
-  font-size: 14px;
+  font-size: var(--fs-md);
+  margin-top: var(--space-6);
 }
 /* Source citations collapsed behind a BookOpen icon (top-right of the answer
    card); click reveals the source links in a popover. 4-6 inline chips per

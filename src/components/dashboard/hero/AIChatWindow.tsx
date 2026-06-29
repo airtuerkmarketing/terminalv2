@@ -59,6 +59,7 @@ export function AIChatWindow({
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null); // .ai-chat-input — measured for Bug C padding
 
   // Esc closes — ONLY when focus is inside the panel (so Esc in the hero search
   // box stays with the box's own close-dropdown handler; no double-dismiss).
@@ -137,6 +138,23 @@ export function AIChatWindow({
       el.removeEventListener("scroll", onScroll);
     };
   }, [open, turns]);
+
+  // Bug C: keep the body's bottom padding equal to the composer's live height
+  // (+24px breathing) so the last answer never slides under the floating composer.
+  // Emirkan's meta-row composer outgrew the old hardcoded 180px. Writes the measured
+  // height to --composer-pad (read by .ai-chat-body padding-bottom in dashboard-hero.css).
+  useEffect(() => {
+    const composer = composerRef.current;
+    const body = bodyRef.current;
+    if (!composer || !body) return;
+    const updatePad = () => {
+      body.style.setProperty("--composer-pad", `${composer.offsetHeight + 24}px`);
+    };
+    updatePad();
+    const ro = new ResizeObserver(updatePad);
+    ro.observe(composer);
+    return () => ro.disconnect();
+  }, [open]);
 
   function scrollToBottom() {
     const el = bodyRef.current;
@@ -301,7 +319,7 @@ export function AIChatWindow({
       {/* Centered floating composer. `is-centered` lifts it to the vertical
           middle (with a greeting) when the thread is empty; otherwise it sits
           bottom-centered. */}
-      <div className={`ai-chat-input${turns.length === 0 ? " is-centered" : ""}`}>
+      <div ref={composerRef} className={`ai-chat-input${turns.length === 0 ? " is-centered" : ""}`}>
         {turns.length === 0 && (
           <div className="ai-chat-greeting">
             <h3 className="ai-chat-greeting-title">How can I help?</h3>
