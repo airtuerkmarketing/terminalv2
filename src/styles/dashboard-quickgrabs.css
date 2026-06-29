@@ -38,8 +38,9 @@
   background: linear-gradient(90deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.10) 55%, transparent 100%);
 }
 .car-art {
-  position: absolute; top: 0; right: 0; height: 100%; width: auto; z-index: 2;
-  object-fit: contain; object-position: right top; pointer-events: none;
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  height: 86%; width: auto; max-width: 62%; z-index: 2;
+  object-fit: contain; object-position: right center; pointer-events: none;
 }
 
 .car-content {
