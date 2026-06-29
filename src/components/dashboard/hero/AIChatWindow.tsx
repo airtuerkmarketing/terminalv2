@@ -163,6 +163,13 @@ export function AIChatWindow({
     }
   }
 
+  // Header context (local turns-state only — no fetch, no timestamp this stage).
+  // Title = the first question (CSS-ellipsised, not JS-sliced, so it stays
+  // responsive); falls back to the product name on an empty chat.
+  const firstQuestion = turns[0]?.question?.trim() || "";
+  const chatTitle = firstQuestion || "airtuerk Intelligence";
+  const messageCount = turns.length;
+
   return (
     <aside
       ref={panelRef}
@@ -174,7 +181,7 @@ export function AIChatWindow({
       // a11y tree (it still cross-fades) — prevents tabbing into hidden controls.
       inert={!open}
     >
-      {/* Header: left = History + New chat, right = Close, middle intentionally empty. */}
+      {/* Header: left = History icon + chat title/meta, right = New chat + Close. */}
       <header className="ai-chat-header">
         <div className="ai-chat-header-actions">
           {/* Placeholder — history panel later (localStorage questions → DB). */}
@@ -186,6 +193,16 @@ export function AIChatWindow({
           >
             <History className="ai-chat-history-icon" aria-hidden="true" />
           </button>
+          <div className="ai-chat-header-title">
+            <span className="ai-chat-header-title-text">{chatTitle}</span>
+            {messageCount > 0 && (
+              <span className="ai-chat-header-meta">
+                {messageCount} {messageCount === 1 ? "Nachricht" : "Nachrichten"}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="ai-chat-header-right">
           <button
             type="button"
             className={`ai-chat-new${confirming ? " is-confirming" : ""}`}
@@ -196,15 +213,15 @@ export function AIChatWindow({
             <Plus className="ai-chat-new-icon" aria-hidden="true" />
             <span>{confirming ? "Delete history?" : "New chat"}</span>
           </button>
+          <button
+            type="button"
+            className="ai-chat-close"
+            onClick={onClose}
+            aria-label="Close chat"
+          >
+            <X className="ai-chat-close-icon" aria-hidden="true" />
+          </button>
         </div>
-        <button
-          type="button"
-          className="ai-chat-close"
-          onClick={onClose}
-          aria-label="Close chat"
-        >
-          <X className="ai-chat-close-icon" aria-hidden="true" />
-        </button>
       </header>
 
       <div className="ai-chat-body" ref={bodyRef}>

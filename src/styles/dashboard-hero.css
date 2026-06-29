@@ -533,11 +533,41 @@
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--separator);
 }
-/* Header middle is intentionally empty (no centered branding). */
+/* Left group: History icon + the chat title/meta column. min-width:0 so the
+   title can ellipsise instead of forcing the header to overflow. */
 .ai-chat-header-actions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
+}
+/* Right group: New chat + Close, never shrinks. */
+.ai-chat-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+/* Two-line title block: chat title (first question) + message count. */
+.ai-chat-header-title {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  line-height: 1.2;
+}
+.ai-chat-header-title-text {
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-chat-header-meta {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  white-space: nowrap;
 }
 /* History (placeholder) — square ghost icon button, left of New chat. */
 .ai-chat-history {
