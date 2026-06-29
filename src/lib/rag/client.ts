@@ -3,6 +3,7 @@
 // streaming per AiTurn; this lib stays UI-agnostic.
 import { createClient } from "@/lib/supabase/client";
 import type { AiSource, AiKonfidenz } from "@/lib/search/types";
+import { parseSseLine } from "./sse";
 
 const RAG_QUERY_PATH = "/functions/v1/rag-query";
 
@@ -26,12 +27,15 @@ export interface RagSource {
 }
 
 export interface RagStreamEvent {
-  type: "text" | "session" | "message" | "done" | "error";
+  type: "text" | "session" | "message" | "done" | "error" | "paused";
   text?: string;
   sessionId?: string;
   messageId?: number;
   weissNicht?: boolean;
   error?: string;
+  /** pause_turn (web-search server-tool iteration cap). Open string per the
+   * Anthropic API — future versions may add reasons; the parser keys on the type. */
+  reason?: string;
 }
 
 export interface RagQueryOptions {
@@ -111,19 +115,16 @@ export async function ragQueryStream(opts: RagQueryOptions): Promise<{
   let fullText = "";
 
   const handleLine = (line: string) => {
-    if (!line.startsWith("data: ")) return;
-    const payload = line.slice(6).trim();
-    if (!payload || payload === "[DONE]") return;
-    try {
-      const evt = JSON.parse(payload);
-      if (evt.type === "content_block_delta" && evt.delta?.text) {
-        fullText += evt.delta.text;
-        onEvent({ type: "text", text: evt.delta.text });
-      } else if (evt.type === "message_stop") {
-        fireDone();
-      }
-    } catch {
-      /* partial JSON across chunk boundary — ignore */
+    const parsed = parseSseLine(line);
+    if (!parsed) return;
+    if (parsed.kind === "text") {
+      fullText += parsed.text;
+      onEvent({ type: "text", text: parsed.text });
+    } else if (parsed.kind === "paused") {
+      onEvent({ type: "paused", reason: parsed.reason });
+    } else {
+      // kind === "stop" (message_stop): fireDone() builds the 'done' event with weissNicht.
+      fireDone();
     }
   };
 

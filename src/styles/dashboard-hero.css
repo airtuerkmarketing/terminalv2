@@ -692,6 +692,19 @@
   color: var(--text-2, var(--text-3));
 }
 
+/* pause_turn notice — web-search hit its iteration cap. Muted info banner (NOT an
+   error red); sits below the (partial) answer body. See AIAnswerBlock. */
+.ai-chat-paused-notice {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  border: 1px solid var(--border, var(--surface-muted));
+  font-size: var(--fs-sm, var(--fs-base));
+  line-height: var(--lh-normal);
+  color: var(--text-2, var(--text-3));
+}
+
 /* Markdown-rendered RAG answer (react-markdown + remark-gfm). Mirrors
    .ai-chat-a-text typography but lets block elements own their spacing — no
    pre-wrap, the parser collapses whitespace. Fixes literal **bold** / - bullets

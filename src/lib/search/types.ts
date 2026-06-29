@@ -68,4 +68,7 @@ export interface AiTurn {
   webSearchTriggered?: boolean;
   /** this turn IS a web-search result. */
   isWebSearch?: boolean;
+  /** web-search server-tool hit its iteration cap (Anthropic pause_turn) → the turn
+   * ended with a partial/empty answer. `reason` is an open string (logging/UX text). */
+  paused?: { reason: string };
 }

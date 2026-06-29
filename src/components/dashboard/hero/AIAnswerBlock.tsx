@@ -9,7 +9,7 @@ import { useTypewriterText } from "@/components/dashboard/hero/useTypewriterText
 import { AnswerFeedback } from "@/components/dashboard/hero/AnswerFeedback";
 import type { AiKonfidenz, AiTurn } from "@/lib/search/types";
 import { isOutOfScope } from "@/lib/rag/client";
-import { buildPreamble } from "@/lib/rag/preamble";
+import { buildPreamble, detectLang } from "@/lib/rag/preamble";
 
 /* One question→answer turn inside the chat window (BAU-Auftrag §5.4).
  * Stage 1: the answer is a placeholder rendered after a fake delay; the shape
@@ -38,6 +38,17 @@ function stripInlineCitations(text: string): string {
     .replace(/\s*\[(?:Quellen?|Kontext)\b[^\]]*$/i, "")
     .replace(/[ \t]{2,}/g, " ");
 }
+
+/* pause_turn notice — web-search server-tool hit its iteration cap (Anthropic
+   pause_turn). Language-mirrored like the preamble. Notice-only: no retry affordance
+   exists in the other error states (verified — no retry pattern in dashboard), so we
+   match that pattern. Copy says "iteration limit" (not "took longer") — that is what
+   actually happened, so an observant user understands. */
+const PAUSED_NOTICE: Record<"de" | "en" | "tr", string> = {
+  de: "Die Suche hat ihr Iterations-Limit erreicht. Bitte stelle eine spezifischere Frage oder formuliere sie um.",
+  en: "The search hit its iteration limit. Try a more specific question or rephrase.",
+  tr: "Arama, yineleme sınırına ulaştı. Lütfen daha spesifik bir soru sorun veya yeniden ifade edin.",
+};
 
 export function AIAnswerBlock({
   turn,
@@ -124,6 +135,8 @@ function AITurnAnswer({
   // (sources live in the toggle by the feedback buttons). DISPLAY-only strip —
   // the raw text already drove confidence inference upstream.
   const displayText = stripInlineCitations(text);
+  // pause_turn notice (web-search iteration cap), language-mirrored from the question.
+  const pausedNotice = turn.paused ? PAUSED_NOTICE[detectLang(turn.question)] : null;
 
   // Copy the raw answer to the clipboard with a brief check-mark confirmation.
   const [copied, setCopied] = useState(false);
@@ -153,6 +166,14 @@ function AITurnAnswer({
         )}
       </div>
 
+      {/* pause_turn notice — explicit state when web-search hit its iteration cap
+          (instead of a silent/abrupt empty answer). Notice-only, language-mirrored. */}
+      {pausedNotice && (
+        <p className="ai-chat-paused-notice" role="status">
+          ⏳ {pausedNotice}
+        </p>
+      )}
+
       {/* Web-Search fallback — offered on a rule-7 out-of-scope refusal. Clicking it
           fires a fresh web-search turn for the same question (handled in SearchAIBox). */}
       {finished &&
@@ -173,7 +194,7 @@ function AITurnAnswer({
           </div>
         )}
 
-      {finished && (
+      {finished && !turn.paused && (
         <div
           className="ai-chat-confidence"
           data-level={KONFIDENZ_LEVEL[answer.konfidenz]}

@@ -865,8 +865,10 @@ async function streamClaudeResponse({
       try {
         let res = firstRes
         let toolRounds = 0
+        let finalStopReason: string | null = null
         while (true) {
           const { stopReason, blocks } = await readTurn(res)
+          finalStopReason = stopReason
 
           if (stopReason === 'tool_use' && toolRounds < MAX_TOOL_ITERATIONS) {
             toolRounds++
@@ -906,6 +908,20 @@ async function streamClaudeResponse({
             continue
           }
           break // final answer reached
+        }
+
+        // TODO(post-demo): Implement resume-with-cap per Anthropic's
+        // recommended pattern (re-send conversation with prior tool_use
+        // results to continue the turn). Cap retry attempts at 2 to
+        // bound worst-case latency. See D-106 follow-up ticket.
+        // Hook-point: insert resume logic here BEFORE emitting the
+        // 'paused' SSE event below.
+        if (finalStopReason === 'pause_turn') {
+          controller.enqueue(
+            enc.encode(
+              `data: ${JSON.stringify({ type: 'paused', reason: 'max_searches_reached' })}\n\n`,
+            ),
+          )
         }
 
         controller.enqueue(enc.encode('data: {"type":"message_stop"}\n\n'))

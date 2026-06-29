@@ -346,6 +346,10 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
             } else if (e.type === "done") {
               // Defer isStreaming:false until sources load (atomic finalize below).
               patchTurn({ weissNicht: e.weissNicht ?? false });
+            } else if (e.type === "paused") {
+              // web-search hit Anthropic's pause_turn (server-tool iteration cap) —
+              // mark the turn so AIAnswerBlock renders the explicit paused notice.
+              patchTurn({ paused: { reason: e.reason ?? "unknown" } });
             } else if (e.type === "error" && e.error) {
               patchTurn({ isStreaming: false, error: e.error });
             }
