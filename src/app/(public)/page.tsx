@@ -27,7 +27,7 @@ export default async function Home() {
     <div className="main-inner">
       <div className="dh-page">
         <GreetingOrbit name={firstName} />
-        <SearchAIBox />
+        <SearchAIBox firstName={firstName} />
         <QuickGrabs />
       </div>
     </div>

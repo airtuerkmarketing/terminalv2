@@ -22,6 +22,10 @@ interface Props {
   onNewChat: () => void;
   onCorrect?: (turn: AiTurn) => void;
   onFeedbackChange?: (turnId: string, feedback: "helpful" | "not_helpful") => void;
+  /** Accept the rule-7 web-search offer for an out-of-scope turn. */
+  onWebSearch?: (turn: AiTurn) => void;
+  /** Signed-in user's first name — for the chip personalization preamble. */
+  firstName?: string | null;
 }
 
 export function AIChatWindow({
@@ -32,6 +36,8 @@ export function AIChatWindow({
   onNewChat,
   onCorrect,
   onFeedbackChange,
+  onWebSearch,
+  firstName = null,
 }: Props) {
   const [draft, setDraft] = useState("");
   const [confirming, setConfirming] = useState(false); // "Neuer Chat" two-step arm
@@ -214,8 +220,10 @@ export function AIChatWindow({
               key={t.id}
               turn={t}
               typewriter={i === turns.length - 1}
+              firstName={firstName}
               onCorrect={onCorrect}
               onFeedbackChange={onFeedbackChange}
+              onWebSearch={onWebSearch}
             />
           ))}
         </div>

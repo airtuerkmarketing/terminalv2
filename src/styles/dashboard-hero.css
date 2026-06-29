@@ -682,6 +682,16 @@
   }
 }
 
+/* Chip personalization preamble — a soft greeting line above the answer body
+   ("Hallo Buhara, hier ist deine Übersetzung:"). Lighter + muted so it reads as
+   chrome, not part of the copyable result (it lives outside answer.text). */
+.ai-chat-preamble {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-sm, var(--fs-base));
+  line-height: var(--lh-normal);
+  color: var(--text-2, var(--text-3));
+}
+
 /* Markdown-rendered RAG answer (react-markdown + remark-gfm). Mirrors
    .ai-chat-a-text typography but lets block elements own their spacing — no
    pre-wrap, the parser collapses whitespace. Fixes literal **bold** / - bullets
