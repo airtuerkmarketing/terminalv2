@@ -410,11 +410,16 @@ export function SearchAIBox() {
   }, []);
 
   const closeChat = useCallback(() => setChatOpen(false), []);
-  // Reset the thread: clearing turns lets the persist effect write [] back to
-  // terminal_chat_history (the "Neuer Chat" button guards this behind a confirm).
+  // New chat: reset the thread + close the window. Closing fades the panel out
+  // (260ms) back to the real homepage SearchAIBox — the same greeting + mode-chips
+  // + searchbar (one component, no rebuild/drift), instead of a lookalike empty
+  // state inside the panel. sessionId MUST clear too, or the next question would
+  // continue the old session. The left chat stays in the DB (history modal).
   const newChat = useCallback(() => {
     setTurns([]);
     setTitleOverride(null);
+    setSessionId(null);
+    setChatOpen(false);
   }, []);
 
   // Open a persisted chat: map its DB messages → turns and replace the active
