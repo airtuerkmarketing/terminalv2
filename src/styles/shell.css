@@ -103,8 +103,8 @@ html { scrollbar-gutter: stable; }
 /* Private (is_public=false) folder in the Document Library sub-nav — admin-only
    cue (only admins see private folders in the tree). Wins over .active. */
 .nav-item.is-private .icon { color: var(--torch); }
-.nav-item .icon { width: 18px; height: 18px; flex-shrink: 0; display: grid; place-items: center; }
-.nav-item .icon svg { width: 16px; height: 16px; }
+.nav-item .icon { width: 18px; height: 18px; flex-shrink: 0; display: grid; place-items: center; overflow: visible; }
+.nav-item .icon svg { width: 16px; height: 16px; overflow: visible; }
 
 /* ── Icon micro-animations ───────────────────────────────────────────────────
    On .nav-item hover the INNER parts of each icon move (not the whole icon box —
@@ -170,7 +170,7 @@ html { scrollbar-gutter: stable; }
 .nav-item:hover .ic-lib-3 { transform: translateY(-2px) rotate(-4deg); transition-delay: 140ms; }
 
 /* C10 — presentation-hub: the easel base lifts (screen body + rail static). */
-.nav-item:hover .ic-pres-base { transform: translateY(-1.5px); }
+.nav-item:hover .ic-pres-base { transform: translateY(2px); }
 
 /* C11 — team / users: the head bobs (lucide 1.18.0 Users has a single head circle). */
 .ic-user-head { transform-box: fill-box; transform-origin: center; }
