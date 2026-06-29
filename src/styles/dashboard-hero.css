@@ -813,22 +813,31 @@
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 7px;
+  /* Borderless ghost, consistent with the action icon-buttons in the same row. */
   border-radius: var(--radius-sm);
-  border: 1px solid var(--hairline);
+  border: 0;
   background: transparent;
   color: var(--text-2);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: var(--weight-semibold);
   transition: background 150ms var(--ease-smooth),
               color 150ms var(--ease-smooth);
 }
+.ai-chat-sources-summary-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border-radius: var(--radius-sm);
+}
 .ai-chat-sources-toggle summary::-webkit-details-marker {
   display: none;
 }
-.ai-chat-sources-toggle summary:hover,
-.ai-chat-sources-toggle[open] summary {
+.ai-chat-sources-toggle summary:hover .ai-chat-sources-summary-inner {
+  background: var(--surface-muted);
+  color: var(--text-1);
+}
+.ai-chat-sources-toggle[open] summary .ai-chat-sources-summary-inner {
   background: var(--accent-soft);
   color: var(--accent);
 }
@@ -874,7 +883,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: var(--space-4);
 }
 .ai-chat-conf-bars {
   display: inline-flex;
@@ -1269,60 +1277,63 @@
   color: var(--text-3);
 }
 
-/* Bottom action row: feedback buttons + the sources toggle, side by side. */
+/* Meta row — ONE line: actions left, trust group (sources · sep · confidence)
+   right. flex-wrap is defensive for narrow widths (desktop-only otherwise). */
 .ai-chat-actions {
   margin-top: var(--space-4);
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
-/* Copy answer — dezenter Ghost-Button, matches the feedback-button aesthetic. */
-.ai-chat-copy {
+.ai-chat-actions-left {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 7px;
-  font-size: 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--hairline);
-  background: transparent;
-  color: var(--text-2);
-  cursor: pointer;
-  transition: background 150ms var(--ease-smooth), border-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+  gap: 4px;
 }
-.ai-chat-copy:hover {
-  background: var(--surface-muted);
-  color: var(--text-1);
-}
-
-/* ── AnswerFeedback (Atomic 3.5) — modeled after .ai-chat-source aesthetic ── */
-.ai-chat-feedback {
-  display: flex;
-  gap: var(--space-2);
+.ai-chat-actions-right {
+  margin-left: auto;
+  display: inline-flex;
   align-items: center;
+  gap: var(--space-3);
+}
+/* Thin separator between the sources toggle and the confidence bars. */
+.ai-chat-meta-sep {
+  width: 1px;
+  height: 15px;
+  background: var(--hairline);
+  flex-shrink: 0;
 }
 
+/* Action buttons (Copy + feedback) — rahmenlose square icon ghosts: transparent
+   at rest, a soft grey wash on hover. No border, no label. */
+.ai-chat-copy,
 .ai-chat-feedback-btn {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  /* ~37% smaller than the old 6px/10px·16px-icon chips (per design feedback). */
-  padding: 2px 7px;
-  font-size: 10px;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--hairline);
+  border: 0;
   background: transparent;
   color: var(--text-2);
   cursor: pointer;
   transition: background 150ms var(--ease-smooth),
-              border-color 150ms var(--ease-smooth),
               color 150ms var(--ease-smooth);
 }
-
+.ai-chat-copy:hover,
 .ai-chat-feedback-btn:hover:not(:disabled) {
   background: var(--surface-muted);
   color: var(--text-1);
+}
+
+/* ── AnswerFeedback (Atomic 3.5) — icon-only ghost buttons ── */
+.ai-chat-feedback {
+  display: flex;
+  gap: 4px;
+  align-items: center;
 }
 
 .ai-chat-feedback-btn:disabled {
@@ -1330,14 +1341,10 @@
   cursor: not-allowed;
 }
 
+/* Active feedback: borderless — a soft accent wash + accent icon (no border). */
 .ai-chat-feedback-btn--active {
   background: var(--accent-soft);
-  border-color: var(--accent-border);
   color: var(--accent);
-}
-
-.ai-chat-feedback-btn--correct .ai-chat-feedback-label {
-  display: inline-block;
 }
 
 /* ── CorrectionModal (Atomic 3.6) — follows the repo overlay convention

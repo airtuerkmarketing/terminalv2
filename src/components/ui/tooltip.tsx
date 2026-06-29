@@ -14,16 +14,22 @@ import "./tooltip.css";
 export function TooltipShell({
   content,
   placement = "top",
+  dark = false,
   children,
 }: {
   content: ReactNode;
   placement?: "top" | "bottom";
+  /** Dark card (e.g. compact icon-button tooltips). Default keeps the light card. */
+  dark?: boolean;
   children: ReactNode;
 }) {
   return (
     <span className="ui-tooltip">
       {children}
-      <span className={`ui-tooltip-card ui-tooltip-card--${placement}`} role="tooltip">
+      <span
+        className={`ui-tooltip-card ui-tooltip-card--${placement}${dark ? " ui-tooltip-card--dark" : ""}`}
+        role="tooltip"
+      >
         {content}
       </span>
     </span>
