@@ -838,6 +838,75 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-108 — Chat answer typography (v1 → v2 → v3)
+**Date:** 2026-06-29
+**Status:** DRAFT (awaiting Buhara ratification)
+**Context:** Post-D-107 chat answers read flat — question vs. answer was hard to tell apart and code blocks were unframed.
+**Decision:** 18/20/22 type ladder for `.ai-chat-answer`; the user bubble gets its own `--surface-bubble` (light `#EDEDEF` / dark `#2A2A2E`); 1px hairline frames on `<pre>` + inline `<code>`; a `.ai-chat-ai-mark` logo above each AI answer. New tokens `--fs-reading 18px`, `--lh-loose 1.75`.
+**Trade-offs:** Frontend-only, no behavior change; three iterations driven by preview feedback.
+**Verification:** Preview iterations on Buhara feedback (v1→v3).
+**Commits:** `b87cdb75` (v1), `ffb4b12c` (v2), `8f10b109` (v3).
+
+---
+
+## D-109 — Domain migration `www.airtuerk.dev` → `terminal.airtuerk.ai`
+**Date:** 2026-06-29
+**Status:** DRAFT (awaiting Buhara ratification)
+**Context:** Retire the `.dev` / `.online` domains; consolidate app + mail on `airtuerk.ai`.
+**Decision:** Repoint `NEXT_PUBLIC_SITE_URL` + Supabase Auth `site_url` to `terminal.airtuerk.ai`; `notify-*` edge fns send from `terminal@airtuerk.ai` with `airtuerk.ai` links; `RESEND_API_KEY` rotated to an `airtuerk.ai`-scoped key; B1 recovery-link generator for invite-mail-blocked users.
+**Trade-offs:** M365 sender-warming period (first-contact banner / greylisting until reputation builds).
+**Verification:** `notify-*` probed (`hasResendKey:true`); recovery flow live-verified.
+**Production impact:** All auth + transactional mail and the app served on `airtuerk.ai`.
+**Commits:** `371954c3`, `f3aa2b14`, `349c5aee`, `8432b8dc`.
+**⚠ Numbering note:** the in-progress "D-109c" web-search-truthfulness thread referenced in `BUILD_LOG.md` is **unrelated** work — the D-109 number collision is to be reconciled at ratification.
+
+---
+
+## D-110 — `gold_set_eval_modes` migration
+**Date:** 2026-06-30
+**Status:** DRAFT (awaiting Buhara ratification)
+**Context:** The rag-eval harness needs mode-aware + multi-turn + behavioral-assertion judging.
+**Decision:** Migration `20260630120000` adds `gold_set_answers.mode` (default `'default'`), `conversation_history jsonb default '[]'`, `judge_type text default 'baseline'`, `behavioral_assertions jsonb`. Applied via the D-081 controlled-version pattern.
+**Production impact:** Eval-only schema change; 84 rows preserved.
+**Migration:** `20260630120000_gold_set_eval_modes` (87th on `main`).
+
+---
+
+## D-111 — Auth email overhaul + instant forgot-password
+**Date:** 2026-06-30
+**Status:** DRAFT (awaiting Buhara ratification)
+**Context:** Forgot-password "server response is off" — `resetPasswordForEmail` blocked ~1.4s on GoTrue's synchronous SMTP hand-off; the 5 GoTrue templates were inconsistent and unbranded (mixed EN/DE).
+**Options considered:** (A) bare fire-and-forget — rejected (Vercel kills the un-awaited promise); (B) `after()` deferral — chosen. Inline-SVG / base64 logo — rejected (Outlook's Word engine strips both).
+**Decision:** `requestPasswordResetAction` returns immediately; the send runs in `next/server` `after()` with a cookie-free anon client. All 5 templates (invite / recovery / confirmation / email-change / magic-link) rebuilt into one English all-black Outlook-safe shell — hosted wordmark PNG + styled-alt fallback, bulletproof VML button, every link via the SSR-correct `/auth/confirm?token_hash={{ .TokenHash }}&type=…`. New `notify-password-changed` edge fn (security "password changed" notice, wired into `updatePasswordAction` via `after()`). `notify-correction-event` + `notify-folder-access` re-skinned. Templates applied to the live auth config via the Management API.
+**Trade-offs:** The 429 retry message is dropped (always-neutral, enumeration-safe); late *delivery* is downstream M365 greylisting, not fixable in code.
+**Verification:** Live E2E (recover → `/auth/confirm` → set-password; both mails accepted by Resend); rendering checked in a real M365 inbox.
+**Canonical doc:** `spec/AUTH_EMAIL_TEMPLATES.md` (rollback snapshot + Management-API recipe).
+**Commits:** `63bebcd`, `663934b`. Edge: `notify-password-changed` **v2**, `notify-correction-event` / `notify-folder-access` **v7**.
+
+---
+
+## D-112 — Password UX: min 8 + show/hide toggle
+**Date:** 2026-06-30
+**Status:** DRAFT (awaiting Buhara ratification)
+**Context:** The 12-char minimum was too strict for onboarding, there was no way to reveal a typed password, and the displayed requirement must match the enforced one.
+**Decision:** Lower the new-password minimum 12→8 (client + server checks + input `minLength` + hint/error copy + GoTrue `password_min_length=8`). New reusable `PasswordInput` (lucide `Eye`/`EyeOff`) on the login field + both new-password fields. Invite/reset link TTL (`mailer_otp_exp`) raised 1h→24h (one shared setting — no per-type split) so invite links survive M365 delivery lag.
+**Trade-offs:** Reset links now also valid 24h (accepted for an internal tool).
+**Verification:** typecheck + build green; login toggle browser-verified.
+**Commit:** `7cf1d32`.
+
+---
+
+## D-113 — Login auth-brand Compare-style hover
+**Date:** 2026-06-30
+**Status:** DRAFT (awaiting Buhara ratification)
+**Context:** The login brand panel was static; add a tasteful reveal of the portal's purpose.
+**Decision:** Hand-rolled Aceternity-Compare pattern (zero deps) — State A logo wiped vertically by a pointer-tracking 1px slider to reveal the tagline "Internal brand portal and knowledge hub for airtuerk". The brand panel (inline in `page.tsx`) was extracted to a client component `auth-brand.tsx`; the wipe is a CSS `clip-path` driven by a `--clip-y` custom property; 120ms tracking / 400ms snap-back; gated to `(hover: hover) and (pointer: fine)`; `prefers-reduced-motion` → 200ms opacity crossfade.
+**Trade-offs:** Desktop-only effect (touch/coarse pointers see State A only); brand panel moved from server-inline to a client component.
+**Verification:** typecheck + build green; interaction mechanism verified; live visual check on the preview with a real pointer.
+**Commit:** `3dee708` (merged to `main`, live 2026-06-30).
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

@@ -18,9 +18,9 @@ auth-gated throughout — there is no public content.
 
 ## Status
 
-- **HEAD:** `5c10519` on `main` (442 commits since 2026-06-15)
-- **Latest milestone:** D-107 — AI observability + web-search hardening
-- **Highest decision:** D-107 (`spec/DECISIONS.md`)
+- **HEAD:** `3dee708` on `main` (457 commits since 2026-06-15)
+- **Latest milestone:** D-113 — login auth-brand Compare-style hover (D-108–D-113 wave: chat typography, domain migration, eval-modes, auth-email overhaul, password UX)
+- **Highest decision:** D-113 (`spec/DECISIONS.md`; D-108–D-113 DRAFT, awaiting ratification)
 - **Demo target:** 2026-08-01
 
 ## Stack
@@ -43,13 +43,12 @@ Anthropic and Voyage SDKs are not Next dependencies.
 
 ## Database
 
-- **Migrations:** 86 on `main` (D-081 file↔registry reconcile). *(The prod DB
-  ledger currently holds 87 — one in-flight migration, `20260630120000`, applied
-  ahead of its merge to `main`.)*
+- **Migrations:** 87 on `main` (D-081 file↔registry reconcile; latest
+  `20260630120000_gold_set_eval_modes`, D-110).
 - **Pages:** 51 published
 - **Brands:** 15
 - **Team members:** 63
-- **Profiles / auth users:** 11 / 11
+- **Profiles / auth users:** 12 / 12 (7 super_admin · 5 admin · 0 user)
 - **Assets:** 719
 - **Document Library:** 9 folders / 5 files
 - **Presentation Hub:** 0 / 0 (model live, content pending)
@@ -58,6 +57,10 @@ Anthropic and Voyage SDKs are not Next dependencies.
   · 5 private (`confluence-attachments`, `documents`, `library`,
   `presentations`, `rag-knowledge`)
 - **RLS:** enabled on all 34 public tables
+- **Edge functions:** 9 — `rag-query` v20, `embed-knowledge` v14,
+  `notify-correction-event` v7, `notify-folder-access` v7, `notify-password-changed` v2,
+  `tag-classify-chunks` v3, `confluence-snapshot` v10, `confluence-extend` /
+  `confluence-extract-text` v9
 
 ## Features shipped
 
@@ -88,9 +91,10 @@ Anthropic and Voyage SDKs are not Next dependencies.
 | File | Purpose |
 |---|---|
 | `ARCHITECTURE.md` | System design, schema, block taxonomy, routing |
-| `DECISIONS.md` | Locked design decisions (D-001 through D-107) |
+| `DECISIONS.md` | Locked design decisions (D-001 through D-113; D-108–D-113 DRAFT) |
 | `DESIGN_SYSTEM.md` | Design tokens, theming model, component conventions |
 | `BUILD_LOG.md` | Running progress record (authoritative status source) |
+| `AUTH_EMAIL_TEMPLATES.md` | Auth email templates (rollback snapshot + Management-API apply recipe) |
 | `PHASE_PLAN.md` | Original phase plan (historical — see BUILD_LOG for current status) |
 | `CONTRIBUTING.md` | Branches, commits, deployment workflow |
 | `EMBEDS_INVENTORY.md` | Webflow embeds preserved for porting |
@@ -117,6 +121,7 @@ All migrations are timestamp-named (`YYYYMMDDHHMMSS_*.sql`); grouped by date and
 | `20260625*`–`20260626*` | Data cleanup (test person, airtuerk.online, secrets audit), knowledge-base foundation, tag vocabulary, retrieval-stats job, folder colors + file Trash + presentation visibility |
 | `20260627*` | Per-user folder permissions, ledger drift-repair, bucket lockdown, FK covering indexes, RLS initplan perf, `handle_new_user` lock |
 | `20260628*`–`20260629*` | RAG warmup cron, RAG-write hardening, anon EXECUTE revokes, user-mgmt (title/metadata, email-change RPC), AI observability (D-107) |
+| `20260630*` | Gold-set eval-mode columns (`mode` / `conversation_history` / `judge_type` / `behavioral_assertions`, D-110) |
 
 ## Design system
 

@@ -9,6 +9,17 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-06-30)
 
+- **Production surface (2026-06-30):** `main` @ `3dee708` (457 commits) → Vercel **fra1**
+  (Node 24.x, Turbopack) → **terminal.airtuerk.ai**. Supabase `zkydrymygjrscjbhusxp`
+  (eu-central-1, Postgres 17.6.1, Pro). **87 migrations** (latest
+  `20260630120000_gold_set_eval_modes`). **9 edge functions:** `rag-query` v20,
+  `embed-knowledge` v14, `notify-correction-event` v7, `notify-folder-access` v7,
+  `notify-password-changed` v2, `tag-classify-chunks` v3, `confluence-snapshot` v10,
+  `confluence-extend`/`confluence-extract-text` v9. Highest decision **D-113**
+  (D-108–D-113 are DRAFT in `spec/DECISIONS.md`, awaiting ratification).
+- **Login auth-brand Compare-style hover (D-113) — merged to `main` + live:** State A logo
+  wiped vertically by a pointer-tracking 1px slider to reveal the tagline; hand-rolled,
+  zero deps; client component `auth-brand.tsx` extracted from inline `page.tsx` (`3dee708`).
 - **Auth email overhaul + forgot-password flow — shipped to `main` + deployed:** all five GoTrue
   auth templates (invite / recovery / confirmation / email-change / magic-link) rebuilt into one
   English, all-black, Outlook-safe branded shell — real `terminal` wordmark PNG
@@ -48,10 +59,10 @@ it is append-only history (do not rewrite past entries — add new ones).
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-107** (D-105 = architecture audit; D-106 = AI UX wave, code/edge-only; D-107 = AI observability + web-search hardening, **includes schema change** via `20260629140000`).
+  Highest decision: **D-113** (D-105 = architecture audit; D-106 = AI UX wave, code/edge-only; D-107 = AI observability + web-search hardening, **includes schema change** via `20260629140000`; D-108–D-113 = the 2026-06-29/30 typography / domain-migration / eval-modes / auth-email / password-UX / auth-brand-hover wave, all **DRAFT** awaiting ratification).
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
-  `embed-knowledge` (7 source modes), `rag-query` **v18** live (model **Sonnet 4.6** D-106;
+  `embed-knowledge` (7 source modes), `rag-query` **v20** live (model **Sonnet 4.6** D-106;
   mode-chips RAG-bypass + strict DE/EN/TR mirroring D-072/D-073/D-106; web-search fallback via
   `web_search_20260209` D-106; web_search `max_uses` 3 + `web_search_tool_result` citation chips
   + `mode`/`tool_calls`/`ttft_ms` observability columns D-107; F3 retrieval breadth VECTOR_K/TRGM_K/RERANK 60/30/80, D-104),
@@ -126,6 +137,55 @@ it is append-only history (do not rewrite past entries — add new ones).
   3 priority-1 rows (ZDR-gated consistency follow-up, not retrieval-blocking).
 
 ---
+
+## 2026-06-30 — D-113 auth-brand Compare-style hover (login)
+- Login brand panel: State A logo wiped vertically by a pointer-tracking 1px `--hairline-strong`
+  slider + 13px grabber (`--surface-flat` / `--hairline`) to reveal the tagline "Internal brand
+  portal and knowledge hub for airtuerk" (`--fs-lead` / 500 / `--text-1`). Hand-rolled
+  Aceternity-Compare, **zero deps**: CSS `clip-path` driven by `--clip-y`, 120ms track / 400ms
+  snap-back, gated `(hover: hover) and (pointer: fine)`, `prefers-reduced-motion` → 200ms crossfade.
+- Brand panel extracted from inline `page.tsx` to a client component `src/app/login/auth-brand.tsx`.
+  Gates green. **Merged to `main` + live** (`3dee708`). DRAFT D-113.
+
+## 2026-06-30 — D-112 Password UX: min 8 + show/hide
+- New-password minimum 12→8 (client + server + `minLength` + hint/error copy + GoTrue
+  `password_min_length=8`). New reusable `PasswordInput` (lucide Eye/EyeOff) on the login field +
+  both new-password fields. Invite/reset link TTL `mailer_otp_exp` raised 1h→24h (one shared
+  setting). Gates green; login toggle browser-verified (`7cf1d32`). DRAFT D-112.
+
+## 2026-06-30 — D-111 Auth email overhaul + instant forgot-password
+- `requestPasswordResetAction` returns immediately; the GoTrue→Resend send is deferred to
+  `next/server` `after()` (was a ~1.4s synchronous block). All 5 GoTrue templates rebuilt into one
+  English all-black Outlook-safe shell (hosted `wordmark-email.png` + styled-`alt` fallback,
+  bulletproof VML button, every link via SSR-correct `/auth/confirm?token_hash&type=`); applied to
+  the live auth config via the Management API.
+- New `notify-password-changed` edge fn (**v2**, security "password changed" notice via `after()`);
+  `notify-correction-event` / `notify-folder-access` re-skinned (**v7**). Canonical doc
+  `spec/AUTH_EMAIL_TEMPLATES.md` (rollback + Management-API recipe). Live E2E + real-M365-inbox
+  render verified (`63bebcd`, `663934b`). DRAFT D-111.
+
+## 2026-06-30 — D-110 gold_set_eval_modes migration
+- Migration `20260630120000` adds `gold_set_answers.mode` / `conversation_history` / `judge_type` /
+  `behavioral_assertions` for mode-aware + multi-turn + behavioral-assertion judging in the rag-eval
+  harness (D-081 controlled-version pattern; 84 rows preserved). 87th migration on `main`. DRAFT D-110.
+
+## 2026-06-29 — D-109 Domain migration → terminal.airtuerk.ai
+- Repoint `NEXT_PUBLIC_SITE_URL` + Supabase Auth `site_url` to `terminal.airtuerk.ai`; `notify-*`
+  edge fns send from `terminal@airtuerk.ai` with `airtuerk.ai` links; `RESEND_API_KEY` rotated to an
+  `airtuerk.ai`-scoped key; B1 recovery-link generator for invite-mail-blocked users (`371954c3`,
+  `f3aa2b14`, `349c5aee`, `8432b8dc`). DRAFT D-109. ⚠ Distinct from the in-progress **"D-109c"**
+  web-search-truthfulness thread above — numbering to reconcile at ratification.
+
+## 2026-06-29 — PR #19 UI redesign merged into D-107 base
+- Emirkan's 39-commit `feature/ui-redesign` integrated (`a832e2dd` merge, follow-up `db8f7dc2`
+  account-profile modal polish). Conflicts resolved in `src/lib/rag/client.ts` (union of imports) +
+  `AIAnswerBlock.tsx` (unified meta row, Option A). All D-107 features preserved.
+
+## 2026-06-29 — D-108 Chat answer typography (v1/v2/v3)
+- 18/20/22 type ladder for `.ai-chat-answer`; user bubble gets its own `--surface-bubble` (light
+  `#EDEDEF` / dark `#2A2A2E`); 1px hairline frames on `<pre>` + inline `<code>`; `.ai-chat-ai-mark`
+  logo above each AI answer. New tokens `--fs-reading 18px`, `--lh-loose 1.75`. Frontend-only
+  (`b87cdb75` v1, `ffb4b12c` v2, `8f10b109` v3). DRAFT D-108.
 
 ## 2026-06-29 — D-107 AI observability + web-search hardening (v18 bundle)
 

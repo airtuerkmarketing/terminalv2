@@ -4,6 +4,20 @@ Guidance for any Claude/AI session working in this repo. Applies identically acr
 Claude Code Desktop, PowerShell, and any terminal — consistency comes from this
 committed file, not the environment.
 
+## Production surface (snapshot 2026-06-30)
+
+Point-in-time orientation only — **verify against `supabase/migrations/` +
+`spec/BUILD_LOG.md` before trusting** (per the rule below):
+
+- **HEAD:** `3dee708` on `main` (the working + deploy branch).
+- **App:** Vercel **fra1** (Node 24.x, Turbopack) → **https://terminal.airtuerk.ai** (repo public).
+- **Supabase:** `zkydrymygjrscjbhusxp`, eu-central-1, Postgres 17.6.1, Pro.
+- **Migrations:** 87 (latest `20260630120000_gold_set_eval_modes`).
+- **Edge functions (9):** `rag-query` v20 · `embed-knowledge` v14 · `notify-correction-event` v7 ·
+  `notify-folder-access` v7 · `notify-password-changed` v2 · `tag-classify-chunks` v3 ·
+  `confluence-snapshot` v10 · `confluence-extend`/`confluence-extract-text` v9.
+- **Highest decision:** D-113 (`spec/DECISIONS.md`; D-108–D-113 DRAFT, awaiting ratification).
+
 ## Docs are derived — verify before trusting
 
 Markdown docs (`README.md`, `spec/*.md`) drift from the real system. Treat them as
