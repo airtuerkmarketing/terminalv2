@@ -409,11 +409,16 @@ function detectLang(input: string): "de" | "en" | "tr" {
   const raw = input ?? "";
   const t = raw.toLowerCase();
   if (!t.trim()) return "de";
+  // Turkish-exclusive letters: strong, unambiguous — check first.
   if (/[şğı]/.test(t) || /İ/.test(raw)) return "tr";
-  if (/[äöüß]/.test(t)) return "de";
+  // PRIMARY signal: EN-vs-DE stopword count. A single umlaut loanword ("Malmö") in
+  // otherwise-English text must NOT pre-empt the count (Case-9 baseline-bug fix).
   const de = (t.match(DE_WORDS) ?? []).length;
   const en = (t.match(EN_WORDS) ?? []).length;
-  return en > de ? "en" : "de";
+  if (en > de) return "en";
+  if (de > en) return "de";
+  // Tie: default German (corpus language; diacritics would only reinforce de).
+  return "de";
 }
 
 // Named predicates dispatched on assertion.predicate (Map → .get() is V|undefined).

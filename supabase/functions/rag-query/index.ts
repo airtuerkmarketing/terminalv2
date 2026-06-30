@@ -97,6 +97,27 @@ const WEB_SEARCH_TOOL = {
   max_uses: 3,
 }
 
+// Language of the user's question — drives the localized verified-sources block in
+// web-search mode (#2.5). Word-count primary so an English answer that mentions an
+// umlaut loanword ("Malmö") is not misread as German; Turkish letters checked first.
+// Mirrors src/lib/rag/preamble.ts:detectLang (can't import across the Next/Deno boundary
+// — known-debt D-111 to dedup into a shared helper post-demo).
+const DE_WORDS =
+  /\b(der|die|das|und|ich|ist|ein|eine|einen|einem|einer|nicht|mit|für|auf|dem|den|von|wie|was|wer|bitte|kannst|du|wir|uns|über|kein|mein|haben|wird)\b/gi
+const EN_WORDS =
+  /\b(the|and|is|are|a|an|of|to|in|for|you|your|what|who|how|can|could|please|this|that|with|my|we|our|about|need|want)\b/gi
+function detectLang(input: string): 'de' | 'en' | 'tr' {
+  const raw = input ?? ''
+  const t = raw.toLowerCase()
+  if (!t.trim()) return 'de'
+  if (/[şğı]/.test(t) || /İ/.test(raw)) return 'tr'
+  const de = (t.match(DE_WORDS) ?? []).length
+  const en = (t.match(EN_WORDS) ?? []).length
+  if (en > de) return 'en'
+  if (de > en) return 'de'
+  return 'de'
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
