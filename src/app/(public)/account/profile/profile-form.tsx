@@ -11,16 +11,19 @@ import { updateOwnAvatarAction, updateOwnProfileAction } from "./actions";
 const TEXT_FIELDS = [
   { key: "location", label: "Location", placeholder: "Frankfurt, Germany", type: "text" },
   { key: "company", label: "Company / Team", placeholder: "airtuerk Service GmbH", type: "text" },
-  { key: "website", label: "Portfolio / Website", placeholder: "https://…", type: "url" },
-  { key: "github", label: "GitHub", placeholder: "https://github.com/…", type: "url" },
   { key: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/in/…", type: "url" },
   { key: "instagram", label: "Instagram", placeholder: "@username", type: "text" },
   { key: "phone", label: "Phone (work)", placeholder: "+49 …", type: "tel" },
   { key: "privatePhone", label: "Phone (private)", placeholder: "+49 …", type: "tel" },
 ] as const;
 
+// website + github stay in the data model (users.ts) and the form state — they're
+// only hidden from the UI. Kept explicitly in the key union so state/save/dirty
+// keep round-tripping them unchanged (reversible, no DB/model edit).
 type EditableKey =
   | (typeof TEXT_FIELDS)[number]["key"]
+  | "website"
+  | "github"
   | "statusLine"
   | "about"
   | "dateOfBirth";
@@ -161,6 +164,9 @@ export default function ProfileForm({ profile }: { profile: OwnProfile }) {
         </div>
       </header>
 
+      {/* Scrollable body — only this region scrolls; header + actions stay fixed. */}
+      <div className="acp-body">
+
       {/* Read-only identity row */}
       <section className="acp-section">
         <div className="acp-field acp-field--full">
@@ -243,6 +249,8 @@ export default function ProfileForm({ profile }: { profile: OwnProfile }) {
           />
         </div>
       </section>
+
+      </div>{/* /acp-body */}
 
       {/* Save bar */}
       <footer className="acp-actions">
