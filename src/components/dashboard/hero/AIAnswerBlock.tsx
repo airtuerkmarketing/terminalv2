@@ -54,7 +54,7 @@ const PAUSED_NOTICE: Record<"de" | "en" | "tr", string> = {
 /* Web-search loading copy (1.5b). A web-search turn runs a 30-90s server-side
    operation (3 search iterations + Sonnet synthesis), so the generic "AI is thinking…"
    reads as "stuck". Tier 1 shows immediately; Tier 2 escalates after 8s (no first token
-   yet) to set the 30-60s expectation. Both language-mirror the question via detectLang.
+   yet) to set a longer-wait expectation. Both language-mirror the question via detectLang.
    Once the first token streams the loading branch unmounts entirely. */
 const WEB_SEARCH_LOADING_TIER1: Record<"de" | "en" | "tr", string> = {
   de: "Im Web wird gesucht…",
@@ -62,7 +62,7 @@ const WEB_SEARCH_LOADING_TIER1: Record<"de" | "en" | "tr", string> = {
   tr: "Web'de aranıyor…",
 };
 const WEB_SEARCH_LOADING_TIER2: Record<"de" | "en" | "tr", string> = {
-  de: "Suche im Web läuft — kann 30-60 Sekunden dauern.",
+  de: "Mehrere Quellen werden gegengelesen — kann bis 30 Sekunden dauern.",
   en: "Searching the web — this can take 30-60 seconds.",
   tr: "Web'de aranıyor — 30-60 saniye sürebilir.",
 };
@@ -183,6 +183,15 @@ function AITurnAnswer({
   const displayText = stripInlineCitations(text);
   // pause_turn notice (web-search iteration cap), language-mirrored from the question.
   const pausedNotice = turn.paused ? PAUSED_NOTICE[detectLang(turn.question)] : null;
+  // F-D: suppress the source chips on a web-search turn — its verified-source block (#2.5)
+  // is already streamed into the answer text as the single source surface, so the chips
+  // would duplicate it. Detected two ways for full coverage: the turn flag (live web-search/
+  // sticky turns set it in SearchAIBox; rehydrated turns derive it from persisted web_search
+  // chunks in messagesToTurns) OR a web_search source actually present in the answer (catches
+  // a live contradiction-hint turn — M3.5 — where the backend re-engaged web_search under
+  // mode:'default', so the client flag was never set). Default-RAG turns have neither.
+  const suppressSourceChips =
+    turn.isWebSearch === true || answer.quellen.some((s) => s.quelle === "web_search");
 
   // Copy the raw answer to the clipboard with a brief check-mark confirmation.
   const [copied, setCopied] = useState(false);
@@ -271,7 +280,9 @@ function AITurnAnswer({
           </div>
 
           <div className="ai-chat-actions-right">
-            {answer.quellen.length > 0 && (
+            {/* F-D: chips suppressed on web-search turns (see suppressSourceChips above) —
+                the streamed #2.5 verified-source block is the single source surface. */}
+            {!suppressSourceChips && answer.quellen.length > 0 && (
               <>
                 <details className="ai-chat-sources-toggle">
                   <summary aria-label={`Show ${answer.quellen.length} sources`}>
