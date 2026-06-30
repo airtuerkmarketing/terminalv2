@@ -33,6 +33,10 @@ interface Props {
   onFeedbackChange?: (turnId: string, feedback: "helpful" | "not_helpful") => void;
   /** Accept the rule-7 web-search offer for an out-of-scope turn. */
   onWebSearch?: (turn: AiTurn) => void;
+  /** #3 explicit-sticky web-search: true while follow-ups stay in web-search mode. */
+  webSearchSticky?: boolean;
+  /** Exit the sticky web-search mode (composer pill [exit]). */
+  onExitWebSearch?: () => void;
   /** Signed-in user's first name — for the chip personalization preamble. */
   firstName?: string | null;
 }
@@ -50,6 +54,8 @@ export function AIChatWindow({
   onCorrect,
   onFeedbackChange,
   onWebSearch,
+  webSearchSticky = false,
+  onExitWebSearch,
   firstName = null,
 }: Props) {
   const [draft, setDraft] = useState("");
@@ -327,6 +333,19 @@ export function AIChatWindow({
           </div>
         )}
         <div className="ai-chat-composer">
+          {webSearchSticky && (
+            <div className="ai-chat-websearch-pill">
+              <span>Web-Suche aktiv</span>
+              <button
+                type="button"
+                className="ai-chat-websearch-exit"
+                onClick={onExitWebSearch}
+                aria-label="Web-Suche beenden"
+              >
+                exit
+              </button>
+            </div>
+          )}
           <textarea
             ref={inputRef}
             className="ai-chat-textarea"

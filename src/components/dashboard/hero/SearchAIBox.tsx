@@ -95,6 +95,9 @@ function topCenterRoundedRect(w: number, h: number, r: number): string {
   ].join(" ");
 }
 
+// #3 explicit-sticky web-search: idle timeout after which the sticky mode self-clears.
+const WEB_SEARCH_STICKY_TIMEOUT_MS = 300000;
+
 export function SearchAIBox({ firstName = null }: { firstName?: string | null }) {
   const router = useRouter();
 
@@ -114,6 +117,14 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
   const [titleOverride, setTitleOverride] = useState<string | null>(null);
   const [correctTurn, setCorrectTurn] = useState<AiTurn | null>(null);
   const [chatMode, setChatMode] = useState<ChatMode>("default");
+  // #3 explicit-sticky web-search: once the web-search button fires, follow-ups stay in
+  // web-search mode until the user exits the composer pill or 5 min idle elapses. The state
+  // drives the pill; the ref is read inside submitAi (no stale closure / no extra dep).
+  const [webSearchSticky, setWebSearchSticky] = useState(false);
+  const stickyRef = useRef<{ active: boolean; lastInteractionAt: number }>({
+    active: false,
+    lastInteractionAt: 0,
+  });
 
   // One browser client for the component's lifetime — used to subscribe to auth
   // state changes (clears the chat on login/logout, see effect below).
@@ -298,14 +309,36 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
       setChatOpen(true);
       setQuery("");
 
-      // Web search is button-triggered (the rule-7 out-of-scope fallback), not a chip:
-      // it skips the chip mode + preamble and routes to the backend "web-search" mode.
-      const webSearch = opts?.webSearch === true;
+      // Web search is button-triggered (the rule-7 out-of-scope fallback), not a chip.
+      // #3 explicit-sticky: once armed, a plain (no-chip) follow-up stays in web-search
+      // mode until the user exits the pill or WEB_SEARCH_STICKY_TIMEOUT_MS idle elapses.
+      const explicitWeb = opts?.webSearch === true;
+      const now = Date.now();
+      const sNow = stickyRef.current;
+      const stickyAlive =
+        sNow.active && now - sNow.lastInteractionAt < WEB_SEARCH_STICKY_TIMEOUT_MS;
+      const webSearch = explicitWeb || (chatMode === "default" && stickyAlive);
       // Consume the armed mode for THIS send, then disarm so the chip de-highlights
       // and the next dashboard query (+ chat-window follow-ups) default to normal RAG.
       const activeMode = webSearch ? "default" : chatMode;
       if (!webSearch && chatMode !== "default") setChatMode("default");
       const requestMode = webSearch ? "web-search" : activeMode;
+      // Sticky bookkeeping: enter/refresh on explicit web; an armed chip breaks sticky;
+      // a sticky follow-up refreshes the idle timer; an expired sticky clears itself.
+      if (explicitWeb) {
+        stickyRef.current = { active: true, lastInteractionAt: now };
+        setWebSearchSticky(true);
+      } else if (chatMode !== "default") {
+        if (sNow.active) {
+          stickyRef.current = { active: false, lastInteractionAt: 0 };
+          setWebSearchSticky(false);
+        }
+      } else if (stickyAlive) {
+        stickyRef.current = { active: true, lastInteractionAt: now };
+      } else if (sNow.active) {
+        stickyRef.current = { active: false, lastInteractionAt: 0 };
+        setWebSearchSticky(false);
+      }
 
       // History from completed prior turns (rag-query keeps the last 10).
       const conversationHistory = turnsRef.current
@@ -429,6 +462,12 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
     },
     [submitAi]
   );
+
+  // #3: exit the sticky web-search mode (composer pill [exit] click) → back to default.
+  const exitWebSearchSticky = useCallback(() => {
+    stickyRef.current = { active: false, lastInteractionAt: 0 };
+    setWebSearchSticky(false);
+  }, []);
 
   const closeChat = useCallback(() => setChatOpen(false), []);
   // New chat: reset the thread + close the window. Closing fades the panel out
@@ -660,6 +699,8 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
         onCorrect={handleCorrect}
         onFeedbackChange={handleFeedbackChange}
         onWebSearch={handleWebSearch}
+        webSearchSticky={webSearchSticky}
+        onExitWebSearch={exitWebSearchSticky}
         firstName={firstName}
       />
 
