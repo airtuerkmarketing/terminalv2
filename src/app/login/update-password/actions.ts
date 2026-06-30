@@ -8,8 +8,8 @@ export async function updatePasswordAction(formData: FormData) {
   const password = formData.get("password") as string;
   const confirm = formData.get("confirm") as string;
 
-  if (!password || password.length < 12) {
-    return { error: "Password must be at least 12 characters long." };
+  if (!password || password.length < 8) {
+    return { error: "Password must be at least 8 characters long." };
   }
   if (password !== confirm) {
     return { error: "The passwords do not match." };
