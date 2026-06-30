@@ -318,15 +318,9 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
       // Web search is button-triggered (the rule-7 out-of-scope fallback), not a chip:
       // it skips the chip mode + preamble and routes to the backend "web-search" mode.
       const webSearch = opts?.webSearch === true;
-      // Consume the armed mode for THIS send, then disarm so the chip de-highlights
-      // and the next dashboard query (+ chat-window follow-ups) default to normal RAG.
-      const activeMode = webSearch ? "default" : chatMode;
-      if (!webSearch && chatMode !== "default") setChatMode("default");
-      const requestMode = webSearch ? "web-search" : activeMode;
-
       // D-110: file to send. Web-search NEVER carries a file (its branch ignores
       // attached_file), so a web-search re-trigger must not ship the box's base64.
-      // Otherwise: an explicit opts file (AIChatWindow) wins; the dashboard's own sends
+      // Otherwise an explicit opts file (AIChatWindow) wins; the dashboard's own sends
       // fall back to the box's attached file (captured from the render closure, so the
       // clear-on-send above doesn't change this value).
       const fileToSend = webSearch
@@ -334,6 +328,16 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
         : opts?.attachedFile !== undefined
           ? opts.attachedFile
           : attachedFile;
+
+      // A file is a document-mode operation: force 'default' so the server attach-branch
+      // (mode==='default' && attached_file) handles it. With a mode chip armed, a
+      // RAG_BYPASS/escalation mode runs FIRST and would silently drop the file (Codex P2).
+      // Web-search routes to its own mode (and never carries a file).
+      const activeMode = webSearch || fileToSend ? "default" : chatMode;
+      // Consume the armed chip for THIS send, then disarm it (de-highlight; next send
+      // defaults to normal RAG) — including file sends, which forced default above.
+      if (!webSearch && chatMode !== "default") setChatMode("default");
+      const requestMode = webSearch ? "web-search" : activeMode;
 
       // History from completed prior turns (rag-query keeps the last 10).
       const conversationHistory = turnsRef.current
