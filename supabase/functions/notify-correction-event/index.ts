@@ -28,9 +28,9 @@ const CORS = {
 }
 const H = { ...CORS, ...JSON_HEADERS }
 
-const FROM = 'airtuerk Intelligence <terminal@airtuerk.online>'
+const FROM = 'airtuerk Intelligence <terminal@airtuerk.ai>'
 const REVIEWERS = ['skoeroglu@airtuerk.de', 'msinim@airtuerk.de']
-const REVIEWS_URL = 'https://www.airtuerk.dev/admin/knowledge?tab=reviews'
+const REVIEWS_URL = 'https://terminal.airtuerk.ai/admin/knowledge?tab=reviews'
 
 function esc(s: string): string {
   return (s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))
