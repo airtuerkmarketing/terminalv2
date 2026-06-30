@@ -11,9 +11,15 @@ import type { ChatMessageItem } from "@/lib/users";
 const RAG_QUERY_PATH = "/functions/v1/rag-query";
 
 export interface RagSource {
-  // 'team_directory' (D-069) + 'web_search' (D-106 Phase 5b) are synthetic sources
-  // appended server-side into retrieved_chunks — both already used at runtime.
-  source: "context" | "confluence" | "brand" | "web_search" | "team_directory";
+  // 'team_directory' (D-069) + 'web_search' (D-106 Phase 5b) + 'attached_file' (D-110)
+  // are synthetic sources appended server-side into retrieved_chunks — all runtime-used.
+  source:
+    | "context"
+    | "confluence"
+    | "brand"
+    | "web_search"
+    | "team_directory"
+    | "attached_file";
   source_id: string;
   metadata: {
     title?: string;
@@ -50,6 +56,16 @@ export interface RagQueryOptions {
   /** KI sub-mode (mode-chips). "default" = normal RAG; others switch the system
    * prompt in rag-query (v12+). Older edge fn versions ignore this field. */
   mode?: string;
+  /** D-110: one ephemeral attachment sent with the prompt. PDF -> contentBase64 (sent as
+   * a document block); DOCX -> contentText (client-extracted via mammoth). Only the
+   * filename is persisted server-side; the content itself is never stored. */
+  attachedFile?: {
+    kind: "pdf" | "docx-text";
+    filename: string;
+    contentBase64?: string;
+    contentText?: string;
+    sizeBytes: number;
+  };
   onEvent: (e: RagStreamEvent) => void;
   signal?: AbortSignal;
 }
@@ -60,7 +76,7 @@ export async function ragQueryStream(opts: RagQueryOptions): Promise<{
   sessionId: string;
   messageId: number;
 }> {
-  const { question, sessionId, conversationHistory, mode, onEvent, signal } = opts;
+  const { question, sessionId, conversationHistory, mode, onEvent, signal, attachedFile } = opts;
   const supabase = createClient();
 
   const {
@@ -83,6 +99,7 @@ export async function ragQueryStream(opts: RagQueryOptions): Promise<{
       session_id: sessionId,
       conversation_history: conversationHistory ?? [],
       mode: mode ?? "default",
+      ...(attachedFile ? { attached_file: attachedFile } : {}),
     }),
     signal,
   });
