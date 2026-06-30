@@ -1,8 +1,27 @@
 # airtuerk.dev — Internal platform for airtuerk Service GmbH.
-# Not for public indexing. All paths disallowed for all crawlers.
+# Content is auth-gated; public crawlers see only login page.
 #
-# Note: airtuerk.de (marketing site) is a separate project and is
-# NOT affected by this file.
+# Explicit allow for AI assistants (user-initiated fetches via
+# Claude / ChatGPT to inspect this platform).
+# All other crawlers disallowed.
 
+# Anthropic — Claude (web_fetch in chat) + ClaudeBot (training crawler)
+User-agent: Claude-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+# OpenAI — ChatGPT user fetches + GPTBot
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+# All other crawlers — disallow
 User-agent: *
 Disallow: /

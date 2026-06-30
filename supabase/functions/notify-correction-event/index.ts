@@ -28,20 +28,36 @@ const CORS = {
 }
 const H = { ...CORS, ...JSON_HEADERS }
 
-const FROM = 'airtuerk Intelligence <terminal@airtuerk.online>'
+const FROM = 'airtuerk Intelligence <terminal@airtuerk.ai>'
 const REVIEWERS = ['skoeroglu@airtuerk.de', 'msinim@airtuerk.de']
-const REVIEWS_URL = 'https://www.airtuerk.dev/admin/knowledge?tab=reviews'
+const REVIEWS_URL = 'https://terminal.airtuerk.ai/admin/knowledge?tab=reviews'
 
 function esc(s: string): string {
   return (s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))
 }
 
-function shell(title: string, bodyHtml: string): string {
-  return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#18181b">
-    <h2 style="font-size:18px;margin:0 0 12px">${esc(title)}</h2>
-    ${bodyHtml}
-    <p style="margin-top:24px;font-size:12px;color:#8a8a8a">airtuerk Intelligence · Wissensbasis</p>
-  </div>`
+// Shared branded shell — kept pixel-consistent with the GoTrue auth email
+// templates (spec/AUTH_EMAIL_TEMPLATES.md): all-black monochrome, real terminal
+// wordmark in the header (hosted PNG — Outlook can't render SVG), black accents.
+const FONT = '-apple-system,Segoe UI,Helvetica,Arial,sans-serif'
+const LOGO = 'https://terminal.airtuerk.ai/logos/terminal/wordmark-email.png'
+function shell(title: string, bodyHtml: string, footnote = 'airtuerk · terminal — Wissensbasis'): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f5f7;margin:0;padding:24px 12px">
+  <tr><td align="center">
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;background:#ffffff;border-radius:14px;border:1px solid #e6e8eb;overflow:hidden">
+      <tr><td style="padding:28px 32px 4px">
+        <img src="${LOGO}" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px;font-family:${FONT};font-size:22px;font-weight:700;color:#0b0b0b;line-height:36px">
+      </td></tr>
+      <tr><td style="padding:20px 32px 28px;font-family:${FONT};color:#18181b">
+        <h1 style="font-size:20px;line-height:1.3;margin:0 0 16px;font-weight:700;color:#0b0b0b">${esc(title)}</h1>
+        ${bodyHtml}
+      </td></tr>
+      <tr><td style="padding:18px 32px;background:#fafafa;border-top:1px solid #ececee">
+        <p style="font-family:${FONT};font-size:12px;line-height:1.5;color:#9aa0a6;margin:0">${esc(footnote)}</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>`
 }
 
 async function sendEmail(resendKey: string, to: string[], subject: string, html: string) {
@@ -106,7 +122,7 @@ Deno.serve(async (req: Request) => {
       const html = shell('Neue Wissens-Korrektur wartet auf Review', `
         <p><b>Frage:</b> ${question}</p>
         <p style="background:#f7f7f7;border-radius:8px;padding:12px"><b>Vorgeschlagene Korrektur:</b><br>${proposed}</p>
-        <p><a href="${REVIEWS_URL}" style="display:inline-block;background:#0A82DF;color:#fff;text-decoration:none;padding:9px 16px;border-radius:8px">Review öffnen</a></p>`)
+        <p><a href="${REVIEWS_URL}" style="display:inline-block;background:#0b0b0b;color:#fff;text-decoration:none;padding:9px 16px;border-radius:8px">Review öffnen</a></p>`)
       result = await sendEmail(resendKey, overrideTo ?? REVIEWERS, 'Neue Wissens-Korrektur wartet', html)
     } else {
       const { data: prof } = await supabase

@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -7,8 +8,8 @@ export async function updatePasswordAction(formData: FormData) {
   const password = formData.get("password") as string;
   const confirm = formData.get("confirm") as string;
 
-  if (!password || password.length < 12) {
-    return { error: "Password must be at least 12 characters long." };
+  if (!password || password.length < 8) {
+    return { error: "Password must be at least 8 characters long." };
   }
   if (password !== confirm) {
     return { error: "The passwords do not match." };
@@ -72,6 +73,17 @@ export async function updatePasswordAction(formData: FormData) {
       error: "Password saved, but the flag removal did not take effect. Please sign out and contact bdemir@airtuerk.de."
     };
   }
+
+  // Step 4: tell the user their password was changed (security notification).
+  // Best-effort and non-blocking — runs in after() so it never delays the save
+  // or the redirect, and a mail failure must never fail a successful change.
+  after(() => {
+    adminClient.functions
+      .invoke("notify-password-changed", { body: { userId: user.id } })
+      .catch((err) =>
+        console.error("[update-password] notify-password-changed failed:", err),
+      );
+  });
 
   return { success: true };
 }

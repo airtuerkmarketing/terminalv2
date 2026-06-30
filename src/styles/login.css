@@ -153,6 +153,87 @@
   100% { stroke-dashoffset: 0;   fill: currentColor; stroke: transparent; }
 }
 
+/* ── Compare-style hover (State B): vertical wipe → tagline reveal ──────────
+   Driven by --clip-y (0–100%, set from the pointer in auth-brand.tsx). Hidden by
+   default and only enabled for fine+hover pointers, so State A is pixel-identical
+   on first paint and on touch/coarse devices. */
+.auth-brand-reveal,
+.auth-brand-slider { display: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  /* Opaque overlay (same fill as the panel) that the slider wipes in from the
+     top, progressively covering the logo and exposing the tagline. */
+  .auth-brand-reveal {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-8);
+    background: var(--surface-muted);
+    clip-path: inset(0 0 calc(100% - var(--clip-y, 0%)) 0);
+    transition: clip-path 400ms ease-out; /* hover-leave snap-back */
+    pointer-events: none;
+  }
+  .auth-brand.is-hovering .auth-brand-reveal {
+    transition: clip-path 120ms ease-out; /* pointer tracking */
+  }
+
+  .auth-brand-tagline {
+    max-width: 320px;
+    text-align: center;
+    font-size: var(--fs-lead);
+    font-weight: 500;
+    line-height: var(--lh-normal);
+    color: var(--text-1);
+  }
+
+  /* 1px slider line + grabber dot, parked at the wipe boundary (--clip-y). */
+  .auth-brand-slider {
+    display: block;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: var(--clip-y, 0%);
+    z-index: 3;
+    height: 1px;
+    background: var(--hairline-strong);
+    opacity: 0;
+    transition: top 400ms ease-out, opacity 200ms ease-out;
+    pointer-events: none;
+  }
+  .auth-brand.is-hovering .auth-brand-slider {
+    opacity: 1;
+    transition: top 120ms ease-out, opacity 200ms ease-out;
+  }
+  .auth-brand-grabber {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 13px;
+    height: 13px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: var(--surface-flat);
+    border: 1px solid var(--hairline);
+  }
+}
+
+/* Reduced motion: no slider/wipe — a plain opacity crossfade A↔B instead. */
+@media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
+  .auth-brand-reveal {
+    clip-path: none;
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+  }
+  .auth-brand.is-hovering .auth-brand-reveal {
+    opacity: 1;
+    transition: opacity 200ms ease-out;
+  }
+  .auth-brand-slider { display: none; }
+}
+
 @keyframes wmTextRise {
   to { opacity: 1; transform: translateY(0); }
 }

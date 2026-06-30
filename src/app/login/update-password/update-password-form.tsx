@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updatePasswordAction } from "./actions";
+import PasswordInput from "@/components/ui/password-input";
 
 export default function UpdatePasswordForm({
   type,
@@ -25,8 +26,8 @@ export default function UpdatePasswordForm({
     const pw = formData.get("password") as string;
     const confirm = formData.get("confirm") as string;
 
-    if (pw.length < 12) {
-      setError("Password must be at least 12 characters long.");
+    if (pw.length < 8) {
+      setError("Password must be at least 8 characters long.");
       return;
     }
 
@@ -75,30 +76,28 @@ export default function UpdatePasswordForm({
     <form action={handleSubmit} className="login-form">
       <div className="login-field">
         <label htmlFor="password" className="login-label">New password</label>
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
           required
-          minLength={12}
+          minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={isPending || success}
           className="login-input"
         />
-        <p className="login-hint">At least 12 characters</p>
+        <p className="login-hint">At least 8 characters</p>
       </div>
 
       <div className="login-field">
         <label htmlFor="confirm" className="login-label">Repeat password</label>
-        <input
+        <PasswordInput
           id="confirm"
           name="confirm"
-          type="password"
           autoComplete="new-password"
           required
-          minLength={12}
+          minLength={8}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           disabled={isPending || success}

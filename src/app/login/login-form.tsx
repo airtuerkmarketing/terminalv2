@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { loginAction } from "./actions";
+import PasswordInput from "@/components/ui/password-input";
 
 export default function LoginForm({
   next,
@@ -42,10 +43,9 @@ export default function LoginForm({
 
       <div className="auth-field">
         <label htmlFor="password" className="auth-label">Password</label>
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
           disabled={isPending}
