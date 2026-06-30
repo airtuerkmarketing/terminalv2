@@ -75,4 +75,9 @@ export interface AiTurn {
   /** web-search server-tool hit its iteration cap (Anthropic pause_turn) → the turn
    * ended with a partial/empty answer. `reason` is an open string (logging/UX text). */
   paused?: { reason: string };
+  // ── AI-Attach (D-110) ──
+  /** Marker that this turn carried an attached file — FILENAME + metadata ONLY, never
+   * contentBase64/contentText. This shape is what persists to LS_HISTORY, so the chip can
+   * re-render on reopen/reload while file content is structurally never stored. */
+  attachedFile?: { kind: "pdf" | "docx-text"; filename: string; sizeBytes: number };
 }

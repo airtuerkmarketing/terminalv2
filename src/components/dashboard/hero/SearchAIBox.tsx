@@ -7,12 +7,13 @@ import {
   useMemo,
   useRef,
   useState,
+  type ChangeEvent,
   type ClipboardEvent,
   type KeyboardEvent,
 } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Plus } from "lucide-react";
+import { Plus, FileText, X } from "lucide-react";
 import { TerminalLogo } from "@/components/shell/TerminalLogo";
 import { ModeChips } from "@/components/dashboard/hero/ModeChips";
 import { SearchDropdown, ASK_AI_ID } from "@/components/dashboard/hero/SearchDropdown";
@@ -39,6 +40,12 @@ import {
   renameChatSession,
   messagesToTurns,
 } from "@/lib/rag/client";
+import {
+  readAttachment,
+  attachmentChipMeta,
+  ATTACH_ACCEPT,
+  type AttachedFile,
+} from "@/lib/attachment";
 // Type-only — erased, so the server-only users.ts module isn't bundled here.
 import type { ChatSessionItem } from "@/lib/users";
 
@@ -114,6 +121,10 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
   const [titleOverride, setTitleOverride] = useState<string | null>(null);
   const [correctTurn, setCorrectTurn] = useState<AiTurn | null>(null);
   const [chatMode, setChatMode] = useState<ChatMode>("default");
+  // D-110: one ephemeral attachment for the next send (cleared on send). Content lives
+  // here only transiently; only a filename marker is persisted (AiTurn.attachedFile).
+  const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
+  const [attachError, setAttachError] = useState<string | null>(null);
 
   // One browser client for the component's lifetime — used to subscribe to auth
   // state changes (clears the chat on login/logout, see effect below).
@@ -122,6 +133,7 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const innerBoxRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const skipPersist = useRef(true);
   // Box pixel size, tracked so the animated glow stroke can trace the exact rounded
   // rect (width is fluid, height grows with the textarea). Visual only.
@@ -288,7 +300,7 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
   }, [query]);
 
   const submitAi = useCallback(
-    async (text: string, opts?: { webSearch?: boolean }) => {
+    async (text: string, opts?: { webSearch?: boolean; attachedFile?: AttachedFile | null }) => {
       const qq = text.trim();
       if (!qq) return;
 
@@ -297,6 +309,9 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
       setActiveId(null);
       setChatOpen(true);
       setQuery("");
+      // D-110: the attachment is one-shot — clear it (and any error) on send.
+      setAttachedFile(null);
+      setAttachError(null);
 
       // Web search is button-triggered (the rule-7 out-of-scope fallback), not a chip:
       // it skips the chip mode + preamble and routes to the backend "web-search" mode.
@@ -306,6 +321,12 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
       const activeMode = webSearch ? "default" : chatMode;
       if (!webSearch && chatMode !== "default") setChatMode("default");
       const requestMode = webSearch ? "web-search" : activeMode;
+
+      // D-110: file to send — AIChatWindow passes its own via opts; the dashboard's own
+      // sends fall back to the box's attached file (captured from the render closure, so
+      // the clear-on-send above doesn't change this value). Web-search never carries a
+      // file; commit 3 makes that explicit (clear-on-send already nulls it in practice).
+      const fileToSend = opts?.attachedFile !== undefined ? opts.attachedFile : attachedFile;
 
       // History from completed prior turns (rag-query keeps the last 10).
       const conversationHistory = turnsRef.current
@@ -326,6 +347,10 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
           isStreaming: true,
           chatMode: activeMode !== "default" ? activeMode : undefined,
           isWebSearch: webSearch || undefined,
+          // Marker only — filename/kind/size, never content (kept out of LS_HISTORY).
+          attachedFile: fileToSend
+            ? { kind: fileToSend.kind, filename: fileToSend.filename, sizeBytes: fileToSend.sizeBytes }
+            : undefined,
         },
       ]);
       const patchTurn = (u: Partial<AiTurn>) =>
@@ -337,6 +362,7 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
           sessionId: sessionId ?? undefined,
           conversationHistory,
           mode: requestMode,
+          attachedFile: fileToSend ?? undefined,
           onEvent: (e) => {
             if (e.type === "session" && e.sessionId) {
               setSessionId(e.sessionId);
@@ -400,7 +426,7 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
         }
       }
     },
-    [model, sessionId, chatMode]
+    [model, sessionId, chatMode, attachedFile]
   );
 
   const handleFeedbackChange = useCallback(
@@ -567,6 +593,29 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
     });
   }
 
+  // ── D-110: attach-file picker ──
+  function onPickFile() {
+    setAttachError(null);
+    fileInputRef.current?.click();
+  }
+  async function onFileChosen(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = ""; // reset so re-picking the same filename re-fires onChange
+    if (!f) return;
+    const r = await readAttachment(f);
+    if (r.ok) {
+      setAttachedFile(r.file);
+      setAttachError(null);
+    } else {
+      setAttachedFile(null);
+      setAttachError(r.error);
+    }
+  }
+  function removeAttachment() {
+    setAttachedFile(null);
+    setAttachError(null);
+  }
+
   return (
     <div className="ai-stack">
       <ModeChips active={chatMode} onToggle={onToggleMode} />
@@ -588,6 +637,28 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
               />
             </svg>
           )}
+          {attachedFile && (
+            <div className="ai-attach-chip">
+              <FileText className="ai-attach-chip-icon" aria-hidden="true" />
+              <span className="ai-attach-chip-name">{attachedFile.filename}</span>
+              <span className="ai-attach-chip-size">
+                {attachmentChipMeta(attachedFile).size}
+              </span>
+              <button
+                type="button"
+                className="ai-attach-chip-x"
+                onClick={removeAttachment}
+                aria-label="Remove attachment"
+              >
+                <X aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          {attachError && (
+            <div className="ai-attach-error" role="alert">
+              {attachError}
+            </div>
+          )}
           <textarea
             ref={textareaRef}
             className="ai-search-textarea"
@@ -605,15 +676,23 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
 
           <div className="ai-search-toolbar">
             <div className="ai-search-toolbar-left">
+              {/* Layer 3 (Fork-6) adds: disabled={model !== "claude"} + gated title. */}
               <button
                 type="button"
                 className="ai-search-attach"
-                disabled
-                title="Attachments coming in stage 2"
-                aria-label="Attach"
+                onClick={onPickFile}
+                title="Attach a PDF or DOCX"
+                aria-label="Attach a file"
               >
                 <Plus className="ai-search-attach-icon" aria-hidden="true" />
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ATTACH_ACCEPT}
+                hidden
+                onChange={onFileChosen}
+              />
             </div>
 
             <div className="ai-search-toolbar-right">

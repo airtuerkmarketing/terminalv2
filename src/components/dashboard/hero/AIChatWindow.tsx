@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowUp, ChevronDown, Edit3, History, Plus, X } from "lucide-react";
+import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { ArrowUp, ChevronDown, Edit3, FileText, History, Plus, X } from "lucide-react";
 import { AIAnswerBlock } from "@/components/dashboard/hero/AIAnswerBlock";
 import { ChatHistoryModal } from "@/components/dashboard/hero/ChatHistoryModal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { AiTurn } from "@/lib/search/types";
+import {
+  readAttachment,
+  attachmentChipMeta,
+  ATTACH_ACCEPT,
+  type AttachedFile,
+} from "@/lib/attachment";
 // Type-only — erased, so the server-only users.ts module isn't bundled here.
 import type { ChatSessionItem } from "@/lib/users";
 
@@ -24,7 +30,7 @@ interface Props {
   sessionId?: string | null;
   titleOverride?: string | null;
   onClose: () => void;
-  onSubmit: (text: string) => void;
+  onSubmit: (text: string, opts?: { attachedFile?: AttachedFile | null }) => void;
   onNewChat: () => void;
   onRename?: (sessionId: string, title: string) => void;
   /** Open a persisted chat (restore its turns into the active thread). */
@@ -53,6 +59,9 @@ export function AIChatWindow({
   firstName = null,
 }: Props) {
   const [draft, setDraft] = useState("");
+  // D-110: own attachment state (the follow-up composer is independent of the dashboard box).
+  const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
+  const [attachError, setAttachError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false); // chat-history search modal
   const [pendingSession, setPendingSession] = useState<ChatSessionItem | null>(null); // switch-confirm
   const [showScrollDown, setShowScrollDown] = useState(false); // jump-to-latest button
@@ -60,6 +69,7 @@ export function AIChatWindow({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const composerRef = useRef<HTMLDivElement>(null); // .ai-chat-input — measured for Bug C padding
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Esc closes — ONLY when focus is inside the panel (so Esc in the hero search
   // box stays with the box's own close-dropdown handler; no double-dismiss).
@@ -163,9 +173,36 @@ export function AIChatWindow({
 
   function send() {
     const t = draft.trim();
-    if (!t) return;
-    onSubmit(t);
+    // Allow an attachment-only send for the Layer-3 pills (which supply a non-empty
+    // instruction); a plain empty send is still blocked.
+    if (!t && !attachedFile) return;
+    onSubmit(t, { attachedFile });
     setDraft("");
+    setAttachedFile(null);
+    setAttachError(null);
+  }
+
+  // ── D-110: attach-file picker (shared logic in @/lib/attachment) ──
+  function onPickFile() {
+    setAttachError(null);
+    fileInputRef.current?.click();
+  }
+  async function onFileChosen(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = ""; // reset so re-picking the same filename re-fires onChange
+    if (!f) return;
+    const r = await readAttachment(f);
+    if (r.ok) {
+      setAttachedFile(r.file);
+      setAttachError(null);
+    } else {
+      setAttachedFile(null);
+      setAttachError(r.error);
+    }
+  }
+  function removeAttachment() {
+    setAttachedFile(null);
+    setAttachError(null);
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -327,6 +364,28 @@ export function AIChatWindow({
           </div>
         )}
         <div className="ai-chat-composer">
+          {attachedFile && (
+            <div className="ai-attach-chip">
+              <FileText className="ai-attach-chip-icon" aria-hidden="true" />
+              <span className="ai-attach-chip-name">{attachedFile.filename}</span>
+              <span className="ai-attach-chip-size">
+                {attachmentChipMeta(attachedFile).size}
+              </span>
+              <button
+                type="button"
+                className="ai-attach-chip-x"
+                onClick={removeAttachment}
+                aria-label="Remove attachment"
+              >
+                <X aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          {attachError && (
+            <div className="ai-attach-error" role="alert">
+              {attachError}
+            </div>
+          )}
           <textarea
             ref={inputRef}
             className="ai-chat-textarea"
@@ -338,15 +397,23 @@ export function AIChatWindow({
           />
           {/* Foot row: Plus (left, square ghost) + Send (right, blue). */}
           <div className="ai-chat-composer-foot">
+            {/* Layer 3 (Fork-6) adds: disabled={model !== "claude"} + gated title. */}
             <button
               type="button"
               className="ai-chat-attach"
-              disabled
-              title="Attachments coming in stage 2"
-              aria-label="Attach"
+              onClick={onPickFile}
+              title="Attach a PDF or DOCX"
+              aria-label="Attach a file"
             >
               <Plus className="ai-chat-attach-icon" aria-hidden="true" />
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ATTACH_ACCEPT}
+              hidden
+              onChange={onFileChosen}
+            />
             <button
               type="button"
               className="ai-chat-send"
