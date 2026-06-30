@@ -84,7 +84,7 @@ airtuerk Terminal Team</p>
   <tr><td align="center">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;background:#ffffff;border-radius:14px;border:1px solid #e6e8eb;overflow:hidden">
       <tr><td style="padding:28px 32px 4px">
-        <img src="{{ .SiteURL }}/logos/terminal/wordmark-email.png" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px">
+        <img src="{{ .SiteURL }}/logos/terminal/wordmark-email.png" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:22px;font-weight:700;color:#0b0b0b;line-height:36px">
       </td></tr>
       <tr><td style="padding:20px 32px 28px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#18181b">
         <h1 style="font-size:20px;line-height:1.3;margin:0 0 16px;font-weight:700;color:#0b0b0b">Reset your password</h1>
@@ -115,7 +115,7 @@ airtuerk Terminal Team</p>
   <tr><td align="center">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;background:#ffffff;border-radius:14px;border:1px solid #e6e8eb;overflow:hidden">
       <tr><td style="padding:28px 32px 4px">
-        <img src="{{ .SiteURL }}/logos/terminal/wordmark-email.png" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px">
+        <img src="{{ .SiteURL }}/logos/terminal/wordmark-email.png" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:22px;font-weight:700;color:#0b0b0b;line-height:36px">
       </td></tr>
       <tr><td style="padding:20px 32px 28px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#18181b">
         <h1 style="font-size:20px;line-height:1.3;margin:0 0 16px;font-weight:700;color:#0b0b0b">Welcome to airtuerk terminal</h1>
@@ -147,7 +147,7 @@ airtuerk Terminal Team</p>
   <tr><td align="center">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;background:#ffffff;border-radius:14px;border:1px solid #e6e8eb;overflow:hidden">
       <tr><td style="padding:28px 32px 4px">
-        <img src="{{ .SiteURL }}/logos/terminal/wordmark-email.png" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px">
+        <img src="{{ .SiteURL }}/logos/terminal/wordmark-email.png" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:22px;font-weight:700;color:#0b0b0b;line-height:36px">
       </td></tr>
       <tr><td style="padding:20px 32px 28px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#18181b">
         <h1 style="font-size:20px;line-height:1.3;margin:0 0 16px;font-weight:700;color:#0b0b0b">Confirm your email address</h1>
@@ -178,7 +178,7 @@ airtuerk Terminal Team</p>
   <tr><td align="center">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;background:#ffffff;border-radius:14px;border:1px solid #e6e8eb;overflow:hidden">
       <tr><td style="padding:28px 32px 4px">
-        <img src="{{ .SiteURL }}/logos/terminal/wordmark-email.png" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px">
+        <img src="{{ .SiteURL }}/logos/terminal/wordmark-email.png" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:22px;font-weight:700;color:#0b0b0b;line-height:36px">
       </td></tr>
       <tr><td style="padding:20px 32px 28px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#18181b">
         <h1 style="font-size:20px;line-height:1.3;margin:0 0 16px;font-weight:700;color:#0b0b0b">Confirm your new email address</h1>
@@ -209,7 +209,7 @@ airtuerk Terminal Team</p>
   <tr><td align="center">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;background:#ffffff;border-radius:14px;border:1px solid #e6e8eb;overflow:hidden">
       <tr><td style="padding:28px 32px 4px">
-        <img src="{{ .SiteURL }}/logos/terminal/wordmark-email.png" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px">
+        <img src="{{ .SiteURL }}/logos/terminal/wordmark-email.png" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:22px;font-weight:700;color:#0b0b0b;line-height:36px">
       </td></tr>
       <tr><td style="padding:20px 32px 28px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#18181b">
         <h1 style="font-size:20px;line-height:1.3;margin:0 0 16px;font-weight:700;color:#0b0b0b">Sign in to airtuerk terminal</h1>

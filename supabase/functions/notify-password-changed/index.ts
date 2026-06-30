@@ -46,7 +46,7 @@ function shell(title: string, bodyHtml: string, footnote = 'airtuerk · terminal
   <tr><td align="center">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;background:#ffffff;border-radius:14px;border:1px solid #e6e8eb;overflow:hidden">
       <tr><td style="padding:28px 32px 4px">
-        <img src="${LOGO}" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px">
+        <img src="${LOGO}" width="200" height="36" alt="airtuerk terminal" style="display:block;border:0;outline:none;text-decoration:none;height:36px;width:200px;font-family:${FONT};font-size:22px;font-weight:700;color:#0b0b0b;line-height:36px">
       </td></tr>
       <tr><td style="padding:20px 32px 28px;font-family:${FONT};color:#18181b">
         <h1 style="font-size:20px;line-height:1.3;margin:0 0 16px;font-weight:700;color:#0b0b0b">${esc(title)}</h1>
