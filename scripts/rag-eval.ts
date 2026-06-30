@@ -79,6 +79,10 @@ interface BehavioralAssertion {
   id: string;
   check: string;
   fail_if?: string;
+  // D-109c (review): deterministic judge_type reads exactly ONE of these.
+  regex?: string;
+  lang_detect?: "de" | "en" | "tr";
+  predicate?: string;
 }
 interface GoldRow {
   id: number;
@@ -386,10 +390,101 @@ async function judgeBehavioral(r: ReplayResult): Promise<Judgement> {
   }
 }
 
-// Dispatch: behavioral cases (D-109c) score per-assertion; everything else uses
-// the baseline rubric against the 2026-06-22 human verdict.
+// ---------- deterministic judge (D-109c review) ----------
+// Pure-code per-assertion scoring (no LLM): each assertion carries exactly one
+// evaluator — regex (must match r.answer), lang_detect (detectLang(answer) ===
+// code), or predicate (named fn in PREDICATES). Reuses behavioral_pass/fail so
+// the existing aggregation counts it. Used for cases 7/9/10 (URL-fidelity +
+// F-A localized label), which are mechanically checkable and should not depend
+// on LLM-judge variance.
+
+// Inline DE/EN/TR detector — mirrors src/lib/rag/preamble.ts:detectLang. Cannot
+// import across the Next/Node boundary (the `@/` alias does not resolve under
+// `node --env-file`); known-debt D-111 to dedup into a shared helper post-demo.
+const DE_WORDS =
+  /\b(der|die|das|und|ich|ist|ein|eine|einen|einem|einer|nicht|mit|für|auf|dem|den|von|wie|was|wer|bitte|kannst|du|wir|uns|über|kein|mein|haben|wird)\b/gi;
+const EN_WORDS =
+  /\b(the|and|is|are|a|an|of|to|in|for|you|your|what|who|how|can|could|please|this|that|with|my|we|our|about|need|want)\b/gi;
+function detectLang(input: string): "de" | "en" | "tr" {
+  const raw = input ?? "";
+  const t = raw.toLowerCase();
+  if (!t.trim()) return "de";
+  if (/[şğı]/.test(t) || /İ/.test(raw)) return "tr";
+  if (/[äöüß]/.test(t)) return "de";
+  const de = (t.match(DE_WORDS) ?? []).length;
+  const en = (t.match(EN_WORDS) ?? []).length;
+  return en > de ? "en" : "de";
+}
+
+// Named predicates dispatched on assertion.predicate (Map → .get() is V|undefined).
+const PREDICATES = new Map<string, (answer: string) => boolean>([
+  // Case 7: no http(s) URL may appear in the prose BEFORE the deterministic
+  // source-block label — URLs are allowed only inside the appended block.
+  [
+    "no_url_before_source_block",
+    (answer: string): boolean => {
+      const m = answer.match(/\n\n(Quellen|Sources|Kaynaklar):\n/);
+      const prose = m ? answer.slice(0, m.index ?? answer.length) : answer;
+      return !/https?:\/\//.test(prose);
+    },
+  ],
+]);
+
+function judgeDeterministic(r: ReplayResult): Judgement {
+  const decls = r.row.behavioral_assertions ?? [];
+  if (r.errored) {
+    return {
+      verdict: "fail",
+      category: "behavioral_fail",
+      reason: `Replay-Fehler: ${r.answer.slice(0, 80)}`,
+      security: false,
+      assertions: decls.map((a) => ({ id: a.id, pass: false, evidence: "Replay-Fehler" })),
+    };
+  }
+  const ans = r.answer ?? "";
+  const results: AssertionResult[] = decls.map((a) => {
+    let pass = false;
+    let evidence: string;
+    if (a.regex != null) {
+      try {
+        pass = new RegExp(a.regex).test(ans);
+      } catch {
+        pass = false;
+      }
+      evidence = `regex ${pass ? "match" : "no-match"}`;
+    } else if (a.lang_detect != null) {
+      const got = detectLang(ans);
+      pass = got === a.lang_detect;
+      evidence = `lang=${got} exp=${a.lang_detect}`;
+    } else if (a.predicate != null) {
+      const fn = PREDICATES.get(a.predicate);
+      pass = fn ? fn(ans) : false;
+      evidence = fn ? `predicate ${pass ? "ok" : "fail"}` : `unknown predicate ${a.predicate}`;
+    } else {
+      evidence = "no evaluator (regex|lang_detect|predicate)";
+    }
+    return { id: a.id, pass, evidence };
+  });
+  const allPass = results.length > 0 && results.every((x) => x.pass);
+  return {
+    verdict: allPass ? "pass" : "fail",
+    category: allPass ? "behavioral_pass" : "behavioral_fail",
+    reason: allPass
+      ? "alle deterministischen Checks bestanden"
+      : `Fehlgeschlagen: ${results.filter((x) => !x.pass).map((x) => x.id).join(", ")}`,
+    security: false,
+    assertions: results,
+  };
+}
+
+// Dispatch: deterministic cases (D-109c review) score in code; behavioral cases
+// score per-assertion via the LLM judge; everything else uses the baseline
+// rubric against the 2026-06-22 human verdict.
 async function judge(r: ReplayResult): Promise<Judgement> {
-  return (r.row.judge_type ?? "baseline") === "behavioral" ? judgeBehavioral(r) : judgeBaseline(r);
+  const jt = r.row.judge_type ?? "baseline";
+  if (jt === "behavioral") return judgeBehavioral(r);
+  if (jt === "deterministic") return judgeDeterministic(r);
+  return judgeBaseline(r);
 }
 
 // ---------- main ----------

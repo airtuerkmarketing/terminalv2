@@ -1,0 +1,37 @@
+# Deno type-check baseline — supabase/functions/rag-query/index.ts @ v18
+# Captured 2026-06-30, HEAD 3dee708 (rag-query source byte-identical to v18 anchor 8f10b10).
+#
+# GATE (D-109c Blocker-4 §4.1) — after EACH edge-fn commit at Step 3, run:
+#   deno check --node-modules-dir=auto supabase/functions/rag-query/index.ts
+# PASS  = error count <= 15  AND  every error belongs to Family A or B below.
+# FAIL  = any NEW error family, or count > 15  → a regression the edit introduced; fix before commit.
+#
+# Why these exist: createClient() (jsr:@supabase/supabase-js@2, resolved 2.108.2) returns
+# SupabaseClient<any,"public",...>, but the function annotates SupabaseClient<...never...>, so
+# untyped .from().insert()/.update() results degrade to `never`. Pre-existing on untouched v18,
+# invisible to `pnpm typecheck` (tsconfig excludes supabase/functions). Deployed v18 runs fine.
+# OUT OF SCOPE to fix (would require typing the whole function).
+#
+# NOTE: line:col are a v18 snapshot and WILL shift as code is added — diff by (code + family +
+# construct), NOT by exact line number.
+#
+# ── Family A — SupabaseClient<...> not assignable (call site passes `supabaseService`) ──
+TS2345  index.ts:186:9    supabaseService arg
+TS2322  index.ts:195:9    supabaseService prop  (expected from :681:3)
+TS2345  index.ts:209:9    supabaseService arg
+TS2322  index.ts:218:9    supabaseService prop  (expected from :681:3)
+TS2345  index.ts:238:7    supabaseService arg
+TS2345  index.ts:265:62   supabaseService arg   (streamWeissNichtResponse)
+TS2322  index.ts:286:7    supabaseService prop  (expected from :681:3)
+TS2345  index.ts:1007:19  .update({...}) arg not assignable to `never`
+#
+# ── Family B — untyped query result is `never` / `never[]` ──
+TS2353  index.ts:443:17   'user_id' not in type 'never[]'   (.insert session)
+TS2339  index.ts:449:34   'id' not on type 'never'          (newSession.id)
+TS2353  index.ts:452:5    'session_id' not in type 'never[]'
+TS2353  index.ts:695:7    'session_id' not in type 'never[]'
+TS2339  index.ts:712:28   'id' not on type 'never'          (msgRow.id)
+TS2353  index.ts:1092:7   'session_id' not in type 'never[]'
+TS2339  index.ts:1103:28  'id' not on type 'never'          (msgRow.id)
+#
+# Total: 15 errors  (8 Family-A + 7 Family-B).  deno reports: "Found 15 errors."
