@@ -17,6 +17,15 @@ export const ATTACH_ALLOWED_EXT = new Set(["pdf", "docx"]);
 export const ATTACH_ACCEPT = ".pdf,.docx";
 export const ATTACH_MAX_BYTES = 10 * 1024 * 1024; // 10 MB source -> ~13.3 MB base64 (spike-verified OK)
 
+/** Post-attach quick-action pills (D-110). EN labels (match the hero surface). Each pill
+ *  submits its `prompt` with the attached file on mode 'default', so the server attach
+ *  branch handles it — arming a RAG_BYPASS mode would silently drop the file. */
+export const ATTACH_QUICK_ACTIONS: ReadonlyArray<{ label: string; prompt: string }> = [
+  { label: "Summarize", prompt: "Summarize this document." },
+  { label: "Translate EN", prompt: "Translate this document to English." },
+  { label: "Key Points", prompt: "Extract the key points from this document as a concise bulleted list." },
+];
+
 type ReadResult = { ok: true; file: AttachedFile } | { ok: false; error: string };
 
 /**

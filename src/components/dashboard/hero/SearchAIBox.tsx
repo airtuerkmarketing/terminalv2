@@ -44,6 +44,7 @@ import {
   readAttachment,
   attachmentChipMeta,
   ATTACH_ACCEPT,
+  ATTACH_QUICK_ACTIONS,
   type AttachedFile,
 } from "@/lib/attachment";
 // Type-only — erased, so the server-only users.ts module isn't bundled here.
@@ -134,6 +135,7 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
   const boxRef = useRef<HTMLDivElement>(null);
   const innerBoxRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachBtnRef = useRef<HTMLButtonElement>(null);
   const skipPersist = useRef(true);
   // Box pixel size, tracked so the animated glow stroke can trace the exact rounded
   // rect (width is fluid, height grows with the textarea). Visual only.
@@ -322,11 +324,16 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
       if (!webSearch && chatMode !== "default") setChatMode("default");
       const requestMode = webSearch ? "web-search" : activeMode;
 
-      // D-110: file to send — AIChatWindow passes its own via opts; the dashboard's own
-      // sends fall back to the box's attached file (captured from the render closure, so
-      // the clear-on-send above doesn't change this value). Web-search never carries a
-      // file; commit 3 makes that explicit (clear-on-send already nulls it in practice).
-      const fileToSend = opts?.attachedFile !== undefined ? opts.attachedFile : attachedFile;
+      // D-110: file to send. Web-search NEVER carries a file (its branch ignores
+      // attached_file), so a web-search re-trigger must not ship the box's base64.
+      // Otherwise: an explicit opts file (AIChatWindow) wins; the dashboard's own sends
+      // fall back to the box's attached file (captured from the render closure, so the
+      // clear-on-send above doesn't change this value).
+      const fileToSend = webSearch
+        ? null
+        : opts?.attachedFile !== undefined
+          ? opts.attachedFile
+          : attachedFile;
 
       // History from completed prior turns (rag-query keeps the last 10).
       const conversationHistory = turnsRef.current
@@ -614,6 +621,7 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
   function removeAttachment() {
     setAttachedFile(null);
     setAttachError(null);
+    attachBtnRef.current?.focus(); // a11y: don't strand focus on the removed chip button
   }
 
   return (
@@ -654,6 +662,20 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
               </button>
             </div>
           )}
+          {attachedFile && chatMode === "default" && (
+            <div className="ai-attach-pills">
+              {ATTACH_QUICK_ACTIONS.map((qa) => (
+                <button
+                  key={qa.label}
+                  type="button"
+                  className="ai-attach-pill"
+                  onClick={() => submitAi(qa.prompt, { attachedFile })}
+                >
+                  {qa.label}
+                </button>
+              ))}
+            </div>
+          )}
           {attachError && (
             <div className="ai-attach-error" role="alert">
               {attachError}
@@ -676,12 +698,15 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
 
           <div className="ai-search-toolbar">
             <div className="ai-search-toolbar-left">
-              {/* Layer 3 (Fork-6) adds: disabled={model !== "claude"} + gated title. */}
+              {/* Fork-6 (D-110): attachments are Claude-only. Inert today (model is
+                  always 'claude' until a model-picker ships) but kept as forward-compat. */}
               <button
+                ref={attachBtnRef}
                 type="button"
                 className="ai-search-attach"
                 onClick={onPickFile}
-                title="Attach a PDF or DOCX"
+                disabled={model !== "claude"}
+                title={model !== "claude" ? "Attachments require Claude" : "Attach a PDF or DOCX"}
                 aria-label="Attach a file"
               >
                 <Plus className="ai-search-attach-icon" aria-hidden="true" />
@@ -731,6 +756,8 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
         turns={turns}
         sessionId={sessionId}
         titleOverride={titleOverride}
+        model={model}
+        chatMode={chatMode}
         onClose={closeChat}
         onSubmit={submitAi}
         onNewChat={newChat}

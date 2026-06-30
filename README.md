@@ -19,8 +19,8 @@ auth-gated throughout — there is no public content.
 ## Status
 
 - **HEAD:** `5c10519` on `main` (442 commits since 2026-06-15)
-- **Latest milestone:** D-107 — AI observability + web-search hardening
-- **Highest decision:** D-107 (`spec/DECISIONS.md`)
+- **Latest milestone:** D-110 — AI-Attach for PDF/DOCX (in PR #22)
+- **Highest decision:** D-110 (`spec/DECISIONS.md`)
 - **Demo target:** 2026-08-01
 
 ## Stack
@@ -88,7 +88,7 @@ Anthropic and Voyage SDKs are not Next dependencies.
 | File | Purpose |
 |---|---|
 | `ARCHITECTURE.md` | System design, schema, block taxonomy, routing |
-| `DECISIONS.md` | Locked design decisions (D-001 through D-107) |
+| `DECISIONS.md` | Locked design decisions (D-001 through D-110) |
 | `DESIGN_SYSTEM.md` | Design tokens, theming model, component conventions |
 | `BUILD_LOG.md` | Running progress record (authoritative status source) |
 | `PHASE_PLAN.md` | Original phase plan (historical — see BUILD_LOG for current status) |

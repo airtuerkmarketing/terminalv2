@@ -1,6 +1,9 @@
 # AI-Attach (PDF/DOCX) — Phase-B Implementation Plan (REVIEW DRAFT)
 
-> **Status:** Plan for review — **no code written yet** (Buhara's plan-first pattern).
+> **Status:** Plan APPROVED + IMPLEMENTED — 3 commits on `claude/ai-attach-pdf-docx-kxz7n0` (PR #22):
+> `bbe3c0a` backend · `31ea3cb` client · polish. Pre-spike passed (~14 MB base64 body reaches the edge
+> handler). The as-built record is **D-110** in `spec/DECISIONS.md`; edge `rag-query` redeploy + live
+> preview-verify pending owner sign-off before merge.
 > **Numbering:** **D-110** (owner-locked 2026-06-30). The brief's "D-108" was contested — "D-108"
 > is an informal code-comment label (typography) and "D-109c" is in BUILD_LOG; **D-110** is the next
 > clean formal DECISIONS number.

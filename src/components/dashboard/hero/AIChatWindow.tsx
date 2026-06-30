@@ -6,10 +6,12 @@ import { AIAnswerBlock } from "@/components/dashboard/hero/AIAnswerBlock";
 import { ChatHistoryModal } from "@/components/dashboard/hero/ChatHistoryModal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { AiTurn } from "@/lib/search/types";
+import type { ChatMode } from "@/components/dashboard/hero-data";
 import {
   readAttachment,
   attachmentChipMeta,
   ATTACH_ACCEPT,
+  ATTACH_QUICK_ACTIONS,
   type AttachedFile,
 } from "@/lib/attachment";
 // Type-only — erased, so the server-only users.ts module isn't bundled here.
@@ -29,6 +31,10 @@ interface Props {
   turns: AiTurn[];
   sessionId?: string | null;
   titleOverride?: string | null;
+  /** Selected model (Fork-6 gating: attachments are Claude-only). */
+  model?: string;
+  /** Armed mode-chip — quick-action pills only show on 'default' so they don't double-prime. */
+  chatMode?: ChatMode;
   onClose: () => void;
   onSubmit: (text: string, opts?: { attachedFile?: AttachedFile | null }) => void;
   onNewChat: () => void;
@@ -48,6 +54,8 @@ export function AIChatWindow({
   turns,
   sessionId,
   titleOverride,
+  model,
+  chatMode,
   onClose,
   onSubmit,
   onNewChat,
@@ -70,6 +78,7 @@ export function AIChatWindow({
   const panelRef = useRef<HTMLElement>(null);
   const composerRef = useRef<HTMLDivElement>(null); // .ai-chat-input — measured for Bug C padding
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachBtnRef = useRef<HTMLButtonElement>(null);
 
   // Esc closes — ONLY when focus is inside the panel (so Esc in the hero search
   // box stays with the box's own close-dropdown handler; no double-dismiss).
@@ -201,6 +210,15 @@ export function AIChatWindow({
     }
   }
   function removeAttachment() {
+    setAttachedFile(null);
+    setAttachError(null);
+    attachBtnRef.current?.focus(); // a11y: keep focus on the attach button after removal
+  }
+  // Post-attach pill: submit a mapped instruction with the attached file on mode 'default'.
+  function runQuickAction(prompt: string) {
+    if (!attachedFile) return;
+    onSubmit(prompt, { attachedFile });
+    setDraft("");
     setAttachedFile(null);
     setAttachError(null);
   }
@@ -381,6 +399,20 @@ export function AIChatWindow({
               </button>
             </div>
           )}
+          {attachedFile && chatMode === "default" && (
+            <div className="ai-attach-pills">
+              {ATTACH_QUICK_ACTIONS.map((qa) => (
+                <button
+                  key={qa.label}
+                  type="button"
+                  className="ai-attach-pill"
+                  onClick={() => runQuickAction(qa.prompt)}
+                >
+                  {qa.label}
+                </button>
+              ))}
+            </div>
+          )}
           {attachError && (
             <div className="ai-attach-error" role="alert">
               {attachError}
@@ -397,12 +429,15 @@ export function AIChatWindow({
           />
           {/* Foot row: Plus (left, square ghost) + Send (right, blue). */}
           <div className="ai-chat-composer-foot">
-            {/* Layer 3 (Fork-6) adds: disabled={model !== "claude"} + gated title. */}
+            {/* Fork-6 (D-110): attachments are Claude-only (inert until a model-picker
+                ships; model is threaded from the parent so this isn't always-disabled). */}
             <button
+              ref={attachBtnRef}
               type="button"
               className="ai-chat-attach"
               onClick={onPickFile}
-              title="Attach a PDF or DOCX"
+              disabled={model !== "claude"}
+              title={model !== "claude" ? "Attachments require Claude" : "Attach a PDF or DOCX"}
               aria-label="Attach a file"
             >
               <Plus className="ai-chat-attach-icon" aria-hidden="true" />
