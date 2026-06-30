@@ -89,7 +89,7 @@ Anthropic and Voyage SDKs are not Next dependencies.
 |---|---|
 | `ARCHITECTURE.md` | System design, schema, block taxonomy, routing |
 | `DECISIONS.md` | Locked design decisions (D-001 through D-107) |
-| `DESIGN_SYSTEM.md` | iOS 18 Liquid Glass design language |
+| `DESIGN_SYSTEM.md` | Design tokens, theming model, component conventions |
 | `BUILD_LOG.md` | Running progress record (authoritative status source) |
 | `PHASE_PLAN.md` | Original phase plan (historical — see BUILD_LOG for current status) |
 | `CONTRIBUTING.md` | Branches, commits, deployment workflow |
@@ -120,12 +120,21 @@ All migrations are timestamp-named (`YYYYMMDDHHMMSS_*.sql`); grouped by date and
 
 ## Design system
 
-**iOS 18 Liquid Glass** — translucent surfaces, ambient orbs, Quantum Blue
-(`#0A82DF`) as the sole accent color.
+**Flat editorial minimalism.** Heavy whitespace, near-monochrome surfaces,
+Quantum Blue (`#0A82DF`) as the sole functional accent — never decorative.
+OS-native folder metaphors (lock-badged folder icons, Finder-style libraries),
+hairline borders, sharp corners. Reads as operator software, not consumer app.
 
 No external UI libraries (no Radix, no shadcn). Hand-rolled components throughout
-(portal + focus management + roving keyboard nav + outside-click/Escape). DM Mono
-uppercase labels, sharp corners, hairline borders, per-area BEM naming.
+— portal + focus management + roving keyboard navigation + outside-click /
+Escape — built on a Tailwind 4 `@theme inline` token bridge that maps
+runtime CSS custom properties to utility classes. Theme switches via a
+`[data-theme]` attribute on `<html>`; no hex values are hardcoded in component
+CSS. DM Mono uppercase labels, per-area BEM naming (`.dl-*` for Document
+Library, `.um-*` for User Menu, etc.).
+
+Brand-content tokens (Torch, Orient, Tiara) render brand identity inside
+content blocks only — never UI chrome.
 
 Details: `spec/DESIGN_SYSTEM.md`
 
