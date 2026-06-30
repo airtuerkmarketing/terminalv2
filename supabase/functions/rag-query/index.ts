@@ -118,6 +118,20 @@ function detectLang(input: string): 'de' | 'en' | 'tr' {
   return 'de'
 }
 
+// #3b contradiction-hint (M3.5): a default-mode follow-up that contradicts a prior
+// answer is the classic sycophancy trap — the model is liable to concede just to be
+// agreeable. When the prior turn was web-search-backed (it carried the appended,
+// verified-source block), re-engage the web_search tool so the model re-verifies against
+// live evidence instead of folding. The anti-sycophancy rules (6-9) live in
+// WEB_SEARCH_PROMPT; here we only make the tool AVAILABLE — a backend safety net for when
+// the frontend explicit-sticky mode (M3.4) didn't keep the follow-up in web-search mode.
+const CONTRADICTION_RE =
+  /\b(nein|nope|stimmt nicht|falsch|doch nicht|incorrect|wrong|that'?s not right)\b/i
+function detectContradictionSignal(userMsg: string, priorAssistantMsg: string | null): boolean {
+  if (!priorAssistantMsg) return false
+  return CONTRADICTION_RE.test(userMsg)
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -300,6 +314,19 @@ Deno.serve(async (req: Request) => {
     if (mode === 'escalation') systemPrompt += ESCALATION_SUFFIX
     const messages = buildConversation(conversation_history, question)
 
+    // #3b (M3.5): default-mode contradiction → re-engage web_search when the prior answer
+    // was web-search-backed (its text carried the appended verified-source block). The
+    // prior assistant turn is the last assistant entry in the client-sent history. Only
+    // fires for mode 'default' (escalation/bypass keep their own flows); the source block
+    // then follows ACTUAL tool usage, not this flag (see the H3 gate in streamClaudeResponse).
+    const priorAssistantMsg =
+      [...conversation_history].reverse().find((m) => m.role === 'assistant')?.content ?? null
+    const contradictionHint =
+      mode === 'default' &&
+      detectContradictionSignal(question, priorAssistantMsg) &&
+      /\n(Quellen|Sources|Kaynaklar):\n/.test(priorAssistantMsg ?? '')
+    if (contradictionHint) console.info('contradiction-hint: re-engaging web_search')
+
     return await streamClaudeResponse({
       systemPrompt,
       messages,
@@ -308,6 +335,7 @@ Deno.serve(async (req: Request) => {
       sessionId: activeSessionId,
       retrievedChunks: finalChunks,
       mode,
+      webSearch: contradictionHint,
     })
   } catch (err) {
     console.error('rag-query error:', err)
@@ -1047,8 +1075,13 @@ async function streamClaudeResponse({
         // #2.5 (M3.3): append the verified, localized source block built from the model's
         // native citations, streamed as the final answer text (client + harness see it). Strip
         // any stray model "Quellen:/Sources:/Kaynaklar:" line from the persisted text first
-        // (#2.5.6 — Rule 10 should prevent it; warn for monitoring). Web-search mode only.
-        if (webSearch) {
+        // (#2.5.6 — Rule 10 should prevent it; warn for monitoring).
+        // H3 (M3.5): the block follows ACTUAL web_search usage, not the mode flag. Explicit
+        // web-search mode always emits it (the user asked to search — "Keine verifizierten
+        // Quellen." is then a meaningful answer). A contradiction-hint turn (mode 'default',
+        // web_search re-engaged) emits it ONLY when the model actually searched (webSearchUses
+        // > 0); otherwise a pure-RAG default answer would get a spurious empty source block.
+        if (webSearch && (mode === 'web-search' || webSearchUses > 0)) {
           const before = fullText
           fullText = fullText
             .replace(/^[ \t]*(Quellen|Sources|Kaynaklar):.*$/gim, '')
