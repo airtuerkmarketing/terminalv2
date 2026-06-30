@@ -9,6 +9,8 @@ import {
   type LucideProps,
 } from "lucide-react";
 import { TerminalLogo } from "@/components/shell/TerminalLogo";
+import { FlagIcon } from "@/components/ui/flag-icon";
+import { LANGUAGES } from "@/lib/documents-constants";
 import type { SearchHit, SearchResults } from "@/lib/search/types";
 
 /* Floating results dropdown under the box, Linear-style (BAU-Auftrag §5.3).
@@ -76,6 +78,28 @@ export function SearchDropdown({
                     <span className="ai-search-hit-meta">{hit.subtitle}</span>
                   )}
                 </span>
+                {(hit.language || hit.extension) && (
+                  <span
+                    className="ai-search-hit-badges"
+                    role="img"
+                    aria-label={[
+                      hit.language
+                        ? LANGUAGES.find((l) => l.code === hit.language)?.name ??
+                          hit.language.toUpperCase()
+                        : null,
+                      hit.extension ? hit.extension.toUpperCase() : null,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  >
+                    {hit.language && <FlagIcon code={hit.language} />}
+                    {hit.extension && (
+                      <span className="ai-search-hit-badge">
+                        {hit.extension.toUpperCase()}
+                      </span>
+                    )}
+                  </span>
+                )}
               </button>
             ))}
           </div>
