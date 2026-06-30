@@ -7,8 +7,21 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ---
 
-## Current State (updated 2026-06-29)
+## Current State (updated 2026-06-30)
 
+- **Auth email overhaul + forgot-password flow — shipped to `main` + deployed:** all five GoTrue
+  auth templates (invite / recovery / confirmation / email-change / magic-link) rebuilt into one
+  English, all-black, Outlook-safe branded shell — real `terminal` wordmark PNG
+  (`public/logos/terminal/wordmark-email.png`, rendered from `wordmark.svg`), bulletproof VML
+  button, every link via the SSR-correct `/auth/confirm?token_hash={{ .TokenHash }}&type=…`.
+  Applied to the live auth config via the Management API; `spec/AUTH_EMAIL_TEMPLATES.md` is the
+  canonical record + rollback snapshot. **Forgot-password latency fix:** `requestPasswordResetAction`
+  now returns in ~tens of ms with the GoTrue→Resend send deferred to `next/server` `after()` (was a
+  ~1.4s synchronous block — GoTrue hands the mail to SMTP inside the request). **"Informed" step:**
+  new **`notify-password-changed`** edge function emails a "your password was changed" security
+  notice after a successful reset (wired into `updatePasswordAction` via `after()`, best-effort).
+  `notify-correction-event` + `notify-folder-access` re-skinned to the same shell. Gates green;
+  prod-verified end-to-end.
 - **D-109c (Web-Search Truthfulness + Anti-Sycophancy) — Phase B, in progress on `main`:** #5 (`7670e64`) `feat(rag-eval): mode + history + behavioral judge` — `gold_set_answers` +4 cols (`mode`/`conversation_history`/`judge_type`/`behavioral_assertions`; migration `20260630120000`, 84 rows preserved, ledger md5 `582c2096…`). Harness now drives web-search mode + multi-turn + a behavioral judge alongside the baseline judge; gates green. **Remaining:** source-fidelity + anti-sycophancy prompt blocks in `WEB_SEARCH_PROMPT`, backend native-citation validation, frontend mode-stickiness + honest loading text, 8 behavioral gold cases, decisions/docs sync.
 - **AI UX wave (D-106) — shipped to main + deployed:** four owner-requested airtuerk Intelligence changes. (1) **Generation model Opus 4.8 → Sonnet 4.6** (`rag-query` `ANTHROPIC_MODEL`; supersedes D-060). ⚠️ rag-eval re-baseline pending: 86.9% (Opus single-draw) and 85.7% (Sonnet single-draw) are unreliable for CI-gate pinning — variance evidence (n=3 on identical config) showed μ=80.97%, σ=2.35pp (~5pp intra-version swing typical). Phase 10 prerequisite: a clean n≥3 baseline on v18 prod (~$8–15). Single-draw eval stays valid for regression smoke checks (used for v17 deploy verification this wave). See D-107. (2) **Chip personalization preamble** — "Hallo {Vorname}, hier ist {…}:" rendered as UI chrome above translate/mail/summary/escalation results (`src/lib/rag/preamble.ts`), language-mirrored, kept out of `answer.text` so copy-paste stays clean. (3) **Strict language mirroring** — `rag-query` rules 3/7/8 (uncertainty / out-of-scope / identity) now DE/EN/TR variants instead of hard-German; mode prompts hardened; frontend `isOutOfScope`/`inferKonfidenz` detect all three langs. (4) **Working web-search fallback** — the rule-7 "Yes, search the web" button now runs a `web-search` mode using the Anthropic `web_search_20260209` server tool (was a disabled skeleton). Gates green; frontend browser-verified; prod-verified post-deploy. See D-106.
 - **Architecture audit (D-105) — MERGED to main:** live-source audit of the App Router + Supabase data flow. **SEC-01** (`37e4c33`): `/api/search` no longer leaks draft pages to anon (auth-gate + `status='published'`; anon → 401). **PR #17** (squash `98086c6`) Steps 0–5: SEC-02 redirect sanitizer, CM-01/PERF-04 dashboard code-split, HC-01 `src/config/navigation.ts`, PERF-03 folder-count batching, CM-02 `src/lib/library/actions-shared.ts`, CM-03 modal code-split. **PR #18** (squash `63efa2f`): PERF-01/02 cookie-free cached CMS reads (TTL 3600) + `POST /api/revalidate` super_admin lever + SEC-03 **CSP report-only** (build-derived prefs-script hash, `/api/csp-report` sink) + DOC-01. All gates green; anon prod-verified. **STILL OPEN (owner decisions — NOT done):** SEC-04 Vercel WAF rate-limit (handoff — no MCP firewall API), the CSP enforce-flip (report-only for now), and the DB-track (SEC-06 / DB-01 / DB-02 / DB-03) — each regresses as-specified, see D-105.
@@ -43,7 +56,8 @@ it is append-only history (do not rewrite past entries — add new ones).
   `web_search_20260209` D-106; web_search `max_uses` 3 + `web_search_tool_result` citation chips
   + `mode`/`tool_calls`/`ttft_ms` observability columns D-107; F3 retrieval breadth VECTOR_K/TRGM_K/RERANK 60/30/80, D-104),
   `notify-correction-event`,
-  `notify-folder-access` (D-080, deployed), `tag-classify-chunks` (Haiku), + 3 confluence fns.
+  `notify-folder-access` (D-080, deployed), `notify-password-changed` (2026-06-30, deployed),
+  `tag-classify-chunks` (Haiku), + 3 confluence fns.
   RAG chat live on dashboard hero (turn-based stream, source cards, persona v2).
   **RAG eval harness** (`scripts/rag-eval.ts`, D-099): replays the 84 gold questions
   through live `rag-query` + LLM-judges vs the 2026-06-22 reference (direction-aware,

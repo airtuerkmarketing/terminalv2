@@ -1,22 +1,21 @@
 // ====================================================================
-// notify-folder-access — transactional "you've been granted folder access"
-// email, via the Resend HTTP API (mirrors notify-correction-event).
+// notify-password-changed — security notification email sent when a user
+// changes their password (forgot-password reset, forced change, or self-serve),
+// via the Resend HTTP API. Mirrors notify-folder-access.
 //
-// POST /functions/v1/notify-folder-access
+// POST /functions/v1/notify-password-changed
 // Body: {
-//   kind: 'document' | 'presentation',
-//   folderId: string,
-//   teamMemberId: string,
+//   userId: string,        // auth user id whose password changed
 //   probe?: boolean        // health check: report key presence, send nothing
 // }
 //
-// Looks up the team member's email + name and the folder's name + path with the
-// service role (so it works regardless of the grantee's RLS), then sends a short
-// branded email with a deep link to the folder.
+// Looks up the account's email with the service role (so it works regardless of
+// the caller's RLS), then sends a short branded "your password was changed" email
+// with a security note. This is the "informing the user" step of the reset flow.
 //
-// Best-effort: the caller (saveFolderAccess) invokes this fire-and-forget and
-// swallows failures, so a mail problem never fails the grant. Returns
-// { ok:false, skipped:true } (200) when RESEND_API_KEY is not configured.
+// Best-effort: the caller (updatePasswordAction) invokes this fire-and-forget in
+// after() and swallows failures, so a mail problem never fails the password save.
+// Returns { ok:false, skipped:true } (200) when RESEND_API_KEY is not configured.
 // ====================================================================
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
@@ -29,18 +28,19 @@ const CORS = {
 }
 const H = { ...CORS, ...JSON_HEADERS }
 
-const FROM = 'airtuerk Intelligence <terminal@airtuerk.ai>'
-const BASE_URL = 'https://terminal.airtuerk.ai'
+const FROM = 'airtuerk terminal <terminal@airtuerk.ai>'
+const SUPPORT = 'bdemir@airtuerk.de'
+const LOGIN_URL = 'https://terminal.airtuerk.ai/login'
+const LOGO = 'https://terminal.airtuerk.ai/logos/terminal/wordmark-email.png'
+const FONT = '-apple-system,Segoe UI,Helvetica,Arial,sans-serif'
 
 function esc(s: string): string {
   return (s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))
 }
 
-// Shared branded shell — kept pixel-consistent with the GoTrue auth email
-// templates (spec/AUTH_EMAIL_TEMPLATES.md): all-black monochrome, real terminal
-// wordmark in the header (hosted PNG — Outlook can't render SVG), black accents.
-const FONT = '-apple-system,Segoe UI,Helvetica,Arial,sans-serif'
-const LOGO = 'https://terminal.airtuerk.ai/logos/terminal/wordmark-email.png'
+// Shared branded shell — pixel-consistent with the GoTrue auth email templates
+// (spec/AUTH_EMAIL_TEMPLATES.md): all-black monochrome, real terminal wordmark
+// in the header (hosted PNG — Outlook can't render SVG), black accents.
 function shell(title: string, bodyHtml: string, footnote = 'airtuerk · terminal — Brand & Knowledge Hub'): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f5f7;margin:0;padding:24px 12px">
   <tr><td align="center">
@@ -76,7 +76,7 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: CORS })
 
   try {
-    const { kind, folderId, teamMemberId, probe } = await req.json()
+    const { userId, probe } = await req.json()
     const resendKey = Deno.env.get('RESEND_API_KEY') ?? ''
 
     if (probe) {
@@ -88,11 +88,8 @@ Deno.serve(async (req: Request) => {
         { headers: H },
       )
     }
-    if (kind !== 'document' && kind !== 'presentation') {
-      return new Response(JSON.stringify({ ok: false, error: 'kind must be document|presentation' }), { status: 400, headers: H })
-    }
-    if (!folderId || !teamMemberId) {
-      return new Response(JSON.stringify({ ok: false, error: 'folderId and teamMemberId required' }), { status: 400, headers: H })
+    if (!userId) {
+      return new Response(JSON.stringify({ ok: false, error: 'userId required' }), { status: 400, headers: H })
     }
 
     const supabase = createClient(
@@ -100,46 +97,33 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    const { data: member, error: mErr } = await supabase
-      .from('team_members')
-      .select('first_name, last_name, email')
-      .eq('id', teamMemberId)
-      .single()
-    if (mErr || !member) throw new Error(`team member not found: ${teamMemberId}`)
-    const to = (member.email ?? '').trim()
-    if (!to) {
-      // No address on file — nothing to send, but not an error (grant still stands).
+    // Resolve the account email from the auth user (service role — not RLS-bound).
+    const { data: got, error: uErr } = await supabase.auth.admin.getUserById(userId)
+    const to = (got?.user?.email ?? '').trim()
+    if (uErr || !to) {
+      // No address on file — nothing to send, but not an error (password still changed).
       return new Response(JSON.stringify({ ok: false, skipped: true, error: 'no email on file' }), { headers: H })
     }
 
-    const table = kind === 'document' ? 'document_folders' : 'presentation_folders'
-    const { data: folder, error: fErr } = await supabase
-      .from(table)
-      .select('name, path')
-      .eq('id', folderId)
+    // Optional first name for a warmer greeting.
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('first_name')
+      .eq('id', userId)
       .single()
-    if (fErr || !folder) throw new Error(`folder not found: ${folderId}`)
+    const firstName = ((prof as { first_name?: string } | null)?.first_name ?? '').trim()
+    const greeting = firstName ? `Hi ${esc(firstName)},` : 'Hi,'
 
-    const prefix = kind === 'document' ? '/documents-library/' : '/presentation-hub/'
-    const link = `${BASE_URL}${prefix}${String(folder.path)
-      .split('/')
-      .map(encodeURIComponent)
-      .join('/')}`
+    const html = shell('Your password was changed', `
+      <p style="font-family:${FONT};font-size:15px;line-height:1.6;margin:0 0 14px;color:#18181b">${greeting}</p>
+      <p style="font-family:${FONT};font-size:15px;line-height:1.6;margin:0 0 14px;color:#18181b">the password for your airtuerk terminal account (<strong>${esc(to)}</strong>) was just changed. If this was you, you're all set — no further action is needed.</p>
+      <p style="font-family:${FONT};font-size:15px;line-height:1.6;margin:0 0 14px;color:#18181b">You can sign in here: <a href="${LOGIN_URL}" style="color:#0b0b0b;text-decoration:underline">${LOGIN_URL}</a></p>
+      <p style="font-family:${FONT};font-size:13px;line-height:1.6;margin:16px 0 0;color:#6b7280">If you did <strong>not</strong> change your password, your account may be at risk — contact <a href="mailto:${SUPPORT}" style="color:#0b0b0b;text-decoration:underline">${SUPPORT}</a> immediately.</p>`)
 
-    const firstName = (member.first_name ?? '').trim()
-    const greeting = firstName ? `Dear ${esc(firstName)},` : 'Hello,'
-    const folderName = esc(folder.name ?? 'a folder')
-
-    const html = shell('You have been granted folder access', `
-      <p>${greeting}</p>
-      <p>you have been granted access to <b>${folderName}</b> on terminal.</p>
-      <p><a href="${link}" style="display:inline-block;background:#0b0b0b;color:#fff;text-decoration:none;padding:9px 16px;border-radius:8px">Open folder</a></p>
-      <p style="font-size:12px;color:#8a8a8a">Or paste this link into your browser:<br>${esc(link)}</p>`)
-
-    const result = await sendEmail(resendKey, [to], 'You have been granted folder access on terminal', html)
+    const result = await sendEmail(resendKey, [to], 'Your password was changed', html)
     return new Response(JSON.stringify({ ok: true, id: (result as { id?: string })?.id ?? null }), { headers: H })
   } catch (err) {
-    console.error('notify-folder-access error:', err)
+    console.error('notify-password-changed error:', err)
     return new Response(JSON.stringify({ ok: false, error: String(err) }), { status: 500, headers: H })
   }
 })
