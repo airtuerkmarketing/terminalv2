@@ -12,6 +12,10 @@ export interface SearchHit {
   subtitle: string | null;
   /** Navigation target. Internal route ("/…") or a direct asset URL. */
   href: string;
+  /** ISO language of a document file ("de" | "en" | "tr"); null/absent = neutral or N/A. */
+  language?: string | null;
+  /** Lowercase file extension ("pdf", "docx", …); absent for non-file hits. */
+  extension?: string | null;
 }
 
 /** Results grouped by source table, as returned by /api/search. */

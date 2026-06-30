@@ -30,6 +30,8 @@ type FolderEmbed = { name: string | null; path: string | null; is_public: boolea
 interface FileHitRow {
   id: string;
   title: string | null;
+  extension: string;
+  language: string | null;
   document_folders: FolderEmbed | FolderEmbed[] | null;
 }
 interface FolderHitRow {
@@ -87,7 +89,7 @@ export async function GET(req: NextRequest) {
 
   let filesQuery = supabase
     .from("document_files")
-    .select("id, title, document_folders!inner(name, path, is_public)")
+    .select("id, title, extension, language, document_folders!inner(name, path, is_public)")
     .or(`title.ilike.${p},description.ilike.${p}`)
     .limit(PER_TABLE);
   if (!isAdmin) filesQuery = filesQuery.eq("document_folders.is_public", true);
@@ -137,6 +139,8 @@ export async function GET(req: NextRequest) {
       title: r.title?.trim() || "Datei",
       subtitle: folder?.name ?? null,
       href: folder?.path ? `/documents-library/${folder.path}?file=${r.id}` : "/documents-library",
+      language: r.language,
+      extension: r.extension,
     };
   });
   const folderHits: SearchHit[] = ((foldersRes.data as FolderHitRow[] | null) ?? []).map((r) => ({

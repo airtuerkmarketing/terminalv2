@@ -428,6 +428,31 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Document file hits carry a language flag + file-type label, pinned right so the
+   title/subtitle keep their ellipsis and never get pushed off-screen. */
+.ai-search-hit-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.ai-search-hit-badge {
+  font-size: var(--fs-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+  background: var(--surface-muted);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+}
+/* FlagIcon defaults to 20×14; scale down to sit beside the 11px label (keeps 10:7). */
+.ai-search-hit-badges .flag-icon {
+  width: 16px;
+  height: 11px;
+}
 .ai-search-empty {
   padding: 12px 10px;
   font-size: var(--fs-sm);
