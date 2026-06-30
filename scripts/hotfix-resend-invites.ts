@@ -27,11 +27,10 @@ import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY;
-// NOTE: do NOT use NEXT_PUBLIC_SITE_URL here — in .env.local it is stale and points at
-// https://terminal.airtuerk.de, which 404s (verified: that host does not serve the app).
-// The live, GoTrue-redirect-allow-listed host is www.airtuerk.dev (matches Supabase auth
-// site_url). Hardcode the known-good host so the shared links actually load.
-const SITE_URL = "https://www.airtuerk.dev";
+// Live host = terminal.airtuerk.ai (matches Supabase auth site_url after the airtuerk.ai
+// migration; the old www.airtuerk.dev was retired). NEXT_PUBLIC_SITE_URL in .env.local can
+// be stale, so hardcode the known-good host here so the shared links actually load.
+const SITE_URL = "https://terminal.airtuerk.ai";
 
 if (!SUPABASE_URL || !SECRET_KEY) {
   console.error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SECRET_KEY in .env.local");
