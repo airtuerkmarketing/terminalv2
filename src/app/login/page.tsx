@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeNext } from "@/lib/auth";
 import LoginForm from "./login-form";
-import TerminalMark from "./terminal-mark";
+import AuthBrand from "./auth-brand";
 import SsoButton from "./sso-button";
 import { AuthParticles } from "@/components/effects/auth-particles";
 
@@ -31,14 +31,8 @@ export default async function LoginPage({
       <AuthParticles />
 
       <div className="auth-split">
-        {/* Brand panel — faint chevron watermark + animated mark + CSS-text logo */}
-        <aside className="auth-brand">
-          <TerminalMark className="auth-brand-watermark" />
-          <div className="auth-brand-lockup">
-            <TerminalMark animated className="auth-brand-icon" />
-            <span className="auth-logo-text">terminal</span>
-          </div>
-        </aside>
+        {/* Brand panel — State A logo lockup + Compare-style hover tagline reveal */}
+        <AuthBrand />
 
         {/* Form panel */}
         <section className="auth-form-panel">
