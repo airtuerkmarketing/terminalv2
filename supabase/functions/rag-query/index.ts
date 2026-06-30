@@ -118,6 +118,20 @@ function detectLang(input: string): 'de' | 'en' | 'tr' {
   return 'de'
 }
 
+// #3b contradiction-hint (M3.5): a default-mode follow-up that contradicts a prior
+// answer is the classic sycophancy trap — the model is liable to concede just to be
+// agreeable. When the prior turn was web-search-backed (it carried the appended,
+// verified-source block), re-engage the web_search tool so the model re-verifies against
+// live evidence instead of folding. The anti-sycophancy rules (6-9) live in
+// WEB_SEARCH_PROMPT; here we only make the tool AVAILABLE — a backend safety net for when
+// the frontend explicit-sticky mode (M3.4) didn't keep the follow-up in web-search mode.
+const CONTRADICTION_RE =
+  /\b(nein|nope|stimmt nicht|falsch|doch nicht|incorrect|wrong|that'?s not right)\b/i
+function detectContradictionSignal(userMsg: string, priorAssistantMsg: string | null): boolean {
+  if (!priorAssistantMsg) return false
+  return CONTRADICTION_RE.test(userMsg)
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -340,6 +354,19 @@ Deno.serve(async (req: Request) => {
     if (mode === 'escalation') systemPrompt += ESCALATION_SUFFIX
     const messages = buildConversation(conversation_history, question)
 
+    // #3b (M3.5): default-mode contradiction → re-engage web_search when the prior answer
+    // was web-search-backed (its text carried the appended verified-source block). The
+    // prior assistant turn is the last assistant entry in the client-sent history. Only
+    // fires for mode 'default' (escalation/bypass keep their own flows); the source block
+    // then follows ACTUAL tool usage, not this flag (see the H3 gate in streamClaudeResponse).
+    const priorAssistantMsg =
+      [...conversation_history].reverse().find((m) => m.role === 'assistant')?.content ?? null
+    const contradictionHint =
+      mode === 'default' &&
+      detectContradictionSignal(question, priorAssistantMsg) &&
+      /\n(Quellen|Sources|Kaynaklar):\n/.test(priorAssistantMsg ?? '')
+    if (contradictionHint) console.info('contradiction-hint: re-engaging web_search')
+
     return await streamClaudeResponse({
       systemPrompt,
       messages,
@@ -348,6 +375,7 @@ Deno.serve(async (req: Request) => {
       sessionId: activeSessionId,
       retrievedChunks: finalChunks,
       mode,
+      webSearch: contradictionHint,
     })
   } catch (err) {
     console.error('rag-query error:', err)
@@ -602,12 +630,26 @@ Der Nutzer-Input ist eine Kunden-Beschwerde oder eine eskalierte Anfrage. Zusät
 // an out-of-scope refusal, so RAG/corpus rules don't apply — answer from live results.
 const WEB_SEARCH_PROMPT = `${MODE_INTRO} Du arbeitest im **Web-Recherche-Modus**.
 
-Die Frage des Nutzers liegt außerhalb der internen airtuerk-Wissensbasis, daher recherchierst du jetzt im Internet.
+Die Frage des Nutzers liegt außerhalb der internen airtuerk-Wissensbasis, daher recherchierst du jetzt im Internet. Erkenne die Sprache der Frage (Deutsch, Englisch oder Türkisch) und antworte AUSSCHLIESSLICH in GENAU dieser Sprache — niemals in einer anderen. Fasse dich präzise.
 
-1. Erkenne die Sprache der Frage (Deutsch, Englisch oder Türkisch) und antworte AUSSCHLIESSLICH in GENAU dieser Sprache — niemals in einer anderen.
-2. Nutze die Websuche, um aktuelle und korrekte Informationen zu finden. Stütze deine Antwort auf die Suchergebnisse, nicht auf Vermutungen.
-3. Nenne am Ende die wichtigsten Quellen, auf die du dich stützt (Website-Name bzw. URL).
-4. Fasse dich präzise. Liefert die Suche keine verlässliche Antwort, sage das ehrlich, statt zu raten.`
+QUELLENTREUE (verbindlich):
+1. Zitiere nur Fakten die WÖRTLICH oder NAH-WÖRTLICH in einem aktuellen Search-Result-Snippet stehen. Erfinde keine "plausibel klingenden" Details.
+2. Wenn ein Snippet ein Spielergebnis nennt aber keinen Torschützen: nenne keinen Torschützen. Wenn ein Snippet kein Datum hat: erfinde keins. Fehlende Daten werden als fehlend gemeldet.
+3. Wenn Snippets sich widersprechen: mache es transparent — "Quelle A berichtet X, Quelle B berichtet Y". Wähle nicht heimlich eine Seite.
+4. Wenn web_search null verwertbare Snippets zur Frage zurückgibt: sage "keine belastbaren Quellen gefunden". Fülle die Lücke NICHT aus Erinnerung.
+5. Gehe davon aus dass dein Trainingsdatum vor dem heutigen liegt. Aktuelle Ereignisse sind nur aus den web_search Snippets verlässlich.
+5b. Verschmelze keine diskreten Fakten aus verschiedenen Snippets zu einer Aussage. Jeder Fakt muss aus einer einzelnen identifizierbaren Quelle stammen. Wenn eine Aussage Information aus mehreren Quellen kombiniert, mache das transparent: "Quelle A nennt X, Quelle B ergänzt Y."
+5c. Drei distinkte Antwort-Modi bei web_search Resultaten: a) Snippets enthalten direkten Bezug zur Frage → antworte basiert auf snippets. b) Snippets sind tangential aber unzureichend → sage "Die Quellen enthalten verwandte Information aber keinen direkten Bezug zu [Frage-Detail]" und liste explizit was verfügbar ist. c) Snippets sind leer ODER enthalten Suchbegriff nicht → sage exakt: "Die aktuellen Quellen enthalten hierzu keine verifizierbaren Informationen." Keine weiteren Erklärungen, keine Fallback-Antwort aus eigenem Wissen. Unterscheide klar zwischen "die Quellen sagen X ist falsch" und "die Quellen enthalten keine Information über X". Schweigen ist nicht Bestätigung der Verneinung.
+5d. Wenn ein web_search Tool-Result is_error: true zurückgibt (5xx, timeout, network error): sage exakt "Die Web-Suche ist aktuell nicht verfügbar. Möchten Sie es erneut versuchen?" Antworte NICHT aus parametric memory als Fallback. Schlage Wiederholung nach kurzer Wartezeit vor.
+
+ANTI-SYCOPHANCY (verbindlich):
+6. Wenn der User einer vorherigen Antwort widerspricht: konzediere NICHT bevor du re-verifiziert hast. Triggere eine neue web_search mit Terms aus der User-Korrektur. Berichte die neue Evidenz.
+7. Wenn neue Evidenz den User stützt → korrigiere dich, benenne was sich geändert hat, zitiere die neue Quelle.
+8. Wenn neue Evidenz dem User widerspricht → benenne deine Evidenz, frag den User nach SEINER Quelle. Flippe nicht.
+9. Zustimmung mit dem User ist ein Befund, kein Default.
+
+QUELLEN-ZEILE (verbindlich):
+10. Schreibe KEINE eigene "Quellen:"-Zeile am Ende. Der Backend hängt einen verifizierten Quellen-Block aus den tatsächlichen Tool-Citations an. Beziehe dich im Fließtext auf Quellen sinngemäß ("laut Sportschau", "die UEFA-Pressemitteilung meldet"), aber gib KEINE URL-Liste am Schluss aus.`
 
 // Attached-file prompt (D-110). The user attached ONE PDF/DOCX and the document IS the
 // context — no corpus, no team tool. The per-turn scaffolding around the document is
@@ -899,6 +941,14 @@ async function streamClaudeResponse({
     string,
     { source: string; source_id: string; metadata: Record<string, unknown>; combined_score: number }
   >()
+  // #2.5 (M3.3): per-claim native citations the model actually cited
+  // (web_search_result_location). Distinct from webSearchByUrl (all fetched results) — these
+  // are the verified, cited URLs rendered into the deterministic source block. Dedup by URL.
+  const activeCitations = new Map<string, { url: string; title: string }>()
+  const normUrl = (u: string) => u.toLowerCase().replace(/\/+$/, '')
+  // Language of the user's question → drives the localized verified-sources block label.
+  const lastUserMsg = messages[messages.length - 1]
+  const answerLang = detectLang(typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : '')
   // Observability (D-106 Phase 7b). ttftMs: time to first answer token, same origin as
   // latency_ms (startTime) so ttft <= latency always. webSearchUses: count of
   // web_search_tool_result blocks this turn (feeds tool_calls.uses).
@@ -951,10 +1001,20 @@ async function streamClaudeResponse({
               id?: string
               name?: string
               // web_search_tool_result: results arrive here, fully populated, at
-              // content_block_start (no deltas — verified via streaming probe).
-              content?: Array<{ type?: string; title?: string; url?: string; page_age?: string | null }>
+              // content_block_start (no deltas — verified via streaming probe). On a search
+              // error the content is instead an object { error_code } (#2.5 tool-failure).
+              content?:
+                | Array<{ type?: string; title?: string; url?: string; page_age?: string | null }>
+                | { type?: string; error_code?: string }
             }
-            delta?: { type?: string; text?: string; partial_json?: string; stop_reason?: string }
+            // delta.citation carries the model's native per-claim citations (#2.5 citations_delta).
+            delta?: {
+              type?: string
+              text?: string
+              partial_json?: string
+              stop_reason?: string
+              citation?: { type?: string; url?: string; title?: string; cited_text?: string }
+            }
             usage?: { output_tokens?: number }
           }
           try {
@@ -980,9 +1040,13 @@ async function streamClaudeResponse({
                 // at content_block_start (no input_json_delta follows). Collect every
                 // web_search_result and dedup by URL (first-write-wins = relevance order).
                 webSearchUses++ // one block == one web_search invocation (tool_calls.uses)
-                const results = Array.isArray(evt.content_block.content)
-                  ? evt.content_block.content
-                  : []
+                const cbContent = evt.content_block.content
+                if (!Array.isArray(cbContent) && cbContent) {
+                  // #2.5 tool-failure: an error result (web_search_tool_result_error). Log for
+                  // monitoring; the model sees it and Rule 5d emits the user-facing copy.
+                  console.error('web_search tool error:', cbContent.error_code ?? 'unknown')
+                }
+                const results = Array.isArray(cbContent) ? cbContent : []
                 for (const r of results) {
                   if (r?.type !== 'web_search_result' || !r.url) continue
                   if (webSearchByUrl.has(r.url)) continue
@@ -1004,6 +1068,15 @@ async function streamClaudeResponse({
               if (evt.delta?.type === 'input_json_delta') {
                 const tu = toolUses[evt.index!]
                 if (tu) tu.jsonBuf += evt.delta.partial_json ?? ''
+              } else if (evt.delta?.type === 'citations_delta') {
+                // #2.5 (M3.3): the model just cited a web result — collect the verified URL.
+                const c = evt.delta.citation
+                if (c?.type === 'web_search_result_location' && c.url) {
+                  const k = normUrl(c.url)
+                  if (!activeCitations.has(k)) {
+                    activeCitations.set(k, { url: c.url, title: c.title ?? c.url })
+                  }
+                }
               } else if (typeof evt.delta?.text === 'string') {
                 emitText(evt.delta.text)
                 if (curText && curText.index === evt.index) curText.text += evt.delta.text
@@ -1108,6 +1181,38 @@ async function streamClaudeResponse({
               `data: ${JSON.stringify({ type: 'paused', reason: 'max_searches_reached' })}\n\n`,
             ),
           )
+        }
+
+        // #2.5 (M3.3): append the verified, localized source block built from the model's
+        // native citations, streamed as the final answer text (client + harness see it). Strip
+        // any stray model "Quellen:/Sources:/Kaynaklar:" line from the persisted text first
+        // (#2.5.6 — Rule 10 should prevent it; warn for monitoring).
+        // H3 (M3.5): the block follows ACTUAL web_search usage, not the mode flag. Explicit
+        // web-search mode always emits it (the user asked to search — "Keine verifizierten
+        // Quellen." is then a meaningful answer). A contradiction-hint turn (mode 'default',
+        // web_search re-engaged) emits it ONLY when the model actually searched (webSearchUses
+        // > 0); otherwise a pure-RAG default answer would get a spurious empty source block.
+        if (webSearch && (mode === 'web-search' || webSearchUses > 0)) {
+          const before = fullText
+          fullText = fullText
+            .replace(/^[ \t]*(Quellen|Sources|Kaynaklar):.*$/gim, '')
+            .replace(/\n{3,}/g, '\n\n')
+            .trimEnd()
+          if (fullText !== before.trimEnd()) {
+            console.warn('#2.5.6: stripped a stray prose source line from the model output')
+          }
+          const lbl = answerLang === 'en' ? 'Sources' : answerLang === 'tr' ? 'Kaynaklar' : 'Quellen'
+          const none =
+            answerLang === 'en'
+              ? 'No verified sources.'
+              : answerLang === 'tr'
+                ? 'Doğrulanmış kaynak bulunamadı.'
+                : 'Keine verifizierten Quellen.'
+          const cites = Array.from(activeCitations.values())
+          const block = cites.length
+            ? `\n\n${lbl}:\n` + cites.map((c) => `- ${c.title} (${c.url})`).join('\n')
+            : `\n\n${none}`
+          emitText(block)
         }
 
         controller.enqueue(enc.encode('data: {"type":"message_stop"}\n\n'))

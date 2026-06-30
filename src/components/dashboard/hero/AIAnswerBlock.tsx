@@ -54,7 +54,7 @@ const PAUSED_NOTICE: Record<"de" | "en" | "tr", string> = {
 /* Web-search loading copy (1.5b). A web-search turn runs a 30-90s server-side
    operation (3 search iterations + Sonnet synthesis), so the generic "AI is thinking…"
    reads as "stuck". Tier 1 shows immediately; Tier 2 escalates after 8s (no first token
-   yet) to set the 30-60s expectation. Both language-mirror the question via detectLang.
+   yet) to set a longer-wait expectation. Both language-mirror the question via detectLang.
    Once the first token streams the loading branch unmounts entirely. */
 const WEB_SEARCH_LOADING_TIER1: Record<"de" | "en" | "tr", string> = {
   de: "Im Web wird gesucht…",
@@ -62,7 +62,7 @@ const WEB_SEARCH_LOADING_TIER1: Record<"de" | "en" | "tr", string> = {
   tr: "Web'de aranıyor…",
 };
 const WEB_SEARCH_LOADING_TIER2: Record<"de" | "en" | "tr", string> = {
-  de: "Suche im Web läuft — kann 30-60 Sekunden dauern.",
+  de: "Mehrere Quellen werden gegengelesen — kann bis 30 Sekunden dauern.",
   en: "Searching the web — this can take 30-60 seconds.",
   tr: "Web'de aranıyor — 30-60 saniye sürebilir.",
 };
@@ -183,6 +183,21 @@ function AITurnAnswer({
   const displayText = stripInlineCitations(text);
   // pause_turn notice (web-search iteration cap), language-mirrored from the question.
   const pausedNotice = turn.paused ? PAUSED_NOTICE[detectLang(turn.question)] : null;
+  // F-D: suppress the source chips ONLY when the deterministic #2.5 verified-source block
+  // is actually present in the answer text — that block IS the single source surface, and
+  // the chips would duplicate it. Keying on the block's *presence* (not "is this a web-search
+  // turn") makes this self-synchronizing with the backend: against the current v18 edge fn
+  // (which doesn't stream the block yet) the chips still show as the only source surface, and
+  // they're suppressed only once v19 streams it. This covers every path uniformly (live
+  // web-search/sticky, live contradiction-hint that actually searched — M3.5, and rehydrated
+  // turns) because all persist the block into the answer text. The streamed block is appended
+  // last, in one of two shapes: a "<Label>:\n- …" citation list, or the localized
+  // "no verified sources" fallback (showing raw uncited chips would contradict the latter).
+  const suppressSourceChips =
+    /\n\n(Quellen|Sources|Kaynaklar):\n-/.test(answer.text) ||
+    /\n\n(Keine verifizierten Quellen\.|No verified sources\.|Doğrulanmış kaynak bulunamadı\.)\s*$/.test(
+      answer.text,
+    );
 
   // Copy the raw answer to the clipboard with a brief check-mark confirmation.
   const [copied, setCopied] = useState(false);
@@ -271,7 +286,9 @@ function AITurnAnswer({
           </div>
 
           <div className="ai-chat-actions-right">
-            {answer.quellen.length > 0 && (
+            {/* F-D: chips suppressed on web-search turns (see suppressSourceChips above) —
+                the streamed #2.5 verified-source block is the single source surface. */}
+            {!suppressSourceChips && answer.quellen.length > 0 && (
               <>
                 <details className="ai-chat-sources-toggle">
                   <summary aria-label={`Show ${answer.quellen.length} sources`}>

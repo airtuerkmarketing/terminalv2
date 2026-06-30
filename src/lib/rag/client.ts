@@ -386,6 +386,9 @@ export function messagesToTurns(messages: ChatMessageItem[]): AiTurn[] {
     if (question === null) continue;
     const text = m.content;
     const outOfScope = isOutOfScope(text);
+    // F-D for a restored web-search turn is handled in AIAnswerBlock by detecting the
+    // persisted #2.5 verified-source block inside the answer text (m.content) — no flag
+    // needs to be threaded here, since the block travels with the content.
     turns.push({
       id: m.id,
       question,

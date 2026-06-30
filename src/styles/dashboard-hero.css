@@ -1253,6 +1253,37 @@
   transition: border-color 150ms var(--ease-smooth),
               box-shadow 150ms var(--ease-smooth);
 }
+/* #3 explicit-sticky web-search: composer pill ("Web-Suche aktiv · exit"). */
+.ai-chat-websearch-pill {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 10px;
+  font-size: var(--text-12, 0.75rem);
+  font-weight: 500;
+  color: var(--text-secondary, #555);
+  background: var(--surface-sunken, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+}
+.ai-chat-websearch-pill > span::before {
+  content: "🔎 ";
+}
+.ai-chat-websearch-exit {
+  appearance: none;
+  border: 0;
+  border-left: 1px solid var(--hairline);
+  background: transparent;
+  padding: 0 0 0 8px;
+  margin-left: 4px;
+  color: var(--text-link, #2563eb);
+  font: inherit;
+  cursor: pointer;
+}
+.ai-chat-websearch-exit:hover {
+  text-decoration: underline;
+}
 .ai-chat-composer:hover {
   border-color: var(--hairline-strong);
 }
