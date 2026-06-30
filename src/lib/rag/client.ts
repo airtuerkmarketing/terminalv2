@@ -369,17 +369,9 @@ export function messagesToTurns(messages: ChatMessageItem[]): AiTurn[] {
     if (question === null) continue;
     const text = m.content;
     const outOfScope = isOutOfScope(text);
-    // F-D: mark a restored web-search turn so AIAnswerBlock suppresses the duplicate
-    // source chips (the streamed verified-source block lives in the answer text). Detected
-    // from the persisted chunks (a web_search source was retrieved) rather than a mode
-    // flag — self-contained, and consistent with the backend's actual-usage source-block
-    // gating (H3): chips are hidden exactly when web_search results were actually used.
-    const isWebSearchTurn =
-      Array.isArray(m.retrievedChunks) &&
-      m.retrievedChunks.some((c) => {
-        const cc = c as { source?: string; metadata?: { source_type?: string } };
-        return cc?.source === "web_search" || cc?.metadata?.source_type === "web_search";
-      });
+    // F-D for a restored web-search turn is handled in AIAnswerBlock by detecting the
+    // persisted #2.5 verified-source block inside the answer text (m.content) — no flag
+    // needs to be threaded here, since the block travels with the content.
     turns.push({
       id: m.id,
       question,
@@ -388,7 +380,6 @@ export function messagesToTurns(messages: ChatMessageItem[]): AiTurn[] {
       isStreaming: false,
       feedback: m.userFeedback,
       weissNicht: outOfScope,
-      isWebSearch: isWebSearchTurn || undefined,
       answer: {
         text,
         quellen: outOfScope ? [] : chunksToSources(m.retrievedChunks),

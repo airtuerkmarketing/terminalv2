@@ -183,15 +183,21 @@ function AITurnAnswer({
   const displayText = stripInlineCitations(text);
   // pause_turn notice (web-search iteration cap), language-mirrored from the question.
   const pausedNotice = turn.paused ? PAUSED_NOTICE[detectLang(turn.question)] : null;
-  // F-D: suppress the source chips on a web-search turn — its verified-source block (#2.5)
-  // is already streamed into the answer text as the single source surface, so the chips
-  // would duplicate it. Detected two ways for full coverage: the turn flag (live web-search/
-  // sticky turns set it in SearchAIBox; rehydrated turns derive it from persisted web_search
-  // chunks in messagesToTurns) OR a web_search source actually present in the answer (catches
-  // a live contradiction-hint turn — M3.5 — where the backend re-engaged web_search under
-  // mode:'default', so the client flag was never set). Default-RAG turns have neither.
+  // F-D: suppress the source chips ONLY when the deterministic #2.5 verified-source block
+  // is actually present in the answer text — that block IS the single source surface, and
+  // the chips would duplicate it. Keying on the block's *presence* (not "is this a web-search
+  // turn") makes this self-synchronizing with the backend: against the current v18 edge fn
+  // (which doesn't stream the block yet) the chips still show as the only source surface, and
+  // they're suppressed only once v19 streams it. This covers every path uniformly (live
+  // web-search/sticky, live contradiction-hint that actually searched — M3.5, and rehydrated
+  // turns) because all persist the block into the answer text. The streamed block is appended
+  // last, in one of two shapes: a "<Label>:\n- …" citation list, or the localized
+  // "no verified sources" fallback (showing raw uncited chips would contradict the latter).
   const suppressSourceChips =
-    turn.isWebSearch === true || answer.quellen.some((s) => s.quelle === "web_search");
+    /\n\n(Quellen|Sources|Kaynaklar):\n-/.test(answer.text) ||
+    /\n\n(Keine verifizierten Quellen\.|No verified sources\.|Doğrulanmış kaynak bulunamadı\.)\s*$/.test(
+      answer.text,
+    );
 
   // Copy the raw answer to the clipboard with a brief check-mark confirmation.
   const [copied, setCopied] = useState(false);
