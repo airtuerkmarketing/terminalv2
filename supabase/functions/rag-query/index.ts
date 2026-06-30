@@ -802,6 +802,14 @@ async function streamClaudeResponse({
     string,
     { source: string; source_id: string; metadata: Record<string, unknown>; combined_score: number }
   >()
+  // #2.5 (M3.3): per-claim native citations the model actually cited
+  // (web_search_result_location). Distinct from webSearchByUrl (all fetched results) — these
+  // are the verified, cited URLs rendered into the deterministic source block. Dedup by URL.
+  const activeCitations = new Map<string, { url: string; title: string }>()
+  const normUrl = (u: string) => u.toLowerCase().replace(/\/+$/, '')
+  // Language of the user's question → drives the localized verified-sources block label.
+  const lastUserMsg = messages[messages.length - 1]
+  const answerLang = detectLang(typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : '')
   // Observability (D-106 Phase 7b). ttftMs: time to first answer token, same origin as
   // latency_ms (startTime) so ttft <= latency always. webSearchUses: count of
   // web_search_tool_result blocks this turn (feeds tool_calls.uses).
@@ -854,10 +862,20 @@ async function streamClaudeResponse({
               id?: string
               name?: string
               // web_search_tool_result: results arrive here, fully populated, at
-              // content_block_start (no deltas — verified via streaming probe).
-              content?: Array<{ type?: string; title?: string; url?: string; page_age?: string | null }>
+              // content_block_start (no deltas — verified via streaming probe). On a search
+              // error the content is instead an object { error_code } (#2.5 tool-failure).
+              content?:
+                | Array<{ type?: string; title?: string; url?: string; page_age?: string | null }>
+                | { type?: string; error_code?: string }
             }
-            delta?: { type?: string; text?: string; partial_json?: string; stop_reason?: string }
+            // delta.citation carries the model's native per-claim citations (#2.5 citations_delta).
+            delta?: {
+              type?: string
+              text?: string
+              partial_json?: string
+              stop_reason?: string
+              citation?: { type?: string; url?: string; title?: string; cited_text?: string }
+            }
             usage?: { output_tokens?: number }
           }
           try {
@@ -883,9 +901,13 @@ async function streamClaudeResponse({
                 // at content_block_start (no input_json_delta follows). Collect every
                 // web_search_result and dedup by URL (first-write-wins = relevance order).
                 webSearchUses++ // one block == one web_search invocation (tool_calls.uses)
-                const results = Array.isArray(evt.content_block.content)
-                  ? evt.content_block.content
-                  : []
+                const cbContent = evt.content_block.content
+                if (!Array.isArray(cbContent) && cbContent) {
+                  // #2.5 tool-failure: an error result (web_search_tool_result_error). Log for
+                  // monitoring; the model sees it and Rule 5d emits the user-facing copy.
+                  console.error('web_search tool error:', cbContent.error_code ?? 'unknown')
+                }
+                const results = Array.isArray(cbContent) ? cbContent : []
                 for (const r of results) {
                   if (r?.type !== 'web_search_result' || !r.url) continue
                   if (webSearchByUrl.has(r.url)) continue
@@ -907,6 +929,15 @@ async function streamClaudeResponse({
               if (evt.delta?.type === 'input_json_delta') {
                 const tu = toolUses[evt.index!]
                 if (tu) tu.jsonBuf += evt.delta.partial_json ?? ''
+              } else if (evt.delta?.type === 'citations_delta') {
+                // #2.5 (M3.3): the model just cited a web result — collect the verified URL.
+                const c = evt.delta.citation
+                if (c?.type === 'web_search_result_location' && c.url) {
+                  const k = normUrl(c.url)
+                  if (!activeCitations.has(k)) {
+                    activeCitations.set(k, { url: c.url, title: c.title ?? c.url })
+                  }
+                }
               } else if (typeof evt.delta?.text === 'string') {
                 emitText(evt.delta.text)
                 if (curText && curText.index === evt.index) curText.text += evt.delta.text
@@ -1011,6 +1042,33 @@ async function streamClaudeResponse({
               `data: ${JSON.stringify({ type: 'paused', reason: 'max_searches_reached' })}\n\n`,
             ),
           )
+        }
+
+        // #2.5 (M3.3): append the verified, localized source block built from the model's
+        // native citations, streamed as the final answer text (client + harness see it). Strip
+        // any stray model "Quellen:/Sources:/Kaynaklar:" line from the persisted text first
+        // (#2.5.6 — Rule 10 should prevent it; warn for monitoring). Web-search mode only.
+        if (webSearch) {
+          const before = fullText
+          fullText = fullText
+            .replace(/^[ \t]*(Quellen|Sources|Kaynaklar):.*$/gim, '')
+            .replace(/\n{3,}/g, '\n\n')
+            .trimEnd()
+          if (fullText !== before.trimEnd()) {
+            console.warn('#2.5.6: stripped a stray prose source line from the model output')
+          }
+          const lbl = answerLang === 'en' ? 'Sources' : answerLang === 'tr' ? 'Kaynaklar' : 'Quellen'
+          const none =
+            answerLang === 'en'
+              ? 'No verified sources.'
+              : answerLang === 'tr'
+                ? 'Doğrulanmış kaynak bulunamadı.'
+                : 'Keine verifizierten Quellen.'
+          const cites = Array.from(activeCitations.values())
+          const block = cites.length
+            ? `\n\n${lbl}:\n` + cites.map((c) => `- ${c.title} (${c.url})`).join('\n')
+            : `\n\n${none}`
+          emitText(block)
         }
 
         controller.enqueue(enc.encode('data: {"type":"message_stop"}\n\n'))
