@@ -187,3 +187,28 @@ export function formatBytes(bytes: number): string {
   const mb = kb / 1024;
   return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`;
 }
+
+/**
+ * Owner-based write authority for the Documents Library (D-111). The server
+ * actions are the enforced boundary (requireLibraryWriter / requireFileWriter);
+ * this mirrors that logic on the client so the UI only shows affordances the
+ * viewer can actually use.
+ *
+ * super_admin: writes everything. department_admin / ai_admin: write only the
+ * folders/files they OWN (created_by === their user id). Everyone else: read-only.
+ * `isWriter` = super_admin OR department_admin OR ai_admin (gates top-level
+ * "New Folder", which needs no ownership).
+ */
+export type FolderViewer = {
+  userId: string | null;
+  isSuperAdmin: boolean;
+  isWriter: boolean;
+};
+
+export function canWriteFolder(
+  createdBy: string | null | undefined,
+  viewer: FolderViewer
+): boolean {
+  if (viewer.isSuperAdmin) return true;
+  return viewer.isWriter && !!viewer.userId && createdBy === viewer.userId;
+}

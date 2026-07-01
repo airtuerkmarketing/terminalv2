@@ -29,12 +29,14 @@ export function avatarColor(id: string): string {
 
 const ROLE_LABEL: Record<string, string> = {
   super_admin: "Super-Admin",
-  admin: "Admin",
+  department_admin: "Department-Admin",
+  ai_admin: "AI-Admin",
   user: "User",
 };
 const ROLE_CLASS: Record<string, string> = {
   super_admin: "uap-pill--super",
-  admin: "uap-pill--admin",
+  department_admin: "uap-pill--admin",
+  ai_admin: "uap-pill--admin",
   user: "uap-pill--user",
 };
 const STATUS_LABEL: Record<TeamMemberListItem["loginStatus"], string> = {

@@ -322,7 +322,8 @@ export function CreatePersonModal({
                         onChange={(e) => set("role", e.target.value as Role)}
                       >
                         <option value="user">User</option>
-                        <option value="admin">Admin</option>
+                        <option value="department_admin">Department-Admin</option>
+                        <option value="ai_admin">AI-Admin</option>
                         <option value="super_admin">Super-Admin</option>
                       </select>
                     </div>

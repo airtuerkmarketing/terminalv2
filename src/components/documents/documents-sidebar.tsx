@@ -30,8 +30,8 @@ export interface DocumentsSidebarProps {
   tree: DocFolderTreeNode[];
   activePath: string | null; // current folder path ("" / null at root)
   openFolderFiles?: DocSidebarFile[]; // files of the active folder, shown under it
-  isAdmin?: boolean; // gates the Trash footer (admins can manage trash)
-  isSuperAdmin: boolean;
+  isAdmin?: boolean; // gates the Trash footer (super_admin can manage trash)
+  isWriter: boolean; // gates the top-level "New folder" button (any writer role, D-111)
   activeView?: "trash"; // highlight the Trash entry when on the trash route
 }
 
@@ -68,7 +68,7 @@ export function DocumentsSidebar({
   activePath,
   openFolderFiles = [],
   isAdmin = false,
-  isSuperAdmin,
+  isWriter,
   activeView,
 }: DocumentsSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
@@ -135,7 +135,7 @@ export function DocumentsSidebar({
           <button type="button" className="dl-rail-btn" aria-label="Expand sidebar" title="Expand" onClick={() => expandAnd()}>
             <PanelLeft aria-hidden />
           </button>
-          {isSuperAdmin && (
+          {isWriter && (
             <button type="button" className="dl-rail-btn" aria-label="Add folder" title="Add" onClick={() => expandAnd(() => setCreateOpen(true))}>
               <Plus aria-hidden />
             </button>
@@ -154,7 +154,7 @@ export function DocumentsSidebar({
             </Link>
           )}
         </div>
-        {isSuperAdmin && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={null} />}
+        {isWriter && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={null} />}
       </aside>
     );
   }
@@ -164,7 +164,7 @@ export function DocumentsSidebar({
       <div className="dl-sidebar-head">
         <span className="dl-sidebar-title">{title}</span>
         <div className="dl-sidebar-head-actions">
-          {isSuperAdmin && (
+          {isWriter && (
             <button type="button" className="dl-ico-btn" aria-label="Add folder" title="Add" onClick={() => setCreateOpen(true)}>
               <Plus aria-hidden />
             </button>
@@ -207,7 +207,7 @@ export function DocumentsSidebar({
         </div>
       )}
 
-      {isSuperAdmin && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={null} />}
+      {isWriter && <CreateFolderModal open={createOpen} onClose={() => setCreateOpen(false)} parentId={null} />}
     </aside>
   );
 }
