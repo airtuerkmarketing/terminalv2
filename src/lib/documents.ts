@@ -23,7 +23,7 @@ import {
 // Auth helpers moved to src/lib/auth.ts in Stage 5 of the user panel work.
 // Re-exported here for backward compatibility — existing importers
 // (16 files across the repo) continue to work without edits.
-export { getIdentity, requireAdmin, requireSuperAdmin } from "./auth";
+export { getIdentity, requireAdmin, requireSuperAdmin, requireLibraryWriter, requireAiAdminOrSuper } from "./auth";
 export type { Identity, Role } from "./auth";
 
 // ── DTOs (plain, client-safe shapes) ───────────────────────────────────────
