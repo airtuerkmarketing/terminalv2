@@ -19,7 +19,7 @@ auth-gated throughout — there is no public content.
 ## Status
 
 - **HEAD:** `5c10519` on `main` (442 commits since 2026-06-15)
-- **Latest milestone:** D-110 — AI-Attach for PDF/DOCX (in PR #22)
+- **Latest milestone:** D-110 — AI-Attach for PDF/DOCX (shipped; PR #22 merged `ba6956a8`, edge `rag-query` v21)
 - **Highest decision:** D-110 (`spec/DECISIONS.md`)
 - **Demo target:** 2026-08-01
 
