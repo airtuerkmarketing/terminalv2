@@ -9,7 +9,7 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-07-01)
 
-- **AI-Attach for PDF/DOCX (D-110) — code complete on `claude/ai-attach-pdf-docx-kxz7n0` (PR #22), NOT yet deployed:**
+- **AI-Attach for PDF/DOCX (D-110) — shipped 2026-07-01, live in prod (PR #22 squash-merged `ba6956a8`):**
   the disabled `.ai-search-attach`/`.ai-chat-attach` plus-button is enabled so a user can attach ONE PDF or
   DOCX, sent ephemerally with the prompt to Claude (translate/summarize/ask) — no storage, no embedding. PDF as
   a base64 document block (GA on `anthropic-version: 2023-06-01`, **no beta header**); DOCX client-extracted via
@@ -19,8 +19,10 @@ it is append-only history (do not rewrite past entries — add new ones).
   (Summarize / Translate EN / Key Points, all `mode='default'`-safe so the bypass branch never drops the file),
   Fork-6 Claude-only gating (inert until a model-picker ships), 10 MB cap, web-search clears the file. Pre-spike
   confirmed a ~14 MB base64 body survives the Supabase edge body limit (no signed-URL fallback needed). 3 commits
-  (`bbe3c0a` backend / `31ea3cb` client / polish); `pnpm typecheck` + `pnpm build` green. **Pending:** edge
-  `rag-query` redeploy + live preview-verify (owner) before merge.
+  (`bbe3c0a` backend / `31ea3cb` client / `5ae8041` polish, squashed to `ba6956a8`); `pnpm typecheck` + `pnpm build`
+  green; **7/7 live-verify green**. Prod edge `rag-query` **v21** (sha `756baf79`), Vercel prod `ba6956a8`, PR #22
+  merged. **Hard rule:** prod edge stays **v21** (D-110-only) until the D-109c Master-6 gate; the eventual combined
+  edge deploy comes **from `main`** (D-109c-full + D-110), never from the canary source (no attach → would regress v21).
 - **Auth email overhaul + forgot-password flow — shipped to `main` + deployed:** all five GoTrue
   auth templates (invite / recovery / confirmation / email-change / magic-link) rebuilt into one
   English, all-black, Outlook-safe branded shell — real `terminal` wordmark PNG
@@ -136,6 +138,44 @@ it is append-only history (do not rewrite past entries — add new ones).
   AUDIT-006 (frozen 2026-06-23 corpus) — AUDIT-003 (Hara Filo) + AUDIT-004 (Pegasus)
   fixed in Welle D3 (`20260626093731`, D-070); D2 + D3 Phase-2 embed backfill of the
   3 priority-1 rows (ZDR-gated consistency follow-up, not retrieval-blocking).
+
+---
+
+## 2026-07-01 — D-110 AI-Attach PDF/DOCX (shipped)
+
+**Status:** Shipped, prod live. PR #22 squash-merged to `main` (`ba6956a8`); prod edge `rag-query` **v21** (sha `756baf79`, ACTIVE, verify_jwt true), Vercel prod `ba6956a8` (READY). Gated for edge-fn coordination with D-109c (see below). Decision **D-110**.
+
+**Frontend (Vercel prod, `ba6956a8`):**
+- Plus-button enabled in `SearchAIBox` + `AIChatWindow` (was disabled).
+- File-picker accepts PDF + DOCX, cap 10 MB source (~13 MB base64).
+- DOCX client-side text-extract via `mammoth` (dynamic import, off the initial bundle).
+- Chip + 3 EN quick-action pills (Summarize / Translate EN / Key Points).
+- Pills stay `mode='default'` (critical catch — a RAG_BYPASS mode would have been a silent file-drop).
+- Web-search mode clears the attached file automatically.
+- Fork-6 model-gating (plus disabled when `model !== 'claude'`) — inert today, future-proofing.
+
+**Backend (Supabase edge fn `rag-query` prod v21, sha `756baf79`):**
+- `attached_file` field in the request body branches to a new path.
+- Gating: `if (mode === 'default' && attached_file)` → RAG-retrieval skip, direct Anthropic call.
+- PDF: base64 document block via Anthropic native (no beta header, GA on `2023-06-01`).
+- DOCX: prepended text extract in the user message.
+- Validation: pre-auth (413 > 10 MB, 400 bad kind / empty).
+- `streamClaudeResponse` content signature widened `string`→`unknown` at ~2 spots + the builder return type.
+- Synthetic filename-only chunk in `retrieved_chunks` (history marker, no content).
+
+**Deploy discipline:**
+- Recon → plan → adversarial-verify workflow before implementation.
+- 5 pressure-test findings surfaced (PDF beta-header dropped, `streamClaudeResponse` signature, pills silent-drop, no `metadata` column, model-gating inert).
+- Pre-deploy: `get_edge_function` saved prod v20 (ezbr_sha `ab0b9db`) as the rollback artifact.
+- Deploy-source isolated to D-110-only (D-109c excluded from the cherry-picked baseline); prod delta **provably attach-only** per the rollback→v21 diff = **129 added + 2 changed, all attach**.
+- Post-deploy: byte-diff live v21 vs deploy-source **IDENTICAL** (59,498 chars).
+- 7/7 live-verify green (no-file baseline, PDF summarize, DOCX translate, 11 MB error, `.xlsx` error, light+dark, web-search clears file).
+- Rollback artifact retained: `scratchpad/prod-rag-query.rollback.index.ts`.
+
+**Multi-session coordination (D-109c):** a parallel session ran D-109c Master-5 during this work and logged prod `rag-query` v21 as a "non-blocking anomaly (functionally v18-equivalent)" — that is its observation of this D-110 deploy (v18-base + attach); prod was not touched. Master-5 outcome: **NOT_READY_FOR_MASTER_6** → the D-109c prod-edge promotion stays owner-gated. **Hard rule:** prod edge stays v21 (D-110-only) until Master-6 clears; the combined edge deploy then comes **from `main`** (D-109c-full + D-110), never from the canary source (no attach → would regress v21). A v21-integrity monitor is armed.
+
+**Touched files (15):**
+`src/lib/rag/client.ts` (`RagQueryOptions.attachedFile`) · `src/lib/search/types.ts` (`AiTurn.attachedFile?: { kind: "pdf"|"docx-text"; filename; sizeBytes }` — object, not a string) · `src/lib/attachment.ts` (**new** 98-line shared helper: `AttachedFile`, `readAttachment`, `ATTACH_QUICK_ACTIONS`) · `src/components/dashboard/hero/SearchAIBox.tsx` · `src/components/dashboard/hero/AIChatWindow.tsx` · `src/styles/dashboard-hero.css` (`.ai-attach-chip`/`-icon`/`-name`/`-size`/`-x`, `.ai-attach-pills`/`-pill`, `.ai-attach-error`) · `supabase/functions/rag-query/index.ts` · `package.json` (+`mammoth ^1.9.0`) · `pnpm-lock.yaml` · `README.md` · `spec/ARCHITECTURE.md` · `spec/RUNBOOK.md` · `spec/DECISIONS.md` · `spec/BUILD_LOG.md` · `spec/D-110_AI_ATTACH_PLAN.md`.
 
 ---
 

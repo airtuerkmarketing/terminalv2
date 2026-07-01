@@ -840,7 +840,7 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ## D-110 — AI-Attach for PDF/DOCX (Dashboard SearchAIBox + AIChatWindow)
 **Date:** 2026-06-30
-**Status:** Code complete on `claude/ai-attach-pdf-docx-kxz7n0` (PR #22, 3 commits); edge `rag-query` redeploy + live preview-verify pending owner sign-off.
+**Status:** Shipped 2026-07-01 — PR #22 squash-merged to `main` (`ba6956a8`); prod edge `rag-query` **v21** (sha `756baf79`, ACTIVE), Vercel prod `ba6956a8`; 7/7 live-verify green. Hard rule: prod edge stays v21 until the D-109c Master-6 gate; the combined deploy then comes from `main` (never the canary source — no attach).
 **Summary:** Enables the previously-disabled `.ai-search-attach`/`.ai-chat-attach` plus-button so a user can attach ONE PDF or DOCX, sent ephemerally with the prompt to Claude (translate/summarize/ask). No storage, no embedding. PDF as a base64 document block (GA on `anthropic-version: 2023-06-01`, NO beta header); DOCX text-extracted client-side via mammoth. New server attach-branch bypasses RAG when `mode==='default' && attached_file`.
 
 **Scope:**
@@ -863,7 +863,7 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 **Pending (out of scope):** multi-file; library-bucket persistence; TXT/RTF/ODT/images; vector embedding; GPT/Gemini routing; `ModelSelector` wiring (Fork-6 inert until then).
 
-**References:** predecessor D-104 (search badges, `826b48a`). Plan: `spec/D-110_AI_ATTACH_PLAN.md`. Commits: `bbe3c0a`, `31ea3cb`, + this polish commit.
+**References:** predecessor D-104 (search badges, `826b48a`). Plan: `spec/D-110_AI_ATTACH_PLAN.md`. Commits: `bbe3c0a`, `31ea3cb`, `5ae8041` (squash-merged as `ba6956a8`).
 
 ---
 
