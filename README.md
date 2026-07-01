@@ -19,8 +19,8 @@ auth-gated throughout — there is no public content.
 ## Status
 
 - **HEAD:** `5c10519` on `main` (442 commits since 2026-06-15)
-- **Latest milestone:** D-110 — AI-Attach for PDF/DOCX (shipped; PR #22 merged `ba6956a8`, edge `rag-query` v21)
-- **Highest decision:** D-110 (`spec/DECISIONS.md`)
+- **Latest milestone:** D-111 — 4-role model rewrite + owner-based Documents Library + AI-admin workflow (shipped; PR #26 merged `04959d0`, migration `20260701000000`)
+- **Highest decision:** D-111 (`spec/DECISIONS.md`)
 - **Demo target:** 2026-08-01
 
 ## Stack
@@ -43,9 +43,9 @@ Anthropic and Voyage SDKs are not Next dependencies.
 
 ## Database
 
-- **Migrations:** 86 on `main` (D-081 file↔registry reconcile). *(The prod DB
-  ledger currently holds 87 — one in-flight migration, `20260630120000`, applied
-  ahead of its merge to `main`.)*
+- **Migrations:** 89 on `main`, in exact file↔registry parity (D-081 reconcile;
+  re-verified by hashing the sorted version set at D-111). Highest: `20260701000000`
+  (D-111 role rewrite).
 - **Pages:** 51 published
 - **Brands:** 15
 - **Team members:** 63
@@ -88,7 +88,7 @@ Anthropic and Voyage SDKs are not Next dependencies.
 | File | Purpose |
 |---|---|
 | `ARCHITECTURE.md` | System design, schema, block taxonomy, routing |
-| `DECISIONS.md` | Locked design decisions (D-001 through D-110) |
+| `DECISIONS.md` | Locked design decisions (D-001 through D-111) |
 | `DESIGN_SYSTEM.md` | Design tokens, theming model, component conventions |
 | `BUILD_LOG.md` | Running progress record (authoritative status source) |
 | `PHASE_PLAN.md` | Original phase plan (historical — see BUILD_LOG for current status) |
@@ -117,6 +117,7 @@ All migrations are timestamp-named (`YYYYMMDDHHMMSS_*.sql`); grouped by date and
 | `20260625*`–`20260626*` | Data cleanup (test person, airtuerk.online, secrets audit), knowledge-base foundation, tag vocabulary, retrieval-stats job, folder colors + file Trash + presentation visibility |
 | `20260627*` | Per-user folder permissions, ledger drift-repair, bucket lockdown, FK covering indexes, RLS initplan perf, `handle_new_user` lock |
 | `20260628*`–`20260629*` | RAG warmup cron, RAG-write hardening, anon EXECUTE revokes, user-mgmt (title/metadata, email-change RPC), AI observability (D-107) |
+| `20260630*`–`20260701*` | Gold-set eval modes + deterministic judge (D-109c); 4-role model rewrite + owner-based Documents Library RLS + `audit_events` (D-111) |
 
 ## Design system
 
