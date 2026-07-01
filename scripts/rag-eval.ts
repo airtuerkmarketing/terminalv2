@@ -155,7 +155,9 @@ function percentile(sorted: number[], p: number): number {
 
 // ---------- replay one question through the live edge fn ----------
 async function replay(row: GoldRow, userToken: string): Promise<ReplayResult> {
-  const url = `${SUPABASE_URL}/functions/v1/rag-query`;
+  // RAG_QUERY_FN lets the harness target a non-prod edge fn (e.g. `rag-query-canary`)
+  // without touching prod `rag-query` — for canary/version A-B testing (D-109c Master-4).
+  const url = `${SUPABASE_URL}/functions/v1/${process.env.RAG_QUERY_FN ?? "rag-query"}`;
   const started = Date.now();
   const base: ReplayResult = {
     row,
