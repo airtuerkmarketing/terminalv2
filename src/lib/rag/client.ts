@@ -8,7 +8,16 @@ import { parseSseLine } from "./sse";
 // pulled into the client bundle.
 import type { ChatMessageItem } from "@/lib/users";
 
-const RAG_QUERY_PATH = "/functions/v1/rag-query";
+// D-109c Master-6 — dev-only canary toggle. NEXT_PUBLIC_RAG_QUERY_CANARY=true (in a
+// LOCAL .env.local only) points the client at the parallel `rag-query-canary` fn
+// (v19 + M3.7) for side-by-side testing against prod v18. Naming matches the
+// Master-4 harness RAG_QUERY_FN pattern. NB: NEXT_PUBLIC_* is inlined at
+// build/dev-compile time — flipping the value requires a dev-server RESTART (HMR
+// won't pick it up). Prod/Vercel leaves it unset → default rag-query.
+const USE_CANARY = process.env.NEXT_PUBLIC_RAG_QUERY_CANARY === "true";
+const RAG_QUERY_PATH = USE_CANARY
+  ? "/functions/v1/rag-query-canary"
+  : "/functions/v1/rag-query";
 
 export interface RagSource {
   // 'team_directory' (D-069) + 'web_search' (D-106 Phase 5b) + 'attached_file' (D-110)
