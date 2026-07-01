@@ -1097,9 +1097,27 @@ async function streamClaudeResponse({
               : answerLang === 'tr'
                 ? 'Doğrulanmış kaynak bulunamadı.'
                 : 'Keine verifizierten Quellen.'
+          // #2.5.7 (M3.7): prefer the model's native per-claim citations (activeCitations —
+          // precise, "the model cited this"). But Sonnet 4.6 often USES web_search results
+          // without emitting native citation deltas, which left activeCitations empty and
+          // mislabeled a genuine multi-source search as "no verified sources" (the demo-breaking
+          // bug the Master-4 canary smoke caught: web_search uses:2 / 7 URLs, yet "No verified
+          // sources."). So fall back to webSearchByUrl — the results the search actually returned
+          // (real Anthropic-fetched URLs, never model-fabricated) — and report the localized
+          // "none" ONLY when the search genuinely returned nothing. Cap the fallback list length.
+          const FALLBACK_SOURCE_CAP = 8
           const cites = Array.from(activeCitations.values())
-          const block = cites.length
-            ? `\n\n${lbl}:\n` + cites.map((c) => `- ${c.title} (${c.url})`).join('\n')
+          const shown = cites.length
+            ? cites
+            : Array.from(webSearchByUrl.values())
+                .slice(0, FALLBACK_SOURCE_CAP)
+                .map((w) => {
+                  const m = w.metadata as { title?: string; source_url?: string }
+                  const url = m.source_url ?? w.source_id
+                  return { url, title: m.title ?? url }
+                })
+          const block = shown.length
+            ? `\n\n${lbl}:\n` + shown.map((c) => `- ${c.title} (${c.url})`).join('\n')
             : `\n\n${none}`
           emitText(block)
         }
