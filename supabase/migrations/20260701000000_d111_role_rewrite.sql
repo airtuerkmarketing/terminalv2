@@ -29,6 +29,16 @@ CREATE TABLE _d111_defaults_snapshot AS
 SELECT email, role
 FROM user_role_defaults;
 
+-- Rollback snapshots are service-role-only. CREATE TABLE ... AS lands them in the
+-- public schema with RLS off + Supabase's default anon/authenticated grants, which
+-- would expose every user's email/role via PostgREST. Enable RLS (no policies =
+-- default deny for RLS clients) and revoke the grants; the service role bypasses
+-- both, so the 24h rollback still works. (Applied to prod as a follow-up hotfix.)
+ALTER TABLE _d111_role_snapshot ENABLE ROW LEVEL SECURITY;
+ALTER TABLE _d111_defaults_snapshot ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON _d111_role_snapshot FROM anon, authenticated;
+REVOKE ALL ON _d111_defaults_snapshot FROM anon, authenticated;
+
 -- ------------------------------------------------------------
 -- Step 1: Temporarily widen CHECK to allow all 5 values
 -- ------------------------------------------------------------
