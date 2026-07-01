@@ -39,12 +39,14 @@ export async function updatePasswordAction(formData: FormData) {
     };
   }
 
-  const newMetadata = { ...(user.app_metadata || {}) };
-  delete newMetadata.force_password_change;
-
+  // GoTrue MERGES app_metadata on updateUserById (it does not replace the object),
+  // so removing a key by omission does NOT work — the merge keeps the old value and
+  // updateUserById still reports success (Step 3 below then catches the stale flag).
+  // A key is deleted only by sending it explicitly as `null`. Spreading the existing
+  // metadata keeps provider/providers untouched under both merge and replace semantics.
   const { error: metaError } = await adminClient.auth.admin.updateUserById(
     user.id,
-    { app_metadata: newMetadata }
+    { app_metadata: { ...(user.app_metadata || {}), force_password_change: null } }
   );
 
   if (metaError) {
