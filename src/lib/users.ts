@@ -972,7 +972,7 @@ export async function inviteUser(input: InviteUserInput): Promise<{ userId: stri
   // name (seeded into user_metadata so handle_new_user fills profiles.full_name).
   const { data: tm } = await admin
     .from("team_members")
-    .select("id, email, first_name, last_name, last_invited_at")
+    .select("id, email, first_name, last_name, last_invited_at, auth_user_id")
     .eq("id", teamMemberId)
     .maybeSingle();
   const tmRow = tm as {
@@ -981,6 +981,7 @@ export async function inviteUser(input: InviteUserInput): Promise<{ userId: stri
     first_name: string | null;
     last_name: string | null;
     last_invited_at: string | null;
+    auth_user_id: string | null;
   } | null;
   if (!tmRow) throw new Error("NO_TEAM_MEMBER");
   if (!tmRow.email) throw new Error("NO_EMAIL");
@@ -1006,7 +1007,43 @@ export async function inviteUser(input: InviteUserInput): Promise<{ userId: stri
     email,
     fullName ? { data: { full_name: fullName } } : undefined
   );
-  if (inviteErr) throw inviteErr;
+  if (inviteErr) {
+    // The account already exists — e.g. a seed-created, email-confirmed row that
+    // never signed in (invited_at/last_sign_in_at NULL). inviteUserByEmail MINTS a
+    // NEW user, so GoTrue rejects it with 422 `email_exists` — the wrong primitive
+    // for an existing account, and the raw error surfaced only as "Action failed".
+    // Fall back to a recovery email (the SAME GoTrue /recover primitive as
+    // sendPasswordReset, NO redirectTo): the link lands on
+    // /auth/confirm?type=recovery → update-password, so "Invite again" re-sends an
+    // actionable login link instead of failing. Any OTHER invite error still bubbles.
+    // (Recovery links flow through /auth/confirm like invite links, so they share the
+    // separate Safe-Links interstitial-confirm fix — not this function's concern.)
+    const alreadyRegistered =
+      (inviteErr as { code?: string }).code === "email_exists" ||
+      (inviteErr as { status?: number }).status === 422 ||
+      /already been registered/i.test(inviteErr.message ?? "");
+    if (!alreadyRegistered) throw inviteErr;
+
+    const anon = await createClient();
+    const { error: recErr } = await anon.auth.resetPasswordForEmail(email);
+    if (recErr) throw new Error("INVITE_FAILED");
+
+    // Stamp last_invited_at (best-effort) so the resend rate-limit + the UI's
+    // "zuletzt eingeladen vor X" hint behave exactly as on the fresh-invite path.
+    await admin
+      .from("team_members")
+      .update({ last_invited_at: new Date().toISOString() })
+      .eq("id", teamMemberId);
+
+    await logActivity({
+      userId: identity.userId,
+      action: "resend_invite_recovery",
+      resourceType: "profile",
+      resourceId: tmRow.auth_user_id,
+      metadata: { email, mode: "recovery", teamMemberId },
+    });
+    return { userId: tmRow.auth_user_id ?? "" };
+  }
   const newUserId = invited.user?.id;
   if (!newUserId) throw new Error("INVITE_FAILED");
 
