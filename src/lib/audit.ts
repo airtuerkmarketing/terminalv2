@@ -52,7 +52,47 @@ export async function auditEvent(params: {
       // Don't throw — audit failure must not block the user action.
       console.error("[audit] Failed to log event:", error.message, params.action);
     }
+
+    // High-value actions also fan out an email to super_admins (D-111). Best-effort:
+    // a notification failure never blocks the user action or the audit write.
+    if (NOTIFY_ACTIONS.has(params.action)) {
+      try {
+        await admin.functions.invoke("notify-dept-admin-activity", {
+          body: {
+            actor_email: params.identity.email,
+            actor_role: params.identity.role,
+            action: params.action,
+            resource_type: params.resourceType,
+            resource_id: params.resourceId,
+            resource_name: extractResourceName(params.after),
+            metadata: params.metadata ?? {},
+            timestamp: new Date().toISOString(),
+          },
+        });
+      } catch (notifyErr) {
+        console.error("[audit] Notification invoke failed:", notifyErr);
+      }
+    }
   } catch (err) {
     console.error("[audit] Unhandled error logging event:", err);
   }
+}
+
+/** Actions worth an immediate super_admin email (fan-out via the edge function). */
+const NOTIFY_ACTIONS = new Set<AuditAction>([
+  "folder.create",
+  "folder.delete",
+  "folder.grantAccess",
+  "folder.revokeAccess",
+  "file.upload",
+  "file.delete",
+  "correction.approve",
+  "correction.reject",
+  "source.create",
+]);
+
+function extractResourceName(after: unknown): string | undefined {
+  if (!after || typeof after !== "object") return undefined;
+  const obj = after as Record<string, unknown>;
+  return (obj.name as string) || (obj.title as string) || (obj.topic as string) || undefined;
 }
