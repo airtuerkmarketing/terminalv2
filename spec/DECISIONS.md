@@ -838,6 +838,35 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-110 — AI-Attach for PDF/DOCX (Dashboard SearchAIBox + AIChatWindow)
+**Date:** 2026-06-30
+**Status:** Code complete on `claude/ai-attach-pdf-docx-kxz7n0` (PR #22, 3 commits); edge `rag-query` redeploy + live preview-verify pending owner sign-off.
+**Summary:** Enables the previously-disabled `.ai-search-attach`/`.ai-chat-attach` plus-button so a user can attach ONE PDF or DOCX, sent ephemerally with the prompt to Claude (translate/summarize/ask). No storage, no embedding. PDF as a base64 document block (GA on `anthropic-version: 2023-06-01`, NO beta header); DOCX text-extracted client-side via mammoth. New server attach-branch bypasses RAG when `mode==='default' && attached_file`.
+
+**Scope:**
+- **Layer 1 — backend** (`bbe3c0a`): `rag-query` attach-branch + `RagQueryOptions.attachedFile`; `streamClaudeResponse` content widened `string`→`unknown` (PDF block array); `validateAttachedFile` (413/400); filename logged via a synthetic `attached_file` retrieved_chunks entry (no migration).
+- **Layer 2 — client** (`31ea3cb`): plus-button enablement + file picker + 10 MB/ext validation + chip + `mammoth` (dynamic import) in both surfaces; `src/lib/attachment.ts` shared helper; `AiTurn.attachedFile` filename-only marker for reopen/reload continuity.
+- **Layer 3 — polish** (this commit): EN quick-action pills (Summarize / Translate EN / Key Points — all `mode='default'`); Fork-6 `model!=='claude'` gating (model threaded into AIChatWindow); web-search clears the file; chip/pills CSS (token-based light/dark); a11y focus-return; docs.
+
+**Sub-decisions:**
+- **A — Filename logging via a synthetic `retrieved_chunks` entry, not a `metadata` column.** `ai_chat_messages` has no `metadata` column; the synthetic `attached_file` chunk (filename only) keeps commit 1 migration-free and is verified not to crash `ragToAiSource`/`chunksToSources`.
+- **B — Numbered D-110, not the brief's "D-108".** The DECISIONS log ran to D-107; "D-108" was already an informal code-comment label (chat-typography pass: `theme.css`, `dashboard-hero.css`, `AIAnswerBlock.tsx`) and D-109c is the in-progress web-search work in `BUILD_LOG`. D-110 is the next collision-free formal number; D-108/D-109 are intentionally skipped as DECISIONS entries.
+- **C — Multi-turn = re-attach per turn (V1).** The file is cleared on send; a follow-up without a re-attached file runs full RAG, so document turns require re-attaching.
+- **D — Fork-6 model-gating kept as a cheap `model!=='claude'` expression, inert until a model-picker ships.** No `ModelSelector` wiring / `localStorage` persistence in scope; `model` is threaded into AIChatWindow so its button isn't permanently disabled.
+- **E — Pills stay `mode='default'`** so the attach-branch handles them (a RAG_BYPASS mode would silently drop the file).
+- **F — DOCX scaffolding is language-neutral** (`<document>` tags, not German `Dokument:`/`Frage:` labels) per D-106 strict mirroring; PDF is GA (no `anthropic-beta`).
+- **G — Web-search clears the attached file** so a web-search re-trigger never ships base64 into a branch that ignores it.
+
+**Pre-spike:** a ~14 MB base64 JSON body reaches the `rag-query` handler (Supabase edge body budget OK) → base64-in-JSON transport confirmed; no signed-URL upload fallback needed.
+
+**Reversibility / rollback:** all additive — optional types, branch gated on `mode==='default' && attached_file`, `string`→`unknown` is a strict superset, no migration. Edge: redeploy the prior `index.ts`. Frontend: revert the 3 commits / promote the prior Vercel deploy. DB: nothing.
+
+**Pending (out of scope):** multi-file; library-bucket persistence; TXT/RTF/ODT/images; vector embedding; GPT/Gemini routing; `ModelSelector` wiring (Fork-6 inert until then).
+
+**References:** predecessor D-104 (search badges, `826b48a`). Plan: `spec/D-110_AI_ATTACH_PLAN.md`. Commits: `bbe3c0a`, `31ea3cb`, + this polish commit.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

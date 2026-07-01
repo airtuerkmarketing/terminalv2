@@ -123,4 +123,4 @@ Tenekeci (CEO) + Ahmet Özbek (CFO). Written 2026-06-28. Keep concrete — this 
 - Advisors: security 0 ERROR / 16 WARN (all by-design), performance 0 ERROR.
 - Profiles: 10 (4 super_admin / 5 admin / 1 user), 10 auth users.
 - RAG: corpus ~406 chunks; genuine answer quality **86.9%** after F3 (harness `scripts/rag-eval.ts`, D-104).
-- Highest decision: D-104.
+- Highest decision: D-110.

@@ -9,6 +9,18 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-07-01)
 
+- **AI-Attach for PDF/DOCX (D-110) — code complete on `claude/ai-attach-pdf-docx-kxz7n0` (PR #22), NOT yet deployed:**
+  the disabled `.ai-search-attach`/`.ai-chat-attach` plus-button is enabled so a user can attach ONE PDF or
+  DOCX, sent ephemerally with the prompt to Claude (translate/summarize/ask) — no storage, no embedding. PDF as
+  a base64 document block (GA on `anthropic-version: 2023-06-01`, **no beta header**); DOCX client-extracted via
+  `mammoth` (dynamic import, off the initial bundle). New `rag-query` branch (`mode==='default' && attached_file`)
+  bypasses RAG; `streamClaudeResponse` content widened `string`→`unknown` for the PDF block; filename-only logging
+  via a synthetic `attached_file` retrieved_chunks entry (**no migration**). EN quick-action pills
+  (Summarize / Translate EN / Key Points, all `mode='default'`-safe so the bypass branch never drops the file),
+  Fork-6 Claude-only gating (inert until a model-picker ships), 10 MB cap, web-search clears the file. Pre-spike
+  confirmed a ~14 MB base64 body survives the Supabase edge body limit (no signed-URL fallback needed). 3 commits
+  (`bbe3c0a` backend / `31ea3cb` client / polish); `pnpm typecheck` + `pnpm build` green. **Pending:** edge
+  `rag-query` redeploy + live preview-verify (owner) before merge.
 - **Auth email overhaul + forgot-password flow — shipped to `main` + deployed:** all five GoTrue
   auth templates (invite / recovery / confirmation / email-change / magic-link) rebuilt into one
   English, all-black, Outlook-safe branded shell — real `terminal` wordmark PNG
@@ -48,7 +60,7 @@ it is append-only history (do not rewrite past entries — add new ones).
   `purge-expired-trashed-documents` + `purge-expired-trashed-presentations` crons.
   Per-user folder grants via `document_folder_permissions`/`presentation_folder_permissions`
   + `current_team_member_id()`/`can_access_*`/`can_see_*` SECURITY DEFINER helpers (D-080).
-  Highest decision: **D-107** (D-105 = architecture audit; D-106 = AI UX wave, code/edge-only; D-107 = AI observability + web-search hardening, **includes schema change** via `20260629140000`).
+  Highest decision: **D-110** (D-105 = architecture audit; D-106 = AI UX wave; D-107 = AI observability + web-search hardening, **includes schema change** via `20260629140000`; D-110 = AI-Attach PDF/DOCX, **code/edge-only, no migration**). D-108/D-109 are not formal DECISIONS entries — "D-108" is an informal CSS typography label and D-109c is tracked in this log.
   RAG corpus: **406 chunks** (confluence 363 [page 130 / pdf 159 / office 60 /
   knowledge_base 14] + brand 43) + **39 company_context** entries (all tagged). Edge functions:
   `embed-knowledge` (7 source modes), `rag-query` **v18** live (model **Sonnet 4.6** D-106;

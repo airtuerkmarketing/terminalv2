@@ -7,12 +7,13 @@ import {
   useMemo,
   useRef,
   useState,
+  type ChangeEvent,
   type ClipboardEvent,
   type KeyboardEvent,
 } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Plus } from "lucide-react";
+import { Plus, FileText, X } from "lucide-react";
 import { TerminalLogo } from "@/components/shell/TerminalLogo";
 import { ModeChips } from "@/components/dashboard/hero/ModeChips";
 import { SearchDropdown, ASK_AI_ID } from "@/components/dashboard/hero/SearchDropdown";
@@ -39,6 +40,13 @@ import {
   renameChatSession,
   messagesToTurns,
 } from "@/lib/rag/client";
+import {
+  readAttachment,
+  attachmentChipMeta,
+  ATTACH_ACCEPT,
+  ATTACH_QUICK_ACTIONS,
+  type AttachedFile,
+} from "@/lib/attachment";
 // Type-only — erased, so the server-only users.ts module isn't bundled here.
 import type { ChatSessionItem } from "@/lib/users";
 
@@ -117,6 +125,10 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
   const [titleOverride, setTitleOverride] = useState<string | null>(null);
   const [correctTurn, setCorrectTurn] = useState<AiTurn | null>(null);
   const [chatMode, setChatMode] = useState<ChatMode>("default");
+  // D-110: one ephemeral attachment for the next send (cleared on send). Content lives
+  // here only transiently; only a filename marker is persisted (AiTurn.attachedFile).
+  const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
+  const [attachError, setAttachError] = useState<string | null>(null);
   // #3 explicit-sticky web-search: once the web-search button fires, follow-ups stay in
   // web-search mode until the user exits the composer pill or 5 min idle elapses. The state
   // drives the pill; the ref is read inside submitAi (no stale closure / no extra dep).
@@ -133,6 +145,8 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const innerBoxRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachBtnRef = useRef<HTMLButtonElement>(null);
   const skipPersist = useRef(true);
   // Box pixel size, tracked so the animated glow stroke can trace the exact rounded
   // rect (width is fluid, height grows with the textarea). Visual only.
@@ -299,7 +313,7 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
   }, [query]);
 
   const submitAi = useCallback(
-    async (text: string, opts?: { webSearch?: boolean }) => {
+    async (text: string, opts?: { webSearch?: boolean; attachedFile?: AttachedFile | null }) => {
       const qq = text.trim();
       if (!qq) return;
 
@@ -308,19 +322,40 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
       setActiveId(null);
       setChatOpen(true);
       setQuery("");
+      // D-110: the attachment is one-shot — clear it (and any error) on send.
+      setAttachedFile(null);
+      setAttachError(null);
 
       // Web search is button-triggered (the rule-7 out-of-scope fallback), not a chip.
       // #3 explicit-sticky: once armed, a plain (no-chip) follow-up stays in web-search
       // mode until the user exits the pill or WEB_SEARCH_STICKY_TIMEOUT_MS idle elapses.
       const explicitWeb = opts?.webSearch === true;
+
+      // D-110: resolve the attachment first. An explicit opts file (AIChatWindow) wins,
+      // else the dashboard's own sends fall back to the box's attached file (captured from
+      // the render closure, so the clear-on-send above doesn't change this value).
+      // Web-search never carries a file, so an explicit web-search re-trigger drops it.
+      const fileToSend = explicitWeb
+        ? null
+        : opts?.attachedFile !== undefined
+          ? opts.attachedFile
+          : attachedFile;
+
       const now = Date.now();
       const sNow = stickyRef.current;
       const stickyAlive =
         sNow.active && now - sNow.lastInteractionAt < WEB_SEARCH_STICKY_TIMEOUT_MS;
-      const webSearch = explicitWeb || (chatMode === "default" && stickyAlive);
+      // Sticky web-search applies only to a plain (no-chip) follow-up with NO file — an
+      // attached file is a document-mode operation and takes precedence over sticky.
+      const webSearch =
+        explicitWeb || (chatMode === "default" && stickyAlive && !fileToSend);
+
+      // A file forces 'default' so the server attach-branch (mode==='default' &&
+      // attached_file) handles it; with a mode chip armed, a RAG_BYPASS/escalation mode
+      // would run FIRST and silently drop the file (Codex P2).
+      const activeMode = webSearch || fileToSend ? "default" : chatMode;
       // Consume the armed mode for THIS send, then disarm so the chip de-highlights
       // and the next dashboard query (+ chat-window follow-ups) default to normal RAG.
-      const activeMode = webSearch ? "default" : chatMode;
       if (!webSearch && chatMode !== "default") setChatMode("default");
       const requestMode = webSearch ? "web-search" : activeMode;
       // Sticky bookkeeping: enter/refresh on explicit web; an armed chip breaks sticky;
@@ -359,6 +394,10 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
           isStreaming: true,
           chatMode: activeMode !== "default" ? activeMode : undefined,
           isWebSearch: webSearch || undefined,
+          // Marker only — filename/kind/size, never content (kept out of LS_HISTORY).
+          attachedFile: fileToSend
+            ? { kind: fileToSend.kind, filename: fileToSend.filename, sizeBytes: fileToSend.sizeBytes }
+            : undefined,
         },
       ]);
       const patchTurn = (u: Partial<AiTurn>) =>
@@ -370,6 +409,7 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
           sessionId: sessionId ?? undefined,
           conversationHistory,
           mode: requestMode,
+          attachedFile: fileToSend ?? undefined,
           onEvent: (e) => {
             if (e.type === "session" && e.sessionId) {
               setSessionId(e.sessionId);
@@ -433,7 +473,7 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
         }
       }
     },
-    [model, sessionId, chatMode]
+    [model, sessionId, chatMode, attachedFile]
   );
 
   const handleFeedbackChange = useCallback(
@@ -606,6 +646,30 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
     });
   }
 
+  // ── D-110: attach-file picker ──
+  function onPickFile() {
+    setAttachError(null);
+    fileInputRef.current?.click();
+  }
+  async function onFileChosen(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = ""; // reset so re-picking the same filename re-fires onChange
+    if (!f) return;
+    const r = await readAttachment(f);
+    if (r.ok) {
+      setAttachedFile(r.file);
+      setAttachError(null);
+    } else {
+      setAttachedFile(null);
+      setAttachError(r.error);
+    }
+  }
+  function removeAttachment() {
+    setAttachedFile(null);
+    setAttachError(null);
+    attachBtnRef.current?.focus(); // a11y: don't strand focus on the removed chip button
+  }
+
   return (
     <div className="ai-stack">
       <ModeChips active={chatMode} onToggle={onToggleMode} />
@@ -627,6 +691,42 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
               />
             </svg>
           )}
+          {attachedFile && (
+            <div className="ai-attach-chip">
+              <FileText className="ai-attach-chip-icon" aria-hidden="true" />
+              <span className="ai-attach-chip-name">{attachedFile.filename}</span>
+              <span className="ai-attach-chip-size">
+                {attachmentChipMeta(attachedFile).size}
+              </span>
+              <button
+                type="button"
+                className="ai-attach-chip-x"
+                onClick={removeAttachment}
+                aria-label="Remove attachment"
+              >
+                <X aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          {attachedFile && chatMode === "default" && (
+            <div className="ai-attach-pills">
+              {ATTACH_QUICK_ACTIONS.map((qa) => (
+                <button
+                  key={qa.label}
+                  type="button"
+                  className="ai-attach-pill"
+                  onClick={() => submitAi(qa.prompt, { attachedFile })}
+                >
+                  {qa.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {attachError && (
+            <div className="ai-attach-error" role="alert">
+              {attachError}
+            </div>
+          )}
           <textarea
             ref={textareaRef}
             className="ai-search-textarea"
@@ -644,15 +744,26 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
 
           <div className="ai-search-toolbar">
             <div className="ai-search-toolbar-left">
+              {/* Fork-6 (D-110): attachments are Claude-only. Inert today (model is
+                  always 'claude' until a model-picker ships) but kept as forward-compat. */}
               <button
+                ref={attachBtnRef}
                 type="button"
                 className="ai-search-attach"
-                disabled
-                title="Attachments coming in stage 2"
-                aria-label="Attach"
+                onClick={onPickFile}
+                disabled={model !== "claude"}
+                title={model !== "claude" ? "Attachments require Claude" : "Attach a PDF or DOCX"}
+                aria-label="Attach a file"
               >
                 <Plus className="ai-search-attach-icon" aria-hidden="true" />
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ATTACH_ACCEPT}
+                hidden
+                onChange={onFileChosen}
+              />
             </div>
 
             <div className="ai-search-toolbar-right">
@@ -691,6 +802,8 @@ export function SearchAIBox({ firstName = null }: { firstName?: string | null })
         turns={turns}
         sessionId={sessionId}
         titleOverride={titleOverride}
+        model={model}
+        chatMode={chatMode}
         onClose={closeChat}
         onSubmit={submitAi}
         onNewChat={newChat}

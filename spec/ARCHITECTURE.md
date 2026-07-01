@@ -544,7 +544,7 @@ snapshot **verified via Supabase MCP 2026-06-28 (D-102):** **34 tables + 1 view,
 88 RLS policies, 165 indexes, 82 migrations (ledger hash `6355f130…`, repo↔registry exact),
 9 extensions, 4 cron jobs, 9 storage buckets, 10 auth users, profiles 10 (4 super_admin /
 5 admin / 1 user)**. Advisors: security 0 ERROR / 16 WARN (by-design), performance 0 ERROR.
-Highest decision: **D-104**. RAG genuine quality **86.9%** (D-104, harness-measured).
+Highest decision: **D-110**. RAG genuine quality **86.9%** (D-104, harness-measured).
 
 | D | Change | Effect |
 |---|---|---|
@@ -577,15 +577,15 @@ reset the 6 seeded temp passwords; email-template swap (D-071); E2E CI repo secr
 
 ---
 
-## 17. Current snapshot (2026-06-29, D-107)
+## 17. Current snapshot (2026-06-29, D-110)
 
 Live snapshot verified via Supabase MCP 2026-06-29 (D-107 deploy verification):
 
 - **86 migrations** applied + registered (file ↔ registry exact parity)
 - Ledger hash: `c06a138fff0f62856f7cdf08b380d898`
 - Highest applied migration: `20260629140000` (D-107 — `ai_observability` columns: `mode`/`tool_calls`/`ttft_ms`)
-- Highest decision: **D-107** (AI observability + web-search hardening, v18 bundle)
+- Highest decision: **D-110** (AI-Attach PDF/DOCX — code/edge-only, no DB change since this 2026-06-29 snapshot)
 - `rag-query` edge function: **v18 ACTIVE** (verify_jwt true, sha256 `ab0b9db…`)
 - Vercel production: `1fcfd47` at www.airtuerk.dev (region fra1)
 
-For sprint-scoped detail of D-081–D-104 see §16 above; for D-105–D-107 detail see `DECISIONS.md`.
+For sprint-scoped detail of D-081–D-104 see §16 above; for D-105–D-110 detail see `DECISIONS.md`.

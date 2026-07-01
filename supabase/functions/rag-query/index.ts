@@ -163,6 +163,15 @@ interface RagQueryRequest {
   session_id?: string
   conversation_history?: Array<{ role: 'user' | 'assistant'; content: string }>
   mode?: ChatMode
+  // D-110: one ephemeral attachment. PDF -> contentBase64 (sent as a document block);
+  // DOCX -> contentText (client-extracted via mammoth, prepended to the question).
+  attached_file?: {
+    kind: 'pdf' | 'docx-text'
+    filename: string
+    contentBase64?: string
+    contentText?: string
+    sizeBytes: number
+  }
 }
 
 interface RetrievedChunk {
@@ -185,10 +194,17 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = (await req.json()) as RagQueryRequest
-    const { question, session_id, conversation_history = [], mode = 'default' } = body
+    const { question, session_id, conversation_history = [], mode = 'default', attached_file } = body
 
     if (!question || question.trim().length === 0) {
       return jsonError('Question required', 400)
+    }
+
+    // D-110: validate an attached file if present (guards the real payload size, not just
+    // the reported sizeBytes — the ~13.3MB base64 body is the actual cost).
+    if (attached_file) {
+      const v = validateAttachedFile(attached_file)
+      if (v) return jsonError(v.message, v.status)
     }
 
     const authHeader = req.headers.get('Authorization')
@@ -232,6 +248,30 @@ Deno.serve(async (req: Request) => {
         retrievedChunks: [],
         mode,
         allowTools: false,
+      })
+    }
+
+    // === Mode branch: default + attached file (D-110) ===
+    // One ephemeral PDF/DOCX sent with the prompt. Like the RAG-bypass modes it skips
+    // embed/retrieval/rerank and the team-directory tool — the document IS the context.
+    // Only the filename is logged (synthetic retrieved_chunks entry); content never stored.
+    if (mode === 'default' && attached_file) {
+      const activeSessionId = await ensureSessionAndLog(
+        supabaseService,
+        session_id,
+        user.id,
+        question,
+      )
+      return await streamClaudeResponse({
+        systemPrompt: ATTACHMENT_PROMPT,
+        messages: buildAttachmentConversation(conversation_history, question, attached_file),
+        anthropicKey,
+        supabaseService,
+        sessionId: activeSessionId,
+        retrievedChunks: [],
+        mode,
+        allowTools: false,
+        attachedFilename: attached_file.filename,
       })
     }
 
@@ -348,6 +388,28 @@ function jsonError(message: string, status: number): Response {
     status,
     headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
   })
+}
+
+// ============ Attached-file validation (D-110) ============
+// Guards the LITERAL payload (PDF base64 / DOCX text), not the reported sizeBytes — the
+// ~13.3MB base64 body is the real transport/memory cost. Ceiling leaves headroom under
+// Anthropic's 32MB request limit; the client also caps source size at 10MB. Spike
+// confirmed a ~14MB JSON body reaches the handler (Supabase edge body budget OK).
+const ATTACHMENT_MAX_PAYLOAD_CHARS = 14 * 1024 * 1024 // ~10MB source -> ~13.3MB base64 + headroom
+function validateAttachedFile(
+  f: NonNullable<RagQueryRequest['attached_file']>,
+): { status: number; message: string } | null {
+  if (f.kind !== 'pdf' && f.kind !== 'docx-text') {
+    return { status: 400, message: 'Invalid attachment: unsupported kind' }
+  }
+  const payload = f.kind === 'pdf' ? f.contentBase64 : f.contentText
+  if (!payload || payload.length === 0) {
+    return { status: 400, message: 'Invalid attachment: empty content' }
+  }
+  if (payload.length > ATTACHMENT_MAX_PAYLOAD_CHARS) {
+    return { status: 413, message: 'Attachment too large (max 10 MB)' }
+  }
+  return null
 }
 
 // ============ Embed query (5s timeout) ============
@@ -589,6 +651,18 @@ ANTI-SYCOPHANCY (verbindlich):
 QUELLEN-ZEILE (verbindlich):
 10. Schreibe KEINE eigene "Quellen:"-Zeile am Ende. Der Backend hängt einen verifizierten Quellen-Block aus den tatsächlichen Tool-Citations an. Beziehe dich im Fließtext auf Quellen sinngemäß ("laut Sportschau", "die UEFA-Pressemitteilung meldet"), aber gib KEINE URL-Liste am Schluss aus.`
 
+// Attached-file prompt (D-110). The user attached ONE PDF/DOCX and the document IS the
+// context — no corpus, no team tool. The per-turn scaffolding around the document is
+// language-neutral (see buildAttachmentConversation), so the model mirrors the question's
+// language per the D-106 strict-mirroring mandate.
+const ATTACHMENT_PROMPT = `${MODE_INTRO} Du arbeitest im **Dokument-Modus**.
+
+Der Nutzer hat ein einzelnes Dokument angehängt und stellt dazu eine Frage. Arbeite AUSSCHLIESSLICH mit dem angehängten Dokument und der Frage des Nutzers.
+1. Erkenne die Sprache der Frage (Deutsch, Englisch oder Türkisch) und antworte AUSSCHLIESSLICH in GENAU dieser Sprache — niemals in einer anderen.
+2. Stütze deine Antwort auf das angehängte Dokument. Erfinde nichts hinzu, was nicht darin steht; enthält das Dokument die Antwort nicht, sage das ehrlich in der Sprache der Frage.
+3. Behalte Zahlen, Namen, Daten und Beträge exakt bei.
+4. Antworte direkt — kein Vorwort, kein Quellen-Block.`
+
 // ============ System prompt ============
 function buildSystemPrompt(chunks: RetrievedChunk[]): string {
   const isIdentity = (c: RetrievedChunk) =>
@@ -718,6 +792,37 @@ function buildConversation(
   return [...history.slice(-10), { role: 'user', content: newQuestion }]
 }
 
+// D-110: conversation for an attached-file turn. PDF -> a document content block (base64,
+// GA on anthropic-version 2023-06-01, NO beta header) placed BEFORE the text block. DOCX
+// -> client-extracted text wrapped in language-neutral structural tags (NOT German
+// "Dokument/Frage" labels, which would bias output language vs D-106 mirroring) and
+// prepended to the question. Text-only history is kept. Return type uses `unknown` content
+// so the PDF block-array case type-checks alongside the string-content history items.
+function buildAttachmentConversation(
+  history: Array<{ role: 'user' | 'assistant'; content: string }>,
+  newQuestion: string,
+  file: NonNullable<RagQueryRequest['attached_file']>,
+): Array<{ role: 'user' | 'assistant'; content: unknown }> {
+  if (file.kind === 'pdf') {
+    return [
+      ...history.slice(-10),
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data: file.contentBase64 },
+          },
+          { type: 'text', text: newQuestion },
+        ],
+      },
+    ]
+  }
+  // docx-text: language-neutral wrapper so the answer mirrors the question's language.
+  const wrapped = `<document name="${file.filename}">\n${file.contentText ?? ''}\n</document>\n\n${newQuestion}`
+  return [...history.slice(-10), { role: 'user', content: wrapped }]
+}
+
 // ============ Stream Claude with tool-use loop (C1 + C4 + C5) ============
 // Tool-use breaks the old raw-SSE passthrough: a turn may return a tool_use block
 // instead of text, and emitting Anthropic's per-turn message_stop would make the
@@ -737,9 +842,12 @@ async function streamClaudeResponse({
   mode,
   allowTools = true,
   webSearch = false,
+  attachedFilename,
 }: {
   systemPrompt: string
-  messages: Array<{ role: 'user' | 'assistant'; content: string }>
+  // content is `unknown` so a PDF document-block array (D-110) type-checks alongside the
+  // string-content turns from buildConversation; `convo` below is already `unknown`.
+  messages: Array<{ role: 'user' | 'assistant'; content: unknown }>
   anthropicKey: string
   supabaseService: ReturnType<typeof createClient>
   sessionId: string
@@ -748,6 +856,9 @@ async function streamClaudeResponse({
   mode: ChatMode
   allowTools?: boolean
   webSearch?: boolean
+  // D-110: filename of an attached file — logged via a synthetic retrieved_chunks entry;
+  // the file content itself is never persisted.
+  attachedFilename?: string
 }): Promise<Response> {
   const startTime = Date.now()
 
@@ -1190,6 +1301,22 @@ async function streamClaudeResponse({
                         title: 'airtuerk Team-Verzeichnis',
                         source_type: 'team_directory',
                         calls: toolCallsLog,
+                      },
+                      combined_score: 1,
+                    },
+                  ]
+                : []),
+              // D-110: synthetic attached-file source — FILENAME ONLY (content never
+              // persisted). ragToAiSource renders it from metadata.title; the client
+              // RagSource union includes 'attached_file' and tolerates it without throwing.
+              ...(attachedFilename
+                ? [
+                    {
+                      source: 'attached_file',
+                      source_id: attachedFilename,
+                      metadata: {
+                        title: attachedFilename,
+                        source_type: 'attached_file',
                       },
                       combined_score: 1,
                     },
