@@ -867,6 +867,29 @@ Full inventory: `EMBEDS_INVENTORY.md`.
 
 ---
 
+## D-111 — 4-Role Model Rewrite + Owner-based Documents Library + AI-admin Workflow
+**Date:** 2026-07-01
+**Status:** Shipped 2026-07-01 — PR #26 squash-merged to `main` (`04959d0`); migration `20260701000000` applied to prod; Vercel prod deploy `dpl_79ewgid…` READY (target=production, sha `04959d0`); edge fn `notify-dept-admin-activity` v1 ACTIVE (verify_jwt=true). RLS matrix verified for all 5 roles via SQL role-simulation; super_admin baseline live-confirmed; typecheck+build+Vercel green.
+**Summary:** Replaces the 3-tier role model (`super_admin`/`admin`/`user`) with a 4-role model (`super_admin`/`department_admin`/`ai_admin`/`user`). The `admin` tier is **drained** and removed from the `profiles.role` + `user_role_defaults.role` CHECK constraints (Approach 3): `is_admin()` is left untouched and functionally collapses to super_admin only. Documents Library becomes **owner-based** (any writer role creates folders; edit/manage scoped to `created_by`); `ai_admin` runs the AI-correction workflow (approve/reject/edit) + direct `company_context` source entry. Adds a structured `audit_events` table + a super_admin activity-notification email.
+
+**Roster (end state):** super_admin=5 (bdemir, eerkara, utenekeci, aoezbek, dev@), department_admin=4 in `profiles` (hakan, tsahin, odemir, ebarin) + 2 invite-first seeds in `user_role_defaults` (stobolewski, ekarakas), ai_admin=2 (msinim, skoeroglu), user=1 explicit demote (eadiguezel).
+
+**Scope:**
+- **Commit 1 — migration** (`20260701000000`): add `department_admin`/`ai_admin`, remove `admin` from CHECK (with an admin=0 assert before tightening); by-email role UPDATEs; `user_role_defaults` stale-admin fix + invite-first seed; new `is_dept_admin()`/`is_ai_admin()`/`is_dept_or_ai_admin()` helpers; widened RLS on `document_folders`/`document_files`/`document_folder_permissions` (owner branch) + `ai_corrections`/`company_context` (ai_admin); `audit_events` table + indexes + super-or-own read policy; rollback snapshots `_d111_role_snapshot`/`_d111_defaults_snapshot` (24h window). Applied via `execute_sql` + controlled `schema_migrations` row (D-081 pattern; file↔registry parity re-verified by hash).
+- **Commit 2 — auth infra**: `Role` union drops `admin`, adds the two writer roles; `Identity` gains `isDeptAdmin`/`isAiAdmin` (`isAdmin` now mirrors DB `is_admin()` = super only); `requireLibraryWriter(folderId?)` + `requireAiAdminOrSuper()` guards; new `src/lib/authz/policy.ts` `can()` service + `src/lib/audit.ts` `auditEvent()`.
+- **Commit 3 — Documents Library actions**: all folder/file writes → `requireLibraryWriter`/`requireFileWriter` (owner-or-super); `emptyTrash` tightened to super (global op); `createFolder` keeps `created_by`; mutations emit `auditEvent()`.
+- **Commit 4 — AI-correction workflow**: approve/reject/edit correction + create/update `company_context` → `requireAiAdminOrSuper()`; knowledge `gate()` widened; Taxonomy actions UNCHANGED (super-only, Q3).
+- **Commit 5 — UI**: owner-based `canWrite` gating in the Documents Library (`FolderDTO.createdBy` + `canWriteFolder()` + `viewer`), role-selector options, knowledge page gate widened, Taxonomy tab hidden for non-super.
+- **Commit 6 — notification**: `notify-dept-admin-activity` edge fn (emails super_admins excluding dev@, Resend) + `auditEvent()` fan-out for high-value actions.
+
+**Sub-decisions:** Q1 ownership-based (not department-scoped) sharing; Q2 airtuerk-internal only (no multi-tenant); Q3 ai_admin gets reviews + sources + quality (read) but NOT Taxonomy write (super-only, enforced UI + unchanged server guard); Approach 3 drains `admin` rather than remapping `is_admin()`.
+
+**Reversibility / rollback:** 24h clean-rollback window via the snapshot tables + the File-00 rollback SQL; after 24h dept_admins may have created folders/grants → forward-fix only. Presentation Hub deferred to **D-112** (identical rules, separate data model).
+
+**References:** Plan of record `spec/D-111_ROLE_REWRITE_PLAN.md` (PR #24, `78f6d3b`); batch files `D111_00/01/02`. Squash-merged as `04959d0`.
+
+---
+
 ## Anti-decisions (explicitly NOT doing)
 
 - Not using Payload CMS in v1 (re-evaluate after Phase 5)

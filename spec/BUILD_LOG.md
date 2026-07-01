@@ -9,6 +9,29 @@ it is append-only history (do not rewrite past entries — add new ones).
 
 ## Current State (updated 2026-07-01)
 
+- **4-Role Model Rewrite (D-111) — shipped 2026-07-01, live in prod (PR #26 squash-merged `04959d0`):**
+  the 3-tier `super_admin`/`admin`/`user` model is replaced by 4 roles — `super_admin` / `department_admin` /
+  `ai_admin` / `user`. The `admin` tier is **drained** and removed from the `profiles.role` + `user_role_defaults.role`
+  CHECK constraints (Approach 3): `is_admin()` untouched → functionally collapses to super_admin only. Migration
+  **`20260701000000`** applied to prod (controlled-version, D-081 pattern; file↔registry parity re-verified by hash,
+  89/89) — roster now super_admin=5, department_admin=4 (+2 invite-first `user_role_defaults` seeds), ai_admin=2,
+  user=1. New helpers `is_dept_admin()`/`is_ai_admin()`/`is_dept_or_ai_admin()`; widened RLS for owner-based
+  Documents Library (`document_folders`/`files`/`permissions`) + ai_admin knowledge writes (`ai_corrections`/
+  `company_context`); new structured **`audit_events`** table (super-or-own read; service-role writes only).
+  **Documents Library is now owner-based**: any writer role creates folders; edit/manage/delete/grant/visibility
+  scoped to `created_by` (server: `requireLibraryWriter`/`requireFileWriter`; UI: `canWriteFolder()` + `viewer`
+  threading; `emptyTrash` tightened to super). **ai_admin** runs the AI-correction workflow (approve/reject/edit)
+  + direct `company_context` source entry (`requireAiAdminOrSuper`); **Taxonomy stays super_admin-only** (Q3 —
+  UI-hidden tab + unchanged server guard; knowledge page gate widened to super OR ai_admin). New
+  **`notify-dept-admin-activity`** edge fn (v1, `verify_jwt=true`) emails super_admins (excl. dev@) via Resend for
+  high-value actions, fanned out best-effort from `auditEvent()`. 6 atomic commits; `pnpm typecheck` + `pnpm build`
+  green each; **Vercel prod deploy READY** (`04959d0`, target=production). **Verification:** RLS matrix rigorously
+  verified for all 5 roles via SQL role-simulation (helpers, owner-based folder visibility, audit read-scoping,
+  company_context write allow/deny, audit write-deny) + super_admin baseline live-confirmed; edge fn probed
+  (`hasResendKey:true`). **Rollback:** 24h clean window via `_d111_role_snapshot`/`_d111_defaults_snapshot` +
+  File-00 rollback SQL; after 24h forward-fix only. Presentation Hub → **D-112** (identical rules, separate model).
+  Plan of record `spec/D-111_ROLE_REWRITE_PLAN.md`; batch files `D111_00/01/02`. OPEN (owner): per-role live UI
+  spot-checks (dept/ai/user need per-user passwords) within the 24h window; one live notification-email test.
 - **AI-Attach for PDF/DOCX (D-110) — shipped 2026-07-01, live in prod (PR #22 squash-merged `ba6956a8`):**
   the disabled `.ai-search-attach`/`.ai-chat-attach` plus-button is enabled so a user can attach ONE PDF or
   DOCX, sent ephemerally with the prompt to Claude (translate/summarize/ask) — no storage, no embedding. PDF as
