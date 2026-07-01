@@ -12,7 +12,12 @@
   border: 1px solid var(--hairline);
   border-radius: var(--card-radius);
   box-shadow: var(--card-shadow);
-  padding: var(--card-padding, 24px);
+  /* Fixed-size panel: header + actions stay put, only .acp-body scrolls. Padding
+     lives on header/body/actions so the scroll area sits flush at the edges. */
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  overflow: hidden;
 }
 
 /* ── Modal presentation (opened from the user menu) ──
@@ -36,7 +41,7 @@
 .acp-modal {
   position: relative;
   width: 100%;
-  max-width: 760px;
+  max-width: 560px;
   margin: auto;
 }
 .acp-modal-close {
@@ -73,14 +78,24 @@
   }
 }
 
-/* ── Header ── */
+/* ── Header (fixed top) ── */
 .acp-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: var(--space-4, 18px);
-  padding-bottom: var(--space-4, 18px);
+  gap: var(--space-3, 14px);
+  padding: 20px 20px 14px;
   border-bottom: 1px solid var(--separator);
-  margin-bottom: var(--space-4, 18px);
+}
+
+/* ── Body (the only scrolling region) ── */
+.acp-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+.acp-body > section:last-child {
+  margin-bottom: 0;
 }
 
 .acp-avatar-wrap {
@@ -88,8 +103,8 @@
   flex: 0 0 auto;
 }
 .acp-avatar {
-  width: 84px;
-  height: 84px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   overflow: hidden;
   background: var(--avatar-bg, var(--surface-muted));
@@ -111,8 +126,8 @@
   position: absolute;
   right: -2px;
   bottom: -2px;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: 2px solid var(--surface-flat);
   background: var(--accent);
@@ -172,19 +187,19 @@
 
 /* ── Sections / grid ── */
 .acp-section {
-  margin-bottom: var(--space-4, 18px);
+  margin-bottom: 14px;
 }
 .acp-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-3, 14px) var(--space-4, 18px);
-  margin-bottom: var(--space-4, 18px);
+  gap: 10px 12px;
+  margin-bottom: 14px;
 }
 
 .acp-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 .acp-field--full {
@@ -195,9 +210,9 @@
 }
 
 .acp-label {
-  font-size: var(--fs-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--text-1);
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+  color: var(--text-2);
 }
 .acp-label-sub {
   font-weight: var(--weight-medium);
@@ -206,12 +221,16 @@
 
 .acp-input {
   width: 100%;
+  height: 34px;
   font-size: var(--fs-sm);
   color: var(--text-1);
-  background: var(--surface-muted, transparent);
+  /* White/top surface (same adaptive token as the card) + a faint rest shadow so
+     the fields lift off the card. surface-flat keeps them from glowing in dark. */
+  background: var(--surface-flat);
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-sm, 10px);
-  padding: 9px 12px;
+  border-radius: 8px;
+  padding: 0 11px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   transition: border-color 150ms var(--ease-smooth), box-shadow 150ms var(--ease-smooth);
 }
 .acp-input::placeholder {
@@ -223,13 +242,19 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
+/* Login email: locked, not "broken-disabled" — flat grey, no lift, full opacity. */
 .acp-input:disabled {
-  opacity: 0.65;
+  background: var(--surface-muted);
+  color: var(--text-2);
+  box-shadow: none;
+  opacity: 1;
   cursor: not-allowed;
 }
 .acp-textarea {
+  height: auto;
+  min-height: 58px;
+  padding: 8px 11px;
   resize: vertical;
-  min-height: 96px;
   font: inherit;
 }
 
@@ -257,12 +282,13 @@
   accent-color: var(--accent);
 }
 
-/* ── Actions ── */
+/* ── Actions (fixed bottom) ── */
 .acp-actions {
+  flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3, 12px);
-  padding-top: var(--space-4, 18px);
+  padding: 14px 20px;
   border-top: 1px solid var(--separator);
 }
 .acp-btn {
@@ -271,22 +297,25 @@
   color: var(--text-1);
   background: var(--surface-muted);
   border: 1px solid var(--hairline);
-  border-radius: var(--radius-sm, 10px);
+  border-radius: 999px;
   padding: 9px 18px;
   cursor: pointer;
-  transition: filter 150ms var(--ease-smooth), opacity 150ms var(--ease-smooth);
+  transition: background-color 150ms var(--ease-smooth), filter 150ms var(--ease-smooth), opacity 150ms var(--ease-smooth);
 }
 .acp-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* Primary = the text colour as a fill (black in light, light in dark — always
+   inverts against the surface). brightness() can't lighten near-black, so the
+   hover mixes toward the surface for a visible shift in both themes. */
 .acp-btn--primary {
-  color: #fff;
-  background: var(--accent);
+  color: var(--surface-flat);
+  background: var(--text-1);
   border-color: transparent;
 }
 .acp-btn--primary:hover:not(:disabled) {
-  filter: brightness(1.06);
+  background: color-mix(in srgb, var(--text-1) 82%, var(--surface-flat));
 }
 .acp-btn:focus-visible {
   outline: 2px solid var(--accent);
