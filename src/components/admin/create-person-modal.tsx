@@ -11,7 +11,8 @@ import { createTeamMemberAction, inviteUserAction } from "@/app/(public)/admin/u
 
 const ROLE_LABEL: Record<Role, string> = {
   super_admin: "Super-Admin",
-  admin: "Admin",
+  department_admin: "Department-Admin",
+  ai_admin: "AI-Admin",
   user: "User",
 };
 
