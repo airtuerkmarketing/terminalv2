@@ -64,7 +64,8 @@ export interface UserAdminPanelFilters {
 // from the Quantum-Blue admin accent; user/null stay muted (--text-3).
 const ROLE_SECTIONS: { key: string; label: string; color: string }[] = [
   { key: "super_admin", label: "Super-Admin", color: "var(--torch)" },
-  { key: "admin", label: "Admin", color: "var(--accent)" },
+  { key: "department_admin", label: "Department-Admin", color: "var(--accent)" },
+  { key: "ai_admin", label: "AI-Admin", color: "var(--accent)" },
   { key: "user", label: "User", color: "var(--text-3)" },
   { key: "null", label: "No role", color: "var(--text-3)" },
 ];
@@ -72,7 +73,8 @@ const ROLE_SECTIONS: { key: string; label: string; color: string }[] = [
 // Default collapse state: the two privileged groups open, the rest collapsed.
 const DEFAULT_COLLAPSED: Record<string, boolean> = {
   super_admin: false,
-  admin: false,
+  department_admin: false,
+  ai_admin: false,
   user: true,
   null: true,
 };
@@ -263,11 +265,16 @@ export function UserAdminPanel({
   const grouped = useMemo(() => {
     const map: Record<string, TeamMemberListItem[]> = {
       super_admin: [],
-      admin: [],
+      department_admin: [],
+      ai_admin: [],
       user: [],
       null: [],
     };
-    for (const u of filtered) map[u.role ?? "null"].push(u);
+    // Defensive: seed the bucket if a role value ever appears that isn't pre-listed.
+    // A missing bucket would throw on .push — the D-111 regression this hotfix fixes
+    // (the panel's role constants had drifted from the 4-role model, dropping
+    // department_admin/ai_admin users into an undefined bucket).
+    for (const u of filtered) (map[u.role ?? "null"] ??= []).push(u);
     for (const bucket of Object.values(map)) bucket.sort((a, b) => compareBySort(a, b, sort));
     return map;
   }, [filtered, sort]);
