@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireSuperAdmin, type Identity } from "@/lib/auth";
+import { requireAiAdminOrSuper, requireSuperAdmin, type Identity } from "@/lib/auth";
+import { auditEvent } from "@/lib/audit";
 import { getChunkEditLog } from "./queries";
 import type { ChunkEditLogEntry, ChunkTags, TagAxis } from "./types";
 
@@ -67,13 +68,13 @@ export async function approveCorrection(
 ): Promise<ActionResult> {
   let identity: Identity;
   try {
-    identity = await requireSuperAdmin();
+    identity = await requireAiAdminOrSuper();
   } catch (e) {
     return { ok: false, error: mapErr(e) };
   }
 
   const edited = opts.editedContent?.trim();
-  const db = await createClient(); // authenticated; ai_corrections UPDATE allows super_admin
+  const db = await createClient(); // authenticated; ai_corrections UPDATE allows super_admin + ai_admin
   const { data, error } = await db
     .from("ai_corrections")
     .update({
@@ -105,6 +106,13 @@ export async function approveCorrection(
     edited: !!edited,
     embed_error: embedErr?.message ?? null,
   });
+  await auditEvent({
+    identity,
+    action: edited ? "correction.editAndApprove" : "correction.approve",
+    resourceType: "ai_correction",
+    resourceId: correctionId,
+    metadata: { edited: !!edited, embedded },
+  });
   notifyCorrectionEvent({ type: edited ? "edited_approved" : "approved", correctionId });
 
   revalidatePath("/admin/knowledge");
@@ -114,7 +122,7 @@ export async function approveCorrection(
 export async function rejectCorrection(correctionId: string, reason: string): Promise<ActionResult> {
   let identity: Identity;
   try {
-    identity = await requireSuperAdmin();
+    identity = await requireAiAdminOrSuper();
   } catch (e) {
     return { ok: false, error: mapErr(e) };
   }
@@ -140,6 +148,13 @@ export async function rejectCorrection(correctionId: string, reason: string): Pr
   }
 
   await logActivity(identity, "reject_correction", correctionId, { reason: trimmed });
+  await auditEvent({
+    identity,
+    action: "correction.reject",
+    resourceType: "ai_correction",
+    resourceId: correctionId,
+    metadata: { reason: trimmed },
+  });
   notifyCorrectionEvent({ type: "rejected", correctionId, reason: trimmed });
 
   revalidatePath("/admin/knowledge");
@@ -155,7 +170,7 @@ export async function updateCompanyContextChunk(
 ): Promise<ActionResult> {
   let identity: Identity;
   try {
-    identity = await requireSuperAdmin();
+    identity = await requireAiAdminOrSuper();
   } catch (e) {
     return { ok: false, error: mapErr(e) };
   }
@@ -175,7 +190,7 @@ export async function updateCompanyContextChunk(
   if (patch.content !== undefined) update.content = patch.content;
   if (patch.tags !== undefined) update.tags = patch.tags;
 
-  const db = await createClient(); // authenticated; company_context UPDATE allows super_admin
+  const db = await createClient(); // authenticated; company_context UPDATE allows super_admin + ai_admin
   const { error } = await db.from("company_context").update(update).eq("id", id);
   if (error) return { ok: false, error: error.message };
 
@@ -190,6 +205,13 @@ export async function updateCompanyContextChunk(
     tags_after: patch.tags ?? prev.tags ?? {},
   });
   await logActivity(identity, "edit_chunk", id, { table: "company_context", content_changed: contentChanged });
+  await auditEvent({
+    identity,
+    action: "source.edit",
+    resourceType: "company_context",
+    resourceId: id,
+    metadata: { content_changed: contentChanged },
+  });
 
   // Re-embed in place only when the text changed (tag-only edits don't need it).
   let embedded = true;
@@ -214,7 +236,7 @@ export async function createCompanyContextChunk(
 ): Promise<ActionResult> {
   let identity: Identity;
   try {
-    identity = await requireSuperAdmin();
+    identity = await requireAiAdminOrSuper();
   } catch (e) {
     return { ok: false, error: mapErr(e) };
   }
@@ -223,7 +245,7 @@ export async function createCompanyContextChunk(
   }
   if (!reason.trim()) return { ok: false, error: "A reason is required" };
 
-  const db = await createClient(); // authenticated; company_context INSERT allows super_admin
+  const db = await createClient(); // authenticated; company_context INSERT allows super_admin + ai_admin
   const { data, error } = await db
     .from("company_context")
     .insert({
@@ -253,6 +275,14 @@ export async function createCompanyContextChunk(
     tags_after: {},
   });
   await logActivity(identity, "create_chunk", id, { table: "company_context" });
+  await auditEvent({
+    identity,
+    action: "source.create",
+    resourceType: "company_context",
+    resourceId: id,
+    after: { topic: input.topic.trim(), category: input.category.trim() },
+    metadata: { topic: input.topic.trim(), category: input.category.trim() },
+  });
 
   // New row has no embedding → force:false embeds exactly the unembedded rows.
   let embedded = true;
@@ -361,7 +391,7 @@ export async function loadChunkAudit(
   chunkId: string,
 ): Promise<ChunkEditLogEntry[]> {
   try {
-    await requireSuperAdmin();
+    await requireAiAdminOrSuper();
   } catch {
     return [];
   }

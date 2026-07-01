@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireSuperAdmin } from "@/lib/auth";
+import { requireAiAdminOrSuper } from "@/lib/auth";
 import type {
   ChunkEditLogEntry,
   ChunkLayer,
@@ -18,11 +18,13 @@ import type {
 
 const PREVIEW_LEN = 700;
 
-/** Reads run via the service-role client behind a super_admin gate (defense in
- *  depth: every entrypoint calls requireSuperAdmin first). This sidesteps the
- *  per-table RLS read model and matches the repo's draft-aware admin reads. */
+/** Reads run via the service-role client behind an ai_admin-or-super_admin gate
+ *  (D-111: ai_admin runs the knowledge workflow — reviews/sources/quality. Every
+ *  entrypoint calls requireAiAdminOrSuper first). This sidesteps the per-table RLS
+ *  read model and matches the repo's draft-aware admin reads. Taxonomy WRITE stays
+ *  super_admin-only in actions.ts; the taxonomy tab is UI-hidden for non-super. */
 async function gate() {
-  await requireSuperAdmin();
+  await requireAiAdminOrSuper();
   return createAdminClient();
 }
 
