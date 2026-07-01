@@ -299,6 +299,74 @@
   .logo-block, .logo-block-img, .logo-block-dl, .logo-assets-btn { transition: none; }
 }
 
+/* ── Letterhead section (frontend layout — letterhead-section.tsx) ──
+   Download cards: tilted paper preview on top, title + download below. The tilt
+   (ease/duration/reduced-motion) mirrors .doc-card--tilted for one portal style. */
+.letterhead-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-6); }
+.lh-card {
+  border: 1px solid var(--hairline); border-radius: var(--radius-xl); overflow: hidden;
+  text-decoration: none; cursor: pointer; background: var(--surface-flat);
+  transition: box-shadow 160ms var(--ease-smooth), transform 160ms var(--ease-smooth);
+}
+.lh-card:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
+.lh-preview {
+  height: 120px; background: var(--surface-muted); display: grid; place-items: center;
+  border-bottom: 1px solid var(--hairline); overflow: hidden;
+}
+/* Paper preview (image or CSS deco sheet) — tilts + lifts on hover. */
+.lh-preview-img {
+  max-height: 92px; object-fit: contain;
+  transform: rotate(-4deg);
+  transition: transform 240ms var(--ease-smooth), box-shadow 240ms var(--ease-smooth);
+}
+/* CSS deco sheet placeholder (until real previews exist): a small white page with
+   an accent header bar + hinted text lines. */
+.lh-paper {
+  position: relative; width: 70px; height: 92px; background: #fff;
+  border: 1px solid var(--hairline); border-radius: 3px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: rotate(-4deg);
+  transition: transform 240ms var(--ease-smooth), box-shadow 240ms var(--ease-smooth);
+}
+.lh-paper::before {
+  content: ""; position: absolute; top: 10px; left: 10px; width: 28px; height: 5px;
+  border-radius: 2px; background: var(--accent);
+}
+.lh-paper::after {
+  content: ""; position: absolute; top: 24px; left: 10px; right: 10px; height: 4px;
+  border-radius: 2px; color: var(--text-3);
+  background:
+    linear-gradient(currentColor, currentColor) 0 0 / 100% 2px no-repeat,
+    linear-gradient(currentColor, currentColor) 0 8px / 100% 2px no-repeat,
+    linear-gradient(currentColor, currentColor) 0 16px / 80% 2px no-repeat,
+    linear-gradient(currentColor, currentColor) 0 24px / 90% 2px no-repeat;
+  height: 26px; opacity: 0.5;
+}
+.lh-card:hover .lh-preview-img,
+.lh-card:hover .lh-paper {
+  transform: rotate(3deg) translateY(-3px) scale(1.03);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.14);
+}
+.lh-card-body { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; }
+.lh-title { font-size: var(--fs-base); font-weight: var(--weight-semibold); color: var(--text-1); }
+.lh-fmt { font-size: var(--fs-sm); color: var(--text-3); margin-top: 2px; }
+.lh-dl {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px;
+  border: 1px solid var(--hairline); background: var(--surface-flat);
+  display: grid; place-items: center; color: var(--text-2); box-shadow: var(--shadow-card);
+  opacity: 0; transform: translateY(4px);
+  transition: opacity 160ms var(--ease-smooth), transform 160ms var(--ease-smooth);
+}
+.lh-dl svg { width: 15px; height: 15px; }
+.lh-card:hover .lh-dl, .lh-card:focus-within .lh-dl { opacity: 1; transform: translateY(0); }
+/* Same reduced-motion approach as .doc-card--tilted: no transitions, tilt locked
+   at its rest angle (no rotate jump); hover reveals still apply, just instantly. */
+@media (prefers-reduced-motion: reduce) {
+  .lh-card, .lh-dl { transition: none; }
+  .lh-preview-img, .lh-card:hover .lh-preview-img,
+  .lh-paper, .lh-card:hover .lh-paper { transition: none; transform: rotate(-4deg); }
+}
+
 /* ── asset_block ── */
 /* Compact white card (reference "Logo Package"): title top-left, download pill
    top-right (same grid row), optional preview + caption span full width below.
