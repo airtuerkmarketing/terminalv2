@@ -32,6 +32,12 @@ it is append-only history (do not rewrite past entries — add new ones).
   File-00 rollback SQL; after 24h forward-fix only. Presentation Hub → **D-112** (identical rules, separate model).
   Plan of record `spec/D-111_ROLE_REWRITE_PLAN.md`; batch files `D111_00/01/02`. OPEN (owner): per-role live UI
   spot-checks (dept/ai/user need per-user passwords) within the 24h window; one live notification-email test.
+  **Hotfix (same day):** the `CREATE TABLE … AS` rollback snapshots landed in `public` with RLS off + default
+  anon/authenticated grants (advisor ERROR — would expose all emails/roles via PostgREST); secured in prod
+  (RLS enabled + grants revoked; service-role/rollback unaffected) and folded into the migration file. The
+  new `is_dept_admin`/`is_ai_admin`/`is_dept_or_ai_admin` helpers are anon-executable **by design** (required
+  by the `{public}` `document_folders_select` policy for anon public-folder reads — same posture as
+  `is_admin`/`can_see_document_folder`, D-089).
 - **AI-Attach for PDF/DOCX (D-110) — shipped 2026-07-01, live in prod (PR #22 squash-merged `ba6956a8`):**
   the disabled `.ai-search-attach`/`.ai-chat-attach` plus-button is enabled so a user can attach ONE PDF or
   DOCX, sent ephemerally with the prompt to Claude (translate/summarize/ask) — no storage, no embedding. PDF as
