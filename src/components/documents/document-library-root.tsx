@@ -6,6 +6,7 @@ import { FolderPlus } from "lucide-react";
 import "@/styles/document-library.css";
 import { createFolder } from "@/app/(public)/documents-library/actions";
 import type { RootFolderDTO } from "@/lib/documents";
+import { canWriteFolder, type FolderViewer } from "@/lib/documents-constants";
 import type { ViewMode } from "@/components/ui/view-toggle";
 import { FolderCard3D, FolderRow } from "./folder-card-3d";
 import { LibraryToolbar } from "./library-toolbar";
@@ -20,10 +21,10 @@ import type { CtxItem } from "./file-card";
  *  popover shows sort only here (folders carry no file type / no sub-files). */
 export function DocumentLibraryRoot({
   folders,
-  isSuperAdmin,
+  viewer,
 }: {
   folders: RootFolderDTO[];
-  isSuperAdmin: boolean;
+  viewer: FolderViewer;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -56,7 +57,7 @@ export function DocumentLibraryRoot({
   }, [folders, search, filter]);
 
   const spaceItems: CtxItem[] = [];
-  if (isSuperAdmin) {
+  if (viewer.isWriter) {
     spaceItems.push({ kind: "item", label: "New folder", onClick: createTopFolder }, { kind: "sep" });
   }
   spaceItems.push({ kind: "item", label: "Refresh", onClick: () => router.refresh() });
@@ -86,9 +87,9 @@ export function DocumentLibraryRoot({
         view={view}
         onView={setView}
         viewStorageKey="terminalv2-doclib-view"
-        actionLabel={isSuperAdmin ? "New Folder" : undefined}
-        actionIcon={isSuperAdmin ? <FolderPlus size={16} aria-hidden="true" /> : undefined}
-        onAction={isSuperAdmin ? createTopFolder : undefined}
+        actionLabel={viewer.isWriter ? "New Folder" : undefined}
+        actionIcon={viewer.isWriter ? <FolderPlus size={16} aria-hidden="true" /> : undefined}
+        onAction={viewer.isWriter ? createTopFolder : undefined}
       />
 
       {createError && <p className="dl-error">{createError}</p>}
@@ -101,7 +102,7 @@ export function DocumentLibraryRoot({
             ) : (
               <>
                 <strong>No folders yet.</strong>
-                {isSuperAdmin ? (
+                {viewer.isWriter ? (
                   <span>Create your first folder to get started.</span>
                 ) : (
                   <span>Nothing here yet.</span>
@@ -130,7 +131,7 @@ export function DocumentLibraryRoot({
                 isPublic={f.isPublic}
                 fileCount={f.fileCount}
                 color={f.color}
-                isSuperAdmin={isSuperAdmin}
+                isSuperAdmin={canWriteFolder(f.createdBy, viewer)}
                 autoRename={f.id === pendingRenameId}
               />
             ))}
@@ -149,7 +150,7 @@ export function DocumentLibraryRoot({
                 fileCount={f.fileCount}
                 previewFiles={f.previewFiles}
                 color={f.color}
-                isSuperAdmin={isSuperAdmin}
+                isSuperAdmin={canWriteFolder(f.createdBy, viewer)}
                 autoRename={f.id === pendingRenameId}
               />
             ))}

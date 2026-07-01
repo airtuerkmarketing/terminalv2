@@ -23,7 +23,7 @@ import {
 // Auth helpers moved to src/lib/auth.ts in Stage 5 of the user panel work.
 // Re-exported here for backward compatibility — existing importers
 // (16 files across the repo) continue to work without edits.
-export { getIdentity, requireAdmin, requireSuperAdmin } from "./auth";
+export { getIdentity, requireAdmin, requireSuperAdmin, requireLibraryWriter, requireAiAdminOrSuper } from "./auth";
 export type { Identity, Role } from "./auth";
 
 // ── DTOs (plain, client-safe shapes) ───────────────────────────────────────
@@ -38,6 +38,8 @@ export interface FolderDTO {
   sortOrder: number;
   /** Persisted folder colour (D-074); null = the default (grey). */
   color: FolderColor | null;
+  /** Folder owner (D-111) — anchors owner-based write authority in the UI. */
+  createdBy: string | null;
 }
 
 export interface FileDTO {
@@ -63,8 +65,8 @@ export interface FilesPage {
 /** Sort options for the in-folder file list (matches the toolbar dropdown). */
 export type FileSortKey = "name" | "date" | "size";
 
-const FOLDER_COLS = "id, parent_id, name, slug, path, is_public, sort_order, color";
-const FOLDER_COLS_BASE = "id, parent_id, name, slug, path, is_public, sort_order";
+const FOLDER_COLS = "id, parent_id, name, slug, path, is_public, sort_order, created_by, color";
+const FOLDER_COLS_BASE = "id, parent_id, name, slug, path, is_public, sort_order, created_by";
 
 /**
  * Colour-column rollout guard (D-074). The `color` column (migration
@@ -110,6 +112,7 @@ type FolderRow = {
   path: string;
   is_public: boolean;
   sort_order: number;
+  created_by: string | null;
   color: string | null;
 };
 type FileRow = {
@@ -137,6 +140,7 @@ function mapFolder(r: FolderRow): FolderDTO {
     isPublic: r.is_public,
     sortOrder: r.sort_order,
     color: normalizeFolderColor(r.color),
+    createdBy: r.created_by ?? null,
   };
 }
 function mapFile(r: FileRow): FileDTO {

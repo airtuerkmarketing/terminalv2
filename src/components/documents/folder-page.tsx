@@ -8,7 +8,7 @@ import "@/styles/document-library.css";
 import type { ViewMode } from "@/components/ui/view-toggle";
 import { createFolder, renameFolder, searchFilesInFolder } from "@/app/(public)/documents-library/actions";
 import type { FileDTO, FileSortKey, FolderDTO, RootFolderDTO } from "@/lib/documents";
-import { fileKind } from "@/lib/documents-constants";
+import { canWriteFolder, fileKind, type FolderViewer } from "@/lib/documents-constants";
 import { Breadcrumb } from "./breadcrumb";
 import { FileCard, type CtxItem } from "./file-card";
 import { FileRow } from "./file-row";
@@ -58,7 +58,7 @@ export function FolderPage({
   childFolders,
   initialFiles,
   initialHasMore,
-  isSuperAdmin,
+  viewer,
   grantees,
 }: {
   folder: FolderDTO;
@@ -66,10 +66,14 @@ export function FolderPage({
   childFolders: RootFolderDTO[];
   initialFiles: FileDTO[];
   initialHasMore: boolean;
-  isSuperAdmin: boolean;
+  viewer: FolderViewer;
   grantees: AccessMember[];
 }) {
   const router = useRouter();
+  // Owner-based write authority (D-111): super_admin, or a writer role that owns
+  // THIS folder. Files inside share the folder's authority; child folders compute
+  // their own (canWriteFolder per child).
+  const canWrite = canWriteFolder(folder.createdBy, viewer);
   const [files, setFiles] = useState<FileDTO[]>(initialFiles);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
@@ -245,7 +249,7 @@ export function FolderPage({
 
   // Empty-space (right-click) menu items, in the current-folder context.
   const spaceItems: CtxItem[] = [];
-  if (isSuperAdmin) {
+  if (canWrite) {
     spaceItems.push(
       { kind: "item", label: "New subfolder", onClick: createSubfolder },
       { kind: "item", label: "Upload file", onClick: () => setUploadOpen(true) },
@@ -258,7 +262,7 @@ export function FolderPage({
   // share the SAME grid + cell size as the file cells in card view (folders
   // first). childFolders now carries real fileCount/previewFiles/color (D-074),
   // so subfolder cards show their count + docs peek like the root grid.
-  // isSuperAdmin enables the folder context-menu actions.
+  // canWrite (per child folder) enables the folder context-menu actions.
   const folderCards = visibleFolders.map((f) => (
     <FolderCard3D
       key={f.id}
@@ -271,7 +275,7 @@ export function FolderPage({
       fileCount={f.fileCount}
       previewFiles={f.previewFiles}
       color={f.color}
-      isSuperAdmin={isSuperAdmin}
+      isSuperAdmin={canWriteFolder(f.createdBy, viewer)}
       autoRename={f.id === pendingRenameId}
     />
   ));
@@ -289,7 +293,7 @@ export function FolderPage({
         ) : (
           <div className="dl-empty">
             <strong>This folder is empty.</strong>
-            {isSuperAdmin ? (
+            {canWrite ? (
               <span>Upload a file, or open a subfolder from the left sidebar.</span>
             ) : (
               <span>No files here yet.</span>
@@ -317,12 +321,12 @@ export function FolderPage({
               isPublic={f.isPublic}
               fileCount={f.fileCount}
               color={f.color}
-              isSuperAdmin={isSuperAdmin}
+              isSuperAdmin={canWriteFolder(f.createdBy, viewer)}
               autoRename={f.id === pendingRenameId}
             />
           ))}
           {visibleFiles.map((f) => (
-            <FileRow key={f.id} file={f} isSuperAdmin={isSuperAdmin} onManage={setManageFile} />
+            <FileRow key={f.id} file={f} isSuperAdmin={canWrite} onManage={setManageFile} />
           ))}
         </div>
       ) : (
@@ -333,7 +337,7 @@ export function FolderPage({
               key={f.id}
               file={f}
               view="card"
-              isSuperAdmin={isSuperAdmin}
+              isSuperAdmin={canWrite}
               onManage={setManageFile}
               onUpdated={upsertFile}
               onRemoved={removeFile}
@@ -377,7 +381,7 @@ export function FolderPage({
               onBlur={commitTitle}
               aria-label="Rename folder"
             />
-          ) : isSuperAdmin ? (
+          ) : canWrite ? (
             <h1 className="dl-title-h1">
               <button type="button" className="dl-title-btn" onClick={startTitleRename} title="Rename folder">
                 {folder.name}
@@ -388,7 +392,7 @@ export function FolderPage({
             <h1>{folder.name}</h1>
           )}
 
-          {isSuperAdmin ? (
+          {canWrite ? (
             <VisibilityPopover folderId={folder.id} isPublic={folder.isPublic} />
           ) : (
             !folder.isPublic && (
@@ -399,7 +403,7 @@ export function FolderPage({
             )
           )}
         </div>
-        {isSuperAdmin && (
+        {canWrite && (
           <div className="dl-head-right">
             <FolderAccessAvatars
               key={grantees.map((g) => g.teamMemberId).join(",")}
@@ -407,7 +411,7 @@ export function FolderPage({
               kind="document"
               grantees={grantees}
             />
-            <FolderActionsMenu folder={folder} isSuperAdmin={isSuperAdmin} />
+            <FolderActionsMenu folder={folder} isSuperAdmin={canWrite} />
           </div>
         )}
       </header>
@@ -421,12 +425,12 @@ export function FolderPage({
         view={view}
         onView={setView}
         viewStorageKey="terminalv2-doclib-view"
-        secondaryLabel={isSuperAdmin ? "New subfolder" : undefined}
-        secondaryIcon={isSuperAdmin ? <Plus size={16} aria-hidden="true" /> : undefined}
-        onSecondary={isSuperAdmin ? createSubfolder : undefined}
-        actionLabel={isSuperAdmin ? "Upload File" : undefined}
-        actionIcon={isSuperAdmin ? <Upload size={16} aria-hidden="true" /> : undefined}
-        onAction={isSuperAdmin ? () => setUploadOpen(true) : undefined}
+        secondaryLabel={canWrite ? "New subfolder" : undefined}
+        secondaryIcon={canWrite ? <Plus size={16} aria-hidden="true" /> : undefined}
+        onSecondary={canWrite ? createSubfolder : undefined}
+        actionLabel={canWrite ? "Upload File" : undefined}
+        actionIcon={canWrite ? <Upload size={16} aria-hidden="true" /> : undefined}
+        onAction={canWrite ? () => setUploadOpen(true) : undefined}
       />
 
       {createError && <p className="dl-error">{createError}</p>}
@@ -436,7 +440,7 @@ export function FolderPage({
         {filesArea}
       </EmptySpaceContextMenu>
 
-      {isSuperAdmin && (
+      {canWrite && (
         <UploadModal
           open={uploadOpen}
           onClose={() => setUploadOpen(false)}
@@ -444,7 +448,7 @@ export function FolderPage({
           onUploaded={upsertFile}
         />
       )}
-      {isSuperAdmin && (
+      {canWrite && (
         <FileEditModal
           file={manageFile}
           onClose={() => setManageFile(null)}

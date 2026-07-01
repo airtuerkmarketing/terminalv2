@@ -11,6 +11,7 @@ import {
   getTrashedFiles,
   TRASH_RETENTION_DAYS,
 } from "@/lib/documents";
+import { canWriteFolder, type FolderViewer } from "@/lib/documents-constants";
 import { listFolderGrantees } from "@/app/(public)/documents-library/actions";
 import { DocumentLibraryRoot } from "@/components/documents/document-library-root";
 import { FolderPage } from "@/components/documents/folder-page";
@@ -40,6 +41,10 @@ export default async function DocumentLibraryPage({ params }: Params) {
   const identity = await getIdentity();
   const isSuperAdmin = identity?.isSuperAdmin ?? false;
   const isAdmin = identity?.isAdmin ?? false;
+  // Owner-based write authority (D-111): any writer role can create top-level
+  // folders; per-folder edit/manage is owner-or-super (see canWriteFolder).
+  const isWriter = isSuperAdmin || (identity?.isDeptAdmin ?? false) || (identity?.isAiAdmin ?? false);
+  const viewer: FolderViewer = { userId: identity?.userId ?? null, isSuperAdmin, isWriter };
 
   // Reserved Trash view (admin-only) — a special segment that shadows folder
   // resolution, so a folder can't be named "trash" and steal it (D-076).
@@ -49,7 +54,7 @@ export default async function DocumentLibraryPage({ params }: Params) {
     return (
       <div className="dl-page">
         <div className="dl-shell">
-          <DocumentsSidebar tree={tree} activePath={null} activeView="trash" isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
+          <DocumentsSidebar tree={tree} activePath={null} activeView="trash" isAdmin={isAdmin} isWriter={isWriter} />
           <div className="dl-shell-main">
             <TrashView files={trashed} retentionDays={TRASH_RETENTION_DAYS} />
           </div>
@@ -67,9 +72,9 @@ export default async function DocumentLibraryPage({ params }: Params) {
     return (
       <div className="dl-fullbleed">
         <div className="dl-shell">
-          <DocumentsSidebar tree={tree} activePath={null} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
+          <DocumentsSidebar tree={tree} activePath={null} isAdmin={isAdmin} isWriter={isWriter} />
           <div className="dl-shell-main">
-            <DocumentLibraryRoot folders={folders} isSuperAdmin={isSuperAdmin} />
+            <DocumentLibraryRoot folders={folders} viewer={viewer} />
           </div>
         </div>
       </div>
@@ -90,8 +95,9 @@ export default async function DocumentLibraryPage({ params }: Params) {
   ]);
   const openFolderFiles = page.files.map((f) => ({ id: f.id, title: f.title, extension: f.extension }));
   // Who currently has per-user access (D-080) — feeds the header avatar group.
-  // super_admin-only (the action is gated; non-admins can't read others' grants).
-  const grantees = isSuperAdmin ? await listFolderGrantees(current.id) : [];
+  // Owner-or-super only (the action is gated; others can't read grants). D-111.
+  const canWriteCurrent = canWriteFolder(current.createdBy, viewer);
+  const grantees = canWriteCurrent ? await listFolderGrantees(current.id) : [];
 
   return (
     <div className="dl-page">
@@ -101,7 +107,7 @@ export default async function DocumentLibraryPage({ params }: Params) {
           activePath={current.path}
           openFolderFiles={openFolderFiles}
           isAdmin={isAdmin}
-          isSuperAdmin={isSuperAdmin}
+          isWriter={isWriter}
         />
         <div className="dl-shell-main">
           <FolderPage
@@ -111,7 +117,7 @@ export default async function DocumentLibraryPage({ params }: Params) {
             childFolders={childFolders}
             initialFiles={page.files}
             initialHasMore={page.hasMore}
-            isSuperAdmin={isSuperAdmin}
+            viewer={viewer}
             grantees={grantees}
           />
         </div>

@@ -3,14 +3,15 @@
 /**
  * Document Library admin mutations (File System v2).
  *
- * Security model: each action re-checks the caller's role server-side via
- * requireAdmin()/requireSuperAdmin() (which read the session), THEN performs the
- * privileged write with the service-role admin client. The DB RLS write policies
- * (is_admin()) are a backstop; this app layer is the real boundary, so these are
- * the ONLY write path. UI gating is cosmetic — never trust it.
+ * Security model (D-111 owner-based): each action re-checks the caller server-side
+ * via requireLibraryWriter(folderId?) / requireFileWriter(fileId) — super_admin
+ * always passes; department_admin / ai_admin pass only for folders/files they OWN
+ * (created_by) — THEN performs the privileged write with the service-role admin
+ * client. The DB RLS policies are a backstop; this app layer is the real boundary,
+ * so these are the ONLY write path. UI gating is cosmetic — never trust it.
  *
- * Structural/sensitive ops (folder delete, visibility toggle) require
- * super_admin. Folder delete is an app-level cascade (FKs are ON DELETE RESTRICT):
+ * Global/system ops (emptyTrash across all owners) require super_admin. Folder
+ * delete is owner-or-super and is an app-level cascade (FKs are ON DELETE RESTRICT):
  * delete file rows, then folder rows bottom-up, then storage objects (best-effort,
  * after the row deletes, so a failure never loses a still-referenced blob).
  */
@@ -21,13 +22,14 @@ import {
   getAllFolders,
   getFileById,
   getFilesInFolder,
-  requireAdmin,
+  requireLibraryWriter,
   requireSuperAdmin,
   type FileDTO,
   type FileSortKey,
   type FolderDTO,
   type Identity,
 } from "@/lib/documents";
+import { auditEvent } from "@/lib/audit";
 import {
   ALLOWED_EXT,
   EXT_TO_MIME,
@@ -82,7 +84,7 @@ export async function searchFilesInFolder(
  * serialized into every folder-page navigation.
  */
 export async function listAllFolders(): Promise<FolderDTO[]> {
-  await requireAdmin();
+  await requireLibraryWriter();
   return getAllFolders();
 }
 
@@ -93,12 +95,28 @@ function revalidateFiles() {
   revalidateLibraryFiles("/documents-library");
 }
 
+/**
+ * File-scoped writer guard (D-111 owner-based model): resolve the file's folder,
+ * then require super_admin OR the folder's owner via requireLibraryWriter. Throws
+ * FILE_NOT_FOUND / NOT_AUTHENTICATED / NOT_AUTHORIZED (mapped by toMessage).
+ */
+async function requireFileWriter(fileId: string): Promise<Identity> {
+  const admin = createAdminClient();
+  const { data: file } = await admin
+    .from("document_files")
+    .select("folder_id")
+    .eq("id", fileId)
+    .single();
+  if (!file) throw new Error("FILE_NOT_FOUND");
+  return requireLibraryWriter(file.folder_id as string);
+}
+
 // ── Folder mutations ────────────────────────────────────────────────────────
 
 export async function createFolder(parentId: string | null, name: string): Promise<ActionResult> {
   let id: Identity;
   try {
-    id = await requireAdmin();
+    id = await requireLibraryWriter();
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -113,13 +131,22 @@ export async function createFolder(parentId: string | null, name: string): Promi
     .select("id")
     .single();
   if (error) return { ok: false, error: toMessage(error, "folder") };
+  await auditEvent({
+    identity: id,
+    action: "folder.create",
+    resourceType: "document_folder",
+    resourceId: data.id as string,
+    after: { id: data.id, name: trimmed, parent_id: parentId },
+    metadata: { name: trimmed, parent_id: parentId },
+  });
   revalidateStructure();
   return { ok: true, id: data.id as string };
 }
 
 export async function renameFolder(folderId: string, name: string): Promise<ActionResult> {
+  let id: Identity;
   try {
-    await requireAdmin();
+    id = await requireLibraryWriter(folderId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -138,18 +165,36 @@ export async function renameFolder(folderId: string, name: string): Promise<Acti
     .select("path")
     .single();
   if (error) return { ok: false, error: toMessage(error, "folder") };
+  await auditEvent({
+    identity: id,
+    action: "folder.rename",
+    resourceType: "document_folder",
+    resourceId: folderId,
+    after: { name: trimmed },
+    metadata: { name: trimmed, path: data?.path },
+  });
   revalidateStructure();
   return { ok: true, path: data?.path as string | undefined };
 }
 
 export async function moveFolder(folderId: string, newParentId: string | null): Promise<ActionResult> {
+  let id: Identity;
   try {
-    await requireAdmin();
+    id = await requireLibraryWriter(folderId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
   if (folderId === newParentId) {
     return { ok: false, error: "You can't move a folder into itself." };
+  }
+  // Owner-based (D-111): moving into a destination parent also requires owning it
+  // (super_admin bypasses) — no relocating content under another owner's tree.
+  if (newParentId && !id.isSuperAdmin) {
+    try {
+      await requireLibraryWriter(newParentId);
+    } catch (e) {
+      return { ok: false, error: toMessage(e) };
+    }
   }
   const admin = createAdminClient();
   const { error } = await admin
@@ -157,6 +202,14 @@ export async function moveFolder(folderId: string, newParentId: string | null): 
     .update({ parent_id: newParentId })
     .eq("id", folderId);
   if (error) return { ok: false, error: toMessage(error, "folder") };
+  await auditEvent({
+    identity: id,
+    action: "folder.move",
+    resourceType: "document_folder",
+    resourceId: folderId,
+    after: { parent_id: newParentId },
+    metadata: { parent_id: newParentId },
+  });
   revalidateStructure();
   return { ok: true };
 }
@@ -172,7 +225,7 @@ export async function setFolderColor(
   color: FolderColor | null
 ): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireLibraryWriter(folderId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -193,8 +246,9 @@ export async function setFolderColor(
 }
 
 export async function setFolderVisibility(folderId: string, isPublic: boolean): Promise<ActionResult> {
+  let id: Identity;
   try {
-    await requireSuperAdmin();
+    id = await requireLibraryWriter(folderId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -204,6 +258,14 @@ export async function setFolderVisibility(folderId: string, isPublic: boolean): 
     .update({ is_public: isPublic })
     .eq("id", folderId);
   if (error) return { ok: false, error: toMessage(error, "folder") };
+  await auditEvent({
+    identity: id,
+    action: "folder.setVisibility",
+    resourceType: "document_folder",
+    resourceId: folderId,
+    after: { is_public: isPublic },
+    metadata: { is_public: isPublic },
+  });
   revalidateStructure();
   return { ok: true };
 }
@@ -215,13 +277,13 @@ export async function setFolderVisibility(folderId: string, isPublic: boolean): 
 // be granted to people not yet invited; the grant activates on their first login
 // (RLS resolves auth.uid() → team_member via the profiles bridge). Granted users
 // are READ-ONLY (the write policies stay admin-only) — they can open/download but
-// not change anything. Both reads + writes here are super_admin-gated and go
-// through the service-role client (the modal that calls them is super_admin-only).
+// not change anything. D-111: these actions are gated to the folder OWNER OR a
+// super_admin (requireLibraryWriter) and go through the service-role client.
 
 /** The team directory + which members already have access to this folder. */
 export async function getFolderAccess(folderId: string): Promise<FolderAccessResult> {
   try {
-    await requireSuperAdmin();
+    await requireLibraryWriter(folderId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -261,7 +323,7 @@ export async function saveFolderAccess(
 ): Promise<SaveAccessResult> {
   let id: Identity;
   try {
-    id = await requireSuperAdmin();
+    id = await requireLibraryWriter(folderId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -303,6 +365,13 @@ export async function saveFolderAccess(
       metadata: { added: toAdd, removed: toRemove },
     });
     await notifyFolderAccess("document", folderId, toAdd);
+    await auditEvent({
+      identity: id,
+      action: "folder.grantAccess",
+      resourceType: "document_folder",
+      resourceId: folderId,
+      metadata: { added: toAdd, removed: toRemove },
+    });
     revalidateStructure(); // a grantee must see the folder/tree appear immediately
   }
   return { ok: true, added: toAdd.length, removed: toRemove.length };
@@ -315,7 +384,7 @@ export async function saveFolderAccess(
  */
 export async function listFolderGrantees(folderId: string): Promise<AccessMember[]> {
   try {
-    await requireSuperAdmin();
+    await requireLibraryWriter(folderId);
   } catch {
     return [];
   }
@@ -356,7 +425,7 @@ export async function revokeFolderAccess(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   let id: Identity;
   try {
-    id = await requireSuperAdmin();
+    id = await requireLibraryWriter(folderId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -379,6 +448,13 @@ export async function revokeFolderAccess(
     resourceId: folderId,
     metadata: { removed: [teamMemberId] },
   });
+  await auditEvent({
+    identity: id,
+    action: "folder.revokeAccess",
+    resourceType: "document_folder",
+    resourceId: folderId,
+    metadata: { removed: [teamMemberId] },
+  });
   revalidateStructure();
   return { ok: true };
 }
@@ -389,8 +465,9 @@ export async function revokeFolderAccess(
  * deepest-first (children before parents), then remove storage objects last.
  */
 export async function deleteFolder(folderId: string): Promise<ActionResult> {
+  let id: Identity;
   try {
-    await requireSuperAdmin();
+    id = await requireLibraryWriter(folderId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -456,6 +533,14 @@ export async function deleteFolder(folderId: string): Promise<ActionResult> {
     await admin.storage.from(BUCKET).remove(storagePaths);
   }
 
+  await auditEvent({
+    identity: id,
+    action: "folder.delete",
+    resourceType: "document_folder",
+    resourceId: folderId,
+    before: { path },
+    metadata: { path, folderCount: folderIds.length },
+  });
   revalidateStructure();
   return { ok: true };
 }
@@ -481,7 +566,7 @@ export async function createDocumentUploadTicket(
   filename: string
 ): Promise<UploadTicket> {
   try {
-    await requireAdmin();
+    await requireLibraryWriter(folderId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -519,7 +604,7 @@ export async function finalizeDocumentUpload(
 ): Promise<FileResult> {
   let id: Identity;
   try {
-    id = await requireAdmin();
+    id = await requireLibraryWriter(folderId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -566,6 +651,14 @@ export async function finalizeDocumentUpload(
     return { ok: false, error: toMessage(rowErr, "file") };
   }
 
+  await auditEvent({
+    identity: id,
+    action: "file.upload",
+    resourceType: "document_file",
+    resourceId: meta.fileId,
+    after: { title, folder_id: folderId },
+    metadata: { title, folder_id: folderId, extension: ext, size_bytes: sizeBytes },
+  });
   revalidateFiles();
   return { ok: true, file: (await getFileById(meta.fileId)) ?? undefined };
 }
@@ -574,8 +667,9 @@ export async function editFile(
   fileId: string,
   fields: { title?: string; description?: string | null; language?: string | null }
 ): Promise<FileResult> {
+  let id: Identity;
   try {
-    await requireAdmin();
+    id = await requireFileWriter(fileId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -592,19 +686,45 @@ export async function editFile(
   const admin = createAdminClient();
   const { error } = await admin.from("document_files").update(patch).eq("id", fileId);
   if (error) return { ok: false, error: toMessage(error, "file") };
+  await auditEvent({
+    identity: id,
+    action: "file.edit",
+    resourceType: "document_file",
+    resourceId: fileId,
+    after: patch,
+    metadata: patch,
+  });
   revalidateFiles();
   return { ok: true, file: (await getFileById(fileId)) ?? undefined };
 }
 
 export async function moveFile(fileId: string, folderId: string): Promise<ActionResult> {
+  let id: Identity;
   try {
-    await requireAdmin();
+    id = await requireFileWriter(fileId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
+  }
+  // Owner-based (D-111): dropping a file into a destination folder requires owning
+  // that folder too (super_admin bypasses).
+  if (!id.isSuperAdmin) {
+    try {
+      await requireLibraryWriter(folderId);
+    } catch (e) {
+      return { ok: false, error: toMessage(e) };
+    }
   }
   const admin = createAdminClient();
   const { error } = await admin.from("document_files").update({ folder_id: folderId }).eq("id", fileId);
   if (error) return { ok: false, error: toMessage(error, "file") };
+  await auditEvent({
+    identity: id,
+    action: "file.move",
+    resourceType: "document_file",
+    resourceId: fileId,
+    after: { folder_id: folderId },
+    metadata: { folder_id: folderId },
+  });
   revalidateFiles();
   return { ok: true, id: fileId };
 }
@@ -615,8 +735,9 @@ export async function moveFile(fileId: string, folderId: string): Promise<Action
  * the old object. No version history (D-053).
  */
 export async function replaceFile(fileId: string, formData: FormData): Promise<FileResult> {
+  let id: Identity;
   try {
-    await requireAdmin();
+    id = await requireFileWriter(fileId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -656,6 +777,14 @@ export async function replaceFile(fileId: string, formData: FormData): Promise<F
   }
 
   if (!sameExt) await admin.storage.from(BUCKET).remove([oldPath]);
+  await auditEvent({
+    identity: id,
+    action: "file.replace",
+    resourceType: "document_file",
+    resourceId: fileId,
+    after: { extension: ext, size_bytes: file.size },
+    metadata: { extension: ext, size_bytes: file.size },
+  });
   revalidateFiles();
   return { ok: true, file: (await getFileById(fileId)) ?? undefined };
 }
@@ -669,7 +798,7 @@ export async function replaceFile(fileId: string, formData: FormData): Promise<F
 export async function deleteFile(fileId: string): Promise<ActionResult> {
   let id: Identity;
   try {
-    id = await requireAdmin();
+    id = await requireFileWriter(fileId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -687,6 +816,13 @@ export async function deleteFile(fileId: string): Promise<ActionResult> {
     }
     return { ok: false, error: toMessage(error, "file") };
   }
+  await auditEvent({
+    identity: id,
+    action: "file.delete",
+    resourceType: "document_file",
+    resourceId: fileId,
+    metadata: { soft: true },
+  });
   revalidateFiles();
   revalidateStructure(); // folder file-counts (sidebar tree + cards) change
   return { ok: true, id: fileId };
@@ -711,7 +847,7 @@ async function hardDeleteFile(fileId: string): Promise<ActionResult> {
 /** Restore a trashed file (clear deleted_at) — back to its original folder. */
 export async function restoreFile(fileId: string): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireFileWriter(fileId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -729,7 +865,7 @@ export async function restoreFile(fileId: string): Promise<ActionResult> {
 /** Permanently delete one trashed file (row + blob) — the "Delete forever" action. */
 export async function deleteFilePermanently(fileId: string): Promise<ActionResult> {
   try {
-    await requireAdmin();
+    await requireFileWriter(fileId);
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }
@@ -743,8 +879,9 @@ export async function deleteFilePermanently(fileId: string): Promise<ActionResul
 
 /** Permanently delete EVERY trashed file (row + blob). Admin-gated. */
 export async function emptyTrash(): Promise<ActionResult> {
+  // Global op across ALL owners' trashed files → super_admin only (D-111).
   try {
-    await requireAdmin();
+    await requireSuperAdmin();
   } catch (e) {
     return { ok: false, error: toMessage(e) };
   }

@@ -1,12 +1,19 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
- * Three-tier role model (Migration 0030).
- * super_admin: full access; admin: tier-bounded write; user: read-only.
+ * Four-role model (D-111, migration 20260701000000). Replaces the prior
+ * three-tier model: the `admin` tier was drained (Approach 3) and split into two
+ * named writer roles, then removed from the profiles.role CHECK. is_admin()
+ * DB-side now collapses to super_admin only.
+ *
+ * super_admin: full access. department_admin / ai_admin: writer roles scoped to
+ * their own content (Documents Library ownership; ai_admin additionally runs the
+ * AI knowledge/correction workflow). user: read-only.
  */
-export type Role = "super_admin" | "admin" | "user";
+export type Role = "super_admin" | "department_admin" | "ai_admin" | "user";
 
 /**
  * Identity of the currently signed-in user.
@@ -27,8 +34,11 @@ export interface Identity {
   email: string | null;
   fullName: string | null;
   role: Role;
+  /** DB is_admin() parity — admin tier drained (D-111), so this is super_admin only. */
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  isDeptAdmin: boolean;
+  isAiAdmin: boolean;
   // Stammdaten via the team_members embed (bridge FK from Migration 0034)
   teamMemberId: string | null;
   firstName: string | null;
@@ -83,8 +93,10 @@ export const getIdentity = cache(async (): Promise<Identity | null> => {
     email: profile.email,
     fullName: profile.full_name,
     role,
-    isAdmin: role === "admin" || role === "super_admin",
+    isAdmin: role === "super_admin",
     isSuperAdmin: role === "super_admin",
+    isDeptAdmin: role === "department_admin",
+    isAiAdmin: role === "ai_admin",
     teamMemberId: profile.team_member_id,
     firstName: tm?.first_name ?? null,
     lastName: tm?.last_name ?? null,
@@ -119,6 +131,48 @@ export async function requireSuperAdmin(): Promise<Identity> {
   if (!id) throw new Error("NOT_AUTHENTICATED");
   if (!id.isSuperAdmin) throw new Error("NOT_AUTHORIZED");
   return id;
+}
+
+/**
+ * Guard for Documents-Library writer actions (D-111, owner-based model).
+ *
+ * super_admin: always allowed. department_admin / ai_admin: allowed as writer
+ * roles; when `folderId` is given, additionally required to OWN that folder
+ * (created_by = them). Everyone else: NOT_AUTHORIZED. Ownership is read through
+ * the service-role client because the write actions themselves run service-role
+ * (the require* guard is the real boundary — RLS is a backstop).
+ *
+ * Error strings "NOT_AUTHENTICATED" / "NOT_AUTHORIZED" are matched verbatim by
+ * the actions' error mappers — keep them.
+ */
+export async function requireLibraryWriter(folderId?: string): Promise<Identity> {
+  const id = await getIdentity();
+  if (!id) throw new Error("NOT_AUTHENTICATED");
+  if (id.isSuperAdmin) return id;
+  if (!id.isDeptAdmin && !id.isAiAdmin) throw new Error("NOT_AUTHORIZED");
+
+  if (folderId) {
+    const admin = createAdminClient();
+    const { data: folder } = await admin
+      .from("document_folders")
+      .select("created_by")
+      .eq("id", folderId)
+      .single();
+    if (!folder || folder.created_by !== id.userId) throw new Error("NOT_AUTHORIZED");
+  }
+  return id;
+}
+
+/**
+ * Guard for the AI-knowledge / correction workflow (D-111 Q3). super_admin OR
+ * ai_admin allowed; everyone else NOT_AUTHORIZED. Taxonomy writes stay
+ * super_admin-only and keep using requireSuperAdmin (not this guard).
+ */
+export async function requireAiAdminOrSuper(): Promise<Identity> {
+  const id = await getIdentity();
+  if (!id) throw new Error("NOT_AUTHENTICATED");
+  if (id.isSuperAdmin || id.isAiAdmin) return id;
+  throw new Error("NOT_AUTHORIZED");
 }
 
 /**

@@ -38,13 +38,17 @@ export interface KnowledgeAppProps {
   suggestions: TagSuggestion[];
   initialTab: Tab;
   initialSourceFilters: { search: string; layers: ChunkLayer[]; sort: string; axes: Record<TagAxis, string[]> };
+  /** Taxonomy tab is super_admin-only (D-111 Q3); ai_admin sees the other tabs. */
+  isSuperAdmin: boolean;
 }
 
 export function KnowledgeApp(props: KnowledgeAppProps) {
-  const { stats, chunks, corrections, quality, vocab, suggestions } = props;
+  const { stats, chunks, corrections, quality, vocab, suggestions, isSuperAdmin } = props;
   const [tab, setTab] = useState<Tab>(props.initialTab);
 
   function go(t: Tab) {
+    // Taxonomy is super_admin-only — ignore any attempt to switch there otherwise.
+    if (t === "taxonomy" && !isSuperAdmin) return;
     setTab(t);
     const p = new URLSearchParams(window.location.search);
     p.set("tab", t);
@@ -104,9 +108,11 @@ export function KnowledgeApp(props: KnowledgeAppProps) {
         <button role="tab" aria-selected={tab === "quality"} className="kb-tab" onClick={() => go("quality")}>
           <BarChart3 size={15} /> Quality
         </button>
-        <button role="tab" aria-selected={tab === "taxonomy"} className="kb-tab" onClick={() => go("taxonomy")}>
-          <Tags size={15} /> Taxonomy
-        </button>
+        {isSuperAdmin && (
+          <button role="tab" aria-selected={tab === "taxonomy"} className="kb-tab" onClick={() => go("taxonomy")}>
+            <Tags size={15} /> Taxonomy
+          </button>
+        )}
       </div>
 
       <div role="tabpanel">
@@ -121,7 +127,7 @@ export function KnowledgeApp(props: KnowledgeAppProps) {
         )}
         {tab === "reviews" && <ReviewsTab pending={corrections.pending} history={corrections.history} />}
         {tab === "quality" && <QualityTab quality={quality} />}
-        {tab === "taxonomy" && <TaxonomyTab vocab={vocab} suggestions={suggestions} />}
+        {tab === "taxonomy" && isSuperAdmin && <TaxonomyTab vocab={vocab} suggestions={suggestions} />}
       </div>
     </div>
   );

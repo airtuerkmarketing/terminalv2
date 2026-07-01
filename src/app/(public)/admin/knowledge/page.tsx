@@ -21,13 +21,19 @@ export default async function KnowledgePage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  // Defense in depth: page-level gate in addition to every query's requireSuperAdmin.
+  // Defense in depth: page-level gate in addition to every query's gate().
+  // D-111: ai_admin runs the knowledge workflow (reviews/sources/quality); the
+  // Taxonomy tab stays super_admin-only and is hidden in the UI for non-super.
   const identity = await getIdentity();
-  if (!identity?.isSuperAdmin) notFound();
+  if (!identity?.isSuperAdmin && !identity?.isAiAdmin) notFound();
+  const isSuperAdmin = identity.isSuperAdmin;
 
   const sp = await searchParams;
   const tabRaw = typeof sp.tab === "string" ? sp.tab : "sources";
-  const tab = (["sources", "reviews", "quality", "taxonomy"].includes(tabRaw) ? tabRaw : "sources") as Tab;
+  const requestedTab = (["sources", "reviews", "quality", "taxonomy"].includes(tabRaw) ? tabRaw : "sources") as Tab;
+  // Taxonomy is super_admin-only (Q3); an ai_admin deep-linking ?tab=taxonomy
+  // falls back to Sources.
+  const tab: Tab = requestedTab === "taxonomy" && !isSuperAdmin ? "sources" : requestedTab;
   const search = typeof sp.search === "string" ? sp.search : "";
   const layerParam = typeof sp.layer === "string" ? sp.layer : "";
   const layers = layerParam
@@ -63,6 +69,7 @@ export default async function KnowledgePage({
       suggestions={suggestions}
       initialTab={tab}
       initialSourceFilters={{ search, layers, sort, axes }}
+      isSuperAdmin={isSuperAdmin}
     />
   );
 }
